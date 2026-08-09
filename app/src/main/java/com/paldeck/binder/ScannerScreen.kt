@@ -29,14 +29,16 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.concurrent.Executors
 
-private val CARD_NUMBER = Regex("E[A-Z]{2,5}-?\\d{3}[A-Z]{0,3}")
+// Card numbers look like EBP01-001, ETD01-005TSR, EPR-001, ESOUL-000:
+// E + a short letter set-code + optional set digits + "-" + 3 digits + optional rarity letters.
+private val CARD_NUMBER = Regex("E[A-Z]{1,4}\\d{0,2}-?\\d{3}[A-Z]{0,3}")
 
 fun extractCardNumber(text: String): String? =
     CARD_NUMBER.find(text.uppercase().replace(" ", ""))?.value
 
 @SuppressLint("MissingPermission")
 @Composable
-fun ScannerScreen(store: BinderStore) {
+fun ScannerScreen(store: BinderStore, onScanned: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var granted by remember { mutableStateOf(
@@ -47,6 +49,9 @@ fun ScannerScreen(store: BinderStore) {
 
     var lastMatch by remember { mutableStateOf<Card?>(null) }
     var cooldown by remember { mutableStateOf(0L) }
+    var camProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    // Release the camera when the Scan tab is left.
+    DisposableEffect(Unit) { onDispose { camProvider?.unbindAll() } }
 
     Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
         if (granted) {
@@ -57,6 +62,7 @@ fun ScannerScreen(store: BinderStore) {
                 val providerFuture = ProcessCameraProvider.getInstance(ctx)
                 providerFuture.addListener({
                     val provider = providerFuture.get()
+                    camProvider = provider
                     val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                     val analysis = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
@@ -69,10 +75,10 @@ fun ScannerScreen(store: BinderStore) {
                                     for (block in result.textBlocks) {
                                         val num = extractCardNumber(block.text) ?: continue
                                         val now = System.currentTimeMillis()
-                                        val card = store.card(num)
+                                        val card = store.resolve(num)
                                         if (card != null && now > cooldown) {
                                             cooldown = now + 1500
-                                            store.collect(num)
+                                            onScanned(card.number)
                                             lastMatch = card
                                         }
                                         break

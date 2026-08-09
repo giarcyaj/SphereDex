@@ -43,6 +43,7 @@ class BinderStore(private val context: Context) {
     val sets: List<SetInfo>
     val cards: List<Card>
     private val byNumber: Map<String, Card>
+    private val byNormalized: Map<String, Card>          // key without hyphen/spaces, for OCR matching
     val own: SnapshotStateMap<String, OwnEntry> = mutableStateMapOf()
     val currencyCode = mutableStateOf("USD")
     val revision = mutableStateOf(0)                 // bump to trigger recomposition on nested edits
@@ -61,11 +62,25 @@ class BinderStore(private val context: Context) {
             }
         }
         byNumber = cards.associateBy { it.number }
+        byNormalized = cards.associateBy { normalizeNum(it.number) }
         currencyCode.value = context.getSharedPreferences("paldeck", 0).getString("currency", "USD") ?: "USD"
         load()
     }
 
     fun card(number: String): Card? = byNumber[number]
+
+    private fun normalizeNum(s: String) = s.uppercase().replace(Regex("[^A-Z0-9]"), "")
+
+    /** Match an OCR-read number to a card, tolerating a missing/misread hyphen and stray trailing letters. */
+    fun resolve(scanned: String): Card? {
+        val s = normalizeNum(scanned)
+        byNormalized[s]?.let { return it }
+        // Fall back to the most specific stored number that this scan begins with.
+        return byNormalized.entries
+            .filter { s.startsWith(it.key) }
+            .maxByOrNull { it.key.length }
+            ?.value
+    }
     fun entry(number: String): OwnEntry = own[number] ?: OwnEntry()
 
     fun setEntry(number: String, e: OwnEntry) {
