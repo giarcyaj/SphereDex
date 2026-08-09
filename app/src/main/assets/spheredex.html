@@ -280,12 +280,30 @@
 
   @media (max-width:760px){ .dash{ grid-template-columns:1fr 1fr; } .dash .xpwrap{ grid-column:1/-1; } }
   /* ---- Navigation + pages ---- */
-  .tabs { display:flex; gap:2px; border-bottom:2px solid var(--line-strong); margin-bottom:24px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-  .tabs::-webkit-scrollbar { display:none; }
-  .tab { border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700; white-space:nowrap; flex:none;
-    font-size:1rem; padding:10px 14px 12px; border-bottom:3px solid transparent; margin-bottom:-2px; transition:.14s; border-radius:9px 9px 0 0; }
-  .tab:hover { color:var(--ink); background:color-mix(in srgb,var(--accent) 9%,transparent); }
-  .tab.active { color:var(--accent-ink); border-bottom-color:var(--accent); }
+  /* Expanding-icon nav: icon-only tabs; the active one expands to show its label. Wraps, no scroll. */
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; padding-bottom:18px; margin-bottom:22px; border-bottom:2px solid var(--line-strong); }
+  .tab { display:inline-flex; align-items:center; justify-content:center; border:1.5px solid var(--line); background:var(--surface); color:var(--ink-soft);
+    font-family:var(--font-display); font-weight:700; font-size:.95rem; white-space:nowrap; cursor:pointer; padding:9px; border-radius:11px; transition:background .14s, color .14s, border-color .14s, padding .16s ease; }
+  .tab .ic { width:1.25rem; height:1.25rem; margin:0 !important; }
+  .tab .tablabel { display:inline-block; max-width:0; overflow:hidden; opacity:0; transition:max-width .18s ease, opacity .16s ease, margin .18s ease; }
+  .tab:hover { color:var(--ink); border-color:var(--line-strong); }
+  .tab.active { color:#fff; background:var(--accent); border-color:var(--accent); padding:9px 14px; }
+  .tab.active .tablabel { max-width:120px; opacity:1; margin-left:7px; }
+  /* Dropdown nav (shown on narrow screens / the app) */
+  .navmenu { display:none; position:relative; margin-bottom:22px; }
+  .navtrigger { display:flex; align-items:center; gap:10px; width:100%; padding:12px 15px; border-radius:12px; border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); font-family:var(--font-display); font-weight:750; font-size:1.02rem; cursor:pointer; }
+  .navtrigger .navcur { flex:1; text-align:left; }
+  .navtrigger .ic { width:1.25rem; height:1.25rem; margin:0; }
+  .navtrigger[aria-expanded="true"] .navchev { transform:rotate(180deg); }
+  .navchev { transition:transform .16s; }
+  .navlist { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:6px; box-shadow:var(--shadow); max-height:66vh; overflow:auto; }
+  .navlist[hidden] { display:none; }
+  .navitem { display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 13px; border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.98rem; border-radius:10px; cursor:pointer; }
+  .navitem .ic { width:1.2rem; height:1.2rem; margin:0; color:var(--ink-faint); }
+  .navitem:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); color:var(--ink); }
+  .navitem.active { color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .navitem.active .ic { color:var(--accent-ink); }
+  @media (max-width:760px){ .tabs { display:none; } .navmenu { display:block; } }
   .page { display:none; }
   .page.active { display:block; animation:fade .2s ease; }
   @keyframes fade { from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
@@ -698,20 +716,24 @@
   </header>
 
   <nav class="tabs" id="tabs">
-    <button class="tab active" data-page="home">Home</button>
-    <button class="tab" data-page="scan">Quick Add</button>
-    <button class="tab" data-page="collection">Collection</button>
-    <button class="tab" data-page="graded">Graded</button>
-    <button class="tab" data-page="sealed">Sealed</button>
-    <button class="tab" data-page="releases">Releases</button>
-    <button class="tab" data-page="news">News</button>
-    <button class="tab" data-page="key">Key</button>
-    <button class="tab" data-page="settings">Settings</button>
-    <button class="tab" data-page="account">Account</button>
-    <button class="tab" data-page="contact">Contact</button>
-    <button class="tab" data-page="rewards">Rewards</button>
-    <button class="tab" data-page="decks">Decks</button>
+    <button class="tab active" data-page="home" data-icon="home" title="Home"><span class="tablabel">Home</span></button>
+    <button class="tab" data-page="scan" data-icon="bolt" title="Quick Add"><span class="tablabel">Quick Add</span></button>
+    <button class="tab" data-page="collection" data-icon="grid" title="Collection"><span class="tablabel">Collection</span></button>
+    <button class="tab" data-page="graded" data-icon="award" title="Graded"><span class="tablabel">Graded</span></button>
+    <button class="tab" data-page="sealed" data-icon="box" title="Sealed"><span class="tablabel">Sealed</span></button>
+    <button class="tab" data-page="releases" data-icon="calendar" title="Releases"><span class="tablabel">Releases</span></button>
+    <button class="tab" data-page="news" data-icon="news" title="News"><span class="tablabel">News</span></button>
+    <button class="tab" data-page="key" data-icon="key" title="Key"><span class="tablabel">Key</span></button>
+    <button class="tab" data-page="rewards" data-icon="sphere" title="Rewards"><span class="tablabel">Rewards</span></button>
+    <button class="tab" data-page="decks" data-icon="layers" title="Decks"><span class="tablabel">Decks</span></button>
+    <button class="tab" data-page="settings" data-icon="gear" title="Settings"><span class="tablabel">Settings</span></button>
+    <button class="tab" data-page="account" data-icon="user" title="Account"><span class="tablabel">Account</span></button>
+    <button class="tab" data-page="contact" data-icon="mail" title="Contact"><span class="tablabel">Contact</span></button>
   </nav>
+  <div class="navmenu" id="navMenu">
+    <button class="navtrigger" id="navTrigger" aria-haspopup="true" aria-expanded="false"></button>
+    <div class="navlist" id="navList" hidden></div>
+  </div>
 
   <section class="page active" id="page-home">
     <div class="hero">
@@ -1604,7 +1626,19 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     apple:'<path d="M16 13.6c0 3-2 5.4-3.9 5.4-.8 0-1.3-.4-2.1-.4s-1.3.4-2.1.4C6 19 4 16.6 4 13.6 4 10.5 6 9 8 9c1 0 1.4.5 2 .5S11.5 9 12 9c4 0 4 1.6 4 4.6z"/><path d="M12 9c0-1.9 1.2-3 2.6-3.1"/>',
     mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/>',
     bug:'<rect x="8" y="8" width="8" height="10" rx="4"/><path d="M9 6l1.5 2M15 6l-1.5 2M4 11h4M16 13h4M4 16h4M16 16h4M12 8v10"/>',
-    life:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M6.3 6.3l3.4 3.4M14.3 14.3l3.4 3.4M17.7 6.3l-3.4 3.4M9.7 14.3l-3.4 3.4"/>'
+    life:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M6.3 6.3l3.4 3.4M14.3 14.3l3.4 3.4M17.7 6.3l-3.4 3.4M9.7 14.3l-3.4 3.4"/>',
+    home:'<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+    bolt:'<path d="M13 3L5 13h6l-1 8 8-11h-6z"/>',
+    grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    award:'<circle cx="12" cy="9" r="5.5"/><path d="M9 13.4L7.5 21l4.5-2.5L16.5 21 15 13.4"/>',
+    box:'<path d="M3.5 7.5l8.5-4 8.5 4v9l-8.5 4-8.5-4z"/><path d="M3.5 7.5l8.5 4 8.5-4M12 11.5V20"/>',
+    calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/>',
+    news:'<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 12h8M8 15h5"/>',
+    key:'<circle cx="8" cy="8" r="4"/><path d="M11 11l8 8M16 16l2-2M18 18l2-2"/>',
+    gear:'<path d="M5 7h9M18 7h1M5 12h1M10 12h9M5 17h6M15 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="17" r="2"/>',
+    user:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+    layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+    chev:'<path d="M6 9l6 6 6-6"/>'
   };
   function icon(name, cls){ return '<svg class="ic'+(cls?' '+cls:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'; }
 
@@ -1803,6 +1837,29 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if (p==="news") renderNews();
     if (p==="key") renderKey();
     if (p==="contact") renderContact();
+    updateNavMenu(p);
+  }
+  // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
+  function closeNavMenu(){ var l=$("navList"); if(l) l.hidden=true; var t=$("navTrigger"); if(t) t.setAttribute("aria-expanded","false"); }
+  function buildNavMenu(){
+    var list=$("navList"); if(!list) return; list.innerHTML="";
+    Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){
+      var p=tab.getAttribute("data-page"), ico=tab.getAttribute("data-icon"), lab=(tab.querySelector(".tablabel")||{}).textContent||p;
+      var b=document.createElement("button"); b.className="navitem"; b.setAttribute("data-page",p);
+      b.innerHTML=icon(ico)+"<span>"+esc(lab)+"</span>";
+      b.onclick=function(){ showPage(p); closeNavMenu(); };
+      list.appendChild(b);
+    });
+    var trig=$("navTrigger");
+    if(trig){ trig.onclick=function(e){ e.stopPropagation(); var l=$("navList"); var open=l.hidden; l.hidden=!open; trig.setAttribute("aria-expanded", open?"true":"false"); }; }
+    var nl=$("navList"); if(nl) nl.addEventListener("click", function(e){ e.stopPropagation(); });
+    document.addEventListener("click", closeNavMenu);
+  }
+  function updateNavMenu(p){
+    var tab=document.querySelector('#tabs .tab[data-page="'+p+'"]'); if(!tab) return;
+    var ico=tab.getAttribute("data-icon"), lab=(tab.querySelector(".tablabel")||{}).textContent||p;
+    var trig=$("navTrigger"); if(trig) trig.innerHTML=icon(ico)+'<span class="navcur">'+esc(lab)+'</span>'+icon("chev","navchev");
+    var list=$("navList"); if(list) Array.prototype.forEach.call(list.querySelectorAll(".navitem"), function(b){ b.classList.toggle("active", b.getAttribute("data-page")===p); });
   }
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
@@ -2364,6 +2421,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
 
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
+  buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   buildColSel();
   buildChips();
   applyTheme();
