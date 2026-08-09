@@ -10,15 +10,10 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,19 +51,19 @@ private class ReticleView(ctx: Context) : View(ctx) {
     }
 }
 
-/** Full-screen camera scanner with a target window and a confirm step before adding. */
+/**
+ * Full-screen camera scanner with a target window. On the first recognised card it returns the
+ * card number to the WebView, which shows the rich confirmation (image, wishlist/collection,
+ * raw/graded, grading company + grade, which collection). No native confirm step, so there is
+ * only one confirmation instead of two.
+ */
 class ScannerActivity : ComponentActivity() {
     private val store by lazy { BinderStore(applicationContext) }
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val exec = Executors.newSingleThreadExecutor()
-    @Volatile private var paused = false
-    private var pendingNumber: String? = null
-    private var collectionName = ""
+    @Volatile private var handled = false
 
     private lateinit var previewView: PreviewView
-    private lateinit var panel: LinearLayout
-    private lateinit var nameText: TextView
-    private lateinit var collText: TextView
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -79,7 +74,6 @@ class ScannerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        collectionName = intent.getStringExtra("collection") ?: ""
 
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         previewView = PreviewView(this)
@@ -92,24 +86,6 @@ class ScannerActivity : ComponentActivity() {
         }
         root.addView(hint, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
 
-        // --- Confirmation panel (hidden until a card is recognised) ---
-        panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            setPadding(dp(18), dp(16), dp(18), dp(16))
-            background = GradientDrawable().apply { cornerRadius = dp(18).toFloat(); setColor(0xF21A1E28.toInt()) }
-        }
-        nameText = TextView(this).apply { setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD }
-        collText = TextView(this).apply { setTextColor(0xFFAAB3C6.toInt()); textSize = 13f; setPadding(0, dp(3), 0, dp(12)) }
-        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val rescan = Button(this).apply { text = "Scan again"; setOnClickListener { paused = false; panel.visibility = View.GONE } }
-        val add = Button(this).apply { text = "Add"; setOnClickListener { returnCard(pendingNumber) } }
-        btnRow.addView(rescan, LinearLayout.LayoutParams(0, -2, 1f))
-        btnRow.addView(add, LinearLayout.LayoutParams(0, -2, 1f))
-        panel.addView(nameText); panel.addView(collText); panel.addView(btnRow)
-        val pl = FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM).apply { setMargins(dp(16), 0, dp(16), dp(28)) }
-        root.addView(panel, pl)
-
         setContentView(root)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -117,18 +93,12 @@ class ScannerActivity : ComponentActivity() {
         else permLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    private fun returnCard(num: String?) {
-        if (num.isNullOrEmpty()) return
-        setResult(RESULT_OK, Intent().putExtra("card", num))
-        finish()
-    }
-
-    private fun onMatch(number: String, name: String) {
+    private fun returnCard(num: String) {
+        if (handled) return
+        handled = true
         runOnUiThread {
-            pendingNumber = number
-            nameText.text = name
-            collText.text = if (collectionName.isNotEmpty()) "Add to “$collectionName”" else "Add to your collection"
-            panel.visibility = View.VISIBLE
+            setResult(RESULT_OK, Intent().putExtra("card", num))
+            finish()
         }
     }
 
@@ -141,15 +111,15 @@ class ScannerActivity : ComponentActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
             analysis.setAnalyzer(exec) { proxy ->
                 val media = proxy.image
-                if (media == null || paused) { proxy.close(); return@setAnalyzer }
+                if (media == null || handled) { proxy.close(); return@setAnalyzer }
                 val input = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
                 recognizer.process(input)
                     .addOnSuccessListener { result ->
-                        if (paused) return@addOnSuccessListener
+                        if (handled) return@addOnSuccessListener
                         for (block in result.textBlocks) {
                             val num = extractCardNumber(block.text) ?: continue
                             val card = store.resolve(num)
-                            if (card != null) { paused = true; onMatch(card.number, card.name); break }
+                            if (card != null) { returnCard(card.number); break }
                             break
                         }
                     }
