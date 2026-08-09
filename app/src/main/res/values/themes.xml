@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window/launch theme. The UI itself is themed by Compose (MaterialTheme);
+         this only needs to give the Activity a no-action-bar window. -->
+    <style name="Theme.SphereDex" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
