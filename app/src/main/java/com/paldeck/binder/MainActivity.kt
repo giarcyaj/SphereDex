@@ -104,11 +104,22 @@ class MainActivity : ComponentActivity() {
         })
     }
 
+    private fun launchScanner(collection: String) {
+        scanLauncher.launch(Intent(this, ScannerActivity::class.java).putExtra("collection", collection))
+    }
+
     /** Exposed to the web app as window.AndroidScan */
     inner class WebBridge {
         @JavascriptInterface
         fun scan() {
-            runOnUiThread { scanLauncher.launch(Intent(this@MainActivity, ScannerActivity::class.java)) }
+            runOnUiThread {
+                // Read which collection a scan will go to, then open the camera.
+                web.evaluateJavascript("(window.SDActiveCollection && window.SDActiveCollection()) || ''") { raw ->
+                    val name = raw?.trim()?.removeSurrounding("\"")?.replace("\\\"", "\"")
+                        ?.takeIf { it.isNotEmpty() && it != "null" } ?: ""
+                    runOnUiThread { launchScanner(name) }
+                }
+            }
         }
     }
 }

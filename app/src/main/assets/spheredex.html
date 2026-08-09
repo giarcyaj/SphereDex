@@ -613,6 +613,22 @@
   .askbtns .ok{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .askbtns .ok.danger{ background:var(--el-Fire); border-color:var(--el-Fire); }
 
+  /* Detail modal: wishlist/collection toggles + sections + graded guide */
+  .detactions{ display:flex; gap:10px; margin:14px 0 4px; }
+  .detact{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 12px; border-radius:12px; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-faint); font-family:var(--font-display); font-weight:700; font-size:.9rem; cursor:pointer; transition:.14s; }
+  .detact .ic{ width:1.2rem; height:1.2rem; margin:0; }
+  .detact:hover{ color:var(--ink); }
+  .detact.on.wish{ color:var(--r-RR); border-color:var(--r-RR); background:color-mix(in srgb,var(--r-RR) 12%,transparent); }
+  .detact.on.coll{ color:var(--accent-ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .dsec{ font-family:var(--font-display); font-weight:750; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:20px 0 10px; padding-bottom:6px; border-bottom:1.5px solid var(--line); }
+  .salesavg{ font-size:.84rem; color:var(--ink-soft); margin-top:8px; }
+  .gradeguide{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
+  .ggnote{ grid-column:1/-1; font-size:.8rem; color:var(--ink-faint); margin-bottom:4px; }
+  .ggrow{ display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:6px 10px; }
+  .ggr{ flex:1; font-family:var(--font-mono); font-size:.82rem; color:var(--ink-soft); }
+  .ggv{ width:74px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:8px; padding:5px 7px; color:var(--ink); font-family:var(--font-mono); font-size:.82rem; }
+  .ggv:focus{ outline:none; border-color:var(--accent); }
+
   /* Contact page */
   .ctopics{ display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; }
   .ctopic{ display:flex; align-items:center; gap:10px; text-align:left; padding:13px 15px; border-radius:14px; border:2px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer; font-family:var(--font-display); font-weight:700; font-size:.94rem; transition:transform .14s, border-color .14s, box-shadow .14s; }
@@ -626,7 +642,7 @@
 
   /* Collector mode — hide every price / value surface */
   .collector .priceui{ display:none !important; }
-  .collector #portfolioCard, .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval{ display:none !important; }
+  .collector #portfolioCard, .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval, .collector #curSel{ display:none !important; }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
 </style>
@@ -683,17 +699,18 @@
 
   <nav class="tabs" id="tabs">
     <button class="tab active" data-page="home">Home</button>
+    <button class="tab" data-page="scan">Quick Add</button>
     <button class="tab" data-page="collection">Collection</button>
-    <button class="tab" data-page="rewards">Rewards</button>
-    <button class="tab" data-page="decks">Decks</button>
+    <button class="tab" data-page="graded">Graded</button>
     <button class="tab" data-page="sealed">Sealed</button>
     <button class="tab" data-page="releases">Releases</button>
     <button class="tab" data-page="news">News</button>
     <button class="tab" data-page="key">Key</button>
-    <button class="tab" data-page="scan">Quick Add</button>
     <button class="tab" data-page="settings">Settings</button>
     <button class="tab" data-page="account">Account</button>
     <button class="tab" data-page="contact">Contact</button>
+    <button class="tab" data-page="rewards">Rewards</button>
+    <button class="tab" data-page="decks">Decks</button>
   </nav>
 
   <section class="page active" id="page-home">
@@ -719,6 +736,12 @@
     <p class="rwintro">Each rarity powers up its own Pal Sphere as you complete it — Pal → Mega → Giga → Hyper → Ultra. Collect every card of a rarity to claim its <b>Legendary Sphere</b>.</p>
     <div class="rewardgrid" id="rewardGrid"></div>
     <div class="rwcap" id="rewardCap"></div>
+  </section>
+
+  <section class="page" id="page-graded">
+    <h2 class="sech">Graded</h2>
+    <p class="qsub" id="gradedNote"></p>
+    <div class="grid cols-3" id="gradedGrid"></div>
   </section>
 
   <section class="page" id="page-collection">
@@ -772,6 +795,7 @@
         <option value="binder12">View · 12-pocket binder</option>
       </select>
       <button class="tbtn" id="filterBtn" aria-expanded="false">⌕ Filters<span class="fcount" id="filterCount" hidden>0</span></button>
+      <button class="tbtn ghost" id="fadeToggle" type="button" title="Fade uncollected cards"></button>
     </div>
     <div class="filterpanel" id="filterPanel" hidden>
       <div class="chiprow" id="setChips"><span class="grouplab">Set</span></div>
@@ -905,6 +929,10 @@
           <option value="it">Italy (ebay.it)</option>
           <option value="es">Spain (ebay.es)</option>
         </select>
+      </div>
+      <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Default grading company</div><div class="sdesc">Shown as the default on the graded price guide and when adding graded slabs.</div></div>
+        <select class="sortsel" id="setGrader"></select>
       </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Cloud server URL <span class="betatag">beta</span></div><div class="sdesc">Your deployed SphereDex backend (e.g. https://palvault-backend.you.workers.dev). Enables the Account tab’s sign-in &amp; sync. Leave blank to stay fully offline.</div></div>
@@ -1084,7 +1112,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:""};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:"",defaultGrader:"PSA"};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1260,11 +1288,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="crow">'+elTags+'<span class="colorpip">'+c.color.slice(0,3)+'</span></div>'+
         '<div class="cstats">'+statsInner+'</div>'+
       '</div>'+
-      '<div class="cardfoot">'+
+      '<div class="cardfoot iconfoot">'+
         (owned
           ? (s.qty>0?'<div class="qty"><button class="minus" aria-label="Remove one">–</button><span>'+s.qty+'</span><button class="plus" aria-label="Add one">+</button></div>':'')
-          : '<button class="wishbtn'+(wished?' on':'')+'" title="'+(wished?'Remove from wishlist':'Add to wishlist')+'">'+icon(wished?'starf':'star')+' Wishlist</button>')+
-        '<button class="ownbtn">'+(owned?icon('check')+' Collected':icon('plus')+' Collect')+'</button>'+
+          : '<button class="wishbtn'+(wished?' on':'')+'" aria-label="'+(wished?'Remove from wishlist':'Add to wishlist')+'" title="'+(wished?'Remove from wishlist':'Add to wishlist')+'">'+icon(wished?'starf':'star')+'</button>')+
+        '<button class="ownbtn" aria-label="'+(owned?'Collected — edit':'Add to collection')+'" title="'+(owned?'Collected — edit':'Add to collection')+'">'+(owned?icon('check'):icon('plus'))+'</button>'+
       '</div>';
     var wb=el.querySelector(".wishbtn");
     if (wb) wb.addEventListener("click", function(ev){ ev.stopPropagation(); toggleWish(c.id); save(); render(); buildColSel(); });
@@ -1345,33 +1373,47 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       '<h2 id="mTitle">'+esc(c.name)+'</h2>'+
       '<div class="mtags">'+elTags+'<span class="eltag" style="background:'+colVar(c.color)+'">'+c.color+'</span>'+
         '<span class="eltag" style="background:'+rareVar(c.rare)+';color:#fff">'+c.rare+'</span></div>'+
+      '<div class="detactions"><button class="detact" id="detWish" type="button"></button><button class="detact" id="detColl" type="button"></button></div>'+
       (statBoxes.length?'<div class="statline">'+statBoxes.join("")+'</div>':'')+
       kv+
       promoContext(c)+
       '<div class="meditor">'+
+      '<h3 class="dsec">Collection</h3>'+
       '<div class="fieldrow">'+
         '<div class="field"><label>Raw copies</label><input id="fQty" type="number" min="0" value="'+s.qty+'"></div>'+
         '<div class="field"><label>Condition</label><select id="fCond">'+
           ["Near Mint","Lightly Played","Moderately Played","Heavily Played","Damaged"].map(function(x){return '<option'+(x===s.cond?' selected':'')+'>'+x+'</option>';}).join("")+
         '</select></div>'+
-        '<div class="field priceui"><label>Market '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
+        '<div class="field priceui"><label>Value each '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
       '</div>'+
-      '<div class="fieldrow priceui">'+
-        '<div class="field"><label>Last sold '+CUR.sym+'</label><input id="fLast" type="number" min="0" step="0.01" value="'+(s.last||0)+'"></div>'+
-        '<div class="field"><label>Avg sold (last 5) '+CUR.sym+'</label><input id="fAvg" type="number" readonly value="'+(s.avg||0)+'" title="Average of your last five recorded sales" style="opacity:.85"></div>'+
-      '</div>'+
-      '<div class="graded priceui"><div class="glabel"><span>Recent eBay sales</span><span style="display:flex;gap:8px">'+
-        '<button class="addgrade" id="pullEbay" type="button" hidden>'+icon('refresh')+' Pull from eBay</button>'+
-        '<button class="addgrade" id="addSale" type="button">+ Add sale</button></span></div>'+
+      '<div class="graded"><div class="glabel"><span>Graded copies</span><button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></div><div id="gradeList"></div></div>'+
+
+      '<h3 class="dsec priceui">Recent sales</h3>'+
+      '<div class="graded priceui"><div class="glabel"><span>Last 10 sold '+(SETTINGS.priceSource&&SETTINGS.priceSource!=="manual"?'· '+esc(SETTINGS.priceSource):'')+'</span><span style="display:flex;gap:8px">'+
+        '<button class="addgrade" id="pullEbay" type="button" hidden>'+icon('refresh')+' Pull</button>'+
+        '<button class="addgrade" id="addSale" type="button">'+icon('plus')+' Add</button></span></div>'+
         '<div id="salesList"></div>'+
+        '<div class="salesavg" id="salesAvg"></div>'+
         '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a></div>'+
-      '<div class="graded"><div class="glabel"><span>Graded copies</span><button class="addgrade" id="addGrade" type="button">+ Add slab</button></div><div id="gradeList"></div></div>'+
-      '<div class="field"><label>Notes</label><textarea id="fNotes" placeholder="Trade, alt-art pull, cert number…">'+esc(s.notes||"")+'</textarea></div>'+
-      '<label class="field" style="flex-direction:row;align-items:center;gap:8px;cursor:pointer"><input id="fWish" type="checkbox" '+(isWished(c.id)?'checked':'')+' style="width:auto"> <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink)">On my wishlist</span></label>'+
+      '<input type="hidden" id="fLast"><input type="hidden" id="fAvg">'+
+
+      '<h3 class="dsec priceui">Graded price guide</h3>'+
+      '<div class="gradeguide priceui" id="gradeGuide"></div>'+
+
+      '<h3 class="dsec">Notes</h3>'+
+      '<textarea id="fNotes" class="ctmsg" style="min-height:80px" placeholder="Trade, alt-art pull, cert number…">'+esc(s.notes||"")+'</textarea>'+
+
       '<div class="valsum"><span>Card value <span id="sumBreak" style="color:var(--ink-faint)"></span></span><b id="sumVal">$0</b></div>'+
-      '<div class="mfoot"><button class="btn primary" id="fSave">Save</button>'+
-        '<a class="extlink" href="https://en.palworld-official-cardgame.com/cardlist/searchresults?expansion=EBP01" target="_blank" rel="noopener">Official card &amp; rules ↗</a></div>'+
+      '<div class="mfoot"><button class="btn primary" id="fSave">Save</button></div>'+
       '</div>';
+    function paintDetActions(){
+      var w=$("detWish"), b=$("detColl"); var wished=isWished(c.id), owned=has(o(c.id));
+      if(w){ w.className="detact"+(wished?" on wish":""); w.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
+      if(b){ b.className="detact"+(owned?" on coll":""); b.innerHTML=icon('book')+'<span>'+(owned?'In collection':'Add to collection')+'</span>'; }
+    }
+    paintDetActions();
+    $("detWish").onclick=function(){ toggleWish(c.id); save(); paintDetActions(); render(); buildColSel(); };
+    $("detColl").onclick=function(){ var e=o(c.id); e.qty=Math.max(1,(e.qty||0)+1); save(); var q=$("fQty"); if(q) q.value=e.qty; paintDetActions(); render(); if(typeof updateSum==="function") updateSum(); };
     $("mClose").onclick = closeModal;
     var mf=$("mMain").querySelector(".martflo");
     if(mf) mf.addEventListener("click", function(ev){ if(ev.target.closest(".mclose")) return; openLightbox(c); });
@@ -1400,14 +1442,23 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       var parts=[]; if(q) parts.push(q+" raw"); if(gwork.length) parts.push(gwork.length+" graded");
       $("sumBreak").textContent=parts.length?"("+parts.join(" · ")+")":"";
     }
-    $("addGrade").onclick=function(){ gwork.push({grader:"PSA",grade:"10",value:0}); renderGrades(); updateSum(); };
+    $("addGrade").onclick=function(){ gwork.push({grader:(SETTINGS.defaultGrader||"PSA"),grade:"10",value:0}); renderGrades(); updateSum(); };
     $("fQty").oninput=updateSum; $("fMkt").oninput=updateSum;
     renderGrades(); updateSum();
 
     // ---- Recent eBay sales (avg of last 5) ----
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
     function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
-    function refreshAvg(){ var a=avgLast5(salesWork); $("fAvg").value = a? a.toFixed(2) : 0; }
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; }
+    // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
+    function renderGradeGuide(){
+      var host=$("gradeGuide"); if(!host) return;
+      var guide=s.gradeGuide||{}; var grader=SETTINGS.defaultGrader||"PSA";
+      host.innerHTML='<div class="ggnote">Average of the last 5 <b>'+esc(grader)+'</b> sold at each grade. Enter what you know; live per-grade data fills these once a graded-sales feed is connected.</div>'+
+        GRADES.map(function(gr){ return '<label class="ggrow"><span class="ggr">'+esc(grader)+' '+esc(gr)+'</span><input class="ggv" data-grade="'+esc(gr)+'" type="number" min="0" step="0.01" placeholder="'+CUR.sym+'" value="'+(guide[gr]!=null?guide[gr]:"")+'"></label>'; }).join("");
+      Array.prototype.forEach.call(host.querySelectorAll(".ggv"), function(inp){ inp.oninput=function(){ if(!s.gradeGuide) s.gradeGuide={}; var v=parseFloat(this.value); if(isNaN(v)) delete s.gradeGuide[this.getAttribute("data-grade")]; else s.gradeGuide[this.getAttribute("data-grade")]=v; }; });
+    }
+    renderGradeGuide();
     function renderSales(){
       var host=$("salesList"); if(!host) return; host.innerHTML="";
       salesWork.forEach(function(sale,i){
@@ -1446,10 +1497,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
 
     $("fSave").onclick = function(){
       s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
-      s.mkt=parseFloat($("fMkt").value)||0; s.last=parseFloat($("fLast").value)||0;
+      s.mkt=parseFloat($("fMkt").value)||0;
       s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||""}; });
       s.avg=avgLast5(salesWork);
-      s.notes=$("fNotes").value; if($("fWish").checked) STATE.wishlist[c.id]=true; else delete STATE.wishlist[c.id];
+      s.notes=$("fNotes").value;
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
       save(); render(); buildColSel(); closeModal(); toast(c.name+" updated");
     };
@@ -1745,7 +1796,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     Array.prototype.forEach.call(document.querySelectorAll(".page"), function(el){ el.classList.toggle("active", el.id==="page-"+p); });
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){ el.classList.toggle("active", el.getAttribute("data-page")===p); });
     window.scrollTo(0,0);
-    if (p==="scan") { var qi=$("qInput"); if(qi) qi.focus(); }
+    if (p==="graded") renderGradedPage();
     if (p==="sealed") renderSealed();
     if (p==="decks") renderDecks();
     if (p==="account") renderAccount();
@@ -1766,6 +1817,14 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     Array.prototype.forEach.call(host.querySelectorAll(".ctopic"), function(b){ b.onclick=function(){ ctTopic=b.getAttribute("data-topic"); renderContact(); }; });
   }
   function ctStatus(msg, bad){ var el=$("ctStatus"); if(!el) return; el.hidden=false; el.textContent=msg; el.className="ctstatus"+(bad?" bad":" ok"); }
+  // ---- Graded page: cards you own graded slabs of (in the active collection) ----
+  function renderGradedPage(){
+    var host=$("gradedGrid"), note=$("gradedNote"); if(!host) return;
+    var owned=CARDS.filter(function(c){ var e=o(c.id); return e.graded && e.graded.length>0; });
+    if(note) note.textContent = owned.length ? (owned.length+(owned.length===1?" card":" cards")+" with graded slabs in “"+activeCol().name+"”.") : "No graded slabs yet — open a card, then Collection → Graded copies → Add slab.";
+    host.innerHTML="";
+    owned.forEach(function(c){ host.appendChild(cardEl(c)); });
+  }
   function contactSend(){
     var msg=(($("ctMsg")||{}).value||"").trim();
     if(msg.length<2){ ctStatus("Please write a message first.", true); return; }
@@ -2172,6 +2231,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       return true;
     }catch(e){ return false; }
   };
+  // Native camera reads this to show which collection a scan will go to.
+  window.SDActiveCollection = function(){ try{ return activeCol().name || ""; }catch(e){ return ""; } };
   // Show the camera-scan button only when running inside the native app shell.
   (function(){
     var b=$("nativeScanBtn"); if(!b) return;
@@ -2213,6 +2274,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var md=$("setModeSel"); if(md){ md.value=SETTINGS.mode||"trader"; md.onchange=function(){ SETTINGS.mode=md.value; saveSettings(); applyMode(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); }; }
+    var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); };
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
@@ -2312,6 +2374,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   renderAccount();
   renderContact();
   var ctb=$("ctSend"); if(ctb) ctb.onclick=contactSend;
+  var ftg=$("fadeToggle");
+  function paintFade(){ if(!ftg) return; ftg.textContent=SETTINGS.noFade?"Fade: off":"Fade: on"; ftg.classList.toggle("on", !SETTINGS.noFade); }
+  if(ftg){ paintFade(); ftg.onclick=function(){ SETTINGS.noFade=!SETTINGS.noFade; saveSettings(); paintFade(); render(); var nf=$("setNoFade"); if(nf) nf.checked=!!SETTINGS.noFade; }; }
   // Store links are placeholders until the apps are published.
   ["playLink","iosLink"].forEach(function(id){ var a=$(id); if(a) a.onclick=function(e){ e.preventDefault(); toast("Mobile apps coming soon — you're on the web app"); }; });
   maybeOnboard();
