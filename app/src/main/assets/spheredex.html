@@ -1084,7 +1084,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:""};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:""};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1756,7 +1756,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
   // Cloud server URL from Settings; set this to your deployed Worker so feedback always reaches you.
-  var CONTACT_ENDPOINT="";
+  var CONTACT_ENDPOINT="https://spheredex-backend.craigjayedit.workers.dev";
   function contactBase(){ return (CONTACT_ENDPOINT||apiBase()||"").replace(/\/+$/,""); }
   var CT_TOPICS=[{k:"Feature request",i:"star"},{k:"Report a bug",i:"bug"},{k:"Help — how do I…",i:"life"},{k:"General feedback",i:"mail"}];
   var ctTopic=CT_TOPICS[0].k;
