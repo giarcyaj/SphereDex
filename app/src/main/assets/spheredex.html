@@ -45,9 +45,14 @@
   .wrap { max-width:1260px; margin:0 auto; padding:22px 20px 90px; }
 
   /* Masthead */
-  header.mast { display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px 24px; padding-bottom:18px;
+  header.mast { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; padding:6px 0 18px;
     margin-bottom:20px; border-bottom:2px solid var(--line-strong); }
-  .brand { display:flex; align-items:center; gap:14px; }
+  .stores { position:absolute; top:0; right:0; display:flex; gap:6px; }
+  .storebtn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; border:1.5px solid var(--line); color:var(--ink-faint); text-decoration:none; opacity:.7; transition:opacity .15s, color .15s, border-color .15s; }
+  .storebtn:hover { opacity:1; color:var(--ink); border-color:var(--line-strong); }
+  .storebtn .ic { width:16px; height:16px; margin:0; }
+  .brand { display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .brandtext { text-align:center; }
   .sigil { width:54px; height:54px; flex:none; filter:drop-shadow(0 8px 16px rgba(0,0,0,.35)); }
   .sigil svg { width:100%; height:100%; display:block; }
   .brand h1 { font-family:var(--font-display); font-weight:800; margin:0; letter-spacing:-.02em; line-height:.95;
@@ -55,8 +60,7 @@
   .brand .sub { margin:5px 0 0; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; }
   .ver { font-family:var(--font-mono); font-size:.32em; font-weight:500; color:var(--ink-faint); background:none; padding:0; letter-spacing:.03em; vertical-align:super; margin-left:6px; opacity:.8; }
   .betatag { font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 18%,transparent); padding:2px 7px; border-radius:20px; margin-left:6px; vertical-align:middle; }
-  .mast .spacer { flex:1 1 30px; }
-  .toolbtns { display:flex; gap:8px; flex-wrap:wrap; }
+  .toolbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   .tbtn { border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:11px;
     padding:9px 13px; font-size:.82rem; font-weight:650; display:inline-flex; align-items:center; gap:7px; transition:.15s; }
   .tbtn:hover { border-color:var(--accent); color:var(--accent-ink); transform:translateY(-1px); }
@@ -102,6 +106,14 @@
   .graderow select, .graderow input { background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:9px; padding:7px 8px; color:var(--ink); font-size:.82rem; font-family:inherit; }
   .graderow .gg { flex:0 0 74px; } .graderow .gv { flex:1; min-width:0; }
   .graderow .grm { border:none; background:transparent; color:var(--el-Fire); font-size:1rem; width:26px; flex:none; cursor:pointer; }
+  .salerow { display:flex; gap:7px; align-items:center; margin-bottom:6px; }
+  .salerow input { background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:9px; padding:7px 8px; color:var(--ink); font-size:.82rem; font-family:inherit; }
+  .salerow .sPrice { flex:0 0 92px; font-family:var(--font-mono); } .salerow .sUrl { flex:1; min-width:0; }
+  .salerow .sview { flex:none; width:26px; text-align:center; text-decoration:none; color:var(--accent-ink); font-weight:800; }
+  .salerow .sview.off { color:var(--ink-faint); opacity:.4; }
+  .salerow .grm { border:none; background:transparent; color:var(--el-Fire); font-size:1rem; width:26px; flex:none; cursor:pointer; }
+  .ebaysearch { display:inline-block; margin-top:4px; font-size:.82rem; font-weight:650; color:var(--accent-ink); text-decoration:none; }
+  .ebaysearch:hover { text-decoration:underline; }
   .valsum { font-size:.85rem; color:var(--ink-soft); background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
   .valsum b { font-family:var(--font-mono); font-size:1.05rem; color:var(--ink); font-weight:600; }
 
@@ -164,6 +176,9 @@
   .fallback .kindtag { position:absolute; bottom:8px; left:0; right:0; text-align:center; z-index:1;
     font-size:.6rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.9); }
   .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; background:var(--surface-2); }
+  /* Landscape (Structure) cards: rotate 90° to fill the 63/88 portrait frame.
+     139.68% = 88/63 (= frame height as a % of width); 71.59% = 63/88 (= frame width as a % of height). */
+  .art img.land { inset:auto; top:50%; left:50%; width:139.68%; height:71.59%; transform:translate(-50%,-50%) rotate(90deg); background:transparent; }
   .art img.failed { display:none; }
   .num { position:absolute; top:8px; left:9px; z-index:3; font-family:var(--font-mono); font-size:.66rem; font-weight:600;
     color:#fff; background:rgba(0,0,0,.42); padding:2px 6px; border-radius:20px; backdrop-filter:blur(2px); }
@@ -188,7 +203,8 @@
     display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:.13s; }
   .ownbtn:hover { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent-ink); }
   .card:not(.locked) .ownbtn { color:var(--accent-ink); }
-  .wishbtn { flex:1; border:none; border-left:1.5px solid var(--line); background:transparent; padding:8px; font-size:.78rem;
+  .cardfoot > .ownbtn:not(:first-child) { border-left:1.5px solid var(--line); }
+  .wishbtn { flex:1; border:none; background:transparent; padding:8px; font-size:.78rem;
     font-weight:700; color:var(--ink-soft); display:inline-flex; align-items:center; justify-content:center; gap:5px; transition:.13s; }
   .wishbtn:hover { background:color-mix(in srgb, var(--r-RR) 16%, transparent); color:var(--r-RR); }
   .wishbtn.on { color:var(--r-RR); }
@@ -264,9 +280,10 @@
 
   @media (max-width:760px){ .dash{ grid-template-columns:1fr 1fr; } .dash .xpwrap{ grid-column:1/-1; } }
   /* ---- Navigation + pages ---- */
-  .tabs { display:flex; gap:4px; border-bottom:2px solid var(--line-strong); margin-bottom:24px; flex-wrap:wrap; }
-  .tab { border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700;
-    font-size:1rem; padding:10px 15px 12px; border-bottom:3px solid transparent; margin-bottom:-2px; transition:.14s; border-radius:9px 9px 0 0; }
+  .tabs { display:flex; gap:2px; border-bottom:2px solid var(--line-strong); margin-bottom:24px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700; white-space:nowrap; flex:none;
+    font-size:1rem; padding:10px 14px 12px; border-bottom:3px solid transparent; margin-bottom:-2px; transition:.14s; border-radius:9px 9px 0 0; }
   .tab:hover { color:var(--ink); background:color-mix(in srgb,var(--accent) 9%,transparent); }
   .tab.active { color:var(--accent-ink); border-bottom-color:var(--accent); }
   .page { display:none; }
@@ -292,6 +309,9 @@
   .herostats .hs .n { font-family:var(--font-mono); font-size:1.5rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1; }
   .herostats .hs .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .hero .xpbar { margin-top:18px; }
+  .rankcard { display:flex; flex-direction:column; gap:8px; align-items:flex-start; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; padding:16px 18px; }
+  .rankcard .rankbadge { margin-top:0; font-size:1rem; padding:8px 16px 8px 11px; }
+  .rankmeta { font-family:var(--font-mono); font-size:.8rem; color:var(--ink-soft); }
   .rankbadge { display:inline-flex; align-items:center; gap:8px; margin-top:11px; font-family:var(--font-display); font-weight:700;
     font-size:.85rem; padding:6px 13px 6px 9px; border-radius:20px; color:var(--ink);
     border:1.5px solid color-mix(in srgb, var(--rc,var(--accent)) 55%, var(--line-strong));
@@ -371,6 +391,10 @@
   .qinput { width:100%; background:var(--surface); border:2px solid var(--line-strong); border-radius:14px; padding:16px 18px;
     color:var(--ink); font-family:var(--font-mono); font-size:1.1rem; outline:none; box-sizing:border-box; }
   .qinput:focus { border-color:var(--accent); }
+  .scanbtn { width:100%; margin-bottom:12px; padding:15px 18px; border-radius:14px; border:0; cursor:pointer;
+    background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000)); color:#fff;
+    font-family:var(--font-display); font-weight:750; font-size:1.02rem; letter-spacing:-.01em; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  .scanbtn:active { transform:translateY(1px); }
   .qhint { font-size:.82rem; color:var(--ink-faint); margin-top:9px; min-height:1.2em; }
   .qhint.ok { color:var(--accent-ink); } .qhint.bad { color:var(--el-Fire); }
   .qrecent { display:flex; flex-direction:column; gap:8px; margin-top:22px; }
@@ -548,11 +572,71 @@
   .cels { color:rgba(255,255,255,.82); font-size:.94rem; margin-top:4px; }
   @keyframes celspin { 0%{ transform:rotate(-14deg) scale(.6); } 55%{ transform:rotate(8deg) scale(1.08); } 100%{ transform:rotate(0) scale(1); } }
 
+  /* First-run onboarding */
+  .onboard{ position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; overflow:auto;
+    background:radial-gradient(120% 90% at 50% -10%, rgba(63,127,224,.22), transparent 60%), rgba(6,8,13,.92); backdrop-filter:blur(6px); }
+  .onboard[hidden]{ display:none; }
+  .obcard{ width:100%; max-width:440px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:22px; padding:26px 24px 22px; text-align:center; box-shadow:var(--shadow); }
+  .oblogo{ width:84px; height:84px; margin:0 auto 12px; filter:drop-shadow(0 8px 22px rgba(63,127,224,.4)); }
+  .oblogo svg{ width:100%; height:100%; display:block; }
+  .obh{ font-family:var(--font-display); font-weight:800; font-size:1.6rem; letter-spacing:-.02em; margin:0 0 6px; }
+  .obsub{ color:var(--ink-soft); font-size:.92rem; margin:0 0 18px; text-wrap:pretty; }
+  .oblabel{ display:block; text-align:left; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:6px; }
+  .oblabel span{ font-weight:500; text-transform:none; letter-spacing:0; }
+  .obinput{ width:100%; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:12px 14px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; margin-bottom:18px; }
+  .obinput:focus{ outline:none; border-color:var(--accent); }
+  .obchoices{ display:grid; gap:12px; }
+  .obchoice{ display:grid; gap:3px; text-align:left; padding:15px 16px; border-radius:16px; border:2px solid var(--line-strong); background:var(--surface-2); color:var(--ink); cursor:pointer; transition:transform .14s, border-color .14s, box-shadow .14s; }
+  .obchoice:hover{ border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
+  .obicon{ font-size:1.5rem; }
+  .obt{ font-family:var(--font-display); font-weight:750; font-size:1.05rem; }
+  .obd{ color:var(--ink-soft); font-size:.84rem; line-height:1.4; }
+  .obnote{ color:var(--ink-faint); font-size:.78rem; margin-top:14px; }
+
+  /* Inline icon system (replaces emoji) */
+  .ic{ width:1.05em; height:1.05em; display:inline-block; vertical-align:-0.16em; flex:none; }
+  .ic:not(:only-child){ margin-right:.4em; }
+  .ic.lg{ width:1.35em; height:1.35em; }
+  .obicon .ic{ width:1.7rem; height:1.7rem; color:var(--accent-ink); }
+
+  /* Ask / confirm modal */
+  .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
+  .askscrim[hidden]{ display:none; }
+  .askbox{ width:100%; max-width:380px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:18px; padding:20px; box-shadow:var(--shadow); }
+  .askbox h3{ font-family:var(--font-display); font-weight:750; font-size:1.15rem; margin:0 0 4px; }
+  .askbox p{ color:var(--ink-soft); font-size:.88rem; margin:0 0 14px; }
+  .askbox input{ width:100%; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:11px 13px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; margin-bottom:16px; }
+  .askbox input:focus{ outline:none; border-color:var(--accent); }
+  .askbtns{ display:flex; gap:9px; justify-content:flex-end; }
+  .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; }
+  .askbtns .ok{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .askbtns .ok.danger{ background:var(--el-Fire); border-color:var(--el-Fire); }
+
+  /* Contact page */
+  .ctopics{ display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; }
+  .ctopic{ display:flex; align-items:center; gap:10px; text-align:left; padding:13px 15px; border-radius:14px; border:2px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer; font-family:var(--font-display); font-weight:700; font-size:.94rem; transition:transform .14s, border-color .14s, box-shadow .14s; }
+  .ctopic .ic{ width:1.2rem; height:1.2rem; color:var(--accent-ink); }
+  .ctopic:hover{ transform:translateY(-2px); border-color:var(--accent); box-shadow:var(--shadow); }
+  .ctopic.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+  .ctmsg{ width:100%; min-height:130px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:13px 15px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; resize:vertical; margin-top:6px; }
+  .ctmsg:focus{ outline:none; border-color:var(--accent); }
+  .ctstatus{ margin-top:12px; font-size:.9rem; font-weight:600; }
+  .ctstatus.ok{ color:var(--accent-ink); } .ctstatus.bad{ color:var(--el-Fire); }
+
+  /* Collector mode — hide every price / value surface */
+  .collector .priceui{ display:none !important; }
+  .collector #portfolioCard, .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval{ display:none !important; }
+
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
 </style>
 
 <div class="wrap">
   <header class="mast">
+    <div class="stores">
+      <a class="storebtn" id="playLink" href="#" data-icon="play" title="Get it on Google Play — coming soon" aria-label="Google Play"></a>
+      <a class="storebtn" id="iosLink" href="#" data-icon="apple" title="Download on the App Store — coming soon" aria-label="App Store"></a>
+    </div>
     <div class="brand">
       <div class="sigil">
         <svg viewBox="0 0 100 100" role="img" aria-label="SphereDex">
@@ -576,21 +660,20 @@
           <path d="M73 28 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5 z" fill="#ffffff" opacity="0.9"/>
         </svg>
       </div>
-      <div>
-        <h1>SphereDex <span class="ver">v0.9 · beta</span></h1>
+      <div class="brandtext">
+        <h1>SphereDex <span class="ver">v0.9</span> <span class="betatag">beta</span></h1>
         <p class="sub">Palworld TCG collection tracker</p>
       </div>
     </div>
-    <div class="spacer"></div>
     <div class="toolbtns">
       <div class="colwrap">
         <select class="tbtn" id="colSel" title="Active collection" aria-label="Active collection"></select>
         <button class="tbtn ghost" id="colMenuBtn" title="Manage collections" aria-label="Manage collections">⋯ Manage</button>
         <div class="colmenu" id="colMenu" hidden>
-          <button data-act="new">＋ New collection</button>
-          <button data-act="rename">✎ Rename</button>
-          <button data-act="dupe">⧉ Duplicate</button>
-          <button data-act="delete">🗑 Delete</button>
+          <button data-act="new" data-icon="plus">New collection</button>
+          <button data-act="rename" data-icon="pencil">Rename</button>
+          <button data-act="dupe" data-icon="copy">Duplicate</button>
+          <button data-act="delete" data-icon="trash">Delete</button>
         </div>
       </div>
       <select class="tbtn" id="curSel" title="Display currency" aria-label="Display currency"></select>
@@ -601,6 +684,7 @@
   <nav class="tabs" id="tabs">
     <button class="tab active" data-page="home">Home</button>
     <button class="tab" data-page="collection">Collection</button>
+    <button class="tab" data-page="rewards">Rewards</button>
     <button class="tab" data-page="decks">Decks</button>
     <button class="tab" data-page="sealed">Sealed</button>
     <button class="tab" data-page="releases">Releases</button>
@@ -609,23 +693,29 @@
     <button class="tab" data-page="scan">Quick Add</button>
     <button class="tab" data-page="settings">Settings</button>
     <button class="tab" data-page="account">Account</button>
+    <button class="tab" data-page="contact">Contact</button>
   </nav>
 
   <section class="page active" id="page-home">
     <div class="hero">
       <div class="herohead">
-        <div><div class="herotitle" id="heroPct">0%</div><div class="herosub" id="heroSub">of all cards · every set</div><div class="rankbadge" id="heroRank"></div></div>
+        <div><div class="herotitle" id="heroPct">0%</div><div class="herosub" id="heroSub">of all cards · every set</div></div>
         <div class="herostats" id="heroStats"></div>
       </div>
       <div class="xpbar"><div class="xpfill" id="heroFill" style="width:0"></div></div>
-      <div class="trophyrow" id="trophyRow" hidden></div>
     </div>
     <div class="pcard" id="portfolioCard"></div>
-    <h2 class="sech">Trending card</h2>
-    <div id="trendCard" style="margin-bottom:26px"></div>
+    <div class="priceui"><h2 class="sech">Trending card</h2>
+    <div id="trendCard" style="margin-bottom:26px"></div></div>
     <h2 class="sech">Browse by set</h2>
     <div class="setbrowse" id="setBrowse"></div>
-    <h2 class="sech">Rarity rewards</h2>
+  </section>
+
+  <section class="page" id="page-rewards">
+    <h2 class="sech">Rewards</h2>
+    <div class="rankcard" id="rewardRank"></div>
+    <div class="trophyrow" id="trophyRow" hidden></div>
+    <h2 class="sech" style="margin-top:26px">Rarity spheres</h2>
     <p class="rwintro">Each rarity powers up its own Pal Sphere as you complete it — Pal → Mega → Giga → Hyper → Ultra. Collect every card of a rarity to claim its <b>Legendary Sphere</b>.</p>
     <div class="rewardgrid" id="rewardGrid"></div>
     <div class="rwcap" id="rewardCap"></div>
@@ -703,9 +793,9 @@
       <h2 class="sech" style="margin:0">Decks</h2>
       <div class="deckctrls">
         <select class="sortsel" id="deckSel" aria-label="Active deck"></select>
-        <button class="tbtn" id="deckNew">＋ New</button>
-        <button class="tbtn ghost" id="deckRename" title="Rename deck">✎ Rename</button>
-        <button class="tbtn ghost" id="deckDelete" title="Delete deck">🗑 Delete</button>
+        <button class="tbtn" id="deckNew" data-icon="plus">New</button>
+        <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
+        <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
       </div>
     </div>
     <p class="qsub">Build a deck from the whole card pool — SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
@@ -749,7 +839,8 @@
   <section class="page" id="page-scan">
     <div class="quickwrap">
       <h2 class="sech">Quick add</h2>
-      <p class="qsub">Type or paste card numbers (like <code>EBP01-001</code>) and press Enter. Paste several at once, separated by spaces or new lines. Camera scanning lives in the mobile app.</p>
+      <p class="qsub">Type or paste card numbers (like <code>EBP01-001</code>) and press Enter. Paste several at once, separated by spaces or new lines.</p>
+      <button id="nativeScanBtn" class="scanbtn" type="button" data-icon="camera" hidden>Scan a card with the camera</button>
       <input id="qInput" class="qinput" placeholder="EBP01-001   ETD01-005TSR   EPR-001 …" autocomplete="off" spellcheck="false" />
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
@@ -759,6 +850,13 @@
   <section class="page" id="page-settings">
     <h2 class="sech">Settings</h2>
     <div class="setwrap">
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Experience</div><div class="sdesc"><b>Trader</b> shows values, market prices and eBay listings. <b>Collector</b> hides all of that for a clean binder focused on completing sets.</div></div>
+        <select class="sortsel" id="setModeSel">
+          <option value="trader">Trader — show prices</option>
+          <option value="collector">Collector — hide prices</option>
+        </select>
+      </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Theme</div><div class="sdesc">Follow your device, or force light / dark. Remembered on this device.</div></div>
         <select class="sortsel" id="setThemeSel">
@@ -783,24 +881,36 @@
         <select class="sortsel" id="setDefaultAddSel"></select>
       </div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Show “Completion by color”</div><div class="sdesc">Adds the per-color completion panel to the Collection summary.</div></div>
-        <label class="switch"><input type="checkbox" id="setColorToggle"><span class="track"></span></label>
+        <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it — no dimming for missing cards.</div></div>
+        <label class="switch"><input type="checkbox" id="setNoFade"><span class="track"></span></label>
       </div>
-      <div class="setrow">
+      <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Price source <span class="betatag">beta</span></div><div class="sdesc">Where market prices come from. Live feeds come from the SphereDex backend — values are manual until you deploy it, and this sets the source label.</div></div>
         <select class="sortsel" id="setSourceSel">
           <option value="manual">Manual (you enter)</option>
-          <option value="ebay">eBay — sold listings</option>
-          <option value="tcgplayer">TCGplayer (US)</option>
-          <option value="cardmarket">Cardmarket (EU)</option>
+          <option value="ebay-active">eBay — current listings (instant)</option>
+          <option value="ebay">eBay — sold listings (needs approval)</option>
           <option value="pricecharting">PriceCharting</option>
+        </select>
+      </div>
+      <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">eBay region</div><div class="sdesc">Which eBay marketplace the “Search sold listings” links open. Match it to where you buy and sell.</div></div>
+        <select class="sortsel" id="setEbayRegion">
+          <option value="co.uk">United Kingdom (ebay.co.uk)</option>
+          <option value="com">United States (ebay.com)</option>
+          <option value="de">Germany (ebay.de)</option>
+          <option value="com.au">Australia (ebay.com.au)</option>
+          <option value="ca">Canada (ebay.ca)</option>
+          <option value="fr">France (ebay.fr)</option>
+          <option value="it">Italy (ebay.it)</option>
+          <option value="es">Spain (ebay.es)</option>
         </select>
       </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Cloud server URL <span class="betatag">beta</span></div><div class="sdesc">Your deployed SphereDex backend (e.g. https://palvault-backend.you.workers.dev). Enables the Account tab’s sign-in &amp; sync. Leave blank to stay fully offline.</div></div>
         <input class="sortsel" id="setServerUrl" placeholder="https://…" style="min-width:200px" />
       </div>
-      <div class="setrow">
+      <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Prices from server</div><div class="sdesc">Pull cached market / last / avg prices for every card from your backend (needs a server URL and a live price source).</div></div>
         <button class="btn sec" id="fetchPrices" style="flex:0 0 auto">Fetch prices now</button>
       </div>
@@ -822,7 +932,57 @@
     </div>
   </section>
 
+  <section class="page" id="page-contact">
+    <h2 class="sech">Contact &amp; feedback</h2>
+    <p class="qsub">Got an idea, a bug, or need a hand? This goes straight to the developer. Pick a topic, write a note, and it opens an email ready to send.</p>
+    <div class="ctopics" id="ctTopics"></div>
+    <label class="oblabel" for="ctEmail" style="margin-top:18px">Your email <span>(optional — only if you'd like a reply)</span></label>
+    <input id="ctEmail" class="obinput" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" />
+    <label class="oblabel" for="ctMsg">Your message</label>
+    <textarea id="ctMsg" class="ctmsg" placeholder="Tell me what you'd like…"></textarea>
+    <button class="btn primary" id="ctSend" type="button" style="margin-top:12px" data-icon="mail">Send message</button>
+    <p class="ctstatus" id="ctStatus" hidden></p>
+  </section>
+
   <p class="footnote" id="foot"></p>
+</div>
+
+<div class="onboard" id="onboard" hidden>
+  <div class="obcard">
+    <div class="oblogo"><svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M50 3 l6.5 6 -6.5 6 -6.5 -6 z" fill="url(#sdGold)"/>
+      <path d="M50 85 l6.5 6 -6.5 6 -6.5 -6 z" fill="url(#sdGold)"/>
+      <circle cx="50" cy="50" r="33" fill="url(#sdOrb)"/>
+      <circle cx="50" cy="50" r="33" fill="none" stroke="url(#sdGold)" stroke-width="4.5"/>
+      <path d="M50 34 C34 34 34 50 50 50 C66 50 66 66 50 66" fill="none" stroke="url(#sdGold)" stroke-width="4.5" stroke-linecap="round"/>
+    </svg></div>
+    <h1 class="obh">Welcome to SphereDex</h1>
+    <p class="obsub">Track your Palworld TCG collection your way. First, how do you want to use it?</p>
+    <label class="oblabel" for="obEmail">Email <span>(optional for now)</span></label>
+    <input id="obEmail" class="obinput" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" />
+    <div class="obchoices">
+      <button class="obchoice" type="button" data-mode="collector">
+        <span class="obicon" data-icon="book"></span>
+        <span class="obt">Collector</span>
+        <span class="obd">Just my binder. No prices or market noise — focus on completing sets and spheres.</span>
+      </button>
+      <button class="obchoice" type="button" data-mode="trader">
+        <span class="obicon" data-icon="chart"></span>
+        <span class="obt">Trader</span>
+        <span class="obd">Show values, market prices and eBay listings right alongside my collection.</span>
+      </button>
+    </div>
+    <div class="obnote">You can switch anytime in Settings.</div>
+  </div>
+</div>
+
+<div class="askscrim" id="askScrim" hidden>
+  <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+    <h3 id="askTitle"></h3>
+    <p id="askMsg" hidden></p>
+    <input id="askInput" type="text" autocomplete="off" spellcheck="false" />
+    <div class="askbtns"><button type="button" id="askCancel">Cancel</button><button type="button" class="ok" id="askOk">OK</button></div>
+  </div>
 </div>
 
 <div class="scrim" id="scrim">
@@ -915,12 +1075,16 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function o(id){ var s=own[id]; if(!s){ s=own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     if(s.mkt==null) s.mkt=0; if(s.last==null) s.last=0; if(s.avg==null) s.avg=0; if(!s.graded) s.graded=[]; return s; }
   function has(s){ return s.qty>0 || (s.graded && s.graded.length>0); }
+  // Owned in ANY collection — drives the colour/fade of a card, regardless of which collection is active.
+  function hasAny(id){ for(var i=0;i<STATE.cols.length;i++){ var e=STATE.cols[i].own[id]; if(e && (e.qty>0 || (e.graded && e.graded.length>0))) return true; } return false; }
+  // eBay "sold listings" search for a card, on the region set in Settings.
+  function ebayUrl(c){ var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+"&LH_Sold=1&LH_Complete=1&_ipg=60"; }
   function cardValue(s){ var v=(+s.qty||0)*(+s.mkt||0); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
 
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"",defaultAddCol:"ask"};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:""};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1051,14 +1215,16 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var ec2 = c.els[1]?elVar(c.els[1]):(tint?elVar(tint):colVar(c.color));
     var mono = c.kind==="Pal" ? c.name.split(" ")[0] : (c.kind==="Soul"?"◆":c.name.charAt(0));
     var rareCls = c.rare==="OSR" ? "rgem holo" : "rgem";
+    // Structure cards are printed landscape — rotate them to fill the portrait frame.
+    var landCls = (c.kind==="Structure") ? " land" : "";
     var img;
     if (hi){
       // detail view: try the crisp full-resolution official image first, fall back to the
       // embedded copy (when remote images are blocked), then to the color tile.
-      img = '<img src="'+IMG_BASE+c.pic+'" alt="'+esc(c.name)+'" '+
+      img = '<img class="cardimg'+landCls+'" src="'+IMG_BASE+c.pic+'" alt="'+esc(c.name)+'" '+
         'onerror="if(!this.dataset.t){this.dataset.t=1;var e=window.CARD_IMG&&window.CARD_IMG[\''+c.id+'\'];if(e){this.src=e;return;}}this.classList.add(\'failed\')">';
     } else {
-      img = '<img src="'+imgSrc(c)+'" loading="lazy" alt="'+esc(c.name)+'" onerror="this.classList.add(\'failed\')">';
+      img = '<img class="cardimg'+landCls+'" src="'+imgSrc(c)+'" loading="lazy" alt="'+esc(c.name)+'" onerror="this.classList.add(\'failed\')">';
     }
     return ''+
       '<div class="fallback" style="--_ec:'+ec+';--_ec2:'+ec2+'">'+
@@ -1072,19 +1238,20 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
 
   function cardEl(c){
     var s=o(c.id), owned=has(s);
+    var colored = SETTINGS.noFade || hasAny(c.id);   // full colour if owned in ANY collection (or fading is off)
     var el=document.createElement("div");
-    el.className="card"+(owned?"":" locked");
+    el.className="card"+(colored?"":" locked");
     el.style.setProperty("--_col", colVar(c.color));
     var elTags = c.els.map(function(e){ return '<span class="eltag" style="background:'+elVar(e)+'">'+e+'</span>'; }).join("");
     var costPow = [];
     if (c.cost!=="") costPow.push('◇<b>'+c.cost+'</b>');
     if (c.power!=="") costPow.push('◈<b>'+c.power+'</b>');
-    if (c.atk!=="") costPow.push('⚔<b>'+c.atk+'</b>');
+    if (c.atk!=="") costPow.push(icon('sword')+'<b>'+c.atk+'</b>');
     var val = cardValue(s);
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + (val>0?'<span class="val">'+money(val)+'</span>':'');
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var wished = isWished(c.id);
-    var wishflag = wished ? '<span class="wishflag" title="On your wishlist">★</span>' : '';
+    var wishflag = wished ? '<span class="wishflag" title="On your wishlist">'+icon('starf')+'</span>' : '';
     el.innerHTML =
       '<div class="art">'+artHTML(c)+ gbadge + wishflag +
       '</div>'+
@@ -1094,10 +1261,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="cstats">'+statsInner+'</div>'+
       '</div>'+
       '<div class="cardfoot">'+
-        '<button class="ownbtn">'+(owned?'✓ Collected':'＋ Collect')+'</button>'+
         (owned
           ? (s.qty>0?'<div class="qty"><button class="minus" aria-label="Remove one">–</button><span>'+s.qty+'</span><button class="plus" aria-label="Add one">+</button></div>':'')
-          : '<button class="wishbtn'+(wished?' on':'')+'" title="'+(wished?'Remove from wishlist':'Add to wishlist')+'">'+(wished?'★':'☆')+' Wishlist</button>')+
+          : '<button class="wishbtn'+(wished?' on':'')+'" title="'+(wished?'Remove from wishlist':'Add to wishlist')+'">'+icon(wished?'starf':'star')+' Wishlist</button>')+
+        '<button class="ownbtn">'+(owned?icon('check')+' Collected':icon('plus')+' Collect')+'</button>'+
       '</div>';
     var wb=el.querySelector(".wishbtn");
     if (wb) wb.addEventListener("click", function(ev){ ev.stopPropagation(); toggleWish(c.id); save(); render(); buildColSel(); });
@@ -1154,7 +1321,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function promoContext(c){
     if(c.set!=="PR2026" && c.rare!=="PR") return "";
     var txt=PROMO_SRC[c.id]||"Promo card — given out through official events and campaigns (such as demo sessions via Bushi Navi registration), not sold in a booster or deck.";
-    return '<div class="promonote"><span class="pnh">🎟 How to get it</span><span class="pnt">'+esc(txt)+'</span></div>';
+    return '<div class="promonote"><span class="pnh">'+icon('ticket')+' How to get it</span><span class="pnt">'+esc(txt)+'</span></div>';
   }
   function openDetail(c){
     var s=o(c.id);
@@ -1163,7 +1330,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var statBoxes = [];
     if (c.cost!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.cost+'</span><span class="l">Cost ◇</span></div>');
     if (c.power!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.power+'</span><span class="l">Power ◈</span></div>');
-    if (c.atk!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.atk+'</span><span class="l">Attack ⚔</span></div>');
+    if (c.atk!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.atk+'</span><span class="l">Attack '+icon('sword')+'</span></div>');
     var kv = '<dl class="kv">'+
       '<dt>Card no.</dt><dd>'+c.id+'</dd>'+
       '<dt>Color</dt><dd>'+c.color+'</dd>'+
@@ -1187,12 +1354,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="field"><label>Condition</label><select id="fCond">'+
           ["Near Mint","Lightly Played","Moderately Played","Heavily Played","Damaged"].map(function(x){return '<option'+(x===s.cond?' selected':'')+'>'+x+'</option>';}).join("")+
         '</select></div>'+
-        '<div class="field"><label>Market '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
+        '<div class="field priceui"><label>Market '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
       '</div>'+
-      '<div class="fieldrow">'+
+      '<div class="fieldrow priceui">'+
         '<div class="field"><label>Last sold '+CUR.sym+'</label><input id="fLast" type="number" min="0" step="0.01" value="'+(s.last||0)+'"></div>'+
-        '<div class="field"><label>Avg sold '+CUR.sym+'</label><input id="fAvg" type="number" min="0" step="0.01" value="'+(s.avg||0)+'"></div>'+
+        '<div class="field"><label>Avg sold (last 5) '+CUR.sym+'</label><input id="fAvg" type="number" readonly value="'+(s.avg||0)+'" title="Average of your last five recorded sales" style="opacity:.85"></div>'+
       '</div>'+
+      '<div class="graded priceui"><div class="glabel"><span>Recent eBay sales</span><span style="display:flex;gap:8px">'+
+        '<button class="addgrade" id="pullEbay" type="button" hidden>'+icon('refresh')+' Pull from eBay</button>'+
+        '<button class="addgrade" id="addSale" type="button">+ Add sale</button></span></div>'+
+        '<div id="salesList"></div>'+
+        '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a></div>'+
       '<div class="graded"><div class="glabel"><span>Graded copies</span><button class="addgrade" id="addGrade" type="button">+ Add slab</button></div><div id="gradeList"></div></div>'+
       '<div class="field"><label>Notes</label><textarea id="fNotes" placeholder="Trade, alt-art pull, cert number…">'+esc(s.notes||"")+'</textarea></div>'+
       '<label class="field" style="flex-direction:row;align-items:center;gap:8px;cursor:pointer"><input id="fWish" type="checkbox" '+(isWished(c.id)?'checked':'')+' style="width:auto"> <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink)">On my wishlist</span></label>'+
@@ -1232,9 +1404,51 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     $("fQty").oninput=updateSum; $("fMkt").oninput=updateSum;
     renderGrades(); updateSum();
 
+    // ---- Recent eBay sales (avg of last 5) ----
+    var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
+    function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
+    function refreshAvg(){ var a=avgLast5(salesWork); $("fAvg").value = a? a.toFixed(2) : 0; }
+    function renderSales(){
+      var host=$("salesList"); if(!host) return; host.innerHTML="";
+      salesWork.forEach(function(sale,i){
+        var row=document.createElement("div"); row.className="salerow";
+        row.innerHTML=
+          '<input class="gv sPrice" type="number" min="0" step="0.01" placeholder="price '+CUR.sym+'" value="'+(sale.p||0)+'">'+
+          '<input class="su sUrl" type="url" inputmode="url" placeholder="eBay listing link (optional)" value="'+esc(sale.url||"")+'">'+
+          (sale.url? '<a class="sview" href="'+esc(sale.url)+'" target="_blank" rel="noopener" title="Open listing">↗</a>' : '<span class="sview off">↗</span>')+
+          '<button class="grm" type="button" title="Remove" aria-label="Remove sale">✕</button>';
+        row.querySelector(".sPrice").oninput=function(){ sale.p=parseFloat(this.value)||0; refreshAvg(); };
+        row.querySelector(".sUrl").oninput=function(){ sale.url=this.value.trim(); var v=row.querySelector(".sview"); if(v){ if(sale.url){ v.outerHTML='<a class="sview" href="'+esc(sale.url)+'" target="_blank" rel="noopener" title="Open listing">↗</a>'; } else { v.outerHTML='<span class="sview off">↗</span>'; } } };
+        row.querySelector(".grm").onclick=function(){ salesWork.splice(i,1); renderSales(); refreshAvg(); };
+        host.appendChild(row);
+      });
+    }
+    $("addSale").onclick=function(){ salesWork.push({p:0,url:""}); renderSales(); };
+    var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
+    // Pull live prices via the backend (only when a server + a live price source are set up).
+    var pe=$("pullEbay"), src=SETTINGS.priceSource;
+    var SRC_LABEL={"ebay":"eBay sold","ebay-active":"eBay listings","pricecharting":"PriceCharting"};
+    if(pe && apiBase() && src && src!=="manual"){
+      pe.hidden=false; var pullLabel=icon('refresh')+' Pull '+(SRC_LABEL[src]||"price"); pe.innerHTML=pullLabel;
+      pe.onclick=function(){
+        pe.disabled=true; pe.innerHTML=icon('refresh')+' …';
+        api("/api/sales?name="+encodeURIComponent(c.name)+"&region="+encodeURIComponent(SETTINGS.ebayRegion||"co.uk")+"&source="+encodeURIComponent(src),"GET").then(function(r){
+          pe.disabled=false; pe.innerHTML=pullLabel;
+          if(!r.ok){ toast("Couldn't reach the price server"); return; }
+          var b=r.body||{}, sales=b.sales||[], got=false;
+          if(b.market!=null){ $("fMkt").value=b.market; updateSum(); got=true; }
+          if(src==="ebay" && sales.length){ salesWork=sales.slice(0,15).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); refreshAvg(); got=true; }
+          toast(got ? ("Updated from "+(SRC_LABEL[src]||"source")) : (b.note||"No results found"));
+        }).catch(function(){ pe.disabled=false; pe.innerHTML=pullLabel; toast("Price pull failed"); });
+      };
+    }
+    renderSales(); refreshAvg();
+
     $("fSave").onclick = function(){
       s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
-      s.mkt=parseFloat($("fMkt").value)||0; s.last=parseFloat($("fLast").value)||0; s.avg=parseFloat($("fAvg").value)||0;
+      s.mkt=parseFloat($("fMkt").value)||0; s.last=parseFloat($("fLast").value)||0;
+      s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||""}; });
+      s.avg=avgLast5(salesWork);
       s.notes=$("fNotes").value; if($("fWish").checked) STATE.wishlist[c.id]=true; else delete STATE.wishlist[c.id];
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
       save(); render(); buildColSel(); closeModal(); toast(c.name+" updated");
@@ -1279,6 +1493,27 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     else document.documentElement.setAttribute("data-theme", t);
     var sel=$("setThemeSel"); if(sel) sel.value=t;
   }
+  // ---- Collector / Trader mode ----
+  function applyMode(){
+    document.documentElement.classList.toggle("collector", SETTINGS.mode==="collector");
+    var sel=$("setModeSel"); if(sel) sel.value=SETTINGS.mode||"trader";
+  }
+  function finishOnboard(mode){
+    SETTINGS.mode=mode;
+    var em=$("obEmail"); if(em && em.value.trim()) SETTINGS.email=em.value.trim();
+    SETTINGS.onboarded=true; saveSettings(); applyMode();
+    var ob=$("onboard"); if(ob) ob.hidden=true;
+    render();
+    toast(mode==="collector" ? "Collector mode — prices hidden" : "Trader mode — prices shown");
+  }
+  function maybeOnboard(){
+    if(SETTINGS.onboarded) return;
+    var ob=$("onboard"); if(!ob) return;
+    ob.hidden=false;
+    Array.prototype.forEach.call(ob.querySelectorAll(".obchoice"), function(b){
+      b.onclick=function(){ finishOnboard(b.getAttribute("data-mode")); };
+    });
+  }
   $("themeBtn").onclick = function(){
     var eff=SETTINGS.theme; if(eff==="system") eff=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
     SETTINGS.theme = eff==="dark"?"light":"dark"; saveSettings(); applyTheme();
@@ -1296,6 +1531,48 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var toastEl=$("toast"), toastT;
   function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove("show"); },2200); }
   function esc(s){ return String(s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];}); }
+
+  // ---- Inline icon set (in-house, stroke = currentColor; replaces emoji) ----
+  var ICONS={
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    pencil:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+    copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    trash:'<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/>',
+    book:'<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 4v16M12 8.5h4M12 12h4"/>',
+    chart:'<path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/>',
+    camera:'<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.3"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/>',
+    search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+    ticket:'<path d="M4 8.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 1.6 1.6 0 0 0 0 3.2 1.6 1.6 0 0 1 0 3.2 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 1.6 1.6 0 0 0 0-3.2 1.6 1.6 0 0 1 0-3.2z"/><path d="M14 6.5v11" stroke-dasharray="2.5 2.5"/>',
+    refresh:'<path d="M20 11a8 8 0 1 0-1 5"/><path d="M20 5v6h-6"/>',
+    star:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
+    starf:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="currentColor" stroke="none"/>',
+    check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+    sword:'<path d="M20 4l-8.5 8.5"/><path d="M15 4h5v5"/><path d="M4.5 15.5l4 4"/><path d="M11.5 12.5l-7 7"/><path d="M6.5 17.5l-2.5.5.5-2.5"/>',
+    sphere:'<circle cx="12" cy="12" r="8"/><path d="M12 6.5c-3.5 0-3.5 5.5 0 5.5s3.5 5.5 0 5.5"/>',
+    play:'<path d="M6 4.2v15.6a1 1 0 0 0 1.5.87l13-7.8a1 1 0 0 0 0-1.74l-13-7.8A1 1 0 0 0 6 4.2z"/>',
+    apple:'<path d="M16 13.6c0 3-2 5.4-3.9 5.4-.8 0-1.3-.4-2.1-.4s-1.3.4-2.1.4C6 19 4 16.6 4 13.6 4 10.5 6 9 8 9c1 0 1.4.5 2 .5S11.5 9 12 9c4 0 4 1.6 4 4.6z"/><path d="M12 9c0-1.9 1.2-3 2.6-3.1"/>',
+    mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/>',
+    bug:'<rect x="8" y="8" width="8" height="10" rx="4"/><path d="M9 6l1.5 2M15 6l-1.5 2M4 11h4M16 13h4M4 16h4M16 16h4M12 8v10"/>',
+    life:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M6.3 6.3l3.4 3.4M14.3 14.3l3.4 3.4M17.7 6.3l-3.4 3.4M9.7 14.3l-3.4 3.4"/>'
+  };
+  function icon(name, cls){ return '<svg class="ic'+(cls?' '+cls:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'; }
+
+  // ---- Custom in-app prompt / confirm (works in the WebView, styled like the app) ----
+  function openAsk(opts){
+    var sc=$("askScrim"); if(!sc) { if(opts.onOk) opts.onOk(opts.value||""); return; }
+    var isPrompt = (opts.value!==undefined && opts.value!==null && !opts.confirmOnly);
+    $("askTitle").textContent=opts.title||"";
+    var msg=$("askMsg"); if(opts.message){ msg.textContent=opts.message; msg.hidden=false; } else msg.hidden=true;
+    var inp=$("askInput"); inp.hidden=!isPrompt; if(isPrompt){ inp.value=opts.value||""; }
+    var ok=$("askOk"); ok.textContent=opts.okText||"OK"; ok.className="ok"+(opts.danger?" danger":"");
+    sc.hidden=false;
+    if(isPrompt){ setTimeout(function(){ inp.focus(); inp.select(); }, 30); }
+    function close(){ sc.hidden=true; ok.onclick=null; $("askCancel").onclick=null; inp.onkeydown=null; }
+    ok.onclick=function(){ var v=isPrompt?inp.value.trim():true; if(isPrompt && !v) return; close(); if(opts.onOk) opts.onOk(isPrompt?v:true); };
+    $("askCancel").onclick=close;
+    sc.onclick=function(e){ if(e.target===sc) close(); };
+    inp.onkeydown=function(e){ if(e.key==="Enter") ok.click(); else if(e.key==="Escape") close(); };
+  }
   function fmt(n){ n=+n||0; return n.toLocaleString(undefined,{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}); }
 
   $("foot").innerHTML = '<strong>SphereDex is in beta</strong> — features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
@@ -1445,9 +1722,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   }
   function newDeck(){ var id="d"+Date.now(); decks().push({id:id,name:"Deck "+(decks().length+1),cards:{}}); STATE.activeDeck=id; return id; }
   (function(){
-    $("deckNew").onclick=function(){ var n=prompt("Deck name:","Deck "+(decks().length+1)); if(n){ var id=newDeck(); activeDeck().name=n.trim(); save(); renderDecks(); } };
-    $("deckRename").onclick=function(){ var d=activeDeck(); if(!d)return; var r=prompt("Rename deck:",d.name); if(r){ d.name=r.trim(); save(); renderDecks(); } };
-    $("deckDelete").onclick=function(){ var d=activeDeck(); if(!d)return; if(confirm("Delete deck “"+d.name+"”?")){ STATE.decks=decks().filter(function(x){return x.id!==d.id;}); STATE.activeDeck=(STATE.decks[0]||{}).id; save(); renderDecks(); } };
+    $("deckNew").onclick=function(){ openAsk({title:"New deck", value:"Deck "+(decks().length+1), okText:"Create", onOk:function(n){ newDeck(); activeDeck().name=n; save(); renderDecks(); }}); };
+    $("deckRename").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Rename deck", value:d.name, okText:"Rename", onOk:function(r){ d.name=r; save(); renderDecks(); }}); };
+    $("deckDelete").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Delete this deck?", message:"“"+d.name+"” will be removed.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.decks=decks().filter(function(x){return x.id!==d.id;}); STATE.activeDeck=(STATE.decks[0]||{}).id; save(); renderDecks(); }}); };
     var si=$("deckSearch"), sug=$("deckSug");
     function closeSug(){ sug.hidden=true; sug.innerHTML=""; }
     si.addEventListener("input", function(){
@@ -1474,6 +1751,37 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if (p==="account") renderAccount();
     if (p==="news") renderNews();
     if (p==="key") renderKey();
+    if (p==="contact") renderContact();
+  }
+  // ---- Contact / feedback (sends via the backend; no email address exposed) ----
+  // Fixed endpoint for messages to the developer. Leave blank to use the user's own
+  // Cloud server URL from Settings; set this to your deployed Worker so feedback always reaches you.
+  var CONTACT_ENDPOINT="";
+  function contactBase(){ return (CONTACT_ENDPOINT||apiBase()||"").replace(/\/+$/,""); }
+  var CT_TOPICS=[{k:"Feature request",i:"star"},{k:"Report a bug",i:"bug"},{k:"Help — how do I…",i:"life"},{k:"General feedback",i:"mail"}];
+  var ctTopic=CT_TOPICS[0].k;
+  function renderContact(){
+    var host=$("ctTopics"); if(!host) return;
+    host.innerHTML=CT_TOPICS.map(function(t){ return '<button class="ctopic'+(t.k===ctTopic?' sel':'')+'" type="button" data-topic="'+esc(t.k)+'">'+icon(t.i)+'<span>'+esc(t.k)+'</span></button>'; }).join("");
+    Array.prototype.forEach.call(host.querySelectorAll(".ctopic"), function(b){ b.onclick=function(){ ctTopic=b.getAttribute("data-topic"); renderContact(); }; });
+  }
+  function ctStatus(msg, bad){ var el=$("ctStatus"); if(!el) return; el.hidden=false; el.textContent=msg; el.className="ctstatus"+(bad?" bad":" ok"); }
+  function contactSend(){
+    var msg=(($("ctMsg")||{}).value||"").trim();
+    if(msg.length<2){ ctStatus("Please write a message first.", true); return; }
+    var base=contactBase();
+    if(!base){ ctStatus("Messaging needs the app’s server to be set up — try again later.", true); return; }
+    var email=(($("ctEmail")||{}).value||"").trim();
+    var btn=$("ctSend"); if(btn){ btn.disabled=true; }
+    ctStatus("Sending…", false);
+    fetch(base+"/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:ctTopic,message:msg,from:email})})
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok,body:j}; }); })
+      .then(function(r){
+        if(btn) btn.disabled=false;
+        if(r.ok){ ctStatus("Thanks — your message was sent.", false); $("ctMsg").value=""; }
+        else ctStatus((r.body&&r.body.error)||"Couldn’t send right now — please try again later.", true);
+      })
+      .catch(function(){ if(btn) btn.disabled=false; ctStatus("Couldn’t reach the server — please try again later.", true); });
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
     t.onclick=function(){ showPage(t.getAttribute("data-page")); };
@@ -1578,17 +1886,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       var next = ti<SPHERE_TIERS.length-1 ? SPHERE_TIERS[ti+1] : null;
       var el=document.createElement("div"); el.className="rwd"+(complete?" done":"");
       el.innerHTML=
-        '<div class="rwsphere" style="--rc:'+tier.c+'">'+sphereSVG(tier.c,r)+(complete?'<span class="rwseal">✓</span>':'')+'</div>'+
+        '<div class="rwsphere" style="--rc:'+tier.c+'">'+sphereSVG(tier.c,r)+(complete?'<span class="rwseal">'+icon('check')+'</span>':'')+'</div>'+
         '<div class="rwname"><span class="rwgem" style="background:'+rareVar(r)+'"></span>'+esc(RARE_NAME[r])+'</div>'+
         '<div class="rwtier" style="color:'+tier.c+'">'+esc(tier.name)+'</div>'+
         '<div class="rwbar"><span style="width:'+pct+'%;background:'+tier.c+'"></span></div>'+
-        '<div class="rwmeta">'+owned+'/'+tot+' '+r+(complete?' · complete ✦':(next?' · '+next.name+' at '+next.min+'%':''))+'</div>';
+        '<div class="rwmeta">'+owned+'/'+tot+' '+r+(complete?' · complete':(next?' · '+next.name+' at '+next.min+'%':''))+'</div>';
       el.title="Show "+RARE_NAME[r]+" cards";
       el.onclick=function(){ openRarity(r, complete?"all":"missing"); };
       host.appendChild(el);
     });
     var cap=$("rewardCap"); if(cap){
-      if(done===N){ cap.className="rwcap gold"; cap.textContent="✦ Every rarity complete — all "+N+" Legendary Spheres claimed. Master collector."; }
+      if(done===N){ cap.className="rwcap gold"; cap.innerHTML=icon('starf')+" Every rarity complete — all "+N+" Legendary Spheres claimed. Master collector."; }
       else { cap.className="rwcap"; cap.textContent=done+" of "+N+" rarities complete."; }
     }
   }
@@ -1612,7 +1920,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(!done.length){ row.hidden=true; row.innerHTML=""; return; }
     row.hidden=false;
     var all=done.length===REWARD_RARES.length;
-    row.innerHTML='<span class="tlabel">'+(all?'✦ All Legendary Spheres':'Legendary Spheres')+'</span>'+
+    row.innerHTML='<span class="tlabel">'+(all?icon('starf')+' All Legendary Spheres':'Legendary Spheres')+'</span>'+
       done.map(function(r){
         return '<button class="troph" type="button" title="'+esc(RARE_NAME[r])+' complete · 100%">'+
           '<span class="tsph" style="--rc:'+top.c+'">'+sphereSVG(top.c,"t"+r)+'</span>'+
@@ -1634,7 +1942,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       }
     });
     if(newlyDone!==null) celebrateRarity(newlyDone);
-    else if(leveled) toast("🔮 "+RARE_NAME[leveled.r]+" reached "+leveled.tier.name);
+    else if(leveled) toast(RARE_NAME[leveled.r]+" reached "+leveled.tier.name);
   }
   function celebrateRarity(r){
     var top=SPHERE_TIERS[SPHERE_TIERS.length-1];
@@ -1654,17 +1962,20 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var pct=total?Math.round(ownedP/total*100):0;
     $("heroPct").textContent=pct+"%";
     $("heroFill").style.width=pct+"%";
-    var rk=sphereRank(pct), hr=$("heroRank");
+    var rk=sphereRank(pct);
     document.documentElement.style.setProperty("--logo-c", rk.c);
-    if(hr){ hr.style.setProperty("--rc",rk.c); hr.title="Collector rank by set completion"+(rk.next?" — next: "+rk.next:" — maxed out!"); hr.innerHTML='<span class="rankdot"></span>'+rk.name; }
+    var rr=$("rewardRank");
+    if(rr){ rr.style.setProperty("--rc",rk.c);
+      rr.innerHTML='<span class="rankbadge" style="--rc:'+rk.c+'"><span class="rankdot"></span>'+rk.name+'</span>'+
+        '<div class="rankmeta">'+pct+'% of all cards collected'+(rk.next?' · next: '+esc(rk.next):' · maxed out!')+'</div>'; }
     var value=0; CARDS.forEach(function(c){ value+=cardValue(o(c.id)); });
     var spH=setProgress();
     var setsDone=SET_ORDER.filter(function(k){ return spH.tot[k]>0 && spH.owned[k]>=spH.tot[k]; }).length;
     $("heroStats").innerHTML=
       '<div class="hs"><span class="n">'+ownedP+'<span style="color:var(--ink-faint);font-size:.7em"> / '+total+'</span></span><span class="l">Cards</span></div>'+
       '<div class="hs" title="Sets you\'ve completed 100%"><span class="n">'+setsDone+'<span style="color:var(--ink-faint);font-size:.7em"> / '+SET_ORDER.length+'</span></span><span class="l">Sets</span></div>'+
-      '<div class="hs"><span class="n">'+money(value)+'</span><span class="l">Binder value</span></div>'+
-      '<div class="hs"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>';
+      '<div class="hs priceui"><span class="n">'+money(value)+'</span><span class="l">Binder value</span></div>'+
+      '<div class="hs priceui"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>';
     renderPortfolio();
     renderTrending();
     var sp=setProgress(), br=$("setBrowse"); br.innerHTML="";
@@ -1677,7 +1988,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
           '<div class="snm">'+esc(SETS[k].name)+'</div>'+
           '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
           '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
-          '<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete ✓')+'</button>'+
+          '<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button>'+
         '</div>';
       el.onclick=function(){ openSet(k); };
       el.querySelector(".missbtn").onclick=function(ev){ ev.stopPropagation(); openSet(k, miss>0?"missing":"all"); };
@@ -1738,11 +2049,12 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var el=$("newsList"); if(!el) return;
     function paint(list, live){
       $("newsNote").innerHTML = live
-        ? 'Live from the official feed via your backend.'
-        : 'Highlights below. For a live feed, connect a <b>Cloud server URL</b> in Settings — the backend pulls the official RSS. Otherwise this stays a curated shortlist.';
+        ? 'Live headlines, merged from each source’s own feed and refreshed hourly via your backend.'
+        : 'Highlights below. For a live feed, connect a <b>Cloud server URL</b> in Settings — the backend pulls each source’s RSS every hour. Otherwise this stays a curated shortlist.';
       el.innerHTML = list.map(function(n){
+        var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
         return '<a class="newsitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
-          (n.date?'<div class="ndate">'+esc(n.date)+'</div>':'')+
+          (meta.length?'<div class="ndate">'+meta.join(' · ')+'</div>':'')+
           '<div class="ntitle">'+esc(n.title)+'</div>'+
           (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':'')+'</a>';
       }).join("");
@@ -1792,7 +2104,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var sel=$("colSel"); sel.innerHTML="";
     STATE.cols.forEach(function(c){ var op=document.createElement("option"); op.value=c.id; op.textContent=c.name; if(!wishMode && c.id===STATE.active)op.selected=true; sel.appendChild(op); });
     var sep=document.createElement("option"); sep.disabled=true; sep.textContent="──────────"; sel.appendChild(sep);
-    var wl=document.createElement("option"); wl.value="__wishlist__"; wl.textContent="★ My Wishlist ("+wishCount()+")"; if(wishMode) wl.selected=true; sel.appendChild(wl);
+    var wl=document.createElement("option"); wl.value="__wishlist__"; wl.textContent="My Wishlist ("+wishCount()+")"; if(wishMode) wl.selected=true; sel.appendChild(wl);
     sel.onchange=function(){ if(sel.value==="__wishlist__"){ wishMode=true; buildColSel(); showPage("collection"); render(); } else { wishMode=false; switchCol(sel.value); } };
     buildDefaultAddSel();
   }
@@ -1818,10 +2130,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     menu.querySelectorAll("button").forEach(function(b){
       b.onclick=function(){
         var act=b.getAttribute("data-act"); menu.hidden=true; var col=activeCol();
-        if(act==="new"){ var n=prompt("New collection name:","Collection "+(STATE.cols.length+1)); if(n){ var id="c"+Date.now(); STATE.cols.push({id:id,name:n.trim(),own:{}}); switchCol(id); } }
-        else if(act==="rename"){ var r=prompt("Rename collection:",col.name); if(r){ col.name=r.trim(); save(); buildColSel(); } }
+        if(act==="new"){ openAsk({title:"New collection", value:"Collection "+(STATE.cols.length+1), okText:"Create", onOk:function(n){ var id="c"+Date.now(); STATE.cols.push({id:id,name:n,own:{}}); switchCol(id); toast("Collection “"+n+"” created"); }}); }
+        else if(act==="rename"){ openAsk({title:"Rename collection", value:col.name, okText:"Rename", onOk:function(r){ col.name=r; save(); buildColSel(); render(); }}); }
         else if(act==="dupe"){ var id2="c"+Date.now(); STATE.cols.push({id:id2,name:col.name+" copy",own:JSON.parse(JSON.stringify(col.own))}); switchCol(id2); }
-        else if(act==="delete"){ if(STATE.cols.length<2){ toast("Keep at least one collection"); return; } if(confirm("Delete “"+col.name+"”? This can't be undone.")){ STATE.cols=STATE.cols.filter(function(x){return x.id!==col.id;}); switchCol(STATE.cols[0].id); } }
+        else if(act==="delete"){ if(STATE.cols.length<2){ toast("Keep at least one collection"); return; } openAsk({title:"Delete this collection?", message:"“"+col.name+"” and its contents will be removed from this device. This can’t be undone.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.cols=STATE.cols.filter(function(x){return x.id!==col.id;}); switchCol(STATE.cols[0].id); toast("Collection deleted"); }}); }
       };
     });
   })();
@@ -1856,10 +2168,18 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       if(!card) return false;
       var col = activeCol();
       addToCollection(col.id, card.id);
-      toast("📸 " + card.name + " → " + col.name);
+      toast(card.name + " scanned → " + col.name);
       return true;
     }catch(e){ return false; }
   };
+  // Show the camera-scan button only when running inside the native app shell.
+  (function(){
+    var b=$("nativeScanBtn"); if(!b) return;
+    if(window.AndroidScan && typeof window.AndroidScan.scan==="function"){
+      b.hidden=false;
+      b.onclick=function(){ try{ window.AndroidScan.scan(); }catch(e){} };
+    }
+  })();
   chooser.addEventListener("click", function(e){ if(e.target===chooser) chooser.classList.remove("open"); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape") chooser.classList.remove("open"); });
 
@@ -1888,10 +2208,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   (function(){
     var sv=$("setViewSel"); sv.value=viewMode;
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; localStorage.setItem("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
-    var ct=$("setColorToggle"); ct.checked=!!SETTINGS.showColorCompletion;
-    ct.onchange=function(){ SETTINGS.showColorCompletion=ct.checked; saveSettings(); applySettings(); };
     var ss=$("setSourceSel"); ss.value=SETTINGS.priceSource;
     ss.onchange=function(){ SETTINGS.priceSource=ss.value; saveSettings(); };
+    var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
+    var md=$("setModeSel"); if(md){ md.value=SETTINGS.mode||"trader"; md.onchange=function(){ SETTINGS.mode=md.value; saveSettings(); applyMode(); render(); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); };
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
@@ -1979,13 +2300,21 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var fp=$("fetchPrices"); if(fp) fp.onclick=fetchServerPrices;
   })();
 
+  // Inject inline icons into any static [data-icon] element (replaces emoji).
+  Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildColSel();
   buildChips();
   applyTheme();
+  applyMode();
   applySettings();
   render();
   renderQuick();
   renderAccount();
+  renderContact();
+  var ctb=$("ctSend"); if(ctb) ctb.onclick=contactSend;
+  // Store links are placeholders until the apps are published.
+  ["playLink","iosLink"].forEach(function(id){ var a=$(id); if(a) a.onclick=function(e){ e.preventDefault(); toast("Mobile apps coming soon — you're on the web app"); }; });
+  maybeOnboard();
   if(AUTH.token && apiBase()) pullState();
 })();
 </script>

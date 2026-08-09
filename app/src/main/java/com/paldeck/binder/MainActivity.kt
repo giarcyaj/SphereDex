@@ -1,83 +1,46 @@
 package com.paldeck.binder
 
 import android.annotation.SuppressLint
-import android.graphics.Color as AndroidColor
+import android.app.AlertDialog
+import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import android.view.ViewGroup
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.activity.result.contract.ActivityResultContracts
 
 /**
- * The app is the full SphereDex web tracker (bundled in assets) running in a WebView,
- * plus a native camera "Scan" tab that feeds scanned card numbers straight into it.
+ * The app is the full SphereDex web tracker (bundled in assets) running full-screen in a WebView.
+ * A JavaScript bridge lets the in-app "Scan" button launch the native camera and drop the
+ * recognised card straight into the web app's collection.
  */
 class MainActivity : ComponentActivity() {
-    private lateinit var store: BinderStore
-    private var web: WebView? = null
+    private lateinit var web: WebView
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        store = BinderStore(applicationContext)
-
-        // Let the device back button navigate the web app before leaving.
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val w = web
-                if (w != null && w.canGoBack()) w.goBack()
-                else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
-            }
-        })
-
-        setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-                Root(store) { web = it }
+    private val scanLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            val card = res.data?.getStringExtra("card")
+            if (res.resultCode == RESULT_OK && !card.isNullOrEmpty()) {
+                val safe = card.replace("\\", "").replace("'", "")
+                web.evaluateJavascript("window.SDScanAdd && window.SDScanAdd('$safe')", null)
             }
         }
-    }
-}
 
-@SuppressLint("SetJavaScriptEnabled")
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun Root(store: BinderStore, onWeb: (WebView) -> Unit) {
-    var tab by remember { mutableStateOf(0) }
-    val context = LocalContext.current
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    // Build the WebView once and keep it alive across tab switches.
-    val webView = remember {
-        WebView(context).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            setBackgroundColor(AndroidColor.parseColor("#0b0e15"))
+        web = WebView(this).apply {
+            setBackgroundColor(Color.parseColor("#0b0e15"))
             with(settings) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -90,33 +53,62 @@ fun Root(store: BinderStore, onWeb: (WebView) -> Unit) {
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
             overScrollMode = WebView.OVER_SCROLL_NEVER
-            loadUrl("file:///android_asset/spheredex.html")
-        }
-    }
-    LaunchedEffect(webView) { onWeb(webView) }
-
-    Scaffold(bottomBar = {
-        NavigationBar {
-            NavigationBarItem(
-                selected = tab == 0, onClick = { tab = 0 },
-                icon = { Icon(Icons.Default.GridView, null) }, label = { Text("Collection") }
-            )
-            NavigationBarItem(
-                selected = tab == 1, onClick = { tab = 1 },
-                icon = { Icon(Icons.Default.CameraAlt, null) }, label = { Text("Scan") }
-            )
-        }
-    }) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            // The web app is always present; the scanner overlays it on the Scan tab.
-            AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
-            if (tab == 1) {
-                ScannerScreen(store) { cardNumber ->
-                    val safe = cardNumber.replace("\\", "").replace("'", "")
-                    webView.evaluateJavascript("window.SDScanAdd && window.SDScanAdd('$safe')", null)
-                    tab = 0
+            // Keep the app inside the WebView, but open real web links (eBay, Buy Me a Coffee) in the browser.
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
+                    val u = req.url
+                    val s = u.scheme
+                    // Open web links (eBay, Buy Me a Coffee) and mailto/tel (Contact page) outside the WebView.
+                    if (s == "http" || s == "https" || s == "mailto" || s == "tel") {
+                        try { startActivity(Intent(Intent.ACTION_VIEW, u)) } catch (_: Exception) {}
+                        return true
+                    }
+                    return false
                 }
             }
+            // Make window.prompt/confirm/alert work (WebView blocks them by default),
+            // so "New collection", rename, and delete confirmations pop up natively.
+            webChromeClient = object : WebChromeClient() {
+                override fun onJsAlert(v: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                    AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                        .setPositiveButton("OK") { _, _ -> r.confirm() }
+                        .setOnCancelListener { r.cancel() }.show()
+                    return true
+                }
+                override fun onJsConfirm(v: WebView?, url: String?, msg: String?, r: JsResult): Boolean {
+                    AlertDialog.Builder(this@MainActivity).setMessage(msg)
+                        .setPositiveButton("OK") { _, _ -> r.confirm() }
+                        .setNegativeButton("Cancel") { _, _ -> r.cancel() }
+                        .setOnCancelListener { r.cancel() }.show()
+                    return true
+                }
+                override fun onJsPrompt(v: WebView?, url: String?, msg: String?, def: String?, r: JsPromptResult): Boolean {
+                    val input = EditText(this@MainActivity).apply { setText(def ?: "") }
+                    AlertDialog.Builder(this@MainActivity).setMessage(msg).setView(input)
+                        .setPositiveButton("OK") { _, _ -> r.confirm(input.text.toString()) }
+                        .setNegativeButton("Cancel") { _, _ -> r.cancel() }
+                        .setOnCancelListener { r.cancel() }.show()
+                    return true
+                }
+            }
+            addJavascriptInterface(WebBridge(), "AndroidScan")
+            loadUrl("file:///android_asset/spheredex.html")
+        }
+        setContentView(web)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack()
+                else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+            }
+        })
+    }
+
+    /** Exposed to the web app as window.AndroidScan */
+    inner class WebBridge {
+        @JavascriptInterface
+        fun scan() {
+            runOnUiThread { scanLauncher.launch(Intent(this@MainActivity, ScannerActivity::class.java)) }
         }
     }
 }
