@@ -1227,7 +1227,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
   var sortDir = (parseInt(localStorage.getItem("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"manual",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1515,14 +1515,18 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '</select></div>'+
         '<div class="field priceui"><label>Value each '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
       '</div>'+
-      '<div class="graded"><div class="glabel"><span>Graded copies</span><button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></div><div id="gradeList"></div></div>'+
+      '<div class="graded"><div class="glabel"><span>Graded copies</span><span style="display:flex;gap:8px">'+
+        '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Pull sold</button>'+
+        '<button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></span></div><div id="gradeList"></div></div>'+
 
       '<h3 class="dsec priceui">Recent sales</h3>'+
-      '<div class="graded priceui"><div class="glabel"><span>Last 10 sold '+(SETTINGS.priceSource&&SETTINGS.priceSource!=="manual"?'· '+esc(SETTINGS.priceSource):'')+'</span><span style="display:flex;gap:8px">'+
-        '<button class="addgrade" id="pullEbay" type="button" hidden>'+icon('refresh')+' Pull</button>'+
+      '<div class="graded priceui"><div class="glabel"><span>Last 5 sold</span><span style="display:flex;gap:8px">'+
+        '<button class="addgrade" id="pullSold" type="button" hidden>'+icon('refresh')+' Sold</button>'+
+        '<button class="addgrade" id="pullList" type="button" hidden>'+icon('refresh')+' Listings</button>'+
         '<button class="addgrade" id="addSale" type="button">'+icon('plus')+' Add</button></span></div>'+
         '<div id="salesList"></div>'+
         '<div class="salesavg" id="salesAvg"></div>'+
+        '<div class="salesavg" id="listHint"></div>'+
         '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a></div>'+
       '<input type="hidden" id="fLast"><input type="hidden" id="fAvg">'+
 
@@ -1605,23 +1609,54 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     }
     $("addSale").onclick=function(){ salesWork.push({p:0,url:""}); renderSales(); };
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
-    // Pull live prices via the backend (only when a server + a live price source are set up).
-    var pe=$("pullEbay"), src=SETTINGS.priceSource;
-    var SRC_LABEL={"ebay":"eBay sold","ebay-active":"eBay listings","soldcomps":"eBay sold","pricecharting":"PriceCharting"};
-    if(pe && apiBase() && src && src!=="manual"){
-      pe.hidden=false; var pullLabel=icon('refresh')+' Pull '+(SRC_LABEL[src]||"price"); pe.innerHTML=pullLabel;
-      pe.onclick=function(){
-        pe.disabled=true; pe.innerHTML=icon('refresh')+' …';
-        api("/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(SETTINGS.ebayRegion||"co.uk")+"&source="+encodeURIComponent(src),"GET").then(function(r){
-          pe.disabled=false; pe.innerHTML=pullLabel;
+    // Live prices via the backend. On demand: Sold (SoldComps, drives Card/Binder value + trending),
+    // Listings (eBay current asks, informational), and per-owned-grade sold for slabs.
+    (function(){
+      if(!apiBase()) return;
+      var region=SETTINGS.ebayRegion||"co.uk";
+      function salesUrl(source, grade){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(region)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
+      function busy(btn){ btn.disabled=true; var o=btn.innerHTML; btn.innerHTML=icon('refresh')+' …'; return function(){ btn.disabled=false; btn.innerHTML=o; }; }
+      // Sold → last-5 sold list + market (median) → feeds Card value / Binder value / trending.
+      var ps=$("pullSold");
+      if(ps){ ps.hidden=false; ps.onclick=function(){ var done=busy(ps);
+        api(salesUrl("soldcomps",""),"GET").then(function(r){ done();
           if(!r.ok){ toast("Couldn't reach the price server"); return; }
-          var b=r.body||{}, sales=b.sales||[], got=false;
-          if(b.market!=null){ $("fMkt").value=b.market; updateSum(); got=true; }
-          if(sales.length){ salesWork=sales.slice(0,15).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); refreshAvg(); got=true; }
-          toast(got ? ("Updated from "+(SRC_LABEL[src]||"source")) : (b.note||"No results found"));
-        }).catch(function(){ pe.disabled=false; pe.innerHTML=pullLabel; toast("Price pull failed"); });
-      };
-    }
+          var b=r.body||{}, sales=b.sales||[];
+          if(b.market!=null) $("fMkt").value=b.market;
+          if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); }
+          refreshAvg(); updateSum();
+          toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
+        }).catch(function(){ done(); toast("Price pull failed"); });
+      }; }
+      // Listings → current eBay asks, shown as a hint (does not touch sold data or market).
+      var pl=$("pullList");
+      if(pl){ pl.hidden=false; pl.onclick=function(){ var done=busy(pl);
+        api(salesUrl("ebay-active",""),"GET").then(function(r){ done();
+          if(!r.ok){ toast("Couldn't reach the price server"); return; }
+          var b=r.body||{}, ls=(b.sales||[]).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}).sort(function(a,z){return a-z;});
+          var lh=$("listHint");
+          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)]; if(lh) lh.innerHTML='Current listings: from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)'; toast("Current listings loaded"); }
+          else { if(lh) lh.textContent=""; toast(b.note||"No current listings"); }
+        }).catch(function(){ done(); toast("Listings pull failed"); });
+      }; }
+      // Graded → for each distinct grade you own, pull sold comps at that grade and fill the slab.
+      var pg=$("pullGraded");
+      if(pg){ pg.hidden=false; pg.onclick=function(){
+        var grades=[]; gwork.forEach(function(g){ var k=(g.grader||"PSA")+" "+(g.grade||"10"); if(grades.indexOf(k)===-1) grades.push(k); });
+        if(!grades.length){ toast("Add a graded slab first"); return; }
+        var done=busy(pg), fin=0, filled=0;
+        grades.forEach(function(gk){
+          api(salesUrl("soldcomps",gk),"GET").then(function(r){
+            var b=(r&&r.body)||{}; if(b.market!=null){
+              var val=(b.avg!=null?b.avg:b.market), gnum=gk.split(" ")[1];
+              if(!s.gradeGuide) s.gradeGuide={}; s.gradeGuide[gnum]=val;
+              gwork.forEach(function(g){ if(((g.grader||"PSA")+" "+(g.grade||"10"))===gk) g.value=val; });
+              filled++;
+            }
+          }).catch(function(){}).then(function(){ if(++fin===grades.length){ done(); renderGrades(); renderGradeGuide(); updateSum(); toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
+        });
+      }; }
+    })();
     renderSales(); refreshAvg();
 
     $("fSave").onclick = function(){
@@ -2096,8 +2131,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // ---- Trending card: biggest riser = current market furthest above its average-sold price ----
   function trendingCard(){
     var best=null;
+    // avg = last-5 sold (recent), mkt = median sold (baseline). Recent above baseline = a live spike.
     CARDS.forEach(function(c){ var s=o(c.id), mkt=+s.mkt||0, avg=+s.avg||0;
-      if(mkt>0 && avg>0 && mkt>avg){ var pct=(mkt-avg)/avg*100; if(!best || pct>best.pct) best={c:c,mkt:mkt,avg:avg,pct:pct}; } });
+      if(mkt>0 && avg>0 && avg>mkt){ var pct=(avg-mkt)/mkt*100; if(!best || pct>best.pct) best={c:c,mkt:mkt,avg:avg,pct:pct}; } });
     return best;
   }
   function renderTrending(){
@@ -2106,7 +2142,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(!t){ el.className="trendnote"; el.textContent="Add a card's Market and Avg-sold prices (in its detail) and the biggest riser shows here. Live movement arrives with the price feed."; el.onclick=null; return; }
     el.className="trend";
     el.innerHTML='<img src="'+imgSrc(t.c)+'" alt="">'+
-      '<div><div class="tnm">'+esc(t.c.name)+'</div><div class="tsub">'+t.c.id+' · market '+money(t.mkt)+' vs avg '+money(t.avg)+'</div></div>'+
+      '<div><div class="tnm">'+esc(t.c.name)+'</div><div class="tsub">'+t.c.id+' · recent '+money(t.avg)+' vs median '+money(t.mkt)+'</div></div>'+
       '<div class="tpct">▲ '+t.pct.toFixed(1)+'%</div>';
     el.onclick=function(){ openDetail(t.c); };
   }
