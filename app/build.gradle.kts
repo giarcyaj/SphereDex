@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "app.spheredex"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "app.spheredex"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 1
+        targetSdk = 35
+        versionCode = 2
         versionName = "1.0"
     }
     signingConfigs {
