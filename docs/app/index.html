@@ -34,6 +34,7 @@
     --accent-ink:#f8b56a; --shadow:24px 34px 70px -34px rgba(0,0,0,.85); --dim:.3; }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh;
     background:
       radial-gradient(1100px 560px at 88% -12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
@@ -423,6 +424,21 @@
   .qra img { width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--surface-2); flex:none; }
   .qra .qn { font-weight:650; font-size:.9rem; } .qra .qnum { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); }
   .qra .qtot { margin-left:auto; font-family:var(--font-mono); font-size:.8rem; color:var(--accent-ink); font-weight:600; }
+  /* ---- Quick Add typeahead ---- */
+  .qbox{ position:relative; }
+  .qsug{ position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:20; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; max-height:340px; overflow-y:auto; }
+  .qsg{ display:flex; align-items:center; gap:11px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .qsug .qsg:last-child{ border-bottom:none; }
+  .qsg:hover, .qsg.hi{ background:var(--surface-2); }
+  .qsg img{ width:32px; height:44px; object-fit:cover; border-radius:5px; background:var(--surface-2); flex:none; }
+  .qsg .qsn{ font-weight:650; font-size:.9rem; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .qsg .qsm{ font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); display:flex; gap:8px; }
+  .qsg .qsk{ text-transform:uppercase; letter-spacing:.05em; }
+  .qsg .qsn b{ color:var(--accent-ink); font-weight:800; }
+  .qsg .qsadd{ margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:4px; color:var(--accent-ink); font-family:var(--font-display); font-weight:700; font-size:.78rem; }
+  .qsg .qsadd .ic{ width:1rem; height:1rem; margin:0; }
+  .qsg .qsown{ margin-left:auto; flex:none; font-family:var(--font-mono); font-size:.76rem; color:var(--accent-ink); font-weight:600; }
+  .qsempty{ padding:14px 12px; color:var(--ink-faint); font-size:.85rem; }
   @media (max-width:520px){ .trow{ grid-template-columns:96px 1fr; } .herotitle{ font-size:2.2rem; } }
 
   /* filters popup */
@@ -694,6 +710,39 @@
   .detact:hover{ color:var(--ink); }
   .detact.on.wish{ color:var(--r-RR); border-color:var(--r-RR); background:color-mix(in srgb,var(--r-RR) 12%,transparent); }
   .detact.on.coll{ color:var(--accent-ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  /* ---- Detail bubbles (progressive disclosure) ---- */
+  .bubrow{ display:flex; gap:9px; margin-top:4px; }
+  .bubrow.glance{ margin-top:12px; }
+  .bub{ flex:1; min-width:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:12px 10px; border-radius:14px;
+    border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.86rem; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
+  .bub .ic{ width:1.15rem; height:1.15rem; margin:0; flex:none; }
+  .bub span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bub .chev{ width:.95rem; height:.95rem; margin-left:2px; opacity:.6; transition:transform .18s; }
+  .bub:hover{ color:var(--ink); border-color:var(--ink-faint); }
+  .bub.open{ border-color:var(--accent); }
+  .bub.open .chev{ transform:rotate(180deg); }
+  .bub.on{ color:var(--accent-ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .bub.on.wish{ color:var(--r-RR); border-color:var(--r-RR); background:color-mix(in srgb,var(--r-RR) 14%,transparent); }
+  .bub.on.fav{ color:#e8547e; border-color:#e8547e; background:color-mix(in srgb,#e8547e 12%,transparent); }
+  .glancebub{ flex-direction:column; gap:3px; padding:11px 8px; }
+  .glancebub .gllab{ font-size:.64rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .glancebub .glval{ font-family:var(--font-mono); font-size:1.02rem; font-weight:600; color:var(--ink); }
+  .glancebub.open{ background:color-mix(in srgb,var(--accent) 8%,var(--surface-2)); }
+  .bubpanel{ border:1.5px solid var(--line); border-radius:14px; background:var(--surface); padding:14px; margin-top:9px; display:flex; flex-direction:column; gap:10px; animation:bubin .16s ease; }
+  @keyframes bubin{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+  .seg{ display:inline-flex; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:3px; gap:3px; align-self:flex-start; }
+  .segb{ border:none; background:transparent; color:var(--ink-faint); font-weight:700; font-size:.82rem; padding:6px 16px; border-radius:8px; cursor:pointer; font-family:var(--font-display); }
+  .segb.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.14); }
+  .addgrid{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .addgrid .field{ flex:1; min-width:96px; }
+  .addgrid .qtyf{ flex:0 0 80px; min-width:70px; }
+  .addbtn{ flex:0 0 auto; padding:10px 18px; }
+  .holdrow{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; padding-top:11px; border-top:1.5px solid var(--line); }
+  .holdrow .holdlab{ flex-basis:100%; font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .holdrow .field{ flex:1; min-width:110px; }
+  .salerow.ro{ margin-bottom:0; }
+  .salerow.ro .lprice{ font-family:var(--font-mono); font-size:.86rem; color:var(--ink); text-decoration:none; }
+  .salerow.ro a.lprice{ color:var(--accent-ink); }
   .dsec{ font-family:var(--font-display); font-weight:750; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:20px 0 10px; padding-bottom:6px; border-bottom:1.5px solid var(--line); }
   .salesavg{ font-size:.84rem; color:var(--ink-soft); margin-top:8px; }
   .gradeguide{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
@@ -952,9 +1001,12 @@
   <section class="page" id="page-scan">
     <div class="quickwrap">
       <h2 class="sech">Quick add</h2>
-      <p class="qsub">Type or paste card numbers (like <code>EBP01-001</code>) and press Enter. Paste several at once, separated by spaces or new lines.</p>
+      <p class="qsub">Search by Pal name, item, or card number, then tap a result to add it. Or paste several numbers (like <code>EBP01-001</code>) at once, separated by spaces or new lines.</p>
       <button id="nativeScanBtn" class="scanbtn" type="button" data-icon="camera" hidden>Scan a card with the camera</button>
-      <input id="qInput" class="qinput" placeholder="EBP01-001   ETD01-005TSR   EPR-001 …" autocomplete="off" spellcheck="false" />
+      <div class="qbox">
+        <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001 …" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
+        <div class="qsug" id="qSug" role="listbox" hidden></div>
+      </div>
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
     </div>
@@ -1237,6 +1289,10 @@
   function isWished(id){ return !!STATE.wishlist[id]; }
   function toggleWish(id){ if(STATE.wishlist[id]) delete STATE.wishlist[id]; else STATE.wishlist[id]=true; }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
+  // Global favourites (starred standout cards), separate from owning or wishing.
+  if (!STATE.fav) STATE.fav={};
+  function isFav(id){ return !!STATE.fav[id]; }
+  function toggleFav(id){ if(STATE.fav[id]) delete STATE.fav[id]; else STATE.fav[id]=true; }
   var wishMode = false;
   function save(){ try { snapshot(); localStorage.setItem(LS_KEY, JSON.stringify(STATE)); if(typeof pushCloud==="function") pushCloud(); } catch(e){} }
   function snapshot(){ var c=activeCol(); if(!c.hist) c.hist={}; var d=new Date().toISOString().slice(0,10);
@@ -1529,8 +1585,7 @@
       '</dl>';
     var gwork = (s.graded||[]).map(function(g){ return {grader:g.grader,grade:g.grade,value:g.value}; });
     $("mMain").innerHTML =
-      '<div class="martflo"><button class="mclose" id="mClose" aria-label="Close">✕</button><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span>'+
-        '<div class="detactions"><button class="detact" id="detWish" type="button"></button><button class="detact" id="detColl" type="button"></button></div></div>'+
+      '<div class="martflo"><button class="mclose" id="mClose" aria-label="Close">✕</button><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span></div>'+
       '<h2 id="mTitle">'+esc(c.name)+'</h2>'+
       '<div class="mtags">'+elTags+'<span class="eltag" style="background:'+colVar(c.color)+'">'+c.color+'</span>'+
         '<span class="eltag" style="background:'+rareVar(c.rare)+';color:#fff">'+c.rare+'</span></div>'+
@@ -1538,46 +1593,114 @@
       kv+
       promoContext(c)+
       '<div class="meditor">'+
-      '<h3 class="dsec">Collection</h3>'+
-      '<div class="fieldrow">'+
-        '<div class="field"><label>Raw copies</label><input id="fQty" type="number" min="0" value="'+s.qty+'"></div>'+
-        '<div class="field"><label>Condition</label><select id="fCond">'+
-          ["Near Mint","Lightly Played","Moderately Played","Heavily Played","Damaged"].map(function(x){return '<option'+(x===s.cond?' selected':'')+'>'+x+'</option>';}).join("")+
-        '</select></div>'+
-        '<div class="field priceui"><label>Value each '+CUR.sym+' <span class="pricebasis" id="priceBasis"></span></label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
+      // ---- Collection action bubbles ----
+      '<div class="bubrow">'+
+        '<button class="bub" id="bubColl" type="button" aria-expanded="false"></button>'+
+        '<button class="bub" id="bubWish" type="button"></button>'+
+        '<button class="bub" id="bubFav" type="button"></button>'+
       '</div>'+
-      '<div class="graded"><div class="glabel"><span>Graded copies</span><span style="display:flex;gap:8px">'+
-        '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Pull sold</button>'+
-        '<button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></span></div><div id="gradeList"></div></div>'+
+      '<div class="bubpanel" id="panelColl" hidden>'+
+        '<div class="seg" id="typeSeg">'+
+          '<button class="segb on" data-type="raw" type="button">Raw</button>'+
+          '<button class="segb" data-type="graded" type="button">Graded</button>'+
+        '</div>'+
+        '<div class="addgrid" id="rawAdd">'+
+          '<div class="field"><label>Condition</label><select id="fCond">'+
+            [["Near Mint","NM"],["Lightly Played","LP"],["Moderately Played","MP"],["Heavily Played","HP"],["Damaged","D"]].map(function(p){return '<option value="'+p[0]+'"'+(p[0]===s.cond?' selected':'')+'>'+p[1]+' · '+p[0]+'</option>';}).join("")+
+          '</select></div>'+
+          '<div class="field qtyf"><label>Copies</label><input id="addQty" type="number" min="1" value="1"></div>'+
+          '<button class="btn primary addbtn" id="addRawBtn" type="button">'+icon('plus')+' Add</button>'+
+        '</div>'+
+        '<div class="addgrid" id="gradedAdd" hidden>'+
+          '<div class="field"><label>Grader</label><select id="fGrader">'+GRADERS.map(function(x){return '<option'+(x===(SETTINGS.defaultGrader||"PSA")?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
+          '<div class="field"><label>Grade</label><select id="fGradeSel">'+GRADES.map(function(x){return '<option'+(x==="10"?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
+          '<div class="field qtyf"><label>Copies</label><input id="addGQty" type="number" min="1" value="1"></div>'+
+          '<button class="btn primary addbtn" id="addGradedBtn" type="button">'+icon('plus')+' Add</button>'+
+        '</div>'+
+        '<div class="holdrow"><span class="holdlab">In this collection</span>'+
+          '<div class="field holdqty"><label>Raw copies</label><input id="fQty" type="number" min="0" value="'+s.qty+'"></div>'+
+          '<div class="field priceui holdval"><label>Value each '+CUR.sym+' <span class="pricebasis" id="priceBasis"></span></label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
+        '</div>'+
+        '<div class="graded"><div class="glabel"><span>Graded slabs</span><span style="display:flex;gap:8px">'+
+          '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Pull sold</button>'+
+          '<button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></span></div><div id="gradeList"></div></div>'+
+      '</div>'+
 
-      '<h3 class="dsec priceui">Recent sales</h3>'+
-      '<div class="graded priceui"><div class="glabel"><span>Last 5 sold</span><span style="display:flex;gap:8px">'+
-        '<button class="addgrade" id="pullSold" type="button" hidden>'+icon('refresh')+' Sold</button>'+
-        '<button class="addgrade" id="pullList" type="button" hidden>'+icon('refresh')+' Listings</button>'+
-        '<button class="addgrade" id="addSale" type="button">'+icon('plus')+' Add</button></span></div>'+
+      // ---- At a glance price bubbles ----
+      '<div class="bubrow glance priceui">'+
+        '<button class="bub glancebub" id="bubSold" type="button"><span class="gllab">Last 5 sold</span><b class="glval" id="glSold">…</b></button>'+
+        '<button class="bub glancebub" id="bubList" type="button"><span class="gllab">Live listings</span><b class="glval" id="glList">…</b></button>'+
+        '<button class="bub glancebub" id="bubPsa" type="button"><span class="gllab">PSA 10 sold</span><b class="glval" id="glPsa">…</b></button>'+
+      '</div>'+
+      '<div class="bubpanel priceui" id="panelSold" hidden>'+
+        '<div class="glabel"><span>Last 5 sold</span><span style="display:flex;gap:8px">'+
+          '<button class="addgrade" id="pullSold" type="button" hidden>'+icon('refresh')+' Refresh</button>'+
+          '<button class="addgrade" id="addSale" type="button">'+icon('plus')+' Add</button></span></div>'+
         '<div id="salesList"></div>'+
         '<div class="salesavg" id="salesAvg"></div>'+
-        '<div class="salesavg" id="listHint"></div>'+
-        '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a></div>'+
+        '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a>'+
+      '</div>'+
+      '<div class="bubpanel priceui" id="panelList" hidden>'+
+        '<div class="glabel"><span>Live listings</span><button class="addgrade" id="pullList" type="button" hidden>'+icon('refresh')+' Refresh</button></div>'+
+        '<div class="salesavg" id="listHint">Loading current listings…</div>'+
+        '<div id="listRows"></div>'+
+      '</div>'+
+      '<div class="bubpanel priceui" id="panelPsa" hidden>'+
+        '<div class="glabel"><span>PSA 10 sold</span><button class="addgrade" id="pullPsa" type="button" hidden>'+icon('refresh')+' Refresh</button></div>'+
+        '<div class="salesavg" id="psaHint">Loading PSA 10 sales…</div>'+
+        '<div id="psaRows"></div>'+
+        '<h3 class="dsec" style="margin:12px 0 0">Graded price guide</h3>'+
+        '<div class="gradeguide" id="gradeGuide"></div>'+
+      '</div>'+
       '<input type="hidden" id="fLast"><input type="hidden" id="fAvg">'+
 
-      '<h3 class="dsec priceui">Graded price guide</h3>'+
-      '<div class="gradeguide priceui" id="gradeGuide"></div>'+
-
+      // ---- Notes + save ----
       '<h3 class="dsec">Notes</h3>'+
       '<textarea id="fNotes" class="ctmsg" style="min-height:80px" placeholder="Trade, alt-art pull, cert number…">'+esc(s.notes||"")+'</textarea>'+
-
       '<div class="valsum"><span>Card value <span id="sumBreak" style="color:var(--ink-faint)"></span></span><b id="sumVal">$0</b></div>'+
       '<div class="mfoot"><button class="btn primary" id="fSave">Save</button></div>'+
       '</div>';
-    function paintDetActions(){
-      var w=$("detWish"), b=$("detColl"); var wished=isWished(c.id), owned=has(o(c.id));
-      if(w){ w.className="detact"+(wished?" on wish":""); w.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
-      if(b){ b.className="detact"+(owned?" on coll":""); b.innerHTML=icon('book')+'<span>'+(owned?'In collection':'Add to collection')+'</span>'; }
+    // ---- Bubble UI: paint states + progressive-disclosure panels ----
+    function panelOpen(id){ var p=$(id); return p && !p.hidden; }
+    function paintBubbles(){
+      var owned=has(o(c.id)), wished=isWished(c.id), fav=isFav(c.id);
+      var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'In collection':'Add to collection')+'</span>'+icon('chevd','chev'); }
+      var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on wish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
+      var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
-    paintDetActions();
-    $("detWish").onclick=function(){ toggleWish(c.id); save(); paintDetActions(); render(); buildColSel(); };
-    $("detColl").onclick=function(){ var e=o(c.id); e.qty=Math.max(1,(e.qty||0)+1); save(); var q=$("fQty"); if(q) q.value=e.qty; paintDetActions(); render(); if(typeof updateSum==="function") updateSum(); };
+    function togglePanel(id){ var p=$(id); if(!p) return; p.hidden=!p.hidden; }
+    function persist(){
+      s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
+      s.mkt=parseFloat($("fMkt").value)||0;
+      s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||""}; });
+      s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
+      s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
+      save(); render(); buildColSel();
+    }
+    paintBubbles();
+    $("bubColl").onclick=function(){ togglePanel("panelColl"); paintBubbles(); if(panelOpen("panelColl")) $("panelColl").scrollIntoView({block:"nearest",behavior:"smooth"}); };
+    $("bubWish").onclick=function(){ toggleWish(c.id); save(); paintBubbles(); render(); buildColSel(); toast(isWished(c.id)?"Added to wishlist":"Removed from wishlist"); };
+    $("bubFav").onclick=function(){ toggleFav(c.id); save(); paintBubbles(); render(); toast(isFav(c.id)?"Favourited":"Removed favourite"); };
+    // Raw / Graded segmented toggle inside the collection panel
+    Array.prototype.forEach.call($("typeSeg").querySelectorAll(".segb"), function(b){
+      b.onclick=function(){
+        Array.prototype.forEach.call($("typeSeg").querySelectorAll(".segb"), function(x){ x.classList.remove("on"); });
+        b.classList.add("on"); var raw=b.getAttribute("data-type")==="raw";
+        $("rawAdd").hidden=!raw; $("gradedAdd").hidden=raw;
+      };
+    });
+    $("addRawBtn").onclick=function(){
+      var n=Math.max(1,parseInt($("addQty").value,10)||1), q=$("fQty");
+      q.value=(parseInt(q.value,10)||0)+n; updateSum(); persist(); paintBubbles();
+      toast("Added "+n+" raw cop"+(n>1?"ies":"y"));
+    };
+    $("addGradedBtn").onclick=function(){
+      var n=Math.max(1,parseInt($("addGQty").value,10)||1), gr=$("fGrader").value, gd=$("fGradeSel").value;
+      var guess=(s.gradeGuide&&s.gradeGuide[gd])||0;
+      for(var i=0;i<n;i++) gwork.push({grader:gr,grade:gd,value:guess});
+      renderGrades(); updateSum(); persist(); paintBubbles();
+      toast("Added "+n+" "+gr+" "+gd);
+    };
     $("mClose").onclick = closeModal;
     var mf=$("mMain").querySelector(".martflo");
     if(mf) mf.addEventListener("click", function(ev){ if(ev.target.closest(".mclose")) return; openLightbox(c); });
@@ -1613,7 +1736,7 @@
     // ---- Recent eBay sales (avg of last 5) ----
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
     function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; }
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; var gl=$("glSold"); if(gl) gl.textContent = a? money(a) : (salesWork.length?'—':'…'); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
     function renderGradeGuide(){
       var host=$("gradeGuide"); if(!host) return;
@@ -1674,13 +1797,35 @@
       function doList(silent, reg, basis){ var done=busy(pl);
         return api(salesUrl("ebay-active","",reg),"GET").then(function(r){ done(); if(!fresh()) return;
           if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
-          var b=r.body||{}, ls=(b.sales||[]).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}).sort(function(a,z){return a-z;}), us=(basis==="uslistings");
+          var b=r.body||{}, us=(basis==="uslistings"),
+              rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
+              ls=rows.map(function(x){return x.p;});
           var lh=$("listHint");
-          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)]; if(lh) lh.innerHTML=(us?'US listings':'Current listings')+': from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)'; if(!silent) toast("Current listings loaded"); }
-          else { if(lh && !us) lh.textContent=""; if(!silent) toast(b.note||"No current listings"); }
+          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)];
+            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)';
+            var gl=$("glList"); if(gl) gl.textContent=money(low);
+            var lr=$("listRows"); if(lr) lr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
+            if(!silent) toast("Live listings loaded");
+          } else { if(lh && !us) lh.textContent="No current listings found."; var gl2=$("glList"); if(gl2 && !us && gl2.textContent==="…") gl2.textContent='—'; if(!silent) toast(b.note||"No current listings"); }
           setMarket(b.market, basis);
         }).catch(function(){ done(); if(!silent && fresh()) toast("Listings pull failed"); });
       }
+      // PSA 10 sold → headline avg + expandable rows. Independent of what you own.
+      function doPsa(silent, reg){ var done=busy($("pullPsa"));
+        return api(salesUrl("soldcomps","PSA 10",reg),"GET").then(function(r){ done(); if(!fresh()) return;
+          if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
+          var b=r.body||{}, rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;});
+          var val=(b.avg!=null?b.avg:b.market), ph=$("psaHint"), gl=$("glPsa");
+          if(val!=null && val>0){
+            if(gl) gl.textContent=money(val);
+            if(ph) ph.innerHTML='Average of last '+Math.min(5,rows.length||5)+' PSA 10 sold: <b>'+money(val)+'</b>';
+            if(!s.gradeGuide) s.gradeGuide={}; if(s.gradeGuide["10"]==null){ s.gradeGuide["10"]=val; renderGradeGuide(); }
+            var pr=$("psaRows"); if(pr) pr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
+            if(!silent) toast("PSA 10 sales loaded");
+          } else { if(gl && gl.textContent==="…") gl.textContent='—'; if(ph) ph.textContent="No PSA 10 sales found yet."; if(!silent) toast(b.note||"No PSA 10 sales yet"); }
+        }).catch(function(){ done(); if(!silent && fresh()) toast("PSA 10 pull failed"); });
+      }
+      var pp=$("pullPsa"); if(pp){ pp.hidden=false; pp.onclick=function(){ doPsa(false, region); }; }
       if(ps) ps.onclick=function(){ doSold(false, region, "sold"); };
       if(pl) pl.onclick=function(){ doList(false, region, "listings"); };
       // Graded → for each distinct grade you own, pull sold comps at that grade and fill the slab.
@@ -1699,24 +1844,24 @@
           }).catch(function(){}).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum(); toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
         });
       };
-      // Auto-load on open: your-region sold + listings, then US as a fallback rung if enabled and region came up empty.
+      // Auto-load on open: your-region sold + listings + PSA 10 sold (all cached 12h on the backend), then US as a fallback rung if enabled and region came up empty.
+      doPsa(true, region);
       Promise.all([ doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
         if(fresh() && marketBasis==null && SETTINGS.fallbackUS && region!=="com"){
           doSold(true, "com", "ussold"); doList(true, "com", "uslistings");
         }
       });
     })();
+    // At-a-glance bubbles: tap to expand the detail underneath, tap again to hide.
+    (function(){
+      [["bubSold","panelSold"],["bubList","panelList"],["bubPsa","panelPsa"]].forEach(function(pair){
+        var btn=$(pair[0]); if(!btn) return;
+        btn.onclick=function(){ var p=$(pair[1]); if(!p) return; p.hidden=!p.hidden; btn.classList.toggle("open",!p.hidden); if(!p.hidden) p.scrollIntoView({block:"nearest",behavior:"smooth"}); };
+      });
+    })();
     renderSales(); refreshAvg();
 
-    $("fSave").onclick = function(){
-      s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
-      s.mkt=parseFloat($("fMkt").value)||0;
-      s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||""}; });
-      s.avg=avgLast5(salesWork);
-      s.notes=$("fNotes").value;
-      s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
-      save(); render(); buildColSel(); closeModal(); toast(c.name+" updated");
-    };
+    $("fSave").onclick = function(){ persist(); closeModal(); toast(c.name+" updated"); };
     scrim.classList.add("open");
   }
   function closeModal(){ detailGen++; scrim.classList.remove("open"); }
@@ -1876,6 +2021,9 @@
     refresh:'<path d="M20 11a8 8 0 1 0-1 5"/><path d="M20 5v6h-6"/>',
     star:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
     starf:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="currentColor" stroke="none"/>',
+    heart:'<path d="M12 20.5l-1.4-1.3C5.4 14.5 2.5 11.9 2.5 8.6 2.5 6 4.5 4 7.1 4c1.5 0 2.9.7 3.9 1.8C11.9 4.7 13.3 4 14.8 4 17.4 4 19.5 6 19.5 8.6c0 3.3-2.9 5.9-8.1 10.6z"/>',
+    heartf:'<path d="M12 20.5l-1.4-1.3C5.4 14.5 2.5 11.9 2.5 8.6 2.5 6 4.5 4 7.1 4c1.5 0 2.9.7 3.9 1.8C11.9 4.7 13.3 4 14.8 4 17.4 4 19.5 6 19.5 8.6c0 3.3-2.9 5.9-8.1 10.6z" fill="currentColor" stroke="none"/>',
+    chevd:'<path d="M6 9l6 6 6-6"/>',
     check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
     lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     sword:'<path d="M20 4l-8.5 8.5"/><path d="M15 4h5v5"/><path d="M4.5 15.5l4 4"/><path d="M11.5 12.5l-7 7"/><path d="M6.5 17.5l-2.5.5.5-2.5"/>',
@@ -2551,12 +2699,68 @@
     else if(tokens.length){ h.className="qhint bad"; h.textContent="No match for: "+bad.join(", "); }
     else { h.className="qhint"; h.textContent=""; }
   }
+  // Add one specific card (by exact id) from a search result.
+  function quickAddCard(id){
+    var c=byNumberIdx[(id||"").toUpperCase()]; if(!c) return;
+    o(c.id).qty++; qRecent.unshift(c.id);
+    save(); render(); renderQuick();
+    var h=$("qHint"); if(h){ h.className="qhint ok"; h.textContent="Added "+c.name+" ("+c.id+")."; }
+    toast("Added "+c.name);
+  }
+  // Predictive search over Pal names, item names and card numbers.
+  function searchCards(q){
+    q=(q||"").trim().toLowerCase(); if(q.length<2) return [];
+    var idq=q.replace(/[^a-z0-9-]/g,"");
+    var out=[];
+    CARDS.forEach(function(c){
+      var name=c.name.toLowerCase(), id=c.id.toLowerCase(), score=-1;
+      if(idq){ if(id.indexOf(idq)===0) score=100; else if(id.indexOf(idq)>-1) score=58; }
+      if(score<0){
+        var ni=name.indexOf(q);
+        if(ni===0) score=95;
+        else { var ws=name.split(/[^a-z0-9]+/); for(var i=0;i<ws.length;i++){ if(ws[i]&&ws[i].indexOf(q)===0){ score=84; break; } } if(score<0 && ni>-1) score=68; }
+      }
+      if(score>-1) out.push({c:c, s:score});
+    });
+    out.sort(function(a,b){ return b.s-a.s || a.c.name.localeCompare(b.c.name) || a.c.setIdx-b.c.setIdx || a.c.seq-b.c.seq; });
+    return out.slice(0,8).map(function(x){return x.c;});
+  }
+  function hiName(name, q){ q=(q||"").trim(); if(!q) return esc(name); var i=name.toLowerCase().indexOf(q.toLowerCase()); if(i<0) return esc(name); return esc(name.slice(0,i))+'<b>'+esc(name.slice(i,i+q.length))+'</b>'+esc(name.slice(i+q.length)); }
   (function(){
-    var qi=$("qInput"); if(!qi) return;
-    qi.addEventListener("keydown", function(e){ if(e.key==="Enter"){ quickAdd(qi.value); qi.value=""; } });
+    var qi=$("qInput"), box=$("qSug"); if(!qi||!box) return;
+    var results=[], hi=-1;
+    function close(){ box.hidden=true; box.innerHTML=""; results=[]; hi=-1; qi.setAttribute("aria-expanded","false"); }
+    function paintHi(){ Array.prototype.forEach.call(box.children, function(el,i){ el.classList.toggle("hi", i===hi); }); if(hi>-1 && box.children[hi]) box.children[hi].scrollIntoView({block:"nearest"}); }
+    function open(){
+      var q=qi.value; results=searchCards(q); hi=-1;
+      if(!results.length){ if(q.trim().length>=2){ box.hidden=false; box.innerHTML='<div class="qsempty">No card matches “'+esc(q.trim())+'”.</div>'; qi.setAttribute("aria-expanded","true"); } else close(); return; }
+      box.innerHTML=results.map(function(c){
+        var s=o(c.id), kind=c.kind+(c.rare?' · '+c.rare:'');
+        var right=has(s)? '<span class="qsown">×'+s.qty+(s.graded&&s.graded.length?" +"+s.graded.length+"◈":"")+'</span>' : '<span class="qsadd">'+icon('plus')+'Add</span>';
+        return '<div class="qsg" role="option" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><div style="min-width:0"><div class="qsn">'+hiName(c.name,q)+'</div><div class="qsm"><span>'+esc(c.id)+'</span><span class="qsk">'+esc(kind)+'</span></div></div>'+right+'</div>';
+      }).join("");
+      Array.prototype.forEach.call(box.querySelectorAll(".qsg"), function(el){
+        el.addEventListener("mousedown", function(ev){ ev.preventDefault(); quickAddCard(el.getAttribute("data-id")); qi.value=""; close(); qi.focus(); });
+      });
+      box.hidden=false; qi.setAttribute("aria-expanded","true");
+    }
+    qi.addEventListener("input", open);
+    qi.addEventListener("focus", function(){ if(qi.value.trim().length>=2) open(); });
+    qi.addEventListener("blur", function(){ setTimeout(close, 120); });
+    qi.addEventListener("keydown", function(e){
+      var vis=!box.hidden && results.length;
+      if(e.key==="ArrowDown" && vis){ e.preventDefault(); hi=(hi+1)%results.length; paintHi(); }
+      else if(e.key==="ArrowUp" && vis){ e.preventDefault(); hi=(hi<=0?results.length:hi)-1; paintHi(); }
+      else if(e.key==="Escape"){ close(); }
+      else if(e.key==="Enter"){
+        if(vis && hi>-1){ e.preventDefault(); quickAddCard(results[hi].id); qi.value=""; close(); }
+        else if(vis && results.length===1){ e.preventDefault(); quickAddCard(results[0].id); qi.value=""; close(); }
+        else { quickAdd(qi.value); qi.value=""; close(); }
+      }
+    });
     qi.addEventListener("paste", function(e){
       var txt=(e.clipboardData||window.clipboardData).getData("text");
-      if(txt && /\s/.test(txt)){ e.preventDefault(); quickAdd(txt); qi.value=""; }
+      if(txt && /\s/.test(txt)){ e.preventDefault(); quickAdd(txt); qi.value=""; close(); }
     });
   })();
 
