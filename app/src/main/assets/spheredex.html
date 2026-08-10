@@ -258,6 +258,7 @@
   .statbox .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .field { display:flex; flex-direction:column; gap:5px; }
   .field label { font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .pricebasis { text-transform:none; letter-spacing:0; font-weight:500; color:var(--accent-ink); }
   .field input, .field select, .field textarea { background:var(--surface-2); border:1.5px solid var(--line-strong);
     border-radius:10px; padding:9px 11px; color:var(--ink); font-size:.9rem; font-family:inherit; width:100%; }
   .field textarea { resize:vertical; min-height:48px; }
@@ -467,6 +468,13 @@
   .pctop { display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
   .pctop .pcval { font-family:var(--font-mono); font-size:1.7rem; font-weight:600; letter-spacing:-.02em; }
   .pctop .pclab { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .pcfoot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  .pcrefsub { font-size:.72rem; color:var(--ink-faint); font-family:var(--font-mono); }
+  .pcrefbtn { border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:9px; padding:6px 11px; font-size:.78rem; font-weight:650; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .pcrefbtn:hover { border-color:var(--accent); color:var(--accent-ink); }
+  .pcrefbtn svg, .sealpull svg { width:14px; height:14px; }
+  .spin svg { animation:spin 1s linear infinite; transform-origin:50% 50%; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .pcchg { font-family:var(--font-mono); font-size:.92rem; font-weight:600; }
   .pcchg.up { color:var(--el-Grass); } .pcchg.down { color:var(--el-Fire); } .pcchg.flat { color:var(--ink-faint); }
   .pcchart { width:100%; height:150px; display:block; }
@@ -625,6 +633,10 @@
   .obchoices{ display:grid; gap:12px; }
   .obchoice{ display:grid; gap:3px; text-align:left; padding:15px 16px; border-radius:16px; border:2px solid var(--line-strong); background:var(--surface-2); color:var(--ink); cursor:pointer; transition:transform .14s, border-color .14s, box-shadow .14s; }
   .obchoice:hover{ border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
+  .obregion{ display:grid; gap:6px; margin-top:14px; text-align:left; }
+  .obreglab{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); }
+  .obreglab span{ text-transform:none; letter-spacing:0; font-weight:500; color:var(--ink-faint); }
+  .obregion select{ width:100%; box-sizing:border-box; }
   .obicon{ font-size:1.5rem; }
   .obt{ font-family:var(--font-display); font-weight:750; font-size:1.05rem; }
   .obd{ color:var(--ink-soft); font-size:.84rem; line-height:1.4; }
@@ -809,7 +821,7 @@
     <div class="rwcap" id="rewardCap"></div>
 
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
-    <p class="rwintro">Reach a sphere tier on any rarity to unlock it, then set it as your app icon and colour theme. The header orb becomes that sphere and the app recolours to match.</p>
+    <p class="rwintro">Reach a sphere tier on any rarity to unlock it, then set it as your app icon and colour theme. The header orb becomes that sphere and the app recolours to match. On the Android app your home-screen icon changes too (it may blink as Android reapplies it).</p>
     <div class="spherethemes" id="sphereThemes"></div>
   </section>
 
@@ -858,7 +870,8 @@
         <option value="num">Sort · Card no.</option>
         <option value="name">Sort · Name A–Z</option>
         <option value="rarity">Sort · Rarity</option>
-        <option value="cost">Sort · Cost</option>
+        <option value="value">Sort · Value</option>
+        <option value="cost">Sort · Cost (energy)</option>
         <option value="owned">Sort · Owned first</option>
       </select>
       <button class="tbtn ghost sortdir" id="sortDirBtn" type="button" aria-label="Reverse sort order" title="Reverse sort order"></button>
@@ -1004,6 +1017,10 @@
         </select>
       </div>
       <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Fallback to US markets</div><div class="sdesc">If your region has no sold or listing data for a card, also check US eBay (ebay.com) — more volume, but prices in USD. Off by default.</div></div>
+        <label class="switch"><input type="checkbox" id="setFallbackUS"><span class="track"></span></label>
+      </div>
+      <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Default grading company</div><div class="sdesc">Shown as the default on the graded price guide and when adding graded slabs.</div></div>
         <select class="sortsel" id="setGrader"></select>
       </div>
@@ -1067,7 +1084,20 @@
         <span class="obd">A clean binder — just the cards, sets and spheres, no money in sight.</span>
       </button>
     </div>
-    <div class="obnote">You can change this anytime in Settings, and sign in from the Account tab.</div>
+    <div class="obregion">
+      <label class="obreglab" for="obRegion">Market region <span>· where eBay prices are pulled from</span></label>
+      <select class="sortsel" id="obRegion">
+        <option value="co.uk">United Kingdom (ebay.co.uk)</option>
+        <option value="com">United States (ebay.com)</option>
+        <option value="ca">Canada (ebay.ca)</option>
+        <option value="com.au">Australia (ebay.com.au)</option>
+        <option value="de">Germany (ebay.de)</option>
+        <option value="fr">France (ebay.fr)</option>
+        <option value="it">Italy (ebay.it)</option>
+        <option value="es">Spain (ebay.es)</option>
+      </select>
+    </div>
+    <div class="obnote">You can change these anytime in Settings, and sign in from the Account tab.</div>
   </div>
 </div>
 
@@ -1227,7 +1257,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
   var sortDir = (parseInt(localStorage.getItem("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1310,6 +1340,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     out.sort(function(a,b){
       if (s==="name") return a.name.localeCompare(b.name) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="rarity") return (RARE_ORDER[b.rare]-RARE_ORDER[a.rare]) || a.setIdx-b.setIdx || a.seq-b.seq;
+      if (s==="value") return ((+o(b.id).mkt||0)-(+o(a.id).mkt||0)) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="cost") return ((+b.cost||0)-(+a.cost||0)) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="owned") return ((has(o(b.id))?1:0)-(has(o(a.id))?1:0)) || a.setIdx-b.setIdx || a.seq-b.seq;
       return a.setIdx-b.setIdx || a.seq-b.seq || RARE_ORDER[a.rare]-RARE_ORDER[b.rare];
@@ -1480,7 +1511,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var txt=PROMO_SRC[c.id]||"Promo card — given out through official events and campaigns (such as demo sessions via Bushi Navi registration), not sold in a booster or deck.";
     return '<div class="promonote"><span class="pnh">'+icon('ticket')+' How to get it</span><span class="pnt">'+esc(txt)+'</span></div>';
   }
+  var detailGen=0;
   function openDetail(c){
+    var myGen=++detailGen;   // guards async price pulls against clicking through to another card
     var s=o(c.id);
     var elTags = c.els.map(function(e){ return '<span class="eltag" style="background:'+elVar(e)+'">'+e+'</span>'; }).join("");
     var rareCls = c.rare==="OSR" ? "rgem holo" : "rgem"; rareCls = rareCls.replace("rgem","eltag");
@@ -1513,7 +1546,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="field"><label>Condition</label><select id="fCond">'+
           ["Near Mint","Lightly Played","Moderately Played","Heavily Played","Damaged"].map(function(x){return '<option'+(x===s.cond?' selected':'')+'>'+x+'</option>';}).join("")+
         '</select></div>'+
-        '<div class="field priceui"><label>Value each '+CUR.sym+'</label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
+        '<div class="field priceui"><label>Value each '+CUR.sym+' <span class="pricebasis" id="priceBasis"></span></label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
       '</div>'+
       '<div class="graded"><div class="glabel"><span>Graded copies</span><span style="display:flex;gap:8px">'+
         '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Pull sold</button>'+
@@ -1609,53 +1642,71 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     }
     $("addSale").onclick=function(){ salesWork.push({p:0,url:""}); renderSales(); };
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
-    // Live prices via the backend. On demand: Sold (SoldComps, drives Card/Binder value + trending),
-    // Listings (eBay current asks, informational), and per-owned-grade sold for slabs.
+    // Live prices via the backend. Sold + Listings AUTO-LOAD on open; Graded is a manual tap.
     (function(){
       if(!apiBase()) return;
       var region=SETTINGS.ebayRegion||"co.uk";
-      function salesUrl(source, grade){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(region)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
-      function busy(btn){ btn.disabled=true; var o=btn.innerHTML; btn.innerHTML=icon('refresh')+' …'; return function(){ btn.disabled=false; btn.innerHTML=o; }; }
-      // Sold → last-5 sold list + market (median) → feeds Card value / Binder value / trending.
-      var ps=$("pullSold");
-      if(ps){ ps.hidden=false; ps.onclick=function(){ var done=busy(ps);
-        api(salesUrl("soldcomps",""),"GET").then(function(r){ done();
-          if(!r.ok){ toast("Couldn't reach the price server"); return; }
+      function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
+      function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
+      function busy(btn){ if(!btn) return function(){}; btn.disabled=true; var o=btn.innerHTML; btn.innerHTML=icon('refresh')+' …'; return function(){ btn.disabled=false; btn.innerHTML=o; }; }
+      var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
+      if(ps) ps.hidden=false; if(pl) pl.hidden=false; if(pg) pg.hidden=false;
+      // Card Price ladder: your-region sold median → your-region listings low → (US sold → US listings, if the setting is on).
+      var BASIS_RANK={uslistings:1, ussold:2, listings:3, sold:4}, marketBasis=null;
+      var BASIS_LABEL={sold:"median of last 5 sold", listings:"lower end of current listings", ussold:"median of last 5 US sold", uslistings:"lower end of US listings"};
+      function setMarket(v, basis){
+        if(v==null) return;
+        if(marketBasis && BASIS_RANK[basis] < BASIS_RANK[marketBasis]) return;   // never downgrade to a lower rung
+        marketBasis=basis; $("fMkt").value=v;
+        var pb=$("priceBasis"); if(pb) pb.textContent="· "+BASIS_LABEL[basis];
+        updateSum();
+      }
+      // Sold → last-5 sold list + market (median).
+      function doSold(silent, reg, basis){ var done=busy(ps);
+        return api(salesUrl("soldcomps","",reg),"GET").then(function(r){ done(); if(!fresh()) return;
+          if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
           var b=r.body||{}, sales=b.sales||[];
-          if(b.market!=null) $("fMkt").value=b.market;
+          setMarket(b.market, basis);
           if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); }
-          refreshAvg(); updateSum();
-          toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
-        }).catch(function(){ done(); toast("Price pull failed"); });
-      }; }
-      // Listings → current eBay asks, shown as a hint (does not touch sold data or market).
-      var pl=$("pullList");
-      if(pl){ pl.hidden=false; pl.onclick=function(){ var done=busy(pl);
-        api(salesUrl("ebay-active",""),"GET").then(function(r){ done();
-          if(!r.ok){ toast("Couldn't reach the price server"); return; }
-          var b=r.body||{}, ls=(b.sales||[]).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}).sort(function(a,z){return a-z;});
+          refreshAvg();
+          if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
+        }).catch(function(){ done(); if(!silent && fresh()) toast("Price pull failed"); });
+      }
+      // Listings → current eBay asks (hint) + fills Card Price only when a higher rung didn't.
+      function doList(silent, reg, basis){ var done=busy(pl);
+        return api(salesUrl("ebay-active","",reg),"GET").then(function(r){ done(); if(!fresh()) return;
+          if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
+          var b=r.body||{}, ls=(b.sales||[]).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}).sort(function(a,z){return a-z;}), us=(basis==="uslistings");
           var lh=$("listHint");
-          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)]; if(lh) lh.innerHTML='Current listings: from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)'; toast("Current listings loaded"); }
-          else { if(lh) lh.textContent=""; toast(b.note||"No current listings"); }
-        }).catch(function(){ done(); toast("Listings pull failed"); });
-      }; }
+          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)]; if(lh) lh.innerHTML=(us?'US listings':'Current listings')+': from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)'; if(!silent) toast("Current listings loaded"); }
+          else { if(lh && !us) lh.textContent=""; if(!silent) toast(b.note||"No current listings"); }
+          setMarket(b.market, basis);
+        }).catch(function(){ done(); if(!silent && fresh()) toast("Listings pull failed"); });
+      }
+      if(ps) ps.onclick=function(){ doSold(false, region, "sold"); };
+      if(pl) pl.onclick=function(){ doList(false, region, "listings"); };
       // Graded → for each distinct grade you own, pull sold comps at that grade and fill the slab.
-      var pg=$("pullGraded");
-      if(pg){ pg.hidden=false; pg.onclick=function(){
+      if(pg) pg.onclick=function(){
         var grades=[]; gwork.forEach(function(g){ var k=(g.grader||"PSA")+" "+(g.grade||"10"); if(grades.indexOf(k)===-1) grades.push(k); });
         if(!grades.length){ toast("Add a graded slab first"); return; }
-        var done=busy(pg), fin=0, filled=0;
+        var done=busy(pg), finc=0, filled=0;
         grades.forEach(function(gk){
-          api(salesUrl("soldcomps",gk),"GET").then(function(r){
+          api(salesUrl("soldcomps",gk),"GET").then(function(r){ if(!fresh()) return;
             var b=(r&&r.body)||{}; if(b.market!=null){
               var val=(b.avg!=null?b.avg:b.market), gnum=gk.split(" ")[1];
               if(!s.gradeGuide) s.gradeGuide={}; s.gradeGuide[gnum]=val;
               gwork.forEach(function(g){ if(((g.grader||"PSA")+" "+(g.grade||"10"))===gk) g.value=val; });
               filled++;
             }
-          }).catch(function(){}).then(function(){ if(++fin===grades.length){ done(); renderGrades(); renderGradeGuide(); updateSum(); toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
+          }).catch(function(){}).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum(); toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
         });
-      }; }
+      };
+      // Auto-load on open: your-region sold + listings, then US as a fallback rung if enabled and region came up empty.
+      Promise.all([ doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
+        if(fresh() && marketBasis==null && SETTINGS.fallbackUS && region!=="com"){
+          doSold(true, "com", "ussold"); doList(true, "com", "uslistings");
+        }
+      });
     })();
     renderSales(); refreshAvg();
 
@@ -1670,7 +1721,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     };
     scrim.classList.add("open");
   }
-  function closeModal(){ scrim.classList.remove("open"); }
+  function closeModal(){ detailGen++; scrim.classList.remove("open"); }
   function openLightbox(c){
     var img=$("lbImg");
     img.onerror=function(){ this.onerror=null; var e=window.CARD_IMG&&window.CARD_IMG[c.id]; if(e) this.src=e; };
@@ -1728,10 +1779,14 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     root.setProperty("--accent-ink", "color-mix(in srgb, "+c+" 64%, var(--ink))");
     root.setProperty("--logo-c", c);
   }
+  var SPHERE_ICON_KEYS=["pal","mega","giga","hyper","ultra","legendary"];
+  function nativeIcon(){ return (window.AndroidIcon && typeof window.AndroidIcon.setIcon==="function") ? window.AndroidIcon : null; }
   function chooseSphere(i){
     if(i>=0 && !sphereUnlocked(i)){ toast("Reach "+SPHERE_TIERS[i].name+" on any rarity to unlock it"); return; }
     SETTINGS.sphere = i; saveSettings(); applySphere(); renderSphereThemes();
-    toast(i<0 ? "Classic theme" : SPHERE_TIERS[i].name+" theme applied");
+    // On the Android app, also swap the home-screen launcher icon to match the sphere.
+    var ni=nativeIcon(); if(ni){ try{ ni.setIcon(i<0?"default":SPHERE_ICON_KEYS[i]); }catch(e){} }
+    toast((i<0 ? "Classic theme" : SPHERE_TIERS[i].name+" theme applied") + (ni?" · home icon updated":""));
   }
   function checkSphereUnlock(){
     var mx=maxTierReached();
@@ -1771,6 +1826,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   }
   function finishOnboard(mode){
     SETTINGS.mode=mode;
+    var reg=$("obRegion"); if(reg && reg.value) SETTINGS.ebayRegion=reg.value;
     SETTINGS.onboarded=true; saveSettings(); applyMode();
     var ob=$("onboard"); if(ob) ob.hidden=true;
     render();
@@ -1907,10 +1963,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
 
   // ---- Sealed products ----
   var SEALED = [
-    { id:"box-ebp01", name:"Booster Box", sub:"Dawn of Palpagos · 12 packs", box:"BOX_EBP01" },
-    { id:"pack-ebp01", name:"Booster Pack", sub:"Dawn of Palpagos · 7 cards", box:"PACK_EBP01" },
-    { id:"td-rb", name:"Trial Deck — Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01" },
-    { id:"td-gp", name:"Trial Deck — Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02" }
+    { id:"box-ebp01", name:"Booster Box", sub:"Dawn of Palpagos · 12 packs", box:"BOX_EBP01", q:"Palworld Dawn of Palpagos Booster Box" },
+    { id:"pack-ebp01", name:"Booster Pack", sub:"Dawn of Palpagos · 7 cards", box:"PACK_EBP01", q:"Palworld Dawn of Palpagos Booster Pack" },
+    { id:"td-rb", name:"Trial Deck — Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
+    { id:"td-gp", name:"Trial Deck — Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" }
   ];
   function sealMap(){ var c=activeCol(); if(!c.sealed) c.sealed={}; return c.sealed; }
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
@@ -1918,6 +1974,31 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function sealedValue(){ var t=0; SEALED.forEach(function(p){ var s=sealItem(p.id); t+=(+s.qty||0)*(+s.mkt||0); }); return t; }
   function cardsValue(){ return CARDS.reduce(function(a,c){ return a+cardValue(o(c.id)); },0); }
   function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
+  // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
+  // listings → (US sold → US listings, if the fallback setting is on). Sequential = quota-light.
+  function pullSealed(p, s, btn){
+    if(!apiBase()){ toast("Set a cloud server first"); return; }
+    var region=SETTINGS.ebayRegion||"co.uk", orig=btn?btn.innerHTML:"";
+    if(btn){ btn.disabled=true; btn.innerHTML=icon('refresh')+' …'; }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(p.q||("Palworld "+p.name))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function applySold(b){ s.mkt=+b.market||0; if(b.sales&&b.sales.length) s.last=+b.sales[0].p||0; if(b.avg!=null) s.avg=+b.avg||0; }
+    function applyList(b){ s.mkt=+b.market||0; if(b.avg!=null) s.avg=+b.avg||0; }
+    function finish(msg){ if(btn){ btn.disabled=false; btn.innerHTML=orig; } save(); renderSealed(); renderHome(); if(msg) toast(msg); }
+    api(url("soldcomps",region),"GET").then(function(r){
+      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); finish("Pulled sold · "+money(s.mkt)); return; }
+      return api(url("ebay-active",region),"GET").then(function(r2){
+        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); finish("From listings · "+money(s.mkt)); return; }
+        if(SETTINGS.fallbackUS && region!=="com"){
+          return api(url("soldcomps","com"),"GET").then(function(r3){
+            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); finish("US sold · "+money(s.mkt)); return; }
+            return api(url("ebay-active","com"),"GET").then(function(r4){
+              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); finish("US listings · "+money(s.mkt)); }
+              else finish("No market data found"); });
+          });
+        } else finish("No market data found");
+      });
+    }).catch(function(){ finish("Price pull failed"); });
+  }
   function renderSealed(){
     var grid=$("sealedGrid"); if(!grid) return; grid.innerHTML="";
     SEALED.forEach(function(p){
@@ -1930,9 +2011,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
           '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
             '<span class="sealval">'+money((+s.qty||0)*(+s.mkt||0))+'</span></div>'+
           '<div class="priceg">'+priceField("rrp","RRP",s.rrp)+priceField("mkt","Market",s.mkt)+priceField("last","Last sold",s.last)+priceField("avg","Avg sold",s.avg)+'</div>'+
+          (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Pull market</button>':'')+
         '</div>';
       el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
       el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ s[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
+      var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
       grid.appendChild(el);
     });
     var bar=$("sealedBar"); if(bar) bar.innerHTML=
@@ -1943,6 +2026,54 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // ---- Portfolio value-over-time chart ----
   function portfolioSeries(){ var h=activeCol().hist||{}; return Object.keys(h).sort().map(function(d){ return {d:d, v:+h[d]||0}; }); }
   function fmtDate(iso){ var p=iso.split("-"); return p[2]+"/"+p[1]; }
+  // ---- Collection price refresh (owned cards only; keeps the portfolio total + graph current) ----
+  var priceRefreshing=false;
+  function relTime(ts){ if(!ts) return "never"; var m=Math.round((Date.now()-ts)/60000); if(m<1) return "just now"; if(m<60) return m+"m ago"; var h=Math.round(m/60); if(h<24) return h+"h ago"; return Math.round(h/24)+"d ago"; }
+  function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(el) el.textContent="Prices refreshed "+relTime(SETTINGS.lastPriceRefresh); }
+  // One card's market via the ladder: region sold → region listings → (US sold → US listings, if on).
+  function pullCardMarket(c, region){
+    var e=o(c.id);
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function applySold(b){ e.mkt=+b.market||0; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; }
+    function applyList(b){ e.mkt=+b.market||0; if(b.avg!=null) e.avg=+b.avg||0; }
+    return api(url("soldcomps",region),"GET").then(function(r){
+      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); return e.mkt; }
+      return api(url("ebay-active",region),"GET").then(function(r2){
+        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); return e.mkt; }
+        if(SETTINGS.fallbackUS && region!=="com"){
+          return api(url("soldcomps","com"),"GET").then(function(r3){
+            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); return e.mkt; }
+            return api(url("ebay-active","com"),"GET").then(function(r4){
+              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); return e.mkt; } return null; });
+          });
+        } return null;
+      });
+    }).catch(function(){ return null; });
+  }
+  function refreshCollectionPrices(opts){
+    opts=opts||{};
+    if(priceRefreshing){ if(!opts.auto) toast("Already refreshing…"); return; }
+    if(!apiBase()){ if(!opts.auto) toast("Set a cloud server first"); return; }
+    if(opts.auto && SETTINGS.mode==="collector") return;         // prices hidden → nothing to refresh
+    var region=SETTINGS.ebayRegion||"co.uk", now=Date.now(), STALE=18*3600*1000, CAP=60;
+    var col=activeCol(), owned=[];
+    CARDS.forEach(function(c){ var e=col.own[c.id]; if(e && (e.qty>0 || (e.graded&&e.graded.length))){ if(!opts.auto || !e.pAt || (now-e.pAt)>STALE) owned.push(c); } });
+    owned.sort(function(a,b){ return (col.own[a.id].pAt||0)-(col.own[b.id].pAt||0); });   // oldest first
+    owned=owned.slice(0,CAP);
+    if(!owned.length){ if(!opts.auto) toast("Prices are already up to date"); return; }
+    priceRefreshing=true;
+    Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.add("spin"); b.disabled=true; });
+    var idx=0, active=0, updated=0;
+    function run(c){ active++; pullCardMarket(c, region).then(function(mkt){ if(mkt!=null){ o(c.id).pAt=Date.now(); updated++; } }).catch(function(){}).then(function(){ active--; if(idx>=owned.length && active===0) finish(); else pump(); }); }
+    function pump(){ while(active<3 && idx<owned.length){ run(owned[idx++]); } }
+    function finish(){
+      priceRefreshing=false;
+      Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.remove("spin"); b.disabled=false; });
+      SETTINGS.lastPriceRefresh=Date.now(); saveSettings(); save(); render();
+      toast(updated? ("Latest prices updated · "+updated+" card"+(updated>1?"s":"")) : "Prices already current");
+    }
+    pump();
+  }
   function renderPortfolio(){
     var card=$("portfolioCard"); if(!card) return;
     var series=portfolioSeries(), cur=cardsValue()+sealedValue();
@@ -1954,7 +2085,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div><div class="pcval">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(series[0].d)+'</span></div>'+
       '</div>'+ chartSVG(series)+
+      '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
+        (apiBase()?'<button class="pcrefbtn pricerefresh priceui" id="refreshPricesBtn" type="button">'+icon('refresh')+' Refresh prices</button>':'')+'</div>'+
       (series.length<2?'<div class="pcnote">Your total is snapshotted each day — the line fills in as the days pass.</div>':'');
+    var rb=$("refreshPricesBtn"); if(rb) rb.onclick=function(){ refreshCollectionPrices({auto:false}); };
+    updateRefreshLabel();
   }
   function chartSVG(series){
     var W=600,H=150,pad=8,n=series.length;
@@ -2606,6 +2741,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); }; }
+    var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); };
@@ -2714,7 +2850,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // Store links are placeholders until the apps are published.
   ["playLink","iosLink"].forEach(function(id){ var a=$(id); if(a) a.onclick=function(e){ e.preventDefault(); toast("Mobile apps coming soon — you're on the web app"); }; });
   maybeOnboard();
-  if(AUTH.token && apiBase()) pullState();
+  // On open, refresh owned-card prices (staleness-gated + capped) so the total + graph stay current.
+  function autoRefreshPrices(){ refreshCollectionPrices({auto:true}); }
+  if(AUTH.token && apiBase()){ pullState().then(function(){ setTimeout(autoRefreshPrices, 500); }); }
+  else { setTimeout(autoRefreshPrices, 900); }
 })();
 </script>
 </body></html>

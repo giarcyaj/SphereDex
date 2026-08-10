@@ -2,7 +2,9 @@ package com.paldeck.binder
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.webkit.JsPromptResult
@@ -92,6 +94,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             addJavascriptInterface(WebBridge(), "AndroidScan")
+            addJavascriptInterface(IconBridge(), "AndroidIcon")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -106,6 +109,42 @@ class MainActivity : ComponentActivity() {
 
     private fun launchScanner(collection: String) {
         scanLauncher.launch(Intent(this, ScannerActivity::class.java).putExtra("collection", collection))
+    }
+
+    // Reward key -> launcher activity-alias. "default"/"pal" share the blue classic icon.
+    private val iconAliases = linkedMapOf(
+        "default" to "AliasDefault",
+        "pal" to "AliasDefault",
+        "mega" to "AliasMega",
+        "giga" to "AliasGiga",
+        "hyper" to "AliasHyper",
+        "ultra" to "AliasUltra",
+        "legendary" to "AliasLegendary",
+    )
+
+    /** Enable the chosen sphere's launcher alias and disable the others. The launcher may briefly
+     *  relaunch the app when the home-screen icon changes — that's normal Android behaviour. */
+    private fun applyIcon(key: String) {
+        val chosen = iconAliases[key] ?: "AliasDefault"
+        val pm = packageManager
+        // Distinct alias set (default/pal collapse to one), so exactly one launcher stays enabled.
+        for (alias in iconAliases.values.toSet()) {
+            val state = if (alias == chosen) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            pm.setComponentEnabledSetting(
+                ComponentName(packageName, "$packageName.$alias"),
+                state,
+                PackageManager.DONT_KILL_APP,
+            )
+        }
+    }
+
+    /** Exposed to the web app as window.AndroidIcon */
+    inner class IconBridge {
+        @JavascriptInterface
+        fun setIcon(key: String) {
+            runOnUiThread { try { applyIcon(key) } catch (_: Exception) {} }
+        }
     }
 
     /** Exposed to the web app as window.AndroidScan */
