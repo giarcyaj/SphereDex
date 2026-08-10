@@ -14,6 +14,11 @@
 .lp{
   font-family:var(--body); color:var(--ink); background:var(--bg);
   -webkit-font-smoothing:antialiased; line-height:1.6; overflow-x:hidden;
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+  position:relative; z-index:0;
+}
+.lp::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background-image:
     radial-gradient(1100px 620px at 78% -8%, rgba(74,166,230,.15), transparent 60%),
     radial-gradient(900px 560px at 8% 6%, rgba(160,107,224,.13), transparent 62%),
@@ -21,7 +26,6 @@
     repeating-linear-gradient(60deg, rgba(230,184,85,.030) 0 1px, transparent 1px 62px),
     repeating-linear-gradient(120deg, rgba(230,184,85,.030) 0 1px, transparent 1px 62px),
     repeating-linear-gradient(0deg, rgba(120,150,190,.022) 0 1px, transparent 1px 54px);
-  background-attachment:fixed;
 }
 .lp ::selection{ background:rgba(74,166,230,.4); color:#fff; }
 .wrap{ max-width:1120px; margin:0 auto; padding:0 24px; }
@@ -126,6 +130,7 @@ section{ padding:56px 0; }
 .mockup .chrome{ display:flex; gap:7px; margin-bottom:16px; }
 .mockup .chrome i{ width:10px; height:10px; border-radius:50%; background:#28323f; }
 @media (max-width:640px){ .mockup{ max-width:none; } }
+@media (max-width:430px){ .cta{ flex-direction:column; align-items:stretch; } .cta .btn{ width:100%; text-align:center; } }
 /* Track: a collection filling in */
 .mk-track .toprow{ display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:.74rem; color:var(--muted); margin-bottom:13px; }
 .mk-track .mkpct{ color:var(--gold-soft); font-weight:700; }
