@@ -43,6 +43,6 @@ If instead you push the whole `paldeck-app/` folder, move `.github/` up to `pald
 ## Notes
 
 - This is a **debug** build: signed with a throwaway debug key, fine for your own device, not for the Play Store.
-- The app id is `com.paldeck.binder`.
+- The app id is `app.spheredex`.
 - If a build fails, open the failed step's log in the Actions run — it almost always points at the exact Gradle error.
 - Want a shareable/installable **release** APK later (proper signing)? Say the word and I'll add a signed-release job.

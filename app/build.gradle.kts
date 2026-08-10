@@ -4,15 +4,33 @@ plugins {
 }
 
 android {
-    namespace = "com.paldeck.binder"
+    namespace = "app.spheredex"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.paldeck.binder"
+        applicationId = "app.spheredex"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+    }
+    signingConfigs {
+        create("release") {
+            // Supplied by CI from GitHub secrets; nothing sensitive lives in the repo.
+            System.getenv("KEYSTORE_FILE")?.let { storeFile = file(it) }
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false   // keep JS bridge (JavascriptInterface) intact; no R8 stripping
+            // Sign the release only when the keystore secrets are present (i.e. in CI).
+            if (System.getenv("KEYSTORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
     buildFeatures { compose = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }

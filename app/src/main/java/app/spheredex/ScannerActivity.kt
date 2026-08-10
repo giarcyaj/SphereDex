@@ -1,4 +1,4 @@
-package com.paldeck.binder
+package app.spheredex
 
 import android.Manifest
 import android.content.Context

@@ -1,4 +1,4 @@
-package com.paldeck.binder
+package app.spheredex
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateMapOf

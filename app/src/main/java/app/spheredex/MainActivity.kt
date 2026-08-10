@@ -1,4 +1,4 @@
-package com.paldeck.binder
+package app.spheredex
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
