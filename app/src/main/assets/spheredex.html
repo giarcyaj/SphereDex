@@ -986,8 +986,8 @@
         <select class="sortsel" id="setSourceSel">
           <option value="manual">Manual (you enter)</option>
           <option value="ebay-active">eBay — current listings (instant)</option>
-          <option value="ebay">eBay — sold listings (needs approval)</option>
-          <option value="pricecharting">PriceCharting</option>
+          <option value="soldcomps">eBay — sold comps, worldwide</option>
+          <option value="pricecharting">PriceCharting (US only)</option>
         </select>
       </div>
       <div class="setrow priceui">
@@ -1607,17 +1607,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
     // Pull live prices via the backend (only when a server + a live price source are set up).
     var pe=$("pullEbay"), src=SETTINGS.priceSource;
-    var SRC_LABEL={"ebay":"eBay sold","ebay-active":"eBay listings","pricecharting":"PriceCharting"};
+    var SRC_LABEL={"ebay":"eBay sold","ebay-active":"eBay listings","soldcomps":"eBay sold","pricecharting":"PriceCharting"};
     if(pe && apiBase() && src && src!=="manual"){
       pe.hidden=false; var pullLabel=icon('refresh')+' Pull '+(SRC_LABEL[src]||"price"); pe.innerHTML=pullLabel;
       pe.onclick=function(){
         pe.disabled=true; pe.innerHTML=icon('refresh')+' …';
-        api("/api/sales?name="+encodeURIComponent(c.name)+"&region="+encodeURIComponent(SETTINGS.ebayRegion||"co.uk")+"&source="+encodeURIComponent(src),"GET").then(function(r){
+        api("/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(SETTINGS.ebayRegion||"co.uk")+"&source="+encodeURIComponent(src),"GET").then(function(r){
           pe.disabled=false; pe.innerHTML=pullLabel;
           if(!r.ok){ toast("Couldn't reach the price server"); return; }
           var b=r.body||{}, sales=b.sales||[], got=false;
           if(b.market!=null){ $("fMkt").value=b.market; updateSum(); got=true; }
-          if(src==="ebay" && sales.length){ salesWork=sales.slice(0,15).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); refreshAvg(); got=true; }
+          if(sales.length){ salesWork=sales.slice(0,15).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); refreshAvg(); got=true; }
           toast(got ? ("Updated from "+(SRC_LABEL[src]||"source")) : (b.note||"No results found"));
         }).catch(function(){ pe.disabled=false; pe.innerHTML=pullLabel; toast("Price pull failed"); });
       };
