@@ -711,19 +711,19 @@
   .detact.on.wish{ color:var(--r-RR); border-color:var(--r-RR); background:color-mix(in srgb,var(--r-RR) 12%,transparent); }
   .detact.on.coll{ color:var(--accent-ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   /* ---- Detail bubbles (progressive disclosure) ---- */
-  .bubrow{ display:flex; gap:9px; margin-top:4px; }
+  .bubrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:4px; }
   .bubrow.glance{ margin-top:12px; }
-  .bub{ flex:1; min-width:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:12px 10px; border-radius:14px;
-    border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.86rem; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
+  .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:7px; padding:12px 10px; border-radius:14px;
+    border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.82rem; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
   .bub .ic{ width:1.15rem; height:1.15rem; margin:0; flex:none; }
-  .bub span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bub span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bub .chev{ width:.95rem; height:.95rem; margin-left:2px; opacity:.6; transition:transform .18s; }
   .bub:hover{ color:var(--ink); border-color:var(--ink-faint); }
   .bub.open{ border-color:var(--accent); }
   .bub.open .chev{ transform:rotate(180deg); }
-  .bub.on{ color:var(--accent-ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
-  .bub.on.wish{ color:var(--r-RR); border-color:var(--r-RR); background:color-mix(in srgb,var(--r-RR) 14%,transparent); }
-  .bub.on.fav{ color:#e8547e; border-color:#e8547e; background:color-mix(in srgb,#e8547e 12%,transparent); }
+  .bub.on{ color:var(--r-R); border-color:var(--r-R); background:color-mix(in srgb,var(--r-R) 15%,transparent); font-weight:800; }
+  .bub.on.bwish{ color:#e0a400; border-color:#efb100; background:color-mix(in srgb,#efb100 18%,transparent); font-weight:800; }
+  .bub.on.fav{ color:#e8547e; border-color:#e8547e; background:color-mix(in srgb,#e8547e 14%,transparent); font-weight:800; }
   .glancebub{ flex-direction:column; gap:3px; padding:11px 8px; }
   .glancebub .gllab{ font-size:.64rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .glancebub .glval{ font-family:var(--font-mono); font-size:1.02rem; font-weight:600; color:var(--ink); }
@@ -737,9 +737,11 @@
   .addgrid .field{ flex:1; min-width:96px; }
   .addgrid .qtyf{ flex:0 0 80px; min-width:70px; }
   .addbtn{ flex:0 0 auto; padding:10px 18px; }
-  .holdrow{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; padding-top:11px; border-top:1.5px solid var(--line); }
-  .holdrow .holdlab{ flex-basis:100%; font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
-  .holdrow .field{ flex:1; min-width:110px; }
+  .ownline{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding-top:11px; border-top:1.5px solid var(--line); }
+  .ownline .ownlab{ flex-basis:100%; font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .ownpill{ display:inline-flex; align-items:center; gap:6px; padding:6px 6px 6px 12px; border-radius:999px; border:1.5px solid var(--line-strong); background:var(--surface-2); font-size:.82rem; font-weight:650; color:var(--ink); }
+  .ownpill .ownx{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; border:none; background:color-mix(in srgb,var(--el-Fire) 16%,transparent); color:var(--el-Fire); font-size:.95rem; line-height:1; cursor:pointer; }
+  .ownpill .ownx:hover{ background:var(--el-Fire); color:#fff; }
   .salerow.ro{ margin-bottom:0; }
   .salerow.ro .lprice{ font-family:var(--font-mono); font-size:.86rem; color:var(--ink); text-decoration:none; }
   .salerow.ro a.lprice{ color:var(--accent-ink); }
@@ -1045,15 +1047,6 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it — no dimming for missing cards.</div></div>
         <label class="switch"><input type="checkbox" id="setNoFade"><span class="track"></span></label>
-      </div>
-      <div class="setrow priceui">
-        <div class="setinfo"><div class="stitle">Price source <span class="betatag">beta</span></div><div class="sdesc">Where market prices come from. Live feeds come from the SphereDex backend — values are manual until you deploy it, and this sets the source label.</div></div>
-        <select class="sortsel" id="setSourceSel">
-          <option value="manual">Manual (you enter)</option>
-          <option value="ebay-active">eBay — current listings (instant)</option>
-          <option value="soldcomps">eBay — sold comps, worldwide</option>
-          <option value="pricecharting">PriceCharting (US only)</option>
-        </select>
       </div>
       <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">eBay region</div><div class="sdesc">Which eBay marketplace the “Search sold listings” links open. Match it to where you buy and sell.</div></div>
@@ -1480,9 +1473,8 @@
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + (val>0?'<span class="val">'+money(val)+'</span>':'');
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var wished = isWished(c.id);
-    var wishflag = wished ? '<span class="wishflag" title="On your wishlist">'+icon('starf')+'</span>' : '';
     el.innerHTML =
-      '<div class="art">'+artHTML(c)+ gbadge + wishflag +
+      '<div class="art">'+artHTML(c)+ gbadge +
       '</div>'+
       '<div class="cbody">'+
         '<div class="cname">'+esc(c.name)+(suffixOf(c)?' <span class="suffix">'+suffixOf(c)+'</span>':'')+'</div>'+
@@ -1617,13 +1609,8 @@
           '<div class="field qtyf"><label>Copies</label><input id="addGQty" type="number" min="1" value="1"></div>'+
           '<button class="btn primary addbtn" id="addGradedBtn" type="button">'+icon('plus')+' Add</button>'+
         '</div>'+
-        '<div class="holdrow"><span class="holdlab">In this collection</span>'+
-          '<div class="field holdqty"><label>Raw copies</label><input id="fQty" type="number" min="0" value="'+s.qty+'"></div>'+
-          '<div class="field priceui holdval"><label>Value each '+CUR.sym+' <span class="pricebasis" id="priceBasis"></span></label><input id="fMkt" type="number" min="0" step="0.01" value="'+(s.mkt||0)+'"></div>'+
-        '</div>'+
-        '<div class="graded"><div class="glabel"><span>Graded slabs</span><span style="display:flex;gap:8px">'+
-          '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Pull sold</button>'+
-          '<button class="addgrade" id="addGrade" type="button">'+icon('plus')+' Add slab</button></span></div><div id="gradeList"></div></div>'+
+        '<div class="ownline" id="ownLine" hidden></div>'+
+        '<input type="hidden" id="fQty" value="'+s.qty+'"><input type="hidden" id="fMkt" value="'+(s.mkt||0)+'"><span id="priceBasis" hidden></span><div id="gradeList" hidden></div>'+
       '</div>'+
 
       // ---- At a glance price bubbles ----
@@ -1664,10 +1651,27 @@
     function panelOpen(id){ var p=$(id); return p && !p.hidden; }
     function paintBubbles(){
       var owned=has(o(c.id)), wished=isWished(c.id), fav=isFav(c.id);
-      var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'In collection':'Add to collection')+'</span>'+icon('chevd','chev'); }
-      var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on wish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
+      var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'In Collection':'Collect')+'</span>'; }
+      var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
       var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
+    // Quick-remove line: shows current holdings once a card is in the collection.
+    function paintOwn(){
+      var host=$("ownLine"); if(!host) return;
+      var parts=[], q=parseInt($("fQty").value,10)||0;
+      if(q>0) parts.push('<span class="ownpill" data-t="raw">'+q+' raw · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" type="button" aria-label="Remove one raw copy">−</button></span>');
+      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      host.hidden=!parts.length;
+      host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
+      Array.prototype.forEach.call(host.querySelectorAll(".ownx"), function(b){
+        b.onclick=function(){
+          if(b.getAttribute("data-t")==="raw"){ var qq=$("fQty"); qq.value=Math.max(0,(parseInt(qq.value,10)||0)-1); }
+          else { gwork.splice(parseInt(b.getAttribute("data-i"),10),1); renderGrades(); }
+          updateSum(); persist(); paintBubbles(); paintOwn();
+        };
+      });
+    }
+    function condShort(x){ return ({"Near Mint":"NM","Lightly Played":"LP","Moderately Played":"MP","Heavily Played":"HP","Damaged":"D"})[x]||x||"NM"; }
     function togglePanel(id){ var p=$(id); if(!p) return; p.hidden=!p.hidden; }
     function persist(){
       s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
@@ -1691,14 +1695,14 @@
     });
     $("addRawBtn").onclick=function(){
       var n=Math.max(1,parseInt($("addQty").value,10)||1), q=$("fQty");
-      q.value=(parseInt(q.value,10)||0)+n; updateSum(); persist(); paintBubbles();
+      q.value=(parseInt(q.value,10)||0)+n; s.cond=$("fCond").value; updateSum(); persist(); paintBubbles(); paintOwn();
       toast("Added "+n+" raw cop"+(n>1?"ies":"y"));
     };
     $("addGradedBtn").onclick=function(){
       var n=Math.max(1,parseInt($("addGQty").value,10)||1), gr=$("fGrader").value, gd=$("fGradeSel").value;
       var guess=(s.gradeGuide&&s.gradeGuide[gd])||0;
       for(var i=0;i<n;i++) gwork.push({grader:gr,grade:gd,value:guess});
-      renderGrades(); updateSum(); persist(); paintBubbles();
+      renderGrades(); updateSum(); persist(); paintBubbles(); paintOwn();
       toast("Added "+n+" "+gr+" "+gd);
     };
     $("mClose").onclick = closeModal;
@@ -1729,9 +1733,7 @@
       var parts=[]; if(q) parts.push(q+" raw"); if(gwork.length) parts.push(gwork.length+" graded");
       $("sumBreak").textContent=parts.length?"("+parts.join(" · ")+")":"";
     }
-    $("addGrade").onclick=function(){ gwork.push({grader:(SETTINGS.defaultGrader||"PSA"),grade:"10",value:0}); renderGrades(); updateSum(); };
-    $("fQty").oninput=updateSum; $("fMkt").oninput=updateSum;
-    renderGrades(); updateSum();
+    renderGrades(); updateSum(); paintOwn();
 
     // ---- Recent eBay sales (avg of last 5) ----
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
@@ -1772,9 +1774,9 @@
       function busy(btn){ if(!btn) return function(){}; btn.disabled=true; var o=btn.innerHTML; btn.innerHTML=icon('refresh')+' …'; return function(){ btn.disabled=false; btn.innerHTML=o; }; }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
       if(ps) ps.hidden=false; if(pl) pl.hidden=false; if(pg) pg.hidden=false;
-      // Card Price ladder: your-region sold median → your-region listings low → (US sold → US listings, if the setting is on).
+      // Card Price ladder: your-region sold average → your-region listings low → (US sold → US listings, if the setting is on).
       var BASIS_RANK={uslistings:1, ussold:2, listings:3, sold:4}, marketBasis=null;
-      var BASIS_LABEL={sold:"median of last 5 sold", listings:"lower end of current listings", ussold:"median of last 5 US sold", uslistings:"lower end of US listings"};
+      var BASIS_LABEL={sold:"average of last 5 sold", listings:"lower end of current listings", ussold:"average of last 5 US sold", uslistings:"lower end of US listings"};
       function setMarket(v, basis){
         if(v==null) return;
         if(marketBasis && BASIS_RANK[basis] < BASIS_RANK[marketBasis]) return;   // never downgrade to a lower rung
@@ -1782,12 +1784,12 @@
         var pb=$("priceBasis"); if(pb) pb.textContent="· "+BASIS_LABEL[basis];
         updateSum();
       }
-      // Sold → last-5 sold list + market (median).
+      // Sold → last-5 sold list + market (average of last 5 sold).
       function doSold(silent, reg, basis){ var done=busy(ps);
         return api(salesUrl("soldcomps","",reg),"GET").then(function(r){ done(); if(!fresh()) return;
           if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
           var b=r.body||{}, sales=b.sales||[];
-          setMarket(b.market, basis);
+          setMarket((b.avg!=null?b.avg:b.market), basis);
           if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); }
           refreshAvg();
           if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
@@ -1801,8 +1803,8 @@
               rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
               ls=rows.map(function(x){return x.p;});
           var lh=$("listHint");
-          if(ls.length){ var low=ls[0], med=ls[Math.floor(ls.length/2)];
-            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': from <b>'+money(low)+'</b> · median <b>'+money(med)+'</b> ('+ls.length+' live)';
+          if(ls.length){ var low=ls[0], lavg=ls.reduce(function(a,z){return a+z;},0)/ls.length;
+            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': from <b>'+money(low)+'</b> · average <b>'+money(lavg)+'</b> ('+ls.length+' live)';
             var gl=$("glList"); if(gl) gl.textContent=money(low);
             var lr=$("listRows"); if(lr) lr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
             if(!silent) toast("Live listings loaded");
@@ -2127,7 +2129,7 @@
     var region=SETTINGS.ebayRegion||"co.uk", orig=btn?btn.innerHTML:"";
     if(btn){ btn.disabled=true; btn.innerHTML=icon('refresh')+' …'; }
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(p.q||("Palworld "+p.name))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
-    function applySold(b){ s.mkt=+b.market||0; if(b.sales&&b.sales.length) s.last=+b.sales[0].p||0; if(b.avg!=null) s.avg=+b.avg||0; }
+    function applySold(b){ s.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) s.last=+b.sales[0].p||0; if(b.avg!=null) s.avg=+b.avg||0; }
     function applyList(b){ s.mkt=+b.market||0; if(b.avg!=null) s.avg=+b.avg||0; }
     function finish(msg){ if(btn){ btn.disabled=false; btn.innerHTML=orig; } save(); renderSealed(); renderHome(); if(msg) toast(msg); }
     api(url("soldcomps",region),"GET").then(function(r){
@@ -2180,7 +2182,7 @@
   function pullCardMarket(c, region){
     var e=o(c.id);
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
-    function applySold(b){ e.mkt=+b.market||0; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; }
+    function applySold(b){ e.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; }
     function applyList(b){ e.mkt=+b.market||0; if(b.avg!=null) e.avg=+b.avg||0; }
     return api(url("soldcomps",region),"GET").then(function(r){
       var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); return e.mkt; }
@@ -2409,21 +2411,21 @@
     return { name:t.name, c:t.c, next: idx<SPHERE_TIERS.length-1 ? SPHERE_TIERS[idx+1].name+" at "+SPHERE_TIERS[idx+1].min+"%" : null };
   }
 
-  // ---- Trending card: biggest riser = current market furthest above its average-sold price ----
+  // ---- Trending card: biggest riser = latest sold price furthest above its average of the last 5 sold ----
   function trendingCard(){
     var best=null;
-    // avg = last-5 sold (recent), mkt = median sold (baseline). Recent above baseline = a live spike.
-    CARDS.forEach(function(c){ var s=o(c.id), mkt=+s.mkt||0, avg=+s.avg||0;
-      if(mkt>0 && avg>0 && avg>mkt){ var pct=(avg-mkt)/mkt*100; if(!best || pct>best.pct) best={c:c,mkt:mkt,avg:avg,pct:pct}; } });
+    // last = most recent sold, avg = average of the last 5 sold. Latest sale above the average = a live riser.
+    CARDS.forEach(function(c){ var s=o(c.id), last=+s.last||0, avg=+s.avg||0;
+      if(last>0 && avg>0 && last>avg){ var pct=(last-avg)/avg*100; if(!best || pct>best.pct) best={c:c,last:last,avg:avg,pct:pct}; } });
     return best;
   }
   function renderTrending(){
     var el=$("trendCard"); if(!el) return;
     var t=trendingCard();
-    if(!t){ el.className="trendnote"; el.textContent="Add a card's Market and Avg-sold prices (in its detail) and the biggest riser shows here. Live movement arrives with the price feed."; el.onclick=null; return; }
+    if(!t){ el.className="trendnote"; el.textContent="Own some cards with sold prices and the biggest riser shows here. Prices refresh automatically from eBay and SoldComps."; el.onclick=null; return; }
     el.className="trend";
     el.innerHTML='<img src="'+imgSrc(t.c)+'" alt="">'+
-      '<div><div class="tnm">'+esc(t.c.name)+'</div><div class="tsub">'+t.c.id+' · recent '+money(t.avg)+' vs median '+money(t.mkt)+'</div></div>'+
+      '<div><div class="tnm">'+esc(t.c.name)+'</div><div class="tsub">'+t.c.id+' · latest '+money(t.last)+' vs average '+money(t.avg)+'</div></div>'+
       '<div class="tpct">▲ '+t.pct.toFixed(1)+'%</div>';
     el.onclick=function(){ openDetail(t.c); };
   }
@@ -2938,8 +2940,6 @@
   (function(){
     var sv=$("setViewSel"); sv.value=viewMode;
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; localStorage.setItem("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
-    var ss=$("setSourceSel"); ss.value=SETTINGS.priceSource;
-    ss.onchange=function(){ SETTINGS.priceSource=ss.value; saveSettings(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); }; }
