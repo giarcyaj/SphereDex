@@ -68,6 +68,12 @@
 .btn.primary:hover{ transform:translateY(-2px); box-shadow:0 18px 42px -12px rgba(230,184,85,.65); }
 .btn.ghost{ color:var(--gold-soft); border-color:var(--line-gold); background:rgba(230,184,85,.05); }
 .btn.ghost:hover{ border-color:var(--gold); transform:translateY(-2px); }
+.playbadge{ display:inline-flex; align-items:center; gap:12px; background:#0a0a0d; color:#fff; border:1px solid rgba(255,255,255,.22); border-radius:13px; padding:8px 20px 8px 16px; text-decoration:none; transition:transform .16s, border-color .16s; }
+.playbadge:hover{ border-color:rgba(255,255,255,.5); transform:translateY(-2px); }
+.playbadge svg{ width:26px; height:26px; flex:none; }
+.playbadge span{ display:flex; flex-direction:column; line-height:1.08; text-align:left; }
+.playbadge small{ font-family:var(--body); font-size:.58rem; letter-spacing:.09em; text-transform:uppercase; opacity:.9; }
+.playbadge b{ font-family:var(--disp); font-size:1.12rem; font-weight:600; }
 .plat{ margin-top:16px; font-family:var(--mono); font-size:.74rem; color:var(--faint); letter-spacing:.04em; }
 
 /* ---------- spectrum arc ---------- */
@@ -130,7 +136,7 @@ section{ padding:56px 0; }
 .mockup .chrome{ display:flex; gap:7px; margin-bottom:16px; }
 .mockup .chrome i{ width:10px; height:10px; border-radius:50%; background:#28323f; }
 @media (max-width:640px){ .mockup{ max-width:none; } }
-@media (max-width:430px){ .cta{ flex-direction:column; align-items:stretch; } .cta .btn{ width:100%; text-align:center; } }
+@media (max-width:430px){ .cta{ flex-direction:column; align-items:stretch; } .cta .btn{ width:100%; text-align:center; } .cta .playbadge{ width:100%; justify-content:center; } }
 /* Track: a collection filling in */
 .mk-track .toprow{ display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:.74rem; color:var(--muted); margin-bottom:13px; }
 .mk-track .mkpct{ color:var(--gold-soft); font-weight:700; }
@@ -302,6 +308,7 @@ section{ padding:56px 0; }
     <p class="lede">The collection companion for the Palworld Official Card Game. Scan cards, track your collection and power up your spheres, with live market value if you want it, or a clean price-free collection if you don't.</p>
     <div class="cta">
       <a class="btn primary" href="app/">Open the app</a>
+      <a class="playbadge" href="https://play.google.com/store/apps/details?id=app.spheredex" target="_blank" rel="noopener" aria-label="Get SphereDex on Google Play"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="#00C3FF" d="M92 66v380c0 12 5 20 12 24l1 1 213-213v-4L105 41l-1 1c-7 5-12 13-12 24z"/><path fill="#FFCE00" d="M385 322l-73-72v-4l73-72 2 1 86 49c24 14 24 36 0 50l-86 49z"/><path fill="#00E676" d="M387 323L313 250 105 471c8 8 21 9 36 1z"/><path fill="#FF3D47" d="M387 179L141 40c-15-8-28-7-36 1l208 209z"/></svg><span><small>Get it on</small><b>Google Play</b></span></a>
       <a class="btn ghost" href="#features">See the features</a>
     </div>
     <div class="plat">Web app + native Android · free cloud sync · iOS coming</div>
@@ -483,6 +490,7 @@ section{ padding:56px 0; }
       <p>Free to use, with cloud sync and live pricing built in. Join the beta and help shape it.</p>
       <div class="cta">
         <a class="btn primary" href="app/">Open the app</a>
+        <a class="playbadge" href="https://play.google.com/store/apps/details?id=app.spheredex" target="_blank" rel="noopener" aria-label="Get SphereDex on Google Play"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="#00C3FF" d="M92 66v380c0 12 5 20 12 24l1 1 213-213v-4L105 41l-1 1c-7 5-12 13-12 24z"/><path fill="#FFCE00" d="M385 322l-73-72v-4l73-72 2 1 86 49c24 14 24 36 0 50l-86 49z"/><path fill="#00E676" d="M387 323L313 250 105 471c8 8 21 9 36 1z"/><path fill="#FF3D47" d="M387 179L141 40c-15-8-28-7-36 1l208 209z"/></svg><span><small>Get it on</small><b>Google Play</b></span></a>
         <a class="btn ghost" href="mailto:craigjayedit@gmail.com">Send feedback</a>
       </div>
       <div class="plat">Runs free in your browser. Android app coming to Google Play.</div>
