@@ -257,7 +257,9 @@
     padding-right: calc(16px + var(--sar, env(safe-area-inset-right, 0px))); }
   .scrim.open { display:grid; }
   .modal { background:var(--surface); border:1.5px solid var(--line-strong); border-radius:20px; max-width:580px; width:100%;
-    box-shadow:var(--shadow); overflow:hidden; max-height:92vh; overflow-y:auto; position:relative; }
+    box-shadow:var(--shadow); overflow:hidden; max-height:92vh; overflow-y:auto; position:relative; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  /* Sticky close: a zero-height bar pinned to the top of the scrolling modal so the X is always reachable. */
+  .mclosewrap { position:sticky; top:0; z-index:20; height:0; display:flex; justify-content:flex-end; pointer-events:none; }
   .mmain { padding:20px 22px; display:block; }
   .mmain > h2 { margin:2px 6px 8px 0; }
   .mmain > .mtags { margin-bottom:12px; }
@@ -266,8 +268,9 @@
     border-radius:12px; overflow:hidden; border:1.5px solid var(--line-strong); box-shadow:0 12px 26px -14px rgba(0,0,0,.55); }
   .martflo .art { position:absolute; inset:0; aspect-ratio:auto; }
   .meditor { clear:both; display:flex; flex-direction:column; gap:13px; margin-top:14px; }
-  .mclose { position:absolute; top:6px; right:6px; z-index:4; width:30px; height:30px; border-radius:9px; border:none;
-    background:rgba(0,0,0,.42); color:#fff; font-size:1rem; backdrop-filter:blur(3px); display:grid; place-items:center; }
+  .mclose { pointer-events:auto; position:relative; top:8px; margin:0; width:36px; height:36px; border-radius:10px; border:none;
+    background:rgba(10,15,20,.62); color:#fff; font-size:1.05rem; backdrop-filter:blur(4px); display:grid; place-items:center; box-shadow:0 3px 10px rgba(0,0,0,.4); }
+  .mclose:hover { background:rgba(10,15,20,.82); }
   .mmain h2 { font-family:var(--font-display); margin:0; font-size:1.4rem; letter-spacing:-.01em; line-height:1.05; }
   .mtags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
   .kv { display:grid; grid-template-columns:auto 1fr; gap:5px 14px; font-size:.86rem; }
@@ -775,6 +778,7 @@
   .glancebub.open{ background:color-mix(in srgb,var(--accent) 8%,var(--surface-2)); }
   .bubpanel{ border:1.5px solid var(--line); border-radius:14px; background:var(--surface); padding:14px; margin-top:9px; display:flex; flex-direction:column; gap:10px; animation:bubin .16s ease; }
   @keyframes bubin{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+  .addcolf select{ width:100%; }
   .seg{ display:inline-flex; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:3px; gap:3px; align-self:flex-start; }
   .segb{ border:none; background:transparent; color:var(--ink-faint); font-weight:700; font-size:.82rem; padding:6px 16px; border-radius:8px; cursor:pointer; font-family:var(--font-display); }
   .segb.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.14); }
@@ -1665,7 +1669,8 @@
       '</dl>';
     var gwork = (s.graded||[]).map(function(g){ return {grader:g.grader,grade:g.grade,value:g.value}; });
     $("mMain").innerHTML =
-      '<div class="martflo"><button class="mclose" id="mClose" aria-label="Close">✕</button><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span></div>'+
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="martflo"><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span></div>'+
       '<h2 id="mTitle">'+esc(c.name)+'</h2>'+
       '<div class="mtags">'+elTags+'<span class="eltag" style="background:'+colVar(c.color)+'">'+c.color+'</span>'+
         '<span class="eltag" style="background:'+rareVar(c.rare)+';color:#fff">'+c.rare+'</span></div>'+
@@ -1680,6 +1685,7 @@
         '<button class="bub" id="bubFav" type="button"></button>'+
       '</div>'+
       '<div class="bubpanel" id="panelColl" hidden>'+
+        '<div class="field addcolf" id="addColWrap" hidden><label>Add to which collection?</label><select id="addColSel"></select></div>'+
         '<div class="seg" id="typeSeg">'+
           '<button class="segb on" data-type="raw" type="button">Raw</button>'+
           '<button class="segb" data-type="graded" type="button">Graded</button>'+
@@ -1781,17 +1787,25 @@
         $("rawAdd").hidden=!raw; $("gradedAdd").hidden=raw;
       };
     });
+    // "Ask me every time" + 2+ collections shows a picker so you choose where the card goes.
+    var multiAsk = (SETTINGS.defaultAddCol==="ask" && STATE.cols.length>1);
+    (function(){ var w=$("addColWrap"), sel=$("addColSel"); if(!w||!sel) return;
+      if(multiAsk){ sel.innerHTML=STATE.cols.map(function(col){ return '<option value="'+col.id+'"'+(col.id===STATE.active?' selected':'')+'>'+esc(col.name)+'</option>'; }).join(""); w.hidden=false; } else w.hidden=true; })();
+    function addTargetCol(){ var sel=$("addColSel"); return (multiAsk && sel && sel.value) ? sel.value : STATE.active; }
+    function colOwnEntry(colId){ var col=STATE.cols.filter(function(x){return x.id===colId;})[0]||activeCol(); if(!col.own) col.own={}; var e=col.own[c.id]; if(!e){ e=col.own[c.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; } if(!e.graded) e.graded=[]; return e; }
+    function colNameOf(colId){ var col=STATE.cols.filter(function(x){return x.id===colId;})[0]; return col?col.name:""; }
     $("addRawBtn").onclick=function(){
-      var n=Math.max(1,parseInt($("addQty").value,10)||1), q=$("fQty");
-      q.value=(parseInt(q.value,10)||0)+n; s.cond=$("fCond").value; updateSum(); persist(); paintBubbles(); paintOwn();
-      toast("Added "+n+" raw cop"+(n>1?"ies":"y"));
+      var n=Math.max(1,parseInt($("addQty").value,10)||1), cond=$("fCond").value, colId=addTargetCol();
+      if(colId===STATE.active){ var q=$("fQty"); q.value=(parseInt(q.value,10)||0)+n; s.cond=cond; updateSum(); persist(); paintBubbles(); paintOwn(); }
+      else { var e=colOwnEntry(colId); e.qty=(+e.qty||0)+n; e.cond=cond; save(); render(); buildColSel(); }
+      toast(multiAsk ? ("Added "+n+" to "+colNameOf(colId)) : ("Added "+n+" raw cop"+(n>1?"ies":"y")));
     };
     $("addGradedBtn").onclick=function(){
-      var n=Math.max(1,parseInt($("addGQty").value,10)||1), gr=$("fGrader").value, gd=$("fGradeSel").value;
+      var n=Math.max(1,parseInt($("addGQty").value,10)||1), gr=$("fGrader").value, gd=$("fGradeSel").value, colId=addTargetCol();
       var guess=(s.gradeGuide&&s.gradeGuide[gd])||0;
-      for(var i=0;i<n;i++) gwork.push({grader:gr,grade:gd,value:guess});
-      renderGrades(); updateSum(); persist(); paintBubbles(); paintOwn();
-      toast("Added "+n+" "+gr+" "+gd);
+      if(colId===STATE.active){ for(var i=0;i<n;i++) gwork.push({grader:gr,grade:gd,value:guess}); renderGrades(); updateSum(); persist(); paintBubbles(); paintOwn(); }
+      else { var e=colOwnEntry(colId); for(var j=0;j<n;j++) e.graded.push({grader:gr,grade:gd,value:guess}); save(); render(); buildColSel(); }
+      toast("Added "+n+" "+gr+" "+gd+(multiAsk?(" to "+colNameOf(colId)):""));
     };
     $("mClose").onclick = closeModal;
     var mf=$("mMain").querySelector(".martflo");
