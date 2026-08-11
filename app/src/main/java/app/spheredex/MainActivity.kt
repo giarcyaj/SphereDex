@@ -27,6 +27,10 @@ import androidx.activity.result.contract.ActivityResultContracts
  */
 class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
+    private var insetJs: String? = null
+
+    /** Push the current safe-area insets into the web app as CSS variables (--sat/--sab/--sal/--sar). */
+    private fun applyInsets() { insetJs?.let { js -> web.evaluateJavascript(js, null) } }
 
     private val scanLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -67,6 +71,8 @@ class MainActivity : ComponentActivity() {
                     }
                     return false
                 }
+                // Re-apply insets once the page's DOM exists (the listener may fire before load).
+                override fun onPageFinished(view: WebView, url: String) { applyInsets() }
             }
             // Make window.prompt/confirm/alert work (WebView blocks them by default),
             // so "New collection", rename, and delete confirmations pop up natively.
@@ -98,6 +104,25 @@ class MainActivity : ComponentActivity() {
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
+
+        // Edge-to-edge (mandatory on Android 15 / API 35): draw the themed web background behind the
+        // system bars, and feed the real safe-area insets to the web app so no content is cut off.
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(web) { _, insets ->
+            val bars = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                    androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            )
+            val d = resources.displayMetrics.density
+            insetJs = "var r=document.documentElement.style;" +
+                "r.setProperty('--sat','${bars.top / d}px');" +
+                "r.setProperty('--sab','${bars.bottom / d}px');" +
+                "r.setProperty('--sal','${bars.left / d}px');" +
+                "r.setProperty('--sar','${bars.right / d}px');"
+            applyInsets()
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(web)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
