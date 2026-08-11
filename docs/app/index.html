@@ -454,6 +454,9 @@
   .qsg .qsadd{ margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:4px; color:var(--accent-ink); font-family:var(--font-display); font-weight:700; font-size:.78rem; }
   .qsg .qsadd .ic{ width:1rem; height:1rem; margin:0; }
   .qsg .qsown{ margin-left:auto; flex:none; font-family:var(--font-mono); font-size:.76rem; color:var(--accent-ink); font-weight:600; }
+  .qsg .qschev{ margin-left:auto; flex:none; display:inline-flex; color:var(--ink-faint); }
+  .qsg .qschev .qschevi{ width:1.15rem; height:1.15rem; margin:0; transform:rotate(-90deg); }
+  .qsg:hover .qschev, .qsg.hi .qschev{ color:var(--accent-ink); }
   .qsempty{ padding:14px 12px; color:var(--ink-faint); font-size:.85rem; }
   @media (max-width:520px){ .trow{ grid-template-columns:96px 1fr; } .herotitle{ font-size:2.2rem; } }
 
@@ -1042,7 +1045,7 @@
   <section class="page" id="page-scan">
     <div class="quickwrap">
       <h2 class="sech">Quick add</h2>
-      <p class="qsub">Search by Pal name, item, or card number, then tap a result to add it. Or paste several numbers (like <code>EBP01-001</code>) at once, separated by spaces or new lines.</p>
+      <p class="qsub">Search by Pal name, item, or card number, then tap a result to open it and choose how to add. Or paste several numbers (like <code>EBP01-001</code>) at once, separated by spaces or new lines.</p>
       <button id="nativeScanBtn" class="scanbtn" type="button" data-icon="camera" hidden>Scan a card with the camera</button>
       <div class="qbox">
         <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001 …" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
@@ -2858,14 +2861,16 @@
       if(!results.length){ if(q.trim().length>=2){ box.hidden=false; box.innerHTML='<div class="qsempty">No card matches “'+esc(q.trim())+'”.</div>'; qi.setAttribute("aria-expanded","true"); } else close(); return; }
       box.innerHTML=results.map(function(c){
         var s=o(c.id), kind=c.kind+(c.rare?' · '+c.rare:'');
-        var right=has(s)? '<span class="qsown">×'+s.qty+(s.graded&&s.graded.length?" +"+s.graded.length+"◈":"")+'</span>' : '<span class="qsadd">'+icon('plus')+'Add</span>';
+        var right=has(s)? '<span class="qsown">×'+s.qty+(s.graded&&s.graded.length?" +"+s.graded.length+"◈":"")+'</span>' : '<span class="qschev">'+icon('chevd','qschevi')+'</span>';
         return '<div class="qsg" role="option" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><div style="min-width:0"><div class="qsn">'+hiName(c.name,q)+'</div><div class="qsm"><span>'+esc(c.id)+'</span><span class="qsk">'+esc(kind)+'</span></div></div>'+right+'</div>';
       }).join("");
       Array.prototype.forEach.call(box.querySelectorAll(".qsg"), function(el){
-        el.addEventListener("mousedown", function(ev){ ev.preventDefault(); quickAddCard(el.getAttribute("data-id")); qi.value=""; close(); qi.focus(); });
+        el.addEventListener("mousedown", function(ev){ ev.preventDefault(); openResult(el.getAttribute("data-id")); });
       });
       box.hidden=false; qi.setAttribute("aria-expanded","true");
     }
+    // Open the card's detail so you can pick raw/graded, condition and how many, instead of insta-adding.
+    function openResult(id){ var c=byNumberIdx[(id||"").toUpperCase()]; if(!c) return; qi.value=""; close(); openDetail(c); }
     qi.addEventListener("input", open);
     qi.addEventListener("focus", function(){ if(qi.value.trim().length>=2) open(); });
     qi.addEventListener("blur", function(){ setTimeout(close, 120); });
@@ -2875,8 +2880,8 @@
       else if(e.key==="ArrowUp" && vis){ e.preventDefault(); hi=(hi<=0?results.length:hi)-1; paintHi(); }
       else if(e.key==="Escape"){ close(); }
       else if(e.key==="Enter"){
-        if(vis && hi>-1){ e.preventDefault(); quickAddCard(results[hi].id); qi.value=""; close(); }
-        else if(vis && results.length===1){ e.preventDefault(); quickAddCard(results[0].id); qi.value=""; close(); }
+        if(vis && hi>-1){ e.preventDefault(); openResult(results[hi].id); }
+        else if(vis && results.length===1){ e.preventDefault(); openResult(results[0].id); }
         else { quickAdd(qi.value); qi.value=""; close(); }
       }
     });
