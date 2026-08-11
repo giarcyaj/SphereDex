@@ -11,7 +11,8 @@ android {
         applicationId = "app.spheredex"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
+        // CI sets VERSION_CODE from the build number so each upload is unique; local builds fall back to 4.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 4
         versionName = "1.0"
     }
     signingConfigs {
