@@ -43,9 +43,10 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Unique, always-increasing version code per build so Play never rejects a re-upload.
-          VERSION_CODE: ${{ 100 + github.run_number }}
         run: |
+          # Unique, always-increasing version code per build so Play never rejects a re-upload.
+          export VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
+          echo "Building with versionCode $VERSION_CODE"
           if [ -f ./gradlew ]; then
             chmod +x ./gradlew
             ./gradlew bundleRelease --stacktrace --no-daemon
