@@ -82,10 +82,16 @@
   .tbtn.sortdir { font-variant-numeric:tabular-nums; min-width:74px; justify-content:center; }
 
   /* Dashboard */
-  .dash { display:grid; grid-template-columns:1.5fr repeat(3,1fr); gap:14px; margin-bottom:20px; }
+  .dash { display:grid; grid-template-columns:1.5fr repeat(2,1fr); gap:14px; margin-bottom:20px; }
   .colorpanel { grid-column:1/-1; }
   .panel { background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px 17px; }
   .panel .lab { font-size:.67rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .dualpanel { cursor:pointer; user-select:none; transition:border-color .14s, background .14s; }
+  .dualpanel:hover { border-color:var(--line-strong); background:var(--surface-2); }
+  .dualpanel:focus-visible { outline:2.5px solid var(--accent); outline-offset:2px; }
+  .dualdots { display:flex; gap:5px; margin-top:9px; }
+  .dualdots span { width:6px; height:6px; border-radius:50%; background:var(--line-strong); transition:.16s; }
+  .dualdots span.on { background:var(--accent); width:15px; border-radius:3px; }
   .panel .big { font-family:var(--font-mono); font-size:1.75rem; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; margin-top:3px; }
   .panel .big small { font-size:.9rem; color:var(--ink-faint); font-weight:500; }
   .panel .meta { font-size:.77rem; color:var(--ink-soft); margin-top:2px; }
@@ -135,6 +141,7 @@
   /* Controls */
   .controls { display:flex; flex-direction:column; gap:11px; margin-bottom:18px; }
   .searchrow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .ctrlrow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; }
   .search { flex:1 1 240px; display:flex; align-items:center; gap:9px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; padding:0 13px; }
   .search input { border:none; background:none; outline:none; color:var(--ink); font-size:.95rem; padding:11px 0; flex:1; font-family:inherit; }
   .search svg { color:var(--ink-faint); flex:none; }
@@ -751,7 +758,20 @@
   .bub.on.fav{ color:#e8547e; border-color:#e8547e; background:color-mix(in srgb,#e8547e 14%,transparent); font-weight:800; }
   .glancebub{ flex-direction:column; gap:3px; padding:11px 8px; }
   .glancebub .gllab{ font-size:.64rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
-  .glancebub .glval{ font-family:var(--font-mono); font-size:1.02rem; font-weight:600; color:var(--ink); }
+  .glancebub .glval{ font-family:var(--font-mono); font-size:1.02rem; font-weight:600; color:var(--ink); min-height:1.15rem; }
+  /* Loading spinner: 8 dots fading in sequence so a bright dot appears to travel around a circle. */
+  .dspin{ display:inline-block; position:relative; width:1.15em; height:1.15em; vertical-align:-0.18em; color:var(--accent); }
+  .dspin i{ position:absolute; inset:0; }
+  .dspin i::after{ content:""; position:absolute; top:0; left:50%; width:0.17em; height:0.17em; margin-left:-0.085em; border-radius:50%; background:currentColor; opacity:.18; animation:dspin .8s linear infinite; }
+  .dspin i:nth-child(1){ transform:rotate(0deg) }   .dspin i:nth-child(1)::after{ animation-delay:-.8s }
+  .dspin i:nth-child(2){ transform:rotate(45deg) }  .dspin i:nth-child(2)::after{ animation-delay:-.7s }
+  .dspin i:nth-child(3){ transform:rotate(90deg) }  .dspin i:nth-child(3)::after{ animation-delay:-.6s }
+  .dspin i:nth-child(4){ transform:rotate(135deg) } .dspin i:nth-child(4)::after{ animation-delay:-.5s }
+  .dspin i:nth-child(5){ transform:rotate(180deg) } .dspin i:nth-child(5)::after{ animation-delay:-.4s }
+  .dspin i:nth-child(6){ transform:rotate(225deg) } .dspin i:nth-child(6)::after{ animation-delay:-.3s }
+  .dspin i:nth-child(7){ transform:rotate(270deg) } .dspin i:nth-child(7)::after{ animation-delay:-.2s }
+  .dspin i:nth-child(8){ transform:rotate(315deg) } .dspin i:nth-child(8)::after{ animation-delay:-.1s }
+  @keyframes dspin{ 0%{opacity:1} 100%{opacity:.18} }
   .glancebub.open{ background:color-mix(in srgb,var(--accent) 8%,var(--surface-2)); }
   .bubpanel{ border:1.5px solid var(--line); border-radius:14px; background:var(--surface); padding:14px; margin-top:9px; display:flex; flex-direction:column; gap:10px; animation:bubin .16s ease; }
   @keyframes bubin{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
@@ -923,13 +943,10 @@
       <div class="big" id="valStat">$0</div>
       <div class="meta" id="valMeta">you set the values</div>
     </div>
-    <div class="panel">
-      <div class="lab" id="masterLab" title="One of each card number, ignoring alt-art / rarity variants">Base set</div>
-      <div class="big" id="masterStat">0 <small>/ 0</small></div>
-    </div>
-    <div class="panel">
-      <div class="lab">Chase cards</div>
-      <div class="big" id="chaseStat">0 <small>/ 0</small></div>
+    <div class="panel dualpanel" id="dualPanel" role="button" tabindex="0" title="Tap to switch between Base set and Chase cards">
+      <div class="lab" id="dualLab">Base set</div>
+      <div class="big" id="dualStat">0 <small>/ 0</small></div>
+      <div class="dualdots" id="dualDots"><span></span><span></span></div>
     </div>
     <div class="panel colorpanel">
       <div class="lab">Completion by color</div>
@@ -953,14 +970,16 @@
         <option value="cost">Sort · Cost (energy)</option>
         <option value="owned">Sort · Owned first</option>
       </select>
+    </div>
+    <div class="ctrlrow">
       <button class="tbtn ghost sortdir" id="sortDirBtn" type="button" aria-label="Reverse sort order" title="Reverse sort order"></button>
       <select class="sortsel" id="viewSel" aria-label="Layout">
-        <option value="auto">View · Auto grid</option>
-        <option value="3">View · 3 per row</option>
-        <option value="4">View · 4 per row</option>
-        <option value="6">View · 6 per row</option>
-        <option value="binder9">View · 9-pocket binder</option>
-        <option value="binder12">View · 12-pocket binder</option>
+        <option value="auto">View · Auto</option>
+        <option value="3">View · 3</option>
+        <option value="4">View · 4</option>
+        <option value="6">View · 6</option>
+        <option value="binder9">View · 9-pocket</option>
+        <option value="binder12">View · 12-pocket</option>
       </select>
       <button class="tbtn" id="filterBtn" aria-expanded="false">⌕ Filters<span class="fcount" id="filterCount" hidden>0</span></button>
       <button class="tbtn ghost" id="fadeToggle" type="button" title="Fade uncollected cards"></button>
@@ -1569,8 +1588,7 @@
     $("pctNum").textContent = pct+"%";
     $("xpfill").style.width = pct+"%";
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected";
-    $("masterStat").innerHTML = master.size+' <small>/ '+MASTER_TOTAL+'</small>';
-    $("chaseStat").innerHTML = chase+' <small>/ '+CHASE_TOTAL+'</small>';
+    _masterN = master.size; _chaseN = chase; paintDual();
     $("valStat").textContent = money(value);
     $("valMeta").textContent = gradedCount? (gradedCount+(gradedCount===1?" graded slab":" graded slabs")+" · you set values") : "you set the values";
     var cb=$("colorBars"); cb.innerHTML="";
@@ -1586,10 +1604,9 @@
       pill.innerHTML=SETS[k].short+' <b>'+bySet[k]+'/'+SET_TOTAL[k]+'</b>';
       sp.appendChild(pill);
     });
-    // Wishlist view retitles the value/count panels and drops completion-by-colour (which is collection-only).
-    var vl=$("valLab"), ml=$("masterLab");
+    // Wishlist view retitles the value panel and drops completion-by-colour (the dashboard itself is hidden in wishlist/favourites/graded modes).
+    var vl=$("valLab");
     if(vl) vl.textContent = wishMode ? "Wishlist value" : "Binder value";
-    if(ml) ml.textContent = wishMode ? "Wishlist count" : "Base set";
     var cp=$("colorBars")?document.querySelector(".colorpanel"):null;
     if(cp) cp.classList.toggle("hide", wishMode || !SETTINGS.showColorCompletion);
     if(wishMode){
@@ -1597,9 +1614,21 @@
       CARDS.forEach(function(c){ if(isWished(c.id)){ wc++; wv+=(+o(c.id).mkt||0); } });
       $("valStat").textContent=money(wv);
       $("valMeta").textContent=wc+(wc===1?" card wanted":" cards wanted");
-      $("masterStat").innerHTML=wc+' <small>card'+(wc===1?'':'s')+'</small>';
     }
   }
+  // Merged Base set / Chase cards counter: tap the panel to switch which one it shows.
+  var _masterN=0, _chaseN=0, dualMetric="base";
+  function paintDual(){
+    var lab=$("dualLab"), stat=$("dualStat"), dots=$("dualDots"); if(!lab||!stat) return;
+    if(dualMetric==="chase"){ lab.textContent="Chase cards"; stat.innerHTML=_chaseN+' <small>/ '+CHASE_TOTAL+'</small>'; }
+    else { lab.textContent="Base set"; stat.innerHTML=_masterN+' <small>/ '+MASTER_TOTAL+'</small>'; }
+    if(dots){ var sp=dots.children; if(sp[0]) sp[0].className=dualMetric==="base"?"on":""; if(sp[1]) sp[1].className=dualMetric==="chase"?"on":""; }
+  }
+  (function(){ var p=$("dualPanel"); if(!p) return;
+    function toggle(){ dualMetric = dualMetric==="base"?"chase":"base"; paintDual(); }
+    p.addEventListener("click", toggle);
+    p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
+  })();
 
   // ---- Detail modal ----
   var scrim=$("scrim");
@@ -1672,9 +1701,9 @@
 
       // ---- At a glance price bubbles ----
       '<div class="bubrow glance priceui">'+
-        '<button class="bub glancebub" id="bubSold" type="button"><span class="gllab">Last 5 sold</span><b class="glval" id="glSold">…</b></button>'+
-        '<button class="bub glancebub" id="bubList" type="button"><span class="gllab">Live listings</span><b class="glval" id="glList">…</b></button>'+
-        '<button class="bub glancebub" id="bubPsa" type="button"><span class="gllab">PSA 10 sold</span><b class="glval" id="glPsa">…</b></button>'+
+        '<button class="bub glancebub" id="bubSold" type="button"><span class="gllab">Last 5 sold</span><b class="glval" id="glSold">'+SPIN+'</b></button>'+
+        '<button class="bub glancebub" id="bubList" type="button"><span class="gllab">Live listings</span><b class="glval" id="glList">'+SPIN+'</b></button>'+
+        '<button class="bub glancebub" id="bubPsa" type="button"><span class="gllab">PSA 10 sold</span><b class="glval" id="glPsa">'+SPIN+'</b></button>'+
       '</div>'+
       '<div class="bubpanel priceui" id="panelSold" hidden>'+
         '<div class="glabel"><span>Last 5 sold</span><span style="display:flex;gap:8px">'+
@@ -1795,7 +1824,10 @@
     // ---- Recent eBay sales (avg of last 5) ----
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
     function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; var gl=$("glSold"); if(gl) gl.textContent = a? money(a) : (salesWork.length?'n/a':'…'); }
+    var glLoading = !!apiBase();   // spinner shows while the auto-load pulls are in flight
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
+    // Once all the price pulls have settled, swap any spinners still showing for "n/a".
+    function finishLoading(){ glLoading=false; refreshAvg(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
     function renderGradeGuide(){
       var host=$("gradeGuide"); if(!host) return;
@@ -1824,7 +1856,7 @@
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
     // Live prices via the backend. Sold + Listings AUTO-LOAD on open; Graded is a manual tap.
     (function(){
-      if(!apiBase()) return;
+      if(!apiBase()){ finishLoading(); return; }
       var region=SETTINGS.ebayRegion||"co.uk";
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
       function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
@@ -1884,9 +1916,10 @@
           } else { if(gl && gl.textContent==="…") gl.textContent='n/a'; if(ph) ph.textContent="No PSA 10 sales found yet."; if(!silent) toast(b.note||"No PSA 10 sales yet"); }
         }).catch(function(){ done(); if(!silent && fresh()) toast("PSA 10 pull failed"); });
       }
-      var pp=$("pullPsa"); if(pp){ pp.hidden=false; pp.onclick=function(){ doPsa(false, region); }; }
-      if(ps) ps.onclick=function(){ doSold(false, region, "sold"); };
-      if(pl) pl.onclick=function(){ doList(false, region, "listings"); };
+      function reload(id, fn){ glLoading=true; var g=$(id); if(g) g.innerHTML=SPIN; fn().then(function(){ if(fresh()) finishLoading(); }); }
+      var pp=$("pullPsa"); if(pp){ pp.hidden=false; pp.onclick=function(){ reload("glPsa", function(){ return doPsa(false, region); }); }; }
+      if(ps) ps.onclick=function(){ reload("glSold", function(){ return doSold(false, region, "sold"); }); };
+      if(pl) pl.onclick=function(){ reload("glList", function(){ return doList(false, region, "listings"); }); };
       // Graded → for each distinct grade you own, pull sold comps at that grade and fill the slab.
       if(pg) pg.onclick=function(){
         var grades=[]; gwork.forEach(function(g){ var k=(g.grader||"PSA")+" "+(g.grade||"10"); if(grades.indexOf(k)===-1) grades.push(k); });
@@ -1904,12 +1937,11 @@
         });
       };
       // Auto-load on open: your-region sold + listings + PSA 10 sold (all cached 12h on the backend), then US as a fallback rung if enabled and region came up empty.
-      doPsa(true, region);
-      Promise.all([ doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
+      Promise.all([ doPsa(true, region), doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
         if(fresh() && marketBasis==null && SETTINGS.fallbackUS && region!=="com"){
-          doSold(true, "com", "ussold"); doList(true, "com", "uslistings");
+          return Promise.all([ doSold(true, "com", "ussold"), doList(true, "com", "uslistings") ]);
         }
-      });
+      }).then(function(){ if(fresh()) finishLoading(); });
     })();
     // At-a-glance bubbles: tap to expand the detail underneath, tap again to hide.
     (function(){
@@ -2075,6 +2107,7 @@
   function esc(s){ return String(s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];}); }
 
   // ---- Inline icon set (in-house, stroke = currentColor; replaces emoji) ----
+  var SPIN='<span class="dspin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>';
   var ICONS={
     plus:'<path d="M12 5v14M5 12h14"/>',
     pencil:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
