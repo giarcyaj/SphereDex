@@ -1296,6 +1296,8 @@
   var SETS = { EBP01:{name:"Booster · Dawn of Palpagos", short:"Booster"}, ETD01:{name:"Trial Deck · Red · Blue", short:"Trial R·B"}, ETD02:{name:"Trial Deck · Green · Purple", short:"Trial G·P"}, PR2026:{name:"Promo Cards (2026)", short:"Promo"} };
   var SET_ORDER = ["EBP01","ETD01","ETD02","PR2026"];
   var CURRENCIES = [{code:"USD",sym:"$",dec:2},{code:"EUR",sym:"€",dec:2},{code:"GBP",sym:"£",dec:2},{code:"JPY",sym:"¥",dec:0},{code:"CAD",sym:"CA$",dec:2},{code:"AUD",sym:"A$",dec:2}];
+  // Each eBay marketplace maps to the currency its prices are quoted in.
+  var REGION_CUR = { "co.uk":"GBP", "com":"USD", "de":"EUR", "com.au":"AUD", "ca":"CAD", "fr":"EUR", "it":"EUR", "es":"EUR" };
   var IMG_BASE = "https://en.palworld-official-cardgame.com/wordpress/wp-content/images/cardlist/";
   var ELEMENTS = ["Neutral","Fire","Water","Electric","Grass","Ice","Ground","Dark","Dragon"];
   var COLORS = ["Red","Blue","Green","Purple","Colorless"];
@@ -2060,7 +2062,7 @@
   }
   function finishOnboard(mode){
     SETTINGS.mode=mode;
-    var reg=$("obRegion"); if(reg && reg.value) SETTINGS.ebayRegion=reg.value;
+    var reg=$("obRegion"); if(reg && reg.value){ SETTINGS.ebayRegion=reg.value; if(REGION_CUR[reg.value]) applyCurrency(REGION_CUR[reg.value]); }
     SETTINGS.onboarded=true; saveSettings(); applyMode();
     var ob=$("onboard"); if(ob) ob.hidden=true;
     render();
@@ -2078,10 +2080,12 @@
     var eff=SETTINGS.theme; if(eff==="system") eff=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
     SETTINGS.theme = eff==="dark"?"light":"dark"; saveSettings(); applyTheme();
   };
+  // Set the display currency (and keep the header dropdown in sync). Used by the picker and by region changes.
+  function applyCurrency(code){ var c=CURRENCIES.filter(function(x){return x.code===code;})[0]; if(!c) return; CUR=c; localStorage.setItem("paldeck-currency",CUR.code); var sel=$("curSel"); if(sel) sel.value=CUR.code; render(); }
   (function(){
     var sel=$("curSel");
     CURRENCIES.forEach(function(c){ var op=document.createElement("option"); op.value=c.code; op.textContent=c.code+" "+c.sym; if(c.code===CUR.code) op.selected=true; sel.appendChild(op); });
-    sel.onchange=function(){ CUR=CURRENCIES.filter(function(c){return c.code===sel.value;})[0]||CURRENCIES[0]; localStorage.setItem("paldeck-currency",CUR.code); render(); };
+    sel.onchange=function(){ applyCurrency(sel.value); };
   })();
   $("search").addEventListener("input", function(e){ filters.q=e.target.value; render(); });
   $("sortSel").addEventListener("change", function(e){ filters.sort=e.target.value; render(); });
@@ -3100,7 +3104,7 @@
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; localStorage.setItem("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
-    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
