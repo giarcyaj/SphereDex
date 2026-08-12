@@ -739,6 +739,17 @@
   .scanbox select:focus{ outline:none; border-color:var(--accent); }
   .scangrade{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .scanbox .askbtns{ margin-top:4px; }
+  /* reward celebration + confetti */
+  .celebscrim{ position:fixed; inset:0; z-index:240; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(4,7,12,.62); }
+  .celebscrim[hidden]{ display:none; }
+  .celebbox{ position:relative; width:100%; max-width:340px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:20px; padding:28px 22px 20px; text-align:center; box-shadow:var(--shadow); overflow:hidden; }
+  .celebbox h3{ font-family:var(--font-display); font-weight:800; font-size:1.3rem; margin:14px 0 6px; color:var(--ink); }
+  .celebbox p{ color:var(--ink-soft); font-size:.9rem; line-height:1.4; margin:0 0 18px; }
+  .celeborb{ width:100px; height:100px; margin:0 auto; position:relative; z-index:2; filter:drop-shadow(0 0 18px color-mix(in srgb, var(--rc,#e6b855) 50%, transparent)); }
+  .celeborb svg{ width:100%; height:100%; }
+  .celebconfetti{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:1; }
+  .celebconfetti i{ position:absolute; top:-16px; border-radius:2px; opacity:.95; animation:conffall linear forwards; }
+  @keyframes conffall{ 0%{ transform:translateY(-16px) rotate(0deg); opacity:1; } 100%{ transform:translateY(340px) rotate(560deg); opacity:0; } }
   /* password reveal */
   .pwwrap{ position:relative; display:flex; align-items:center; }
   .pwwrap input{ flex:1; padding-right:44px; }
@@ -966,10 +977,10 @@
       <div class="big" id="valStat">$0</div>
       <div class="meta" id="valMeta">you set the values</div>
     </div>
-    <div class="panel dualpanel" id="dualPanel" role="button" tabindex="0" title="Tap to switch between Base set and Chase cards">
-      <div class="lab" id="dualLab">Base set</div>
+    <div class="panel dualpanel" id="dualPanel" role="button" tabindex="0" title="Tap to switch: sets completed, base set, chase, promo, rewards">
+      <div class="lab" id="dualLab">Sets completed</div>
       <div class="big" id="dualStat">0 <small>/ 0</small></div>
-      <div class="dualdots" id="dualDots"><span></span><span></span></div>
+      <div class="dualdots" id="dualDots"><span></span><span></span><span></span><span></span><span></span></div>
     </div>
     <div class="panel colorpanel">
       <div class="lab">Completion by color</div>
@@ -1271,6 +1282,19 @@
     <h3 id="chooseTitle">Add to collection</h3>
     <p class="csub" id="chooseSub"></p>
     <div class="chooselist" id="chooseList"></div>
+  </div>
+</div>
+
+<div class="celebscrim" id="celebScrim" hidden>
+  <div class="celebbox" role="dialog" aria-modal="true" aria-labelledby="celebTitle">
+    <div class="celebconfetti" id="celebConfetti"></div>
+    <div class="celeborb" id="celebOrb"></div>
+    <h3 id="celebTitle"></h3>
+    <p id="celebMsg"></p>
+    <div class="askbtns" style="justify-content:center">
+      <button type="button" id="celebCancel">Not now</button>
+      <button type="button" class="ok" id="celebOk">Apply</button>
+    </div>
   </div>
 </div>
 
@@ -1650,7 +1674,11 @@
     $("pctNum").textContent = pct+"%";
     $("xpfill").style.width = pct+"%";
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected";
-    _masterN = master.size; _chaseN = chase; paintDual();
+    _masterN = master.size; _chaseN = chase;
+    _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
+    _setsN = SET_ORDER.filter(function(k){ return SET_TOTAL[k]>0 && (bySet[k]||0)>=SET_TOTAL[k]; }).length; _setsT = SET_ORDER.length;
+    _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
+    paintDual();
     $("valStat").textContent = money(value);
     $("valMeta").textContent = gradedCount? (gradedCount+(gradedCount===1?" graded slab":" graded slabs")+" · you set values") : "you set the values";
     var cb=$("colorBars"); cb.innerHTML="";
@@ -1679,15 +1707,23 @@
     }
   }
   // Merged Base set / Chase cards counter: tap the panel to switch which one it shows.
-  var _masterN=0, _chaseN=0, dualMetric="base";
+  var _masterN=0, _chaseN=0, _promoN=0, _promoT=0, _setsN=0, _setsT=0, _rewardsN=0, _rewardsT=6;
+  var DUAL_ORDER=["sets","base","chase","promo","rewards"], dualMetric="sets";
+  var DUAL_META={
+    sets:   ["Sets completed",   function(){return _setsN;},    function(){return _setsT;}],
+    base:   ["Base set",         function(){return _masterN;},  function(){return MASTER_TOTAL;}],
+    chase:  ["Chase cards",      function(){return _chaseN;},   function(){return CHASE_TOTAL;}],
+    promo:  ["Promo cards",      function(){return _promoN;},   function(){return _promoT;}],
+    rewards:["Rewards unlocked", function(){return _rewardsN;}, function(){return _rewardsT;}]
+  };
   function paintDual(){
     var lab=$("dualLab"), stat=$("dualStat"), dots=$("dualDots"); if(!lab||!stat) return;
-    if(dualMetric==="chase"){ lab.textContent="Chase cards"; stat.innerHTML=_chaseN+' <small>/ '+CHASE_TOTAL+'</small>'; }
-    else { lab.textContent="Base set"; stat.innerHTML=_masterN+' <small>/ '+MASTER_TOTAL+'</small>'; }
-    if(dots){ var sp=dots.children; if(sp[0]) sp[0].className=dualMetric==="base"?"on":""; if(sp[1]) sp[1].className=dualMetric==="chase"?"on":""; }
+    var m=DUAL_META[dualMetric]||DUAL_META.sets;
+    lab.textContent=m[0]; stat.innerHTML=m[1]()+' <small>/ '+m[2]()+'</small>';
+    if(dots){ var sp=dots.children; for(var i=0;i<sp.length;i++){ sp[i].className=(DUAL_ORDER[i]===dualMetric)?"on":""; } }
   }
   (function(){ var p=$("dualPanel"); if(!p) return;
-    function toggle(){ dualMetric = dualMetric==="base"?"chase":"base"; paintDual(); }
+    function toggle(){ var idx=DUAL_ORDER.indexOf(dualMetric); dualMetric=DUAL_ORDER[(idx+1)%DUAL_ORDER.length]; paintDual(); }
     p.addEventListener("click", toggle);
     p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
   })();
@@ -2120,12 +2156,38 @@
   }
   var SPHERE_ICON_KEYS=["pal","mega","giga","hyper","ultra","legendary"];
   function nativeIcon(){ return (window.AndroidIcon && typeof window.AndroidIcon.setIcon==="function") ? window.AndroidIcon : null; }
-  function chooseSphere(i){
-    if(i>=0 && !sphereUnlocked(i)){ toast("Reach "+SPHERE_TIERS[i].name+" on any rarity to unlock it"); return; }
+  function applySphereChoice(i){
     SETTINGS.sphere = i; saveSettings(); applySphere(); renderSphereThemes();
-    // On the Android app, also swap the home-screen launcher icon to match the sphere.
+    // On the Android app, also swap the home-screen launcher icon to match the sphere (this relaunches the app).
     var ni=nativeIcon(); if(ni){ try{ ni.setIcon(i<0?"default":SPHERE_ICON_KEYS[i]); }catch(e){} }
     toast((i<0 ? "Classic theme" : SPHERE_TIERS[i].name+" theme applied") + (ni?" · home icon updated":""));
+  }
+  function fireConfetti(){
+    var c=$("celebConfetti"); if(!c) return; c.innerHTML="";
+    var cols=["#4aa6e6","#57c14a","#f2c53d","#ef5a3c","#ec4f9e","#9b5fd6","#e6b855"];
+    for(var k=0;k<46;k++){ var s=document.createElement("i");
+      s.style.left=(Math.random()*100)+"%"; s.style.background=cols[k%cols.length];
+      s.style.width=(6+Math.random()*5).toFixed(1)+"px"; s.style.height=(9+Math.random()*7).toFixed(1)+"px";
+      s.style.animationDuration=(1.1+Math.random()*1.1).toFixed(2)+"s"; s.style.animationDelay=(Math.random()*0.35).toFixed(2)+"s";
+      c.appendChild(s);
+    }
+  }
+  function chooseSphere(i){
+    if(i>=0 && !sphereUnlocked(i)){ toast("Reach "+SPHERE_TIERS[i].name+" on any rarity to unlock it"); return; }
+    if(i<0){ applySphereChoice(-1); return; }                 // Classic: just revert, no celebration
+    var sc=$("celebScrim"); if(!sc){ applySphereChoice(i); return; }
+    var tier=SPHERE_TIERS[i], native=!!nativeIcon();
+    var orb=$("celebOrb"); if(orb){ orb.style.setProperty("--rc",tier.c); orb.innerHTML=sphereSVG(tier.c,"celeb"); }
+    $("celebTitle").textContent=tier.name+" unlocked!";
+    $("celebMsg").textContent = native
+      ? "This becomes your app icon and colour theme. The app will restart to apply it. Do it now?"
+      : "This becomes your colour theme and header sphere.";
+    $("celebOk").textContent = native ? "Apply & restart" : "Apply";
+    fireConfetti(); sc.hidden=false;
+    function close(){ sc.hidden=true; $("celebOk").onclick=$("celebCancel").onclick=sc.onclick=null; }
+    $("celebCancel").onclick=close;
+    sc.onclick=function(e){ if(e.target===sc) close(); };
+    $("celebOk").onclick=function(){ close(); applySphereChoice(i); };
   }
   function checkSphereUnlock(){
     var mx=maxTierReached();
