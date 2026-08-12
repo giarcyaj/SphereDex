@@ -530,6 +530,36 @@
   .pctip .pctd { font-size:.7rem; opacity:.72; }
   .pctip .pctc { font-size:.68rem; opacity:.6; }
   .pcnote { font-size:.78rem; color:var(--ink-faint); margin-top:6px; }
+  /* portfolio detail page */
+  .backbtn { background:none; border:none; color:var(--ink-soft); font-family:inherit; font-size:.95rem; font-weight:600; cursor:pointer; padding:2px 6px 2px 0; margin-bottom:10px; }
+  .backbtn:hover { color:var(--ink); }
+  .pcbig .pcchart { height:240px; }
+  .pdstats { display:flex; gap:10px; margin-top:16px; }
+  .pdstats .hs { flex:1; text-align:center; background:var(--surface-2,var(--surface)); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
+  .pdstats .hs .n { display:block; font-family:var(--font-mono); font-weight:700; font-size:1.02rem; }
+  .pdstats .hs .l { display:block; font-size:.72rem; color:var(--ink-faint); margin-top:3px; }
+  .pdlist { display:flex; flex-direction:column; }
+  .pdrow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
+  .pdrow .pdd { font-weight:600; min-width:96px; font-size:.9rem; }
+  .pdrow .pdc { color:var(--ink-soft); font-size:.8rem; flex:1; }
+  .pdrow .pdv { font-family:var(--font-mono); font-weight:700; margin-left:auto; }
+  /* owned page */
+  #ownedPanel, #valPanel { cursor:pointer; }
+  .xphint { font-size:.72rem; color:var(--accent); margin-top:8px; font-weight:600; }
+  .ownfilters { display:flex; gap:8px; margin-bottom:16px; }
+  .ownchip { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:.85rem; font-weight:600; padding:7px 13px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); }
+  .ownchip::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--ink-faint); }
+  .ownchip.on { border-color:color-mix(in srgb,var(--accent) 55%,transparent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--ink); }
+  .ownchip.on::before { background:var(--accent); }
+  .ownempty { color:var(--ink-soft); font-size:.92rem; padding:26px 4px; text-align:center; }
+  .ownsealed { display:flex; flex-direction:column; gap:10px; }
+  .ownseal { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--line); border-radius:14px; background:var(--surface); cursor:pointer; }
+  .ownseal:hover { border-color:color-mix(in srgb,var(--accent) 45%,transparent); }
+  .ownseal .osbox { width:44px; height:60px; flex:none; border-radius:6px; overflow:hidden; background:var(--surface-2,#0b0e15); display:flex; align-items:center; justify-content:center; }
+  .ownseal .osbox img { width:100%; height:100%; object-fit:contain; }
+  .ownseal .osn { font-weight:650; font-size:.95rem; }
+  .ownseal .ossub { font-size:.82rem; color:var(--ink-soft); margin-top:2px; }
 
   /* decks */
   .deckhead { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
@@ -943,6 +973,27 @@
     <div class="setbrowse" id="setBrowse"></div>
   </section>
 
+  <section class="page priceui" id="page-portfolio">
+    <button class="backbtn" type="button" id="pdBack">&lsaquo; Home</button>
+    <div class="pcard" id="pdHost"></div>
+  </section>
+
+  <section class="page" id="page-owned">
+    <button class="backbtn" type="button" id="ownBack">&lsaquo; Home</button>
+    <h2 class="sech" style="margin:0 0 4px">What you have collected</h2>
+    <p class="qsub" id="ownSub" style="margin:0 0 14px"></p>
+    <div class="ownfilters">
+      <button class="ownchip on" type="button" id="ownGradedTog" role="switch" aria-checked="true">Graded</button>
+      <button class="ownchip on" type="button" id="ownSealedTog" role="switch" aria-checked="true">Sealed</button>
+    </div>
+    <div class="ownempty" id="ownEmpty" hidden>Nothing collected yet. Add some cards or sealed products and they will show up here.</div>
+    <div class="grid" id="ownedGrid"></div>
+    <div id="ownSealedWrap" hidden>
+      <h2 class="sech" style="margin-top:26px">Sealed products</h2>
+      <div class="ownsealed" id="ownedSealed"></div>
+    </div>
+  </section>
+
   <section class="page" id="page-rewards">
     <h2 class="sech">Rewards</h2>
     <div class="rankcard" id="rewardRank"></div>
@@ -967,15 +1018,16 @@
 
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
   <section class="dash" id="colDash" aria-label="Collection summary">
-    <div class="panel xpwrap">
+    <div class="panel xpwrap" id="ownedPanel" role="button" tabindex="0" title="See everything you have collected">
       <div class="xprow"><span class="lab">Master set completion</span><span class="pct" id="pctNum">0%</span></div>
       <div class="xpbar"><div class="xpfill" id="xpfill" style="width:0"></div></div>
       <div class="meta" id="ownMeta">0 of 242 cards collected</div>
+      <div class="xphint">Tap to see what you have collected &rsaquo;</div>
     </div>
-    <div class="panel">
+    <div class="panel" id="valPanel" role="button" tabindex="0" title="Tap to switch: last 5 sold / live listings">
       <div class="lab" id="valLab">Binder value</div>
       <div class="big" id="valStat">$0</div>
-      <div class="meta" id="valMeta">you set the values</div>
+      <div class="meta" id="valMeta">based on last 5 sold</div>
     </div>
     <div class="panel dualpanel" id="dualPanel" role="button" tabindex="0" title="Tap to switch: sets completed, base set, chase, promo, rewards">
       <div class="lab" id="dualLab">Sets completed</div>
@@ -1438,6 +1490,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // eBay "sold listings" search for a card, on the region set in Settings.
   function ebayUrl(c){ var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+"&LH_Sold=1&LH_Complete=1&_ipg=60"; }
   function cardValue(s){ var v=(+s.qty||0)*(+s.mkt||0); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
+  // Binder value can be shown two ways: last 5 sold (e.sold) or live listings (e.list); each falls back to e.mkt.
+  var valueBasis="sold";
+  function unitPrice(s, basis){ if(basis==="sold") return (s.sold!=null&&s.sold>0)?s.sold:(+s.mkt||0); if(basis==="list") return (s.list!=null&&s.list>0)?s.list:(+s.mkt||0); return (+s.mkt||0); }
+  function cardValueBasis(s, basis){ var v=(+s.qty||0)*unitPrice(s,basis); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
+  function binderValue(basis){ return CARDS.reduce(function(a,c){ return a+cardValueBasis(o(c.id),basis); },0); }
 
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
@@ -1681,8 +1738,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     _setsN = SET_ORDER.filter(function(k){ return SET_TOTAL[k]>0 && (bySet[k]||0)>=SET_TOTAL[k]; }).length; _setsT = SET_ORDER.length;
     _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
     paintDual();
-    $("valStat").textContent = money(value);
-    $("valMeta").textContent = gradedCount? (gradedCount+(gradedCount===1?" graded slab":" graded slabs")+" · you set values") : "you set the values";
+    $("valStat").textContent = money(binderValue(valueBasis));
+    $("valMeta").textContent = (valueBasis==="sold"?"based on last 5 sold":"based on live listings")+(gradedCount?(" · "+gradedCount+(gradedCount===1?" slab":" slabs")):"");
     var cb=$("colorBars"); cb.innerHTML="";
     COLORS.forEach(function(c){
       var owned=byColor[c], tot=COLOR_TOTAL[c], w=tot?Math.round(owned/tot*100):0;
@@ -1728,6 +1785,50 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function toggle(){ var idx=DUAL_ORDER.indexOf(dualMetric); dualMetric=DUAL_ORDER[(idx+1)%DUAL_ORDER.length]; paintDual(); }
     p.addEventListener("click", toggle);
     p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
+  })();
+  (function(){ var p=$("valPanel"); if(!p) return;
+    function toggle(){ if(wishMode) return; valueBasis=(valueBasis==="sold")?"list":"sold"; stats(); }
+    p.addEventListener("click", toggle);
+    p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
+  })();
+
+  // ---- Owned page: everything collected (cards + sealed), tapped from the Master set completion panel ----
+  var ownShowSealed=true, ownShowGraded=true;
+  function renderOwned(){
+    var grid=$("ownedGrid"); if(!grid) return;
+    var cards=CARDS.filter(function(c){ var s=o(c.id); if(!has(s)) return false;
+      if(!ownShowGraded && (+s.qty||0)===0 && s.graded && s.graded.length>0) return false; return true; });
+    grid.innerHTML=""; cards.forEach(function(c){ grid.appendChild(cardEl(c)); });
+    var sealed = ownShowSealed ? sealedList().filter(function(p){ return (+sealItem(p.id).qty||0)>0; }) : [];
+    var sw=$("ownSealedWrap"), sc=$("ownedSealed");
+    if(sc){ sc.innerHTML=""; sealed.forEach(function(p){
+      var s=sealItem(p.id), pr=sealPrice(s), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
+      var el=document.createElement("div"); el.className="ownseal"; el.setAttribute("role","button"); el.tabIndex=0;
+      el.innerHTML='<div class="osbox">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
+        '<div class="osb"><div class="osn">'+esc(p.name)+'</div><div class="ossub">×'+(+s.qty||0)+((+pr.mkt)?(' · '+money((+s.qty||0)*(+pr.mkt||0))):'')+'</div></div>';
+      el.onclick=function(){ showPage("sealed"); };
+      sc.appendChild(el);
+    }); }
+    if(sw) sw.hidden = sealed.length===0;
+    var gc=cards.reduce(function(a,c){ var s=o(c.id); return a+((s.graded&&s.graded.length)||0); },0);
+    var cval=cards.reduce(function(a,c){ return a+cardValue(o(c.id)); },0);
+    var sval=sealed.reduce(function(a,p){ var s=sealItem(p.id); return a+(+s.qty||0)*(+sealPrice(s).mkt||0); },0);
+    var parts=[cards.length+(cards.length===1?" card":" cards")];
+    if(gc) parts.push(gc+" graded"); if(sealed.length) parts.push(sealed.length+" sealed");
+    if(cval+sval>0) parts.push(money(cval+sval));
+    var sub=$("ownSub"); if(sub) sub.textContent=parts.join(" · ");
+    var emp=$("ownEmpty"); if(emp) emp.hidden=(cards.length+sealed.length)>0;
+    var st=$("ownSealedTog"); if(st){ st.classList.toggle("on",ownShowSealed); st.setAttribute("aria-checked",ownShowSealed?"true":"false"); }
+    var gt=$("ownGradedTog"); if(gt){ gt.classList.toggle("on",ownShowGraded); gt.setAttribute("aria-checked",ownShowGraded?"true":"false"); }
+  }
+  (function(){ var p=$("ownedPanel"); if(p){
+      function go(){ showPage("owned"); }
+      p.addEventListener("click", go);
+      p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
+    }
+    var b=$("ownBack"); if(b) b.onclick=function(){ showPage("home"); };
+    var st=$("ownSealedTog"); if(st) st.onclick=function(){ ownShowSealed=!ownShowSealed; renderOwned(); };
+    var gt=$("ownGradedTog"); if(gt) gt.onclick=function(){ ownShowGraded=!ownShowGraded; renderOwned(); };
   })();
 
   // ---- Detail modal ----
@@ -2466,21 +2567,25 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var priceRefreshing=false;
   function relTime(ts){ if(!ts) return "never"; var m=Math.round((Date.now()-ts)/60000); if(m<1) return "just now"; if(m<60) return m+"m ago"; var h=Math.round(m/60); if(h<24) return h+"h ago"; return Math.round(h/24)+"d ago"; }
   function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(el) el.textContent="Prices refreshed "+relTime(SETTINGS.lastPriceRefresh); }
-  // One card's market via the ladder: region sold → region listings → (US sold → US listings, if on).
+  // One card's market. Fetches BOTH last-5-sold and live listings so the binder value can be shown either way.
+  // e.sold = avg of last 5 sold, e.list = live-listings market, e.mkt = headline (sold preferred, else listings).
   function pullCardMarket(c, region){
     var e=o(c.id);
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
-    function applySold(b){ e.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; }
-    function applyList(b){ e.mkt=+b.market||0; if(b.avg!=null) e.avg=+b.avg||0; }
+    function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
+    function applyList(b){ var v=+b.market||0; e.list=v; return v; }
+    function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; return e.mkt; }
     return api(url("soldcomps",region),"GET").then(function(r){
-      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); return e.mkt; }
+      var b=(r&&r.body)||{}, gotSold=(b.market!=null); if(gotSold) applySold(b);
       return api(url("ebay-active",region),"GET").then(function(r2){
-        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); return e.mkt; }
+        var b2=(r2&&r2.body)||{}, gotList=(b2.market!=null); if(gotList) applyList(b2);
+        if(gotSold||gotList) return finalize();
         if(SETTINGS.fallbackUS && region!=="com"){
           return api(url("soldcomps","com"),"GET").then(function(r3){
-            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); return e.mkt; }
+            var b3=(r3&&r3.body)||{}, gs=(b3.market!=null); if(gs) applySold(b3);
             return api(url("ebay-active","com"),"GET").then(function(r4){
-              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); return e.mkt; } return null; });
+              var b4=(r4&&r4.body)||{}, gl=(b4.market!=null); if(gl) applyList(b4);
+              return (gs||gl)?finalize():null; });
           });
         } return null;
       });
@@ -2529,13 +2634,40 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       '</div>'+
       '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
         (apiBase()?'<button class="pcrefbtn pricerefresh priceui" id="refreshPricesBtn" type="button">'+icon('refresh')+' Refresh prices</button>':'')+'</div>'+
-      (series.length<2?'<div class="pcnote">Your total is saved each day, so the line grows as the days pass.</div>':'<div class="pcnote">Hover or tap the chart to see any day\'s value and what you owned.</div>');
-    wireChart(series);
+      (series.length<2?'<div class="pcnote">Your total is saved each day, so the line grows as the days pass.</div>':'<div class="pcnote">Tap the chart for the full history and a day-by-day breakdown.</div>');
+    wireChart(series, null, function(){ showPage("portfolio"); });
     var rb=$("refreshPricesBtn"); if(rb) rb.onclick=function(){ refreshCollectionPrices({auto:false}); };
     updateRefreshLabel();
   }
-  function wireChart(series){
-    var wrap=$("pcWrap"), tip=$("pcTip"), mk=$("pcMark"); if(!wrap||!tip||!mk) return;
+  // Full-page portfolio view (reached by tapping the home chart).
+  function renderPortfolioDetail(){
+    var host=$("pdHost"); if(!host) return;
+    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=new Date().toISOString().slice(0,10), ct=collCounts();
+    var live={d:today, v:cur, cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
+    if(series.length && series[series.length-1].d===today) series[series.length-1]=live; else series=series.concat([live]);
+    var first=series[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
+    var dir=delta>0.005?"up":(delta<-0.005?"down":"flat"), sign=delta>0.005?"+":(delta<-0.005?"":"");
+    var vals=series.map(function(s){return s.v;}), hi=Math.max.apply(null,vals), lo=Math.min.apply(null,vals);
+    var rows=series.slice().reverse().map(function(s){
+      var parts=[]; if(s.cards!=null) parts.push(s.cards+" card"+(s.cards===1?"":"s")); if(s.graded) parts.push(s.graded+" graded"); if(s.sealed) parts.push(s.sealed+" sealed");
+      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdv">'+money(s.v)+'</span></div>';
+    }).join("");
+    host.innerHTML=
+      '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
+        '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(series[0].d)+'</span></div></div>'+
+      '<div class="pcchartwrap pcbig" id="pdWrap">'+ chartSVG(series)+
+        '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div></div>'+
+      '<div class="pdstats"><div class="hs"><span class="n">'+money(hi)+'</span><span class="l">High</span></div>'+
+        '<div class="hs"><span class="n">'+money(lo)+'</span><span class="l">Low</span></div>'+
+        '<div class="hs"><span class="n">'+series.length+'</span><span class="l">Day'+(series.length===1?"":"s")+' tracked</span></div></div>'+
+      (series.length<2?'<div class="pcnote">Your total is saved once a day, so this history fills in as the days pass.</div>':'')+
+      '<h2 class="sech" style="margin-top:26px">Day by day</h2>'+
+      '<div class="pdlist">'+rows+'</div>';
+    wireChart(series, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
+    var bk=$("pdBack"); if(bk) bk.onclick=function(){ showPage("home"); };
+  }
+  function wireChart(series, ids, onClick){
+    ids=ids||{}; var wrap=$(ids.wrap||"pcWrap"), tip=$(ids.tip||"pcTip"), mk=$(ids.mark||"pcMark"); if(!wrap||!tip||!mk) return;
     var n=series.length; if(!n) return;
     var W=600,H=150,pad=8, xw=W-pad*2, yh=H-pad*2;
     var vals=series.map(function(s){return s.v;}), mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
@@ -2552,8 +2684,14 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function at(clientX){ var r=wrap.getBoundingClientRect(); return Math.round(((clientX-r.left)/r.width)*(n-1)); }
     wrap.onmousemove=function(e){ show(at(e.clientX)); };
     wrap.onmouseleave=function(){ tip.hidden=true; mk.hidden=true; };
-    wrap.onclick=function(e){ show(at(e.clientX)); };
-    wrap.ontouchstart=wrap.ontouchmove=function(e){ var t=e.touches&&e.touches[0]; if(t) show(at(t.clientX)); };
+    if(onClick){
+      wrap.onclick=function(){ onClick(); };
+      wrap.ontouchstart=wrap.ontouchmove=null;
+      wrap.style.cursor="pointer";
+    } else {
+      wrap.onclick=function(e){ show(at(e.clientX)); };
+      wrap.ontouchstart=wrap.ontouchmove=function(e){ var t=e.touches&&e.touches[0]; if(t) show(at(t.clientX)); };
+    }
   }
   function chartSVG(series){
     var W=600,H=150,pad=8,n=series.length;
@@ -2729,6 +2867,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if (p==="news") renderNews();
     if (p==="key") renderKey();
     if (p==="contact") renderContact();
+    if (p==="portfolio") renderPortfolioDetail();
+    if (p==="owned") renderOwned();
     updateNavMenu(p);
   }
   // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
