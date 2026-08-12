@@ -1794,6 +1794,7 @@
   var ownShowSealed=true, ownShowGraded=true;
   function renderOwned(){
     var grid=$("ownedGrid"); if(!grid) return;
+    var showPrices=(SETTINGS.mode!=="collector");
     var cards=CARDS.filter(function(c){ var s=o(c.id); if(!has(s)) return false;
       if(!ownShowGraded && (+s.qty||0)===0 && s.graded && s.graded.length>0) return false; return true; });
     grid.innerHTML=""; cards.forEach(function(c){ grid.appendChild(cardEl(c)); });
@@ -1803,7 +1804,7 @@
       var s=sealItem(p.id), pr=sealPrice(s), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       var el=document.createElement("div"); el.className="ownseal"; el.setAttribute("role","button"); el.tabIndex=0;
       el.innerHTML='<div class="osbox">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
-        '<div class="osb"><div class="osn">'+esc(p.name)+'</div><div class="ossub">×'+(+s.qty||0)+((+pr.mkt)?(' · '+money((+s.qty||0)*(+pr.mkt||0))):'')+'</div></div>';
+        '<div class="osb"><div class="osn">'+esc(p.name)+'</div><div class="ossub">×'+(+s.qty||0)+((showPrices&&(+pr.mkt))?(' · '+money((+s.qty||0)*(+pr.mkt||0))):'')+'</div></div>';
       el.onclick=function(){ showPage("sealed"); };
       sc.appendChild(el);
     }); }
@@ -1813,7 +1814,7 @@
     var sval=sealed.reduce(function(a,p){ var s=sealItem(p.id); return a+(+s.qty||0)*(+sealPrice(s).mkt||0); },0);
     var parts=[cards.length+(cards.length===1?" card":" cards")];
     if(gc) parts.push(gc+" graded"); if(sealed.length) parts.push(sealed.length+" sealed");
-    if(cval+sval>0) parts.push(money(cval+sval));
+    if(showPrices && cval+sval>0) parts.push(money(cval+sval));
     var sub=$("ownSub"); if(sub) sub.textContent=parts.join(" · ");
     var emp=$("ownEmpty"); if(emp) emp.hidden=(cards.length+sealed.length)>0;
     var st=$("ownSealedTog"); if(st){ st.classList.toggle("on",ownShowSealed); st.setAttribute("aria-checked",ownShowSealed?"true":"false"); }
