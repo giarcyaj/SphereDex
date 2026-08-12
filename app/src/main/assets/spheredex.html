@@ -708,6 +708,10 @@
   .askbox p{ color:var(--ink-soft); font-size:.88rem; margin:0 0 14px; }
   .askbox input{ width:100%; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:11px 13px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; margin-bottom:16px; }
   .askbox input:focus{ outline:none; border-color:var(--accent); }
+  .askbox textarea{ width:100%; min-height:190px; resize:vertical; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:11px 13px; color:var(--ink); font-family:var(--font-mono); font-size:.86rem; line-height:1.55; box-sizing:border-box; margin-bottom:16px; }
+  .askbox textarea:focus{ outline:none; border-color:var(--accent); }
+  .askbox.wide{ max-width:560px; }
+  .askbox.wide .askbtns{ flex-wrap:wrap; }
   .askbtns{ display:flex; gap:9px; justify-content:flex-end; }
   .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; }
   .askbtns .ok{ background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -1011,6 +1015,8 @@
         <button class="tbtn" id="deckNew" data-icon="plus">New</button>
         <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
+        <button class="tbtn ghost" id="deckExport" title="Export this deck as a text decklist">⭱ Export</button>
+        <button class="tbtn ghost" id="deckImport" title="Import a text decklist as a new deck">⭳ Import</button>
       </div>
     </div>
     <p class="qsub">Build a deck from the whole card pool, SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
@@ -1036,6 +1042,10 @@
           <option value="owned">Sort · Owned first</option>
         </select>
         <button class="tbtn ghost sortdir" id="sealSortDir" type="button" aria-label="Reverse sort order" title="Reverse sort order"></button>
+        <select class="sortsel" id="sealEd" aria-label="Edition for prices" title="Which edition's prices to show">
+          <option value="en">Edition · English</option>
+          <option value="jp">Edition · Japanese</option>
+        </select>
       </div>
     </div>
     <div class="sealedgrid" id="sealedGrid"></div>
@@ -1139,8 +1149,8 @@
         <button class="btn sec" id="fetchPrices" style="flex:0 0 auto">Refresh now</button>
       </div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection to a JSON file, or import one (adds it as a new collection).</div></div>
-        <div style="display:flex;gap:9px;flex:0 0 auto"><button class="btn sec" id="setExport">⭱ Export</button><button class="btn sec" id="setImport">⭳ Import</button></div>
+        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection to a JSON file, import a backup, or import a spreadsheet (CSV) of card numbers and quantities as a new collection.</div></div>
+        <div style="display:flex;gap:9px;flex:0 0 auto;flex-wrap:wrap"><button class="btn sec" id="setExport">⭱ Export</button><button class="btn sec" id="setImport">⭳ Import</button><button class="btn sec" id="setImportCsv">⭳ Import CSV</button></div>
       </div>
     </div>
   </section>
@@ -1217,6 +1227,15 @@
     <p id="askMsg" hidden></p>
     <input id="askInput" type="text" autocomplete="off" spellcheck="false" />
     <div class="askbtns"><button type="button" id="askCancel">Cancel</button><button type="button" class="ok" id="askOk">OK</button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="deckIOScrim" hidden>
+  <div class="askbox wide" role="dialog" aria-modal="true" aria-labelledby="deckIOTitle">
+    <h3 id="deckIOTitle"></h3>
+    <p id="deckIOHint"></p>
+    <textarea id="deckIOText" spellcheck="false" autocomplete="off"></textarea>
+    <div class="askbtns"><button type="button" id="deckIOCancel">Cancel</button><button type="button" id="deckIOAlt"></button><button type="button" class="ok" id="deckIOAction"></button></div>
   </div>
 </div>
 
@@ -1383,6 +1402,26 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
   var sortDir = (parseInt(localStorage.getItem("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
+  // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
+  // and a single blended eBay search skews the number. The dropdown swaps which edition's prices show.
+  // Declared here (before the sealed controls are wired) so the dropdown's initial value is set correctly.
+  var SEAL_ED = (localStorage.getItem("palvault-sealed-ed")==="jp") ? "jp" : "en";
+  var SEAL_EDITIONS = { en:{ label:"English", kw:"English" }, jp:{ label:"Japanese", kw:"Japanese" } };
+  function sealPrice(s){ var e=(SEAL_ED==="jp")?"jp":"en";
+    if(!s.ed){ s.ed={ en:{rrp:+s.rrp||0,mkt:+s.mkt||0,last:+s.last||0,avg:+s.avg||0}, jp:{rrp:0,mkt:0,last:0,avg:0} }; }
+    var b=s.ed[e]; if(!b){ b=s.ed[e]={rrp:0,mkt:0,last:0,avg:0}; }
+    ["rrp","mkt","last","avg"].forEach(function(k){ if(b[k]==null) b[k]=0; }); return b; }
+  // Recommended retail price defaults, per currency. GBP is UK retail from The Card Vault
+  // (box £45.60, pack £3.80, trial deck £18.00), which matches Chaos Cards / Magic Madhouse.
+  // JPY is the official Bushiroad MSRP (box ¥5,280, pack ¥440, trial deck ¥1,980). USD/EUR/AUD/CAD
+  // are approximate conversions of the UK retail until a regional source is confirmed. Editable per product.
+  var SEAL_RRP = {
+    "box-ebp01":  { JPY:5280, USD:57.99, GBP:45.60, EUR:53.99, AUD:88.99, CAD:78.99 },
+    "pack-ebp01": { JPY:440,  USD:4.99,  GBP:3.80,  EUR:4.49,  AUD:7.49,  CAD:6.49  },
+    "td-rb":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 },
+    "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
+  };
+  function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
   var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
@@ -2005,6 +2044,39 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       rd.readAsText(f); };
     inp.click();
   }
+  // Turn a spreadsheet dump into an owned map. Tolerant: one card per line, columns split on
+  // comma / semicolon / tab / whitespace. Any token that is a known card number is the id;
+  // a bare number (or "x2") is the quantity. Header rows and unknown lines are skipped.
+  function parseCsvCollection(text){
+    var own={}, added=0, skipped=0;
+    (text||"").split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line) return;
+      var toks=line.split(/[,;\t]+/), id=null, qty=null;
+      toks.forEach(function(t){
+        t=(t||"").trim(); if(!t) return;
+        var up=t.toUpperCase().replace(/^#/,"");
+        if(!id && byNumberIdx[up]){ id=up; return; }
+        var mq=t.match(/^x?\s*(\d+)$/i); if(qty==null && mq){ qty=parseInt(mq[1],10); }
+      });
+      if(id){ if(!(qty>0)) qty=1; if(own[id]){ own[id].qty+=qty; } else { own[id]={qty:qty,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; } }
+      else skipped++;
+    });
+    return { own:own, added:added, skipped:skipped };
+  }
+  function doImportCsv(){
+    var inp=document.createElement("input"); inp.type="file"; inp.accept=".csv,.txt,text/csv,text/plain";
+    inp.onchange=function(){ var f=inp.files[0]; if(!f) return; var rd=new FileReader();
+      rd.onload=function(){ try{
+        var res=parseCsvCollection(rd.result);
+        if(!res.added){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
+        var base=(f.name||"Imported").replace(/\.[^.]+$/,"");
+        var nm=base+" (CSV)";
+        var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:{} }); switchCol(id);
+        toast("Imported "+res.added+" card"+(res.added>1?"s":"")+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
+      }catch(e){ toast("That file couldn't be read"); } };
+      rd.readAsText(f); };
+    inp.click();
+  }
   function applyTheme(){
     var t=SETTINGS.theme||"system";
     if(t==="system") document.documentElement.removeAttribute("data-theme");
@@ -2107,9 +2179,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   $("sortSel").addEventListener("change", function(e){ filters.sort=e.target.value; render(); });
   // Sealed page controls (search + sort), mirroring the collection page.
   (function(){
-    var ss=$("sealSearch"), so=$("sealSort"), sd=$("sealSortDir");
+    var ss=$("sealSearch"), so=$("sealSort"), sd=$("sealSortDir"), se=$("sealEd");
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
     if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
+    if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ SEAL_ED=(e.target.value==="jp")?"jp":"en"; localStorage.setItem("palvault-sealed-ed",SEAL_ED); renderSealed(); renderHome(); }); }
     if(sd){ function sp(){ sd.textContent = sealSortDir<0 ? "↑ Asc" : "↓ Desc"; sd.classList.toggle("on", sealSortDir<0); } sp();
       sd.onclick=function(){ sealSortDir=-sealSortDir; sp(); renderSealed(); }; }
   })();
@@ -2237,7 +2310,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function sealMap(){ var c=activeCol(); if(!c.sealed) c.sealed={}; return c.sealed; }
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
     ["qty","rrp","mkt","last","avg"].forEach(function(k){ if(s[k]==null) s[k]=0; }); return s; }
-  function sealedValue(){ var t=0; SEALED.forEach(function(p){ var s=sealItem(p.id); t+=(+s.qty||0)*(+s.mkt||0); }); return t; }
+  function sealedValue(){ var t=0; SEALED.forEach(function(p){ var s=sealItem(p.id); t+=(+s.qty||0)*(+sealPrice(s).mkt||0); }); return t; }
   function cardsValue(){ return CARDS.reduce(function(a,c){ return a+cardValue(o(c.id)); },0); }
   function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
   // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
@@ -2245,20 +2318,21 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function pullSealed(p, s, btn){
     if(!apiBase()){ toast("Prices are unavailable right now"); return; }
     var region=SETTINGS.ebayRegion||"co.uk", orig=btn?btn.innerHTML:"";
+    var pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     if(btn){ btn.disabled=true; btn.innerHTML=icon('refresh')+' …'; }
-    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(p.q||("Palworld "+p.name))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
-    function applySold(b){ s.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) s.last=+b.sales[0].p||0; if(b.avg!=null) s.avg=+b.avg||0; }
-    function applyList(b){ s.mkt=+b.market||0; if(b.avg!=null) s.avg=+b.avg||0; }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function applySold(b){ pr.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; }
+    function applyList(b){ pr.mkt=+b.market||0; if(b.avg!=null) pr.avg=+b.avg||0; }
     function finish(msg){ if(btn){ btn.disabled=false; btn.innerHTML=orig; } save(); renderSealed(); renderHome(); if(msg) toast(msg); }
     api(url("soldcomps",region),"GET").then(function(r){
-      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); finish("Pulled sold · "+money(s.mkt)); return; }
+      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); finish("Pulled sold · "+money(pr.mkt)); return; }
       return api(url("ebay-active",region),"GET").then(function(r2){
-        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); finish("From listings · "+money(s.mkt)); return; }
+        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); finish("From listings · "+money(pr.mkt)); return; }
         if(SETTINGS.fallbackUS && region!=="com"){
           return api(url("soldcomps","com"),"GET").then(function(r3){
-            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); finish("US sold · "+money(s.mkt)); return; }
+            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); finish("US sold · "+money(pr.mkt)); return; }
             return api(url("ebay-active","com"),"GET").then(function(r4){
-              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); finish("US listings · "+money(s.mkt)); }
+              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); finish("US listings · "+money(pr.mkt)); }
               else finish("No market data found"); });
           });
         } else finish("No market data found");
@@ -2270,8 +2344,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var q=sealQ.trim().toLowerCase();
     var list=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
     list.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
-      if(sealSortKey==="value") return ((+sb.qty||0)*(+sb.mkt||0))-((+sa.qty||0)*(+sa.mkt||0));
-      if(sealSortKey==="rrp") return (+sb.rrp||0)-(+sa.rrp||0);
+      if(sealSortKey==="value") return ((+sb.qty||0)*(+sealPrice(sb).mkt||0))-((+sa.qty||0)*(+sealPrice(sa).mkt||0));
+      if(sealSortKey==="rrp") return (+sealPrice(sb).rrp||defaultRRP(b.id))-(+sealPrice(sa).rrp||defaultRRP(a.id));
       if(sealSortKey==="owned") return ((+sb.qty>0?1:0)-(+sa.qty>0?1:0)) || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
@@ -2281,19 +2355,19 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function renderSealed(){
     var grid=$("sealedGrid"); if(!grid) return; grid.innerHTML="";
     sealedList().forEach(function(p){
-      var s=sealItem(p.id), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
+      var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       var el=document.createElement("div"); el.className="sealcard";
       el.innerHTML=
         '<div class="sbox">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
         '<div class="sb">'+
-          '<div class="snm">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+'</div>'+
+          '<div class="snm">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
           '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
-            '<span class="sealval">'+money((+s.qty||0)*(+s.mkt||0))+'</span></div>'+
-          '<div class="priceg">'+priceField("rrp","RRP",s.rrp)+priceField("mkt","Market",s.mkt)+priceField("last","Last sold",s.last)+priceField("avg","Avg sold",s.avg)+'</div>'+
+            '<span class="sealval">'+money((+s.qty||0)*(+pr.mkt||0))+'</span></div>'+
+          '<div class="priceg">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
           (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Pull market</button>':'')+
         '</div>';
       el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
-      el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ s[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
+      el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
       var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
       grid.appendChild(el);
     });
@@ -2457,10 +2531,85 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     });
   }
   function newDeck(){ var id="d"+Date.now(); decks().push({id:id,name:"Deck "+(decks().length+1),cards:{}}); STATE.activeDeck=id; return id; }
+  // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
+  function deckToText(d){
+    var ids=Object.keys(d.cards||{}).filter(function(k){ return d.cards[k]>0; });
+    ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
+    var lines=["# "+(d.name||"Deck")+" (SphereDex)"];
+    ids.forEach(function(id){ var c=byNumberIdx[id.toUpperCase()]; lines.push(d.cards[id]+" "+id+(c?(" "+c.name):"")); });
+    return lines.join("\n")+"\n";
+  }
+  function parseDeckList(text){
+    var cards={}, added=0, skipped=0;
+    (text||"").split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line || line.charAt(0)==="#") return;   // skip blanks and comment lines
+      var toks=line.split(/[\s,;]+/), id=null, qty=null;
+      toks.forEach(function(t){
+        t=(t||"").trim(); if(!t) return;
+        var up=t.toUpperCase().replace(/^#/,"");
+        if(!id && byNumberIdx[up]){ id=up; return; }
+        var mq=t.match(/^(?:x\s*)?(\d+)\s*x?$/i); if(qty==null && mq){ qty=parseInt(mq[1],10); }
+      });
+      if(id){ if(!(qty>0)) qty=1; cards[id]=(cards[id]||0)+qty; added++; }
+      else skipped++;
+    });
+    return { cards:cards, added:added, skipped:skipped };
+  }
+  function createDeckFromParse(name, res){
+    if(!res.added){ toast("No card numbers found in that decklist."); return false; }
+    newDeck(); var d=activeDeck(); d.name=name||"Imported deck"; d.cards=res.cards; save(); renderDecks();
+    toast("Imported deck “"+d.name+"” ("+res.added+" line"+(res.added>1?"s":"")+(res.skipped?(", "+res.skipped+" skipped"):"")+")");
+    return true;
+  }
+  function downloadDeckText(d, text){
+    var blob=new Blob([text||deckToText(d)],{type:"text/plain"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=((d.name||"deck").replace(/[^a-z0-9]+/gi,"-").toLowerCase())+".txt"; a.click(); URL.revokeObjectURL(a.href);
+    toast("Exported “"+d.name+"”");
+  }
+  function doDeckImport(){
+    var inp=document.createElement("input"); inp.type="file"; inp.accept=".txt,.csv,text/plain,text/csv";
+    inp.onchange=function(){ var f=inp.files[0]; if(!f) return; var rd=new FileReader();
+      rd.onload=function(){ try{ createDeckFromParse((f.name||"Deck").replace(/\.[^.]+$/,""), parseDeckList(rd.result)); }
+        catch(e){ toast("That file couldn't be read"); } };
+      rd.readAsText(f); };
+    inp.click();
+  }
+  // Paste-box modal: decklists move around as text (the sim copies/pastes them), so offer both.
+  function copyDeckText(t){
+    function done(){ toast("Decklist copied"); }
+    function fallback(){ var ta=$("deckIOText"); if(ta){ ta.focus(); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("Select the text and copy it"); } } }
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done, fallback); } else fallback();
+  }
+  function openDeckIO(mode){
+    var sc=$("deckIOScrim"); if(!sc) return;
+    var ta=$("deckIOText"), act=$("deckIOAction"), alt=$("deckIOAlt"), cancel=$("deckIOCancel");
+    function close(){ sc.hidden=true; act.onclick=alt.onclick=cancel.onclick=sc.onclick=null; }
+    cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    if(mode==="export"){
+      var d=activeDeck(); if(!d){ toast("No deck to export yet"); return; }
+      var text=deckToText(d);
+      $("deckIOTitle").textContent="Export decklist";
+      $("deckIOHint").textContent="Copy this and paste it into your deck tool or the sim, or download it as a file.";
+      ta.value=text; ta.readOnly=true;
+      act.textContent="Copy"; act.onclick=function(){ copyDeckText(text); };
+      alt.hidden=false; alt.textContent="Download .txt"; alt.onclick=function(){ downloadDeckText(d, text); };
+    } else {
+      $("deckIOTitle").textContent="Import decklist";
+      $("deckIOHint").textContent="Paste a decklist below, one card per line (quantity then card number, like 4 EBP01-001). Or upload a file.";
+      ta.value=""; ta.readOnly=false;
+      act.textContent="Import"; act.onclick=function(){ if(createDeckFromParse("Imported deck", parseDeckList(ta.value))) close(); };
+      alt.hidden=false; alt.textContent="Upload file"; alt.onclick=function(){ close(); doDeckImport(); };
+    }
+    sc.hidden=false;
+    setTimeout(function(){ ta.focus(); if(mode==="export") ta.select(); }, 30);
+  }
   (function(){
     $("deckNew").onclick=function(){ openAsk({title:"New deck", value:"Deck "+(decks().length+1), okText:"Create", onOk:function(n){ newDeck(); activeDeck().name=n; save(); renderDecks(); }}); };
     $("deckRename").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Rename deck", value:d.name, okText:"Rename", onOk:function(r){ d.name=r; save(); renderDecks(); }}); };
     $("deckDelete").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Delete this deck?", message:"“"+d.name+"” will be removed.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.decks=decks().filter(function(x){return x.id!==d.id;}); STATE.activeDeck=(STATE.decks[0]||{}).id; save(); renderDecks(); }}); };
+    var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
+    var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var si=$("deckSearch"), sug=$("deckSug");
     function closeSug(){ sug.hidden=true; sug.innerHTML=""; }
     si.addEventListener("input", function(){
@@ -2903,6 +3052,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     out.sort(function(a,b){ return b.s-a.s || a.c.name.localeCompare(b.c.name) || a.c.setIdx-b.c.setIdx || a.c.seq-b.c.seq; });
     return out.slice(0,8).map(function(x){return x.c;});
   }
+  // Sealed products (Booster Box, Booster Pack, Trial Decks) are searchable too, by their generic names.
+  function searchSealed(q){
+    q=(q||"").trim().toLowerCase(); if(q.length<2) return [];
+    return SEALED.filter(function(p){ return (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
+  }
   function hiName(name, q){ q=(q||"").trim(); if(!q) return esc(name); var i=name.toLowerCase().indexOf(q.toLowerCase()); if(i<0) return esc(name); return esc(name.slice(0,i))+'<b>'+esc(name.slice(i,i+q.length))+'</b>'+esc(name.slice(i+q.length)); }
   (function(){
     var qi=$("qInput"), box=$("qSug"); if(!qi||!box) return;
@@ -2910,20 +3064,33 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function close(){ box.hidden=true; box.innerHTML=""; results=[]; hi=-1; qi.setAttribute("aria-expanded","false"); }
     function paintHi(){ Array.prototype.forEach.call(box.children, function(el,i){ el.classList.toggle("hi", i===hi); }); if(hi>-1 && box.children[hi]) box.children[hi].scrollIntoView({block:"nearest"}); }
     function open(){
-      var q=qi.value; results=searchCards(q); hi=-1;
-      if(!results.length){ if(q.trim().length>=2){ box.hidden=false; box.innerHTML='<div class="qsempty">No card matches “'+esc(q.trim())+'”.</div>'; qi.setAttribute("aria-expanded","true"); } else close(); return; }
-      box.innerHTML=results.map(function(c){
+      var q=qi.value; var cards=searchCards(q), sealed=searchSealed(q); results=cards.concat(sealed); hi=-1;
+      if(!results.length){ if(q.trim().length>=2){ box.hidden=false; box.innerHTML='<div class="qsempty">No match for “'+esc(q.trim())+'”.</div>'; qi.setAttribute("aria-expanded","true"); } else close(); return; }
+      var cardHtml=cards.map(function(c){
         var s=o(c.id), kind=c.kind+(c.rare?' · '+c.rare:'');
         var right=has(s)? '<span class="qsown">×'+s.qty+(s.graded&&s.graded.length?" +"+s.graded.length+"◈":"")+'</span>' : '<span class="qschev">'+icon('chevd','qschevi')+'</span>';
         return '<div class="qsg" role="option" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><div style="min-width:0"><div class="qsn">'+hiName(c.name,q)+'</div><div class="qsm"><span>'+esc(c.id)+'</span><span class="qsk">'+esc(kind)+'</span></div></div>'+right+'</div>';
       }).join("");
+      var sealHtml=sealed.map(function(p){
+        var bx=(window.CARD_IMG&&window.CARD_IMG[p.box])||"";
+        return '<div class="qsg" role="option" data-id="'+esc(p.id)+'" data-seal="1"><img src="'+bx+'" alt=""><div style="min-width:0"><div class="qsn">'+hiName(p.name,q)+'</div><div class="qsm"><span>Sealed</span><span class="qsk">'+esc(p.sub)+'</span></div></div><span class="qschev">'+icon('chevd','qschevi')+'</span></div>';
+      }).join("");
+      box.innerHTML=cardHtml+sealHtml;
       Array.prototype.forEach.call(box.querySelectorAll(".qsg"), function(el){
         el.addEventListener("mousedown", function(ev){ ev.preventDefault(); openResult(el.getAttribute("data-id")); });
       });
       box.hidden=false; qi.setAttribute("aria-expanded","true");
     }
     // Open the card's detail so you can pick raw/graded, condition and how many, instead of insta-adding.
-    function openResult(id){ var c=byNumberIdx[(id||"").toUpperCase()]; if(!c) return; qi.value=""; close(); openDetail(c); }
+    // Sealed products have no detail modal, so jump to the Sealed page filtered to that item.
+    function openResult(id){
+      var c=byNumberIdx[(id||"").toUpperCase()]; if(c){ qi.value=""; close(); openDetail(c); return; }
+      var p=null; for(var i=0;i<SEALED.length;i++){ if(SEALED[i].id===id){ p=SEALED[i]; break; } }
+      if(!p) return;
+      qi.value=""; close();
+      sealQ=p.name; var ss=$("sealSearch"); if(ss) ss.value=p.name;
+      showPage("sealed");
+    }
     qi.addEventListener("input", open);
     qi.addEventListener("focus", function(){ if(qi.value.trim().length>=2) open(); });
     qi.addEventListener("blur", function(){ setTimeout(close, 120); });
@@ -3128,6 +3295,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
+    var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
   })();
 
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
