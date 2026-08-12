@@ -82,9 +82,21 @@ class ScannerActivity : ComponentActivity() {
 
         val hint = TextView(this).apply {
             text = "Line up the card number in the box"
-            setTextColor(Color.WHITE); textSize = 15f; setPadding(dp(20), dp(28), dp(20), 0)
+            setTextColor(Color.WHITE); textSize = 15f; setPadding(dp(20), dp(28), dp(20), dp(10))
         }
         root.addView(hint, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+
+        // Draw the camera edge-to-edge, then keep the hint clear of the status bar / camera cutout
+        // by padding it down by the real top inset (the fixed 28dp was hidden under the notch on some phones).
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val top = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            ).top
+            hint.setPadding(dp(20), top + dp(16), dp(20), dp(10))
+            insets
+        }
 
         setContentView(root)
 
