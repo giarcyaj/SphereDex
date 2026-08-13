@@ -390,8 +390,10 @@
   .setcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; letter-spacing:-.01em; }
   .setcard .smeta { font-size:.76rem; color:var(--ink-soft); display:flex; justify-content:space-between; gap:8px; }
   .setcard .smeta b { font-family:var(--font-mono); color:var(--ink); font-weight:600; }
-  .setcard .strack { height:8px; border-radius:6px; background:var(--surface-2); border:1.5px solid var(--line); overflow:hidden; }
-  .setcard .sfill { height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 50%,var(--r-RR))); }
+  .setcard .strack { height:10px; border-radius:6px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden; }
+  .setcard .sfill { height:100%; border-radius:6px; min-width:4px; transition:width .5s cubic-bezier(.2,.7,.2,1);
+    background:linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 72%, #ffffff));
+    box-shadow:0 0 8px color-mix(in srgb, var(--accent) 45%, transparent); }
   .missbtn { border:1.5px solid var(--line-strong); background:transparent; color:var(--ink-soft); border-radius:9px; padding:6px 11px; font-size:.76rem; font-weight:700; align-self:flex-start; margin-top:2px; }
   .missbtn:hover { border-color:var(--accent); color:var(--accent-ink); }
 
@@ -3540,7 +3542,7 @@
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
-    an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); };
+    an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); paintLogin(); };
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
@@ -3553,7 +3555,10 @@
   function saveAuth(){ try{ localStorage.setItem("palvault-auth", JSON.stringify(AUTH)); }catch(e){} }
   // Header login button: reflects sign-in state, opens the Account page.
   function paintLogin(){ var b=$("loginBtn"); if(!b) return;
-    if(AUTH.token){ b.classList.add("in"); b.innerHTML=icon('user')+'<span>'+esc(AUTH.email?AUTH.email.split("@")[0]:"Account")+'</span>'; b.title="Account ("+(AUTH.email||"signed in")+")"; }
+    if(AUTH.token){ b.classList.add("in");
+      var dn=(SETTINGS.displayName||"").trim();
+      var label=dn || (AUTH.email?AUTH.email.split("@")[0]:"Account");
+      b.innerHTML=icon('user')+'<span>'+esc(label)+'</span>'; b.title="Account ("+(AUTH.email||"signed in")+")"; }
     else { b.classList.remove("in"); b.innerHTML=icon('user')+'<span>Log in</span>'; b.title="Sign in or create an account"; }
     b.onclick=function(){ showPage("account"); };
   }
