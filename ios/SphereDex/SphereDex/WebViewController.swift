@@ -28,6 +28,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         let bridge = """
         window.AndroidScan = { scan: function () { window.webkit.messageHandlers.sdscan.postMessage(''); } };
         window.AndroidIcon = { setIcon: function () {} };
+        window.IS_IOS = true;
         """
         controller.addUserScript(WKUserScript(source: bridge, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         controller.add(self, name: "sdscan")

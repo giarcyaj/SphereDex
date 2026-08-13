@@ -297,6 +297,8 @@
   .btn.primary:hover { filter:brightness(1.06); transform:translateY(-1px); }
   .btn.sec { background:transparent; border-color:var(--line-strong); color:var(--ink); }
   .btn.sec:hover { border-color:var(--accent); color:var(--accent-ink); }
+  .btn.danger { background:transparent; border-color:color-mix(in srgb,var(--el-Fire) 55%,var(--line-strong)); color:var(--el-Fire); }
+  .btn.danger:hover { background:color-mix(in srgb,var(--el-Fire) 14%,transparent); border-color:var(--el-Fire); }
   .extlink { font-size:.8rem; color:var(--accent-ink); text-decoration:none; font-weight:650; }
   .extlink:hover { text-decoration:underline; }
 
@@ -2446,7 +2448,9 @@
   }
   function fmt(n){ n=+n||0; return n.toLocaleString(undefined,{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}); }
 
-  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
+  // The donation link is hidden inside the iOS app (App Store guideline 3.1.1 restricts external donation links).
+  var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
+  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.'+_bmc;
 
   // ---- Per-product metadata: release date + box image + blurb ----
   var SET_META = {
@@ -3621,8 +3625,29 @@
     var el=$("acctCard"); if(!el) return;
     if(!apiBase()){ el.innerHTML='<div class="stitle">Cloud sync <span class="betatag">beta</span></div><p class="sdesc" style="margin:8px 0 0">Cloud sync is unavailable right now. Your collection stays saved on this device, and you can move it with Export / Import.</p>'; return; }
     if(AUTH.token){
-      el.innerHTML='<div class="stitle">Signed in</div><p class="sdesc" style="margin:8px 0 12px">'+esc(AUTH.email||"")+' · <span id="syncStat">synced</span></p><div class="acctform"><button class="btn sec" id="syncNow">Sync now</button><button class="btn sec" id="signOutBtn">Sign out</button></div>';
+      el.innerHTML='<div class="stitle">Signed in</div><p class="sdesc" style="margin:8px 0 12px">'+esc(AUTH.email||"")+' · <span id="syncStat">synced</span></p><div class="acctform"><button class="btn sec" id="syncNow">Sync now</button><button class="btn sec" id="signOutBtn">Sign out</button></div><div id="delZone" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px"></div>';
       $("syncNow").onclick=function(){ pushCloud(true); }; $("signOutBtn").onclick=signOut;
+      var dz=$("delZone");
+      function delInitial(){
+        dz.innerHTML='<button class="btn danger" id="delAcctBtn">Delete account</button>'+
+          '<p class="sdesc" style="margin:8px 0 0;font-size:.78rem">Permanently removes your account and any data synced to the server. Cards saved on this device stay unless you reset the app.</p>';
+        $("delAcctBtn").onclick=delConfirm;
+      }
+      function delConfirm(){
+        dz.innerHTML='<p class="sdesc" style="margin:0 0 10px;color:var(--el-Fire);font-weight:600">Delete your account and all synced data? This cannot be undone.</p>'+
+          '<div style="display:flex;gap:9px"><button class="btn danger" id="delYes">Yes, delete</button><button class="btn sec" id="delNo">Cancel</button></div>'+
+          '<div class="sdesc" id="delMsg" style="margin-top:8px"></div>';
+        $("delNo").onclick=delInitial; $("delYes").onclick=delGo;
+      }
+      function delGo(){
+        var y=$("delYes"), m=$("delMsg"); if(y){ y.disabled=true; y.textContent="Deleting…"; }
+        function fail(t){ if(m){ m.textContent=t; m.style.color="var(--el-Fire)"; } if(y){ y.disabled=false; y.textContent="Yes, delete"; } }
+        api("/api/account","DELETE").then(function(r){
+          if(r&&r.ok){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Your account has been deleted"); }
+          else fail((r&&r.body&&r.body.error)||"Couldn't delete the account. Please try again.");
+        }).catch(function(e){ fail(String((e&&e.message)||e)); });
+      }
+      delInitial();
     } else {
       el.innerHTML='<div class="stitle">Sign in or create an account <span class="betatag">beta</span></div><p class="sdesc" style="margin:8px 0 14px">Saves your collections to your account and syncs across devices.</p>'+
         '<div class="acctform" style="flex-direction:column;align-items:stretch;gap:9px;max-width:340px">'+
