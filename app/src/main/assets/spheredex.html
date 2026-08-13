@@ -543,9 +543,11 @@
   .pdstats .hs .l { display:block; font-size:.72rem; color:var(--ink-faint); margin-top:3px; }
   .pdlist { display:flex; flex-direction:column; }
   .pdrow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
-  .pdrow .pdd { font-weight:600; min-width:96px; font-size:.9rem; }
+  .pdrow .pdd { font-weight:600; min-width:88px; font-size:.9rem; }
   .pdrow .pdc { color:var(--ink-soft); font-size:.8rem; flex:1; }
-  .pdrow .pdv { font-family:var(--font-mono); font-weight:700; margin-left:auto; }
+  .pdrow .pdchg { font-family:var(--font-mono); font-size:.76rem; font-weight:700; white-space:nowrap; text-align:right; min-width:70px; font-variant-numeric:tabular-nums; }
+  .pdrow .pdup { color:var(--el-Grass); } .pdrow .pddown { color:var(--el-Fire); } .pdrow .pdflat { color:var(--ink-faint); }
+  .pdrow .pdv { font-family:var(--font-mono); font-weight:700; min-width:62px; text-align:right; }
   /* collected mode (owned cards + sealed) */
   #ownedPanel, #valPanel { cursor:pointer; }
   .collectedbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
@@ -992,7 +994,7 @@
     <div class="rwcap" id="rewardCap"></div>
 
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
-    <p class="rwintro">Reach a sphere tier on any rarity to unlock it, then set it as your app icon and colour theme. The header orb becomes that sphere and the app recolours to match. On the Android app your home-screen icon changes too (it may blink as Android reapplies it).</p>
+    <p class="rwintro">Fill up your master set to unlock these: Pal from the start, then Mega, Giga, Hyper, Ultra and Legendary at 20%, 40%, 60%, 80% and 100% collected. Set one as your app icon and colour theme, the header orb becomes that sphere and the app recolours to match. On the Android app your home-screen icon changes too (it may blink as Android reapplies it).</p>
     <div class="spherethemes" id="sphereThemes"></div>
   </section>
 
@@ -2242,10 +2244,12 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var sel=$("setThemeSel"); if(sel) sel.value=t;
   }
   // ---- Sphere themes: unlocked spheres recolour the app accent + turn the header orb into that sphere ----
+  // Sphere themes unlock from OVERALL master-set completion (the same % as the header orb and the
+  // completion bar), so they track how much you have actually collected, not one easy small rarity.
   function maxTierReached(){
-    var rp=rarityProgress(), mx=0;
-    REWARD_RARES.forEach(function(r){ var t=rp.tot[r]||0, o=rp.owned[r]||0, pct=t?Math.round(o/t*100):0; var ti=tierIndex(pct); if(ti>mx) mx=ti; });
-    return mx;
+    var owned=CARDS.filter(function(c){ return has(o(c.id)); }).length;
+    var pct=TOTAL?Math.round(owned/TOTAL*100):0;
+    return tierIndex(pct);
   }
   function sphereUnlocked(i){ return i===0 || i<=maxTierReached(); }
   function applySphere(){
@@ -2322,7 +2326,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="sthorb" style="--rc:'+tier.c+'">'+sphereSVG(tier.c,"st"+i)+(unlocked?'':'<span class="sthlock">'+icon('lock')+'</span>')+'</div>'+
         '<div class="sthnm" style="color:'+(unlocked?tier.c:'var(--ink-faint)')+'">'+esc(tier.name)+'</div>'+
         '<div class="sthst">'+status+'</div>';
-      el.title = unlocked ? (active?tier.name+" is your current app icon & theme":"Use "+tier.name+" as your app icon & colour theme") : "Reach "+tier.min+"% on any rarity to unlock";
+      el.title = unlocked ? (active?tier.name+" is your current app icon & theme":"Use "+tier.name+" as your app icon & colour theme") : "Collect "+tier.min+"% of the master set to unlock";
       el.onclick=function(){ chooseSphere(i); };
       host.appendChild(el);
     });
@@ -2656,9 +2660,14 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var first=series[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
     var dir=delta>0.005?"up":(delta<-0.005?"down":"flat"), sign=delta>0.005?"+":(delta<-0.005?"":"");
     var vals=series.map(function(s){return s.v;}), hi=Math.max.apply(null,vals), lo=Math.min.apply(null,vals);
-    var rows=series.slice().reverse().map(function(s){
+    var rows=series.map(function(s,i){ return {s:s, delta:(i>0? s.v-series[i-1].v : null)}; }).reverse().map(function(row){
+      var s=row.s, d=row.delta;
       var parts=[]; if(s.cards!=null) parts.push(s.cards+" card"+(s.cards===1?"":"s")); if(s.graded) parts.push(s.graded+" graded"); if(s.sealed) parts.push(s.sealed+" sealed");
-      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdv">'+money(s.v)+'</span></div>';
+      var chg = (d==null) ? '<span class="pdflat">·</span>'
+              : (d>0.005) ? '<span class="pdup">&#9650; '+money(d)+'</span>'
+              : (d<-0.005) ? '<span class="pddown">&#9660; '+money(Math.abs(d))+'</span>'
+              : '<span class="pdflat">&#8211;</span>';
+      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdchg">'+chg+'</span><span class="pdv">'+money(s.v)+'</span></div>';
     }).join("");
     host.innerHTML=
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
