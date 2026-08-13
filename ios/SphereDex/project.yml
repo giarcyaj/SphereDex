@@ -1,0 +1,29 @@
+# XcodeGen spec. Run `xcodegen generate` in this folder to create SphereDex.xcodeproj.
+name: SphereDex
+options:
+  bundleIdPrefix: app
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  SphereDex:
+    type: application
+    platform: iOS
+    sources:
+      - path: SphereDex
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.spheredex
+        PRODUCT_NAME: SphereDex
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_FILE: SphereDex/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        # Set your Apple Developer Team in Xcode > Signing & Capabilities before building to a device.
+        DEVELOPMENT_TEAM: ""

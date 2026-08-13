@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Xcode user state & build artifacts (iOS)
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/**/DerivedData/
+ios/**/build/
+
+# Superseded native-SwiftUI iOS prototype (kept on disk, not tracked)
+ios/Paldeck/
