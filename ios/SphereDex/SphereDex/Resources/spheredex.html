@@ -1187,6 +1187,7 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Text size</div><div class="sdesc">Make everything in the app bigger or smaller. Remembered on this device.</div></div>
         <select class="sortsel" id="setTextSize">
+          <option value="0.9">Small</option>
           <option value="1">Default</option>
           <option value="1.1">Large</option>
           <option value="1.2">Larger</option>
@@ -2257,7 +2258,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // Text size: every font-size in the app is in rem, so scaling the root font-size resizes all
   // text (and rem-based spacing) together. Clamped so card layouts stay intact.
   function applyTextScale(){
-    var s=+SETTINGS.textScale||1; if(s<1) s=1; if(s>1.4) s=1.4;
+    var s=+SETTINGS.textScale||1; if(s<0.85) s=0.85; if(s>1.4) s=1.4;
     document.documentElement.style.fontSize = Math.round(s*1000)/10 + "%";
     var sel=$("setTextSize"); if(sel) sel.value=String(s);
   }
