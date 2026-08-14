@@ -2594,25 +2594,45 @@
   var priceRefreshing=false;
   function relTime(ts){ if(!ts) return "never"; var m=Math.round((Date.now()-ts)/60000); if(m<1) return "just now"; if(m<60) return m+"m ago"; var h=Math.round(m/60); if(h<24) return h+"h ago"; return Math.round(h/24)+"d ago"; }
   function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(el) el.textContent="Prices refreshed "+relTime(SETTINGS.lastPriceRefresh); }
-  // One card's market. Fetches BOTH last-5-sold and live listings so the binder value can be shown either way.
-  // e.sold = avg of last 5 sold, e.list = live-listings market, e.mkt = headline (sold preferred, else listings).
-  function pullCardMarket(c, region){
+  // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
+  // e.mkt = headline (sold preferred, else listings).
+  //   both=false (default, used by the quick on-open refresh): one value via the ladder
+  //     (sold -> listings -> US), 1-2 calls, so a stale binder refreshes fast.
+  //   both=true (the manual "Refresh prices"): fetch sold AND listings so the binder-value
+  //     toggle has both numbers.
+  function pullCardMarket(c, region, both){
     var e=o(c.id);
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
     function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
     function applyList(b){ var v=+b.market||0; e.list=v; return v; }
     function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; return e.mkt; }
+    if(both){
+      return api(url("soldcomps",region),"GET").then(function(r){
+        var b=(r&&r.body)||{}, gotSold=(b.market!=null); if(gotSold) applySold(b);
+        return api(url("ebay-active",region),"GET").then(function(r2){
+          var b2=(r2&&r2.body)||{}, gotList=(b2.market!=null); if(gotList) applyList(b2);
+          if(gotSold||gotList) return finalize();
+          if(SETTINGS.fallbackUS && region!=="com"){
+            return api(url("soldcomps","com"),"GET").then(function(r3){
+              var b3=(r3&&r3.body)||{}, gs=(b3.market!=null); if(gs) applySold(b3);
+              return api(url("ebay-active","com"),"GET").then(function(r4){
+                var b4=(r4&&r4.body)||{}, gl=(b4.market!=null); if(gl) applyList(b4);
+                return (gs||gl)?finalize():null; });
+            });
+          } return null;
+        });
+      }).catch(function(){ return null; });
+    }
+    // Fast ladder: stop at the first source that returns a value.
     return api(url("soldcomps",region),"GET").then(function(r){
-      var b=(r&&r.body)||{}, gotSold=(b.market!=null); if(gotSold) applySold(b);
+      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); return finalize(); }
       return api(url("ebay-active",region),"GET").then(function(r2){
-        var b2=(r2&&r2.body)||{}, gotList=(b2.market!=null); if(gotList) applyList(b2);
-        if(gotSold||gotList) return finalize();
+        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); return finalize(); }
         if(SETTINGS.fallbackUS && region!=="com"){
           return api(url("soldcomps","com"),"GET").then(function(r3){
-            var b3=(r3&&r3.body)||{}, gs=(b3.market!=null); if(gs) applySold(b3);
+            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); return finalize(); }
             return api(url("ebay-active","com"),"GET").then(function(r4){
-              var b4=(r4&&r4.body)||{}, gl=(b4.market!=null); if(gl) applyList(b4);
-              return (gs||gl)?finalize():null; });
+              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); return finalize(); } return null; });
           });
         } return null;
       });
@@ -2632,8 +2652,9 @@
     priceRefreshing=true;
     Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.add("spin"); b.disabled=true; });
     var idx=0, active=0, updated=0;
-    function run(c){ active++; pullCardMarket(c, region).then(function(mkt){ if(mkt!=null){ o(c.id).pAt=Date.now(); updated++; } }).catch(function(){}).then(function(){ active--; if(idx>=owned.length && active===0) finish(); else pump(); }); }
-    function pump(){ while(active<3 && idx<owned.length){ run(owned[idx++]); } }
+    var dual = !opts.auto;   // the on-open auto refresh grabs one value per card (fast); manual grabs both
+    function run(c){ active++; pullCardMarket(c, region, dual).then(function(mkt){ if(mkt!=null){ o(c.id).pAt=Date.now(); updated++; } }).catch(function(){}).then(function(){ active--; if(idx>=owned.length && active===0) finish(); else pump(); }); }
+    function pump(){ while(active<6 && idx<owned.length){ run(owned[idx++]); } }
     function finish(){
       priceRefreshing=false;
       Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.remove("spin"); b.disabled=false; });
