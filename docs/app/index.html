@@ -3679,6 +3679,9 @@
   // On the web the Quick Add tab is a search glass; in the native app it stays a camera (real card scanning).
   var IS_NATIVE = !!(window.AndroidScan && typeof window.AndroidScan.scan==="function");
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
+  // Inside the native app the "get the app" store buttons are pointless (and their fallback
+  // toast wrongly says "you're on the web app"), so hide them when running natively.
+  if(IS_NATIVE){ var _stores=document.querySelector(".stores"); if(_stores) _stores.style.display="none"; }
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
