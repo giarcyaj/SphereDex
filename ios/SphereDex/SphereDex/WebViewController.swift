@@ -49,7 +49,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         webView.scrollView.backgroundColor = Self.bgColor
         webView.scrollView.contentInsetAdjustmentBehavior = .never   // web app owns its safe-area handling
         webView.scrollView.bounces = false
-        webView.allowsBackForwardNavigationGestures = false
+        webView.allowsBackForwardNavigationGestures = true
         view.addSubview(webView)
 
         if let url = URL(string: Self.appURL) {

@@ -2721,7 +2721,7 @@
       '<h2 class="sech" style="margin-top:26px">Day by day</h2>'+
       '<div class="pdlist">'+rows+'</div>';
     wireChart(series, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
-    var bk=$("pdBack"); if(bk) bk.onclick=function(){ showPage("home"); };
+    var bk=$("pdBack"); if(bk) bk.onclick=function(){ if(_histReady && history.length>1) history.back(); else showPage("home"); };
   }
   function wireChart(series, ids, onClick){
     ids=ids||{}; var wrap=$(ids.wrap||"pcWrap"), tip=$(ids.tip||"pcTip"), mk=$(ids.mark||"pcMark"); if(!wrap||!tip||!mk) return;
@@ -2909,7 +2909,10 @@
     if(m==="collected") syncCollectedTogs();
     renderCollectedSealed();
   }
-  function showPage(p){
+  // Page navigation is history-aware so the Android back button and iOS swipe-back go to the
+  // previous page (dismissing an open modal first) instead of closing the app.
+  var _curPage="home", _histReady=false;
+  function showPage(p, _pop){
     // Wishlist, Favourites & Graded are modes of the collection page, so they inherit its search / sort / filters.
     var virtual = (p==="favourites" || p==="graded" || p==="wishlist" || p==="owned");
     var real = virtual ? "collection" : p;
@@ -2930,7 +2933,25 @@
     if (p==="contact") renderContact();
     if (p==="portfolio") renderPortfolioDetail();
     updateNavMenu(p);
+    _curPage = p;
+    if(_histReady && !_pop){ try{ history.pushState({sd:p}, ""); }catch(e){} }
   }
+  // Close the top-most open overlay (modal / lightbox / dropdown). Returns true if one was closed.
+  function closeTopOverlay(){
+    var closed=false;
+    if(scrim && scrim.classList.contains("open")){ closeModal(); closed=true; }
+    else { var lb=$("lightbox"); if(lb && lb.classList.contains("open")){ closeLightbox(); closed=true; } }
+    if(!closed){ var ss=$("scanScrim"); if(ss && !ss.hidden){ closeScanModal(); closed=true; } }
+    if(!closed){ var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; } }
+    if(!closed){ var found=["askScrim","deckIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
+    return closed;
+  }
+  // Device back / swipe-back: dismiss an open overlay first, otherwise go to the previous page.
+  window.addEventListener("popstate", function(ev){
+    if(closeTopOverlay()){ try{ history.pushState({sd:_curPage}, ""); }catch(e){} return; }
+    showPage((ev.state && ev.state.sd) || "home", true);
+  });
   // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
   function closeNavMenu(){ var l=$("navList"); if(l) l.hidden=true; var t=$("navTrigger"); if(t) t.setAttribute("aria-expanded","false"); }
   var NAV_PRIMARY=["home","scan","collection"];
@@ -3724,6 +3745,8 @@
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  // Seed history with the starting page so the back button/gesture has somewhere to return to.
+  (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
   buildChips();
   applyTheme();
