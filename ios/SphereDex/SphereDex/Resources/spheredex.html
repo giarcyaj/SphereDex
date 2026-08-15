@@ -2020,7 +2020,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       else { var e=colOwnEntry(colId); for(var j=0;j<n;j++) e.graded.push({grader:gr,grade:gd,value:guess}); save(); render(); buildColSel(); }
       toast("Added "+n+" "+gr+" "+gd+(multiAsk?(" to "+colNameOf(colId)):""));
     };
-    $("mClose").onclick = closeModal;
+    $("mClose").onclick = dismissOverlay;
     var mf=$("mMain").querySelector(".martflo");
     if(mf) mf.addEventListener("click", function(ev){ if(ev.target.closest(".mclose")) return; openLightbox(c); });
 
@@ -2181,22 +2181,26 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     })();
     renderSales(); refreshAvg();
 
-    $("fSave").onclick = function(){ persist(); closeModal(); toast(c.name+" updated"); };
+    $("fSave").onclick = function(){ persist(); dismissOverlay(); toast(c.name+" updated"); };
+    var _wasOpen=scrim.classList.contains("open");
     scrim.classList.add("open");
+    if(!_wasOpen) openOverlay(closeModal);
   }
   function closeModal(){ detailGen++; scrim.classList.remove("open"); }
   function openLightbox(c){
     var img=$("lbImg");
     img.onerror=function(){ this.onerror=null; var e=window.CARD_IMG&&window.CARD_IMG[c.id]; if(e) this.src=e; };
     img.src=IMG_BASE+c.pic;
+    var _lbWas=$("lightbox").classList.contains("open");
     $("lightbox").classList.add("open");
+    if(!_lbWas) openOverlay(closeLightbox);
   }
   function closeLightbox(){ $("lightbox").classList.remove("open"); $("lbImg").removeAttribute("src"); }
-  $("lbClose").onclick=closeLightbox;
-  $("lightbox").addEventListener("click", function(e){ if(e.target===$("lightbox")) closeLightbox(); });
-  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && $("lightbox").classList.contains("open")){ e.stopPropagation(); closeLightbox(); } }, true);
-  scrim.addEventListener("click", function(e){ if(e.target===scrim) closeModal(); });
-  document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeModal(); });
+  $("lbClose").onclick=dismissOverlay;
+  $("lightbox").addEventListener("click", function(e){ if(e.target===$("lightbox")) dismissOverlay(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && $("lightbox").classList.contains("open")){ e.stopPropagation(); dismissOverlay(); } }, true);
+  scrim.addEventListener("click", function(e){ if(e.target===scrim) dismissOverlay(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && scrim.classList.contains("open")) dismissOverlay(); });
 
   // ---- Import / export (lives in Settings → Backup & restore) ----
   function doExport(){
@@ -2938,19 +2942,23 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     _curPage = p;
     if(_histReady && !_pop){ try{ history.pushState({sd:p}, ""); }catch(e){} }
   }
-  // Close the top-most open overlay (modal / lightbox / dropdown). Returns true if one was closed.
+  // Overlay back-stack: full-screen modals (card detail, its lightbox, the scan sheet) each push a
+  // history entry when they open, so device back / swipe-back closes them from ANY page (including
+  // home) instead of exiting, and the X / backdrop / Escape close them the same way via history.back.
+  var _ovStack = [];  // each item is that overlay's plain hide function (no history side effects)
+  function openOverlay(hideFn){ _ovStack.push(hideFn); if(_histReady){ try{ history.pushState({sd:_curPage, ov:_ovStack.length}, ""); }catch(e){} } }
+  function dismissOverlay(){ if(!_ovStack.length) return; if(_histReady){ try{ history.back(); return; }catch(e){} } var f=_ovStack.pop(); try{ f(); }catch(e){} }
+  // Lightweight popups that do not own a history entry (dropdown menu, transient dialogs).
   function closeTopOverlay(){
     var closed=false;
-    if(scrim && scrim.classList.contains("open")){ closeModal(); closed=true; }
-    else { var lb=$("lightbox"); if(lb && lb.classList.contains("open")){ closeLightbox(); closed=true; } }
-    if(!closed){ var ss=$("scanScrim"); if(ss && !ss.hidden){ closeScanModal(); closed=true; } }
-    if(!closed){ var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; } }
+    var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
     if(!closed){ var found=["askScrim","deckIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     return closed;
   }
-  // Device back / swipe-back: dismiss an open overlay first, otherwise go to the previous page.
+  // Device back / swipe-back: close the top full-screen overlay, else a lightweight popup, else go back a page.
   window.addEventListener("popstate", function(ev){
+    if(_ovStack.length){ var fn=_ovStack.pop(); try{ fn(); }catch(e){} return; }
     if(closeTopOverlay()){ try{ history.pushState({sd:_curPage}, ""); }catch(e){} return; }
     showPage((ev.state && ev.state.sd) || "home", true);
   });
@@ -3518,7 +3526,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join("");
     $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(x==="10"?' selected':'')+'>'+x+'</option>';}).join("");
     paintScan();
+    var _scWas=!scanScrim.hidden;
     scanScrim.hidden=false;
+    if(!_scWas) openOverlay(closeScanModal);
   }
   function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; }
   // After a scan-add, refresh just that card's price in the background so scanning many cards
@@ -3531,12 +3541,12 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(!scanScrim) return;
     $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); });
     $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); });
-    $("scanCancel").onclick=closeScanModal;
+    $("scanCancel").onclick=dismissOverlay;
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
-    scanScrim.addEventListener("click", function(e){ if(e.target===scanScrim) closeScanModal(); });
-    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scanScrim.hidden) closeScanModal(); });
+    scanScrim.addEventListener("click", function(e){ if(e.target===scanScrim) dismissOverlay(); });
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scanScrim.hidden) dismissOverlay(); });
     $("scanConfirm").onclick=function(){
-      var card=scanState.card; if(!card){ closeScanModal(); return; }
+      var card=scanState.card; if(!card){ dismissOverlay(); return; }
       if(scanState.dest==="wishlist"){
         STATE.wishlist[card.id]=true; save(); render();
         toast(card.name+" → Wishlist");
@@ -3558,7 +3568,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         }
         scanBgPrice(card);
       }
-      closeScanModal();
+      dismissOverlay();
     };
   })();
   // Bridge for the native Android camera scanner: open the confirmation modal for a scanned card.
