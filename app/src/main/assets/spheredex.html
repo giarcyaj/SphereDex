@@ -238,7 +238,11 @@
   .trend .tnm { font-family:var(--font-display); font-weight:750; font-size:1rem; line-height:1.1; }
   .trend .tsub { font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint); margin-top:4px; }
   .trend .tpct { margin-left:auto; font-family:var(--font-mono); font-weight:700; font-size:1.15rem; color:var(--el-Grass); white-space:nowrap; }
+  .trend .tpct.down { color:var(--el-Fire); }
   .trendnote { color:var(--ink-faint); font-size:.85rem; background:var(--surface); border:1.5px dashed var(--line-strong); border-radius:16px; padding:14px 16px; }
+  .movers { display:flex; flex-direction:column; gap:8px; }
+  .movers .moverlbl { font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); margin-top:6px; }
+  .movers .moverlbl:first-child { margin-top:0; }
   .qty { display:flex; align-items:center; border-left:1.5px solid var(--line); }
   .qty button { border:none; background:transparent; color:var(--ink-soft); width:28px; font-size:1.05rem; font-weight:700; line-height:1; }
   .qty button:hover { color:var(--accent-ink); background:color-mix(in srgb, var(--accent) 12%, transparent); }
@@ -342,6 +346,7 @@
   .sech { font-family:var(--font-display); font-size:1.2rem; font-weight:800; letter-spacing:-.01em; margin:4px 0 15px; }
 
   .colwrap { position:relative; display:flex; }
+  #colSel, #colSel option { font-size:.8rem; }
   #colSel { border-top-right-radius:0; border-bottom-right-radius:0; max-width:160px; }
   #colMenuBtn { border-top-left-radius:0; border-bottom-left-radius:0; border-left:none; padding:9px 10px; }
   .colmenu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; background:var(--surface); border:1.5px solid var(--line-strong);
@@ -419,6 +424,10 @@
   .sealednote { font-size:.82rem; color:var(--ink-soft); margin:0 0 18px; max-width:640px; }
   .sealednote b { color:var(--ink); }
   .sealedgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
+  .sealedgrid.cols-1 { grid-template-columns:1fr; }
+  .sealedgrid.cols-2 { grid-template-columns:repeat(2,1fr); }
+  .sealedgrid.cols-3 { grid-template-columns:repeat(3,1fr); }
+  @media (max-width:560px){ .sealedgrid.cols-3{ grid-template-columns:repeat(2,1fr);} }
   .sealcard { background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
   .sealcard .sbox { aspect-ratio:1/1; background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; }
   .sealcard .sbox img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
@@ -924,7 +933,6 @@
     <div class="toolbtns">
       <div class="colwrap">
         <select class="tbtn" id="colSel" title="Active collection" aria-label="Active collection"></select>
-        <button class="tbtn ghost" id="colMenuBtn" title="Manage collections" aria-label="Manage collections">⋯ Manage</button>
         <div class="colmenu" id="colMenu" hidden>
           <button data-act="new" data-icon="plus">New collection</button>
           <button data-act="rename" data-icon="pencil">Rename</button>
@@ -973,8 +981,8 @@
       <div class="xpbar"><div class="xpfill" id="heroFill" style="width:0"></div></div>
     </div>
     <div class="pcard" id="portfolioCard"></div>
-    <div class="priceui"><h2 class="sech">Trending card</h2>
-    <div class="qsub" style="margin:-6px 0 12px">The biggest riser in your collection.</div>
+    <div class="priceui"><h2 class="sech">Biggest movers</h2>
+    <div class="qsub" style="margin:-6px 0 12px">The biggest riser and faller in your collection.</div>
     <div id="trendCard" style="margin-bottom:26px"></div></div>
     <h2 class="sech">Browse by set</h2>
     <div class="setbrowse" id="setBrowse"></div>
@@ -1126,6 +1134,12 @@
           <option value="en">Edition · English</option>
           <option value="jp">Edition · Japanese</option>
         </select>
+        <select class="sortsel" id="sealView" aria-label="Layout">
+          <option value="auto">View · Auto</option>
+          <option value="1">View · 1</option>
+          <option value="2">View · 2</option>
+          <option value="3">View · 3</option>
+        </select>
       </div>
     </div>
     <div class="sealedgrid" id="sealedGrid"></div>
@@ -1164,6 +1178,7 @@
         <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001 …" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
         <div class="qsug" id="qSug" role="listbox" hidden></div>
       </div>
+      <button class="btn sec" id="qImportCsv" type="button" style="margin-top:11px">⭳ Import CSV</button>
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
     </div>
@@ -2435,6 +2450,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
     if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
     if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ SEAL_ED=(e.target.value==="jp")?"jp":"en"; localStorage.setItem("palvault-sealed-ed",SEAL_ED); renderSealed(); renderHome(); }); }
+    var sv2=$("sealView"); if(sv2){ sv2.value=sealView; sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = sealSortDir<0 ? "↑ Asc" : "↓ Desc"; sd.classList.toggle("on", sealSortDir<0); } sp();
       sd.onclick=function(){ sealSortDir=-sealSortDir; sp(); renderSealed(); }; }
   })();
@@ -2593,7 +2609,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       });
     }).catch(function(){ finish("Price pull failed"); });
   }
-  var sealSortKey="name", sealSortDir=1, sealQ="";
+  var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(localStorage.getItem("palvault-sealview")||"auto");
   function sealedList(){
     var q=sealQ.trim().toLowerCase();
     var list=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
@@ -2607,7 +2623,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     return list;
   }
   function renderSealed(){
-    var grid=$("sealedGrid"); if(!grid) return; grid.innerHTML="";
+    var grid=$("sealedGrid"); if(!grid) return;
+    grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
+    grid.innerHTML="";
     sealedList().forEach(function(p){
       var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       var el=document.createElement("div"); el.className="sealcard";
@@ -3087,23 +3105,34 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     return { name:t.name, c:t.c, next: idx<SPHERE_TIERS.length-1 ? SPHERE_TIERS[idx+1].name+" at "+SPHERE_TIERS[idx+1].min+"%" : null };
   }
 
-  // ---- Trending card: biggest riser = latest sold price furthest above its average of the last 5 sold ----
-  function trendingCard(){
+  // ---- Biggest movers: compare each card's latest sold to its average of the last 5 sold.
+  // "up" = furthest above average (a riser), "down" = furthest below average (a faller).
+  function moverCard(dir){
     var best=null;
-    // last = most recent sold, avg = average of the last 5 sold. Latest sale above the average = a live riser.
     CARDS.forEach(function(c){ var s=o(c.id), last=+s.last||0, avg=+s.avg||0;
-      if(last>0 && avg>0 && last>avg){ var pct=(last-avg)/avg*100; if(!best || pct>best.pct) best={c:c,last:last,avg:avg,pct:pct}; } });
+      if(last>0 && avg>0){ var pct=(last-avg)/avg*100;
+        if(dir==="up" && pct>0.05){ if(!best || pct>best.pct) best={c:c,last:last,avg:avg,pct:pct}; }
+        else if(dir==="down" && pct<-0.05){ if(!best || pct<best.pct) best={c:c,last:last,avg:avg,pct:pct}; }
+      } });
     return best;
+  }
+  function moverEl(m, dir){
+    var el=document.createElement("div"); el.className="trend";
+    el.innerHTML='<img src="'+imgSrc(m.c)+'" alt="">'+
+      '<div><div class="tnm">'+esc(m.c.name)+'</div><div class="tsub">'+m.c.id+' · latest '+money(m.last)+' vs average '+money(m.avg)+'</div></div>'+
+      '<div class="tpct '+dir+'">'+(dir==="up"?"▲":"▼")+' '+Math.abs(m.pct).toFixed(1)+'%</div>';
+    el.onclick=function(){ openDetail(m.c); };
+    return el;
   }
   function renderTrending(){
     var el=$("trendCard"); if(!el) return;
-    var t=trendingCard();
-    if(!t){ el.className="trendnote"; el.textContent="Own some cards with sold prices and the biggest riser shows here. Prices refresh automatically."; el.onclick=null; return; }
-    el.className="trend";
-    el.innerHTML='<img src="'+imgSrc(t.c)+'" alt="">'+
-      '<div><div class="tnm">'+esc(t.c.name)+'</div><div class="tsub">'+t.c.id+' · latest '+money(t.last)+' vs average '+money(t.avg)+'</div></div>'+
-      '<div class="tpct">▲ '+t.pct.toFixed(1)+'%</div>';
-    el.onclick=function(){ openDetail(t.c); };
+    var up=moverCard("up"), down=moverCard("down");
+    el.onclick=null;
+    if(!up && !down){ el.className="trendnote"; el.textContent="Own some cards with sold prices and the biggest movers show here. Prices refresh automatically."; return; }
+    el.className="movers"; el.innerHTML="";
+    function lbl(t){ var d=document.createElement("div"); d.className="moverlbl"; d.textContent=t; return d; }
+    if(up){ el.appendChild(lbl("Biggest riser")); el.appendChild(moverEl(up,"up")); }
+    if(down){ el.appendChild(lbl("Biggest faller")); el.appendChild(moverEl(down,"down")); }
   }
 
   // ---- Rarity key ----
@@ -3466,9 +3495,13 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function buildColSel(){
     var sel=$("colSel"); sel.innerHTML="";
     STATE.cols.forEach(function(c){ var op=document.createElement("option"); op.value=c.id; op.textContent=c.name; if(!wishMode && c.id===STATE.active)op.selected=true; sel.appendChild(op); });
-    var sep=document.createElement("option"); sep.disabled=true; sep.textContent="──────────"; sel.appendChild(sep);
     var wl=document.createElement("option"); wl.value="__wishlist__"; wl.textContent="My Wishlist ("+wishCount()+")"; if(wishMode) wl.selected=true; sel.appendChild(wl);
-    sel.onchange=function(){ if(sel.value==="__wishlist__"){ showPage("wishlist"); } else { switchCol(sel.value); } };
+    var mg=document.createElement("option"); mg.value="__manage__"; mg.textContent="Manage collections…"; sel.appendChild(mg);
+    sel.onchange=function(){
+      if(sel.value==="__manage__"){ sel.value = wishMode ? "__wishlist__" : STATE.active; openColMenu(); }
+      else if(sel.value==="__wishlist__"){ showPage("wishlist"); }
+      else { switchCol(sel.value); }
+    };
     buildDefaultAddSel();
   }
   function colName(id){ var col=STATE.cols.filter(function(x){return x.id===id;})[0]; return col?col.name:""; }
@@ -3485,9 +3518,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     sel.value=(SETTINGS.defaultAddCol&&STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;}))?SETTINGS.defaultAddCol:"ask";
     sel.onchange=function(){ SETTINGS.defaultAddCol=sel.value; saveSettings(); };
   }
+  // Open the manage-collections menu (triggered from the "Manage collections…" item in the picker).
+  function openColMenu(){ setTimeout(function(){ var m=$("colMenu"); if(m) m.hidden=false; }, 0); }
   (function(){
-    var menu=$("colMenu"), btn=$("colMenuBtn");
-    btn.onclick=function(e){ e.stopPropagation(); menu.hidden=!menu.hidden; };
+    var menu=$("colMenu"); if(!menu) return;
     document.addEventListener("click", function(){ menu.hidden=true; });
     menu.addEventListener("click", function(e){ e.stopPropagation(); });
     menu.querySelectorAll("button").forEach(function(b){
@@ -3673,6 +3707,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
     var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
+    var qic=$("qImportCsv"); if(qic) qic.onclick=doImportCsv;
   })();
 
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
