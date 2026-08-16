@@ -2184,7 +2184,7 @@
     scrim.classList.add("open");
     if(!_wasOpen) openOverlay(closeModal);
   }
-  function closeModal(){ detailGen++; scrim.classList.remove("open"); }
+  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); }
   function openLightbox(c){
     var img=$("lbImg");
     img.onerror=function(){ this.onerror=null; var e=window.CARD_IMG&&window.CARD_IMG[c.id]; if(e) this.src=e; };
@@ -2199,6 +2199,47 @@
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && $("lightbox").classList.contains("open")){ e.stopPropagation(); dismissOverlay(); } }, true);
   scrim.addEventListener("click", function(e){ if(e.target===scrim) dismissOverlay(); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && scrim.classList.contains("open")) dismissOverlay(); });
+  // Keyboard-aware detail sheet: when a field is focused and the on-screen keyboard opens, cap the
+  // sheet to the visible viewport and pin it to the top, then scroll the field into view, otherwise
+  // Notes (near the bottom) sits behind the keyboard. visualViewport reports the height above the
+  // keyboard on both iOS and Android, regardless of the window's soft-input mode.
+  var _kbActive=false, _baseH=(window.visualViewport ? window.visualViewport.height : (window.innerHeight||800));
+  function _modalEl(){ return scrim.querySelector(".modal"); }
+  function _clearKb(){ scrim.style.top=""; scrim.style.height=""; scrim.style.bottom=""; var m=_modalEl(); if(m) m.style.maxHeight=""; }
+  function resetKb(){ _kbActive=false; _clearKb(); }
+  function kbApply(){
+    var m=_modalEl(), vv=window.visualViewport; if(!m) return;
+    if(vv) _baseH=Math.max(_baseH, vv.height);   // tallest visible height ever = the no-keyboard height
+    // Only adjust when the visible area is meaningfully smaller than that (i.e. a keyboard is up),
+    // so desktop focus (no keyboard) leaves the centred sheet alone.
+    if(_kbActive && scrim.classList.contains("open") && vv && vv.height < _baseH - 100){
+      // Pin the overlay to exactly the area above the keyboard, then cap the sheet to fit it, so the
+      // sheet (and the focused field, scrolled into view) sits fully above the keyboard.
+      scrim.style.top = Math.round(vv.offsetTop) + "px";
+      scrim.style.height = Math.round(vv.height) + "px";
+      scrim.style.bottom = "auto";
+      m.style.maxHeight = Math.max(160, Math.round(vv.height) - 24) + "px";
+    } else { _clearKb(); }
+  }
+  if(window.visualViewport) window.visualViewport.addEventListener("resize", kbApply);
+  scrim.addEventListener("focusin", function(e){
+    var t=e.target; if(t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA")){
+      _kbActive=true;
+      var bring=function(){
+        kbApply();
+        requestAnimationFrame(function(){                 // measure after the sheet has been re-sized
+          var m=_modalEl(); if(!m) return;
+          try{ var tr=t.getBoundingClientRect(), mr=m.getBoundingClientRect();
+            m.scrollTop += (tr.top - mr.top) - 70;        // put the focused field near the top of the visible sheet
+          }catch(_){}
+        });
+      };
+      setTimeout(bring, 350); setTimeout(bring, 650); setTimeout(bring, 950);   // repeat across the keyboard animation
+    }
+  });
+  scrim.addEventListener("focusout", function(){
+    setTimeout(function(){ var a=document.activeElement; if(!(a && scrim.contains(a) && (a.tagName==="INPUT"||a.tagName==="TEXTAREA"))) resetKb(); }, 150);
+  });
 
   // ---- Import / export (lives in Settings → Backup & restore) ----
   function doExport(){
