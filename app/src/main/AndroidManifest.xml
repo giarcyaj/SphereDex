@@ -18,6 +18,7 @@
             android:name=".MainActivity"
             android:exported="false"
             android:label="SphereDex"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
         <!-- Launcher aliases: exactly one is enabled at a time. Default (classic / Pal blue) is on;

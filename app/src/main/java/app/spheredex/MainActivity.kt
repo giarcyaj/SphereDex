@@ -113,6 +113,10 @@ class MainActivity : ComponentActivity() {
                 androidx.core.view.WindowInsetsCompat.Type.systemBars() or
                     androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             )
+            // Keyboard (IME) inset: pad the WebView above the on-screen keyboard so its viewport shrinks.
+            // Without this (edge-to-edge), the keyboard just overlays the WebView and covers inputs like Notes.
+            val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
+            if (web.paddingBottom != ime) web.setPadding(0, 0, 0, ime)
             val d = resources.displayMetrics.density
             insetJs = "var r=document.documentElement.style;" +
                 "r.setProperty('--sat','${bars.top / d}px');" +
