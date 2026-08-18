@@ -456,6 +456,20 @@
     background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000)); color:#fff;
     font-family:var(--font-display); font-weight:750; font-size:1.02rem; letter-spacing:-.01em; box-shadow:0 4px 14px rgba(0,0,0,.25); }
   .scanbtn:active { transform:translateY(1px); }
+  /* Quick Add method chooser: three big options, each with an info toggle */
+  .qmethods { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .qopt { display:flex; gap:8px; align-items:stretch; }
+  .qoptbtn { flex:1; display:flex; align-items:center; gap:12px; text-align:left; padding:14px 16px; border-radius:14px;
+    border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); font:inherit; font-size:1rem; font-weight:650; cursor:pointer; transition:border-color .14s, transform .14s; }
+  .qoptbtn:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .qoptbtn .ic { width:22px; height:22px; flex:none; color:var(--accent); }
+  .qinfobtn { flex:none; width:46px; border-radius:12px; border:1.5px solid var(--line-strong); background:var(--surface);
+    color:var(--ink-faint); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .qinfobtn .ic { width:19px; height:19px; }
+  .qinfobtn:hover, .qinfobtn.on { border-color:var(--accent); color:var(--accent-ink); }
+  .qinfopanel { background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-size:.85rem; color:var(--ink-soft); line-height:1.45; margin-bottom:14px; }
+  .qinfopanel code { font-family:var(--font-mono); background:var(--surface); padding:1px 5px; border-radius:5px; }
   .qhint { font-size:.82rem; color:var(--ink-faint); margin-top:9px; min-height:1.2em; }
   .qhint.ok { color:var(--accent-ink); } .qhint.bad { color:var(--el-Fire); }
   .qrecent { display:flex; flex-direction:column; gap:8px; margin-top:22px; }
@@ -1172,13 +1186,25 @@
   <section class="page" id="page-scan">
     <div class="quickwrap">
       <h2 class="sech">Quick add</h2>
-      <p class="qsub">Search by Pal name, item, or card number, then tap a result to open it and choose how to add. Or paste several numbers (like <code>EBP01-001</code>) at once, separated by spaces or new lines.</p>
-      <button id="nativeScanBtn" class="scanbtn" type="button" data-icon="camera" hidden>Scan a card with the camera</button>
-      <div class="qbox">
+      <div class="qmethods">
+        <div class="qopt" id="qOptScan" hidden>
+          <button class="qoptbtn" type="button" id="qScanBtn" data-icon="camera"><span>Scan card with camera</span></button>
+          <button class="qinfobtn" type="button" data-info="scan" data-icon="info" aria-label="About scanning"></button>
+        </div>
+        <div class="qopt">
+          <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
+          <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
+        </div>
+        <div class="qopt">
+          <button class="qoptbtn" type="button" id="qCsvBtn" data-icon="upload"><span>Import CSV</span></button>
+          <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
+        </div>
+      </div>
+      <div class="qinfopanel" id="qInfoPanel" hidden></div>
+      <div class="qbox" id="qBox">
         <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001 …" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
         <div class="qsug" id="qSug" role="listbox" hidden></div>
       </div>
-      <button class="btn sec" id="qImportCsv" type="button" style="margin-top:11px">⭳ Import CSV</button>
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
     </div>
@@ -2476,6 +2502,8 @@
     chart:'<path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/>',
     camera:'<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.3"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/>',
     search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+    upload:'<path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>',
+    info:'<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.7" r="1" fill="currentColor" stroke="none"/>',
     ticket:'<path d="M4 8.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 1.6 1.6 0 0 0 0 3.2 1.6 1.6 0 0 1 0 3.2 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 1.6 1.6 0 0 0 0-3.2 1.6 1.6 0 0 1 0-3.2z"/><path d="M14 6.5v11" stroke-dasharray="2.5 2.5"/>',
     refresh:'<path d="M20 11a8 8 0 1 0-1 5"/><path d="M20 5v6h-6"/>',
     star:'<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
@@ -3657,13 +3685,26 @@
   };
   // Native camera reads this to show which collection a scan will go to.
   window.SDActiveCollection = function(){ try{ return activeCol().name || ""; }catch(e){ return ""; } };
-  // Show the camera-scan button only when running inside the native app shell.
+  // Quick Add method chooser: Scan (native only), Text input, Import CSV, each with an info toggle.
   (function(){
-    var b=$("nativeScanBtn"); if(!b) return;
-    if(window.AndroidScan && typeof window.AndroidScan.scan==="function"){
-      b.hidden=false;
-      b.onclick=function(){ try{ window.AndroidScan.scan(); }catch(e){} };
-    }
+    var native = window.AndroidScan && typeof window.AndroidScan.scan==="function";
+    var os=$("qOptScan"); if(os && native) os.hidden=false;
+    var sb=$("qScanBtn"); if(sb) sb.onclick=function(){ try{ if(native) window.AndroidScan.scan(); }catch(e){} };
+    var tb=$("qTextBtn"); if(tb) tb.onclick=function(){ var qi=$("qInput"); if(qi){ qi.focus(); try{ qi.scrollIntoView({block:"center"}); }catch(e){} } };
+    var cb=$("qCsvBtn"); if(cb) cb.onclick=doImportCsv;
+    var Q_INFO={
+      scan:"Point the camera at a card's number (like <code>EBP01-001</code>) and it is added instantly. Best for adding cards one at a time from your hand.",
+      text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
+      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. It lands as a new collection named after the file."
+    };
+    var cur=null, panel=$("qInfoPanel");
+    Array.prototype.forEach.call(document.querySelectorAll(".qinfobtn"), function(b){
+      b.onclick=function(){ var k=b.getAttribute("data-info");
+        Array.prototype.forEach.call(document.querySelectorAll(".qinfobtn"), function(x){ x.classList.remove("on"); });
+        if(cur===k){ cur=null; if(panel) panel.hidden=true; return; }
+        cur=k; b.classList.add("on"); if(panel){ panel.innerHTML=Q_INFO[k]; panel.hidden=false; }
+      };
+    });
   })();
   chooser.addEventListener("click", function(e){ if(e.target===chooser) chooser.classList.remove("open"); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape") chooser.classList.remove("open"); });
@@ -3705,7 +3746,6 @@
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
     var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
-    var qic=$("qImportCsv"); if(qic) qic.onclick=doImportCsv;
   })();
 
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
