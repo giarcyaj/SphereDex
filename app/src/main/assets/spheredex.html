@@ -1798,7 +1798,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
-    stats(); renderHome(); renderReleases(); updateFilterCount(); save();
+    // Only refresh what is on screen. stats() updates the Collection dashboard (completion, sets, binder value).
+    // Home and Releases are rebuilt lazily when the user navigates to them (see showPage), not on every edit,
+    // and mutating callers own persistence (they call save() themselves) so render() no longer saves.
+    stats(); updateFilterCount();
   }
 
   function suffixOf(c){ var m=c.id.match(/-\d+([A-Z]+)$/); return m?m[1]:""; }
@@ -1835,6 +1838,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var colored = SETTINGS.noFade || hasAny(c.id);   // full colour if owned in ANY collection (or fading is off)
     var el=document.createElement("div");
     el.className="card"+(colored?"":" locked");
+    el.setAttribute("data-cid", c.id);
     el.style.setProperty("--_col", colVar(c.color));
     var elTags = c.els.map(function(e){ return '<span class="eltag" style="background:'+elVar(e)+'">'+e+'</span>'; }).join("");
     var costPow = [];
@@ -1864,11 +1868,20 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     el.querySelector(".ownbtn").addEventListener("click", function(ev){ ev.stopPropagation();
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
     var p=el.querySelector(".plus"), m=el.querySelector(".minus");
-    if (p) p.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty++; save(); render(); });
-    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty=Math.max(0,s.qty-1); save(); render(); });
+    if (p) p.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty++; save(); patchCard(c); });
+    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty=Math.max(0,s.qty-1); save(); patchCard(c); });
     el.querySelector(".art").addEventListener("click", function(ev){ if(ev.target.closest(".wish"))return; openDetail(c); });
     el.querySelector(".cbody").addEventListener("click", function(){ openDetail(c); });
     return el;
+  }
+  // Repaint just one card after a quantity change, instead of tearing down and rebuilding all 242 cells.
+  function patchCard(c){
+    // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
+    if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
+    var old=grid.querySelector('.card[data-cid="'+c.id+'"]');
+    if(!old){ render(); return; }
+    old.replaceWith(cardEl(c));
+    stats();   // keep the Collection dashboard (completion, sets, binder value) in sync
   }
 
   // ---- Stats ----
@@ -3247,6 +3260,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){ el.classList.toggle("active", el.getAttribute("data-page")===p); });
     window.scrollTo(0,0);
     if (real==="collection"){ buildColSel(); applyColMode(); render(); }
+    if (p==="home") renderHome();
+    if (p==="releases") renderReleases();
     if (p==="sealed") renderSealed();
     if (p==="decks") renderDecks();
     if (p==="account") renderAccount();
@@ -4174,6 +4189,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   applyMode();
   applySettings();
   render();
+  renderHome(); renderReleases();   // populate Home (the default page) and Releases once at startup
   renderQuick();
   renderAccount();
   renderContact();
