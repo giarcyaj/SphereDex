@@ -699,6 +699,7 @@
   /* notification bell + What's-new popup */
   .bellbtn { position:relative; padding:9px 11px; }
   .bellbtn svg { display:block; }
+  .themebtn { padding:9px 13px; font-size:1.1rem; line-height:1; }
   .belldot { position:absolute; top:5px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--c-Red);
     border:2px solid var(--surface); box-shadow:0 0 7px color-mix(in srgb,var(--c-Red) 80%,transparent); }
   .belldot[hidden] { display:none; }
@@ -730,12 +731,14 @@
     font-weight:700; font-size:.62rem; letter-spacing:.05em; text-transform:uppercase; color:#fff;
     background:linear-gradient(transparent, rgba(0,0,0,.6)); padding:16px 6px 7px; opacity:0; transition:opacity .14s; pointer-events:none; }
   .martflo:hover .fullhint { opacity:1; }
-  .lightbox { position:fixed; inset:0; z-index:70; display:none; place-items:center; padding:24px;
+  .lightbox { position:fixed; inset:0; z-index:70; display:none; place-items:start center;
+    padding: calc(74px + var(--sat, env(safe-area-inset-top, 0px))) 20px calc(24px + var(--sab, env(safe-area-inset-bottom, 0px)));
     background:color-mix(in srgb,#05080b 82%,transparent); backdrop-filter:blur(6px); }
   .lightbox.open { display:grid; }
-  .lightbox img { max-width:min(92vw,520px); max-height:92vh; width:auto; height:auto; border-radius:14px;
+  .lightbox img { max-width:min(92vw,520px); width:auto; height:auto; border-radius:14px;
+    max-height: calc(100vh - 100px - var(--sat, env(safe-area-inset-top, 0px)) - var(--sab, env(safe-area-inset-bottom, 0px)));
     box-shadow:0 30px 80px -20px rgba(0,0,0,.85); }
-  .lbclose { position:fixed; top:16px; right:16px; z-index:71; width:42px; height:42px; border-radius:12px;
+  .lbclose { position:fixed; top: calc(16px + var(--sat, env(safe-area-inset-top, 0px))); right:16px; z-index:71; width:42px; height:42px; border-radius:12px;
     border:1.5px solid rgba(255,255,255,.3); background:rgba(0,0,0,.45); color:#fff; font-size:1.15rem; }
   .lbclose:hover { background:rgba(0,0,0,.7); }
 
@@ -1001,10 +1004,6 @@
 
 <div class="wrap">
   <header class="mast">
-    <div class="stores">
-      <a class="storebtn" id="playLink" href="#" data-icon="play" title="Get it on Google Play, coming soon" aria-label="Google Play"></a>
-      <a class="storebtn" id="iosLink" href="#" data-icon="apple" title="Download on the App Store, coming soon" aria-label="App Store"></a>
-    </div>
     <div class="brand">
       <div class="sigil">
         <svg viewBox="0 0 100 100" role="img" aria-label="SphereDex">
@@ -1045,7 +1044,7 @@
       </div>
       <select class="tbtn" id="curSel" title="Display currency" aria-label="Display currency"></select>
       <button class="tbtn ghost bellbtn" id="bellBtn" type="button" title="What’s new" aria-label="What’s new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="belldot" id="bellDot" hidden></span></button>
-      <button class="tbtn ghost" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
+      <button class="tbtn ghost themebtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light / dark theme">◐</button>
       <button class="tbtn login" id="loginBtn" type="button" title="Account"></button>
     </div>
   </header>
@@ -1668,7 +1667,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","rewards"]};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -2626,7 +2625,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
     if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
     if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ SEAL_ED=(e.target.value==="jp")?"jp":"en"; localStorage.setItem("palvault-sealed-ed",SEAL_ED); renderSealed(); renderHome(); }); }
-    var sv2=$("sealView"); if(sv2){ sv2.value=sealView; sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
+    var sv2=$("sealView"); if(sv2){ sv2.value=(localStorage.getItem("palvault-sealview")||"auto"); sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = sealSortDir<0 ? "↑ Asc" : "↓ Desc"; sd.classList.toggle("on", sealSortDir<0); } sp();
       sd.onclick=function(){ sealSortDir=-sealSortDir; sp(); renderSealed(); }; }
   })();
@@ -4174,7 +4173,6 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
   // Inside the native app the "get the app" store buttons are pointless (and their fallback
   // toast wrongly says "you're on the web app"), so hide them when running natively.
-  if(IS_NATIVE){ var _stores=document.querySelector(".stores"); if(_stores) _stores.style.display="none"; }
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); renderQuickRow(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
@@ -4198,7 +4196,6 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function paintFade(){ if(!ftg) return; ftg.textContent=SETTINGS.noFade?"Fade: off":"Fade: on"; ftg.classList.toggle("on", !SETTINGS.noFade); }
   if(ftg){ paintFade(); ftg.onclick=function(){ SETTINGS.noFade=!SETTINGS.noFade; saveSettings(); paintFade(); render(); var nf=$("setNoFade"); if(nf) nf.checked=!!SETTINGS.noFade; }; }
   // Store links are placeholders until the apps are published.
-  ["playLink","iosLink"].forEach(function(id){ var a=$(id); if(a) a.onclick=function(e){ e.preventDefault(); toast("Mobile apps coming soon, you're on the web app"); }; });
   maybeOnboard();
   // On open, refresh owned-card prices (staleness-gated + capped) so the total + graph stay current.
   function autoRefreshPrices(){ refreshCollectionPrices({auto:true}); }
