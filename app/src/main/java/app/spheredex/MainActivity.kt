@@ -113,16 +113,19 @@ class MainActivity : ComponentActivity() {
                 androidx.core.view.WindowInsetsCompat.Type.systemBars() or
                     androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             )
-            // Keyboard (IME) inset: pad the WebView above the on-screen keyboard so its viewport shrinks.
-            // Without this (edge-to-edge), the keyboard just overlays the WebView and covers inputs like Notes.
+            // Keyboard (IME) inset: report its height to the web app as --kb (CSS px). The web layer uses
+            // it to lift the detail sheet and page content above the keyboard. We deliberately do NOT pad
+            // the WebView here: padding does not shrink position:fixed overlays (which is where Notes lives),
+            // so it left the field hidden. An explicit --kb the CSS can react to is reliable on both themes.
             val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
-            if (web.paddingBottom != ime) web.setPadding(0, 0, 0, ime)
+            if (web.paddingBottom != 0) web.setPadding(0, 0, 0, 0)
             val d = resources.displayMetrics.density
             insetJs = "var r=document.documentElement.style;" +
                 "r.setProperty('--sat','${bars.top / d}px');" +
                 "r.setProperty('--sab','${bars.bottom / d}px');" +
                 "r.setProperty('--sal','${bars.left / d}px');" +
-                "r.setProperty('--sar','${bars.right / d}px');"
+                "r.setProperty('--sar','${bars.right / d}px');" +
+                "r.setProperty('--kb','${ime / d}px');"
             applyInsets()
             insets
         }

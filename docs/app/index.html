@@ -21,6 +21,7 @@
     --ink-faint:#8894a1; --line:#dfe4ea; --line-strong:#c7ced7; --accent:#c4611e; --accent-ink:#9a430f;
     --shadow:24px 32px 60px -30px rgba(20,30,45,.28); --dim:.4;
     --gold:#cf9622; --gold-deep:#9a6b12; --edge:rgba(255,255,255,.7);
+    --kb:0px; /* on-screen keyboard height; native (Android) sets this so the modal can sit above it */
   }
   @media (prefers-color-scheme: dark){ :root{
     --bg:#0c1424; --surface:#17233b; --surface-2:#111c30; --ink:#eaf0ff; --ink-soft:#aeb9c9;
@@ -51,7 +52,7 @@
      Native injects --sat/--sab/--sal/--sar; browsers fall back to env(safe-area-inset-*). */
   .wrap { max-width:1260px; margin:0 auto;
     padding-top: calc(22px + var(--sat, env(safe-area-inset-top, 0px)));
-    padding-bottom: calc(90px + var(--sab, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: calc(90px + max(var(--sab, env(safe-area-inset-bottom, 0px)), var(--kb, 0px)));
     padding-left: calc(20px + var(--sal, env(safe-area-inset-left, 0px)));
     padding-right: calc(20px + var(--sar, env(safe-area-inset-right, 0px))); }
 
@@ -272,13 +273,13 @@
   .scrim { position:fixed; inset:0; background:color-mix(in srgb,#0a0f14 64%,transparent); backdrop-filter:blur(4px);
     display:none; place-items:center; z-index:50;
     padding-top: calc(16px + var(--sat, env(safe-area-inset-top, 0px)));
-    padding-bottom: calc(16px + var(--sab, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: calc(16px + max(var(--sab, env(safe-area-inset-bottom, 0px)), var(--kb, 0px)));
     padding-left: calc(16px + var(--sal, env(safe-area-inset-left, 0px)));
     padding-right: calc(16px + var(--sar, env(safe-area-inset-right, 0px))); }
   .scrim.open { display:grid; }
   .modal { background:linear-gradient(180deg, color-mix(in srgb,var(--gold) 7%, transparent), transparent 20%), var(--surface);
     border:1.5px solid color-mix(in srgb,var(--gold) 24%, var(--line-strong)); border-radius:20px; max-width:580px; width:100%;
-    box-shadow:var(--shadow), inset 0 1px 0 var(--edge); overflow:hidden; max-height:92vh; overflow-y:auto; position:relative; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+    box-shadow:var(--shadow), inset 0 1px 0 var(--edge); overflow:hidden; max-height:min(92vh, calc(100vh - var(--kb, 0px) - 32px)); overflow-y:auto; position:relative; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
   /* Sticky close: a zero-height bar pinned to the top of the scrolling modal so the X is always reachable. */
   .mclosewrap { position:sticky; top:0; z-index:20; height:0; display:flex; justify-content:flex-end; pointer-events:none; }
   .mmain { padding:20px 22px; display:block; }
@@ -367,8 +368,7 @@
 
   .colwrap { position:relative; display:flex; }
   #colSel, #colSel option { font-size:.8rem; }
-  #colSel { border-top-right-radius:0; border-bottom-right-radius:0; max-width:160px; }
-  #colMenuBtn { border-top-left-radius:0; border-bottom-left-radius:0; border-left:none; padding:9px 10px; }
+  #colSel { max-width:160px; }
   .colmenu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; background:var(--surface); border:1.5px solid var(--line-strong);
     border-radius:12px; box-shadow:var(--shadow); padding:6px; display:flex; flex-direction:column; min-width:186px; }
   .colmenu[hidden] { display:none; }
@@ -1217,12 +1217,12 @@
           <button class="qinfobtn" type="button" data-info="scan" data-icon="info" aria-label="About scanning"></button>
         </div>
         <div class="qopt">
-          <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
-          <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
-        </div>
-        <div class="qopt">
           <button class="qoptbtn" type="button" id="qCsvBtn" data-icon="upload"><span>Import CSV</span></button>
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
+        </div>
+        <div class="qopt">
+          <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
+          <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
         </div>
       </div>
       <div class="qinfopanel" id="qInfoPanel" hidden></div>
@@ -2185,9 +2185,9 @@
               rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
               ls=rows.map(function(x){return x.p;});
           var lh=$("listHint");
-          if(ls.length){ var low=ls[0], lavg=ls.reduce(function(a,z){return a+z;},0)/ls.length;
-            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': from <b>'+money(low)+'</b> · average <b>'+money(lavg)+'</b> ('+ls.length+' live)';
-            var gl=$("glList"); if(gl) gl.textContent=money(low);
+          if(ls.length){ var low=ls[0], l5=ls.slice(0,5), l5avg=l5.reduce(function(a,z){return a+z;},0)/l5.length;
+            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': avg of '+l5.length+' lowest <b>'+money(l5avg)+'</b> · from <b>'+money(low)+'</b> ('+ls.length+' live)';
+            var gl=$("glList"); if(gl) gl.textContent=money(l5avg);
             var lr=$("listRows"); if(lr) lr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
             if(!silent) toast("Live listings loaded");
           } else { if(lh && !us) lh.textContent="No current listings found."; var gl2=$("glList"); if(gl2 && !us && gl2.textContent==="…") gl2.textContent='n/a'; if(!silent) toast(b.note||"No current listings"); }
@@ -2275,6 +2275,8 @@
   function resetKb(){ _kbActive=false; _clearKb(); }
   function kbApply(){
     var m=_modalEl(), vv=window.visualViewport; if(!m) return;
+    var _kb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb'))||0;
+    if(_kb>0){ _clearKb(); return; }   // Android reports the keyboard height via --kb; CSS keeps the sheet above it
     if(vv) _baseH=Math.max(_baseH, vv.height);   // tallest visible height ever = the no-keyboard height
     // Only adjust when the visible area is meaningfully smaller than that (i.e. a keyboard is up),
     // so desktop focus (no keyboard) leaves the centred sheet alone.
@@ -2305,6 +2307,17 @@
   });
   scrim.addEventListener("focusout", function(){
     setTimeout(function(){ var a=document.activeElement; if(!(a && scrim.contains(a) && (a.tagName==="INPUT"||a.tagName==="TEXTAREA"))) resetKb(); }, 150);
+  });
+  // Page-level inputs (Quick Add, Contact, Settings) sit outside the modal. With the keyboard up the
+  // page gains --kb of scroll room at the bottom, so bring the focused field into view above it.
+  document.addEventListener("focusin", function(e){
+    var t=e.target; if(!t || (t.tagName!=="INPUT" && t.tagName!=="TEXTAREA")) return;
+    if(scrim.contains(t)) return;   // the modal handles its own inputs
+    var bring=function(){
+      if(!(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb'))>0)) return;  // only when a keyboard is actually up (Android); desktop/iOS handle their own
+      try{ t.scrollIntoView({block:"center"}); }catch(_){}
+    };
+    setTimeout(bring, 350); setTimeout(bring, 650);
   });
 
   // ---- Import / export (lives in Settings → Backup & restore) ----
