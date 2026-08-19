@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
                 setSupportZoom(false)
                 mediaPlaybackRequiresUserGesture = false
                 cacheMode = WebSettings.LOAD_DEFAULT
+                setSupportMultipleWindows(true)   // so target="_blank" links reach onCreateWindow (below)
             }
             overScrollMode = WebView.OVER_SCROLL_NEVER
             // Keep the app inside the WebView, but open real web links (eBay, Buy Me a Coffee) in the browser.
@@ -96,6 +97,20 @@ class MainActivity : ComponentActivity() {
                         .setPositiveButton("OK") { _, _ -> r.confirm(input.text.toString()) }
                         .setNegativeButton("Cancel") { _, _ -> r.cancel() }
                         .setOnCancelListener { r.cancel() }.show()
+                    return true
+                }
+                // A target="_blank" / window.open link: capture its URL with a throwaway WebView and hand it
+                // to the system browser, so external links (eBay, Amazon, shops) never open a dead in-app popup.
+                override fun onCreateWindow(v: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                    val tmp = WebView(v.context)
+                    tmp.webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(w: WebView, r2: WebResourceRequest): Boolean {
+                            try { startActivity(Intent(Intent.ACTION_VIEW, r2.url)) } catch (_: Exception) {}
+                            w.destroy(); return true
+                        }
+                    }
+                    (resultMsg.obj as WebView.WebViewTransport).webView = tmp
+                    resultMsg.sendToTarget()
                     return true
                 }
             }
