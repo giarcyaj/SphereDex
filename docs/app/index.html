@@ -40,7 +40,7 @@
 
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh;
+  body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh; overscroll-behavior-y:contain;
     background:
       radial-gradient(1100px 560px at 88% -12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
       radial-gradient(820px 460px at 4% -4%, color-mix(in srgb, var(--c-Red) 8%, transparent), transparent 55%),
@@ -330,6 +330,21 @@
     color:var(--bg); padding:12px 20px; border-radius:12px; font-weight:650; font-size:.9rem; opacity:0; pointer-events:none;
     transition:.25s; z-index:60; box-shadow:var(--shadow); }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* pull-to-refresh indicator (News, Releases) */
+  .ptr { position:fixed; top:0; left:50%; margin-left:-20px; z-index:45; width:40px; height:40px; border-radius:50%;
+    display:grid; place-items:center; pointer-events:none; opacity:0; transform:translateY(-58px);
+    margin-top: calc(var(--sat, env(safe-area-inset-top, 0px)));
+    background:var(--surface); border:1.5px solid var(--line-strong); box-shadow:0 8px 18px -8px rgba(0,0,0,.55);
+    transition:transform .24s cubic-bezier(.2,.7,.2,1), opacity .18s; }
+  .ptr.pulling { transition:opacity .12s; }   /* follow the finger without lag */
+  .ptr.show { opacity:1; }
+  .ptr i { width:20px; height:20px; border-radius:50%; display:block;
+    border:2.5px solid color-mix(in srgb,var(--line-strong) 75%, transparent); border-top-color:var(--accent);
+    transition:transform .2s; }
+  .ptr.ready i { transform:rotate(180deg); }
+  .ptr.spinning i { animation:ptrspin .7s linear infinite; }
+  @keyframes ptrspin { to{ transform:rotate(360deg); } }
   .footnote { margin-top:36px; padding-top:18px; border-top:1.5px solid var(--line); color:var(--ink-faint); font-size:.8rem; text-wrap:pretty; text-align:center; max-width:64ch; margin-left:auto; margin-right:auto; }
   .footnote code { font-family:var(--font-mono); background:var(--surface-2); padding:1px 5px; border-radius:5px; }
   .footnote a { color:var(--accent-ink); }
@@ -355,6 +370,11 @@
   .navq.active { color:#fff; background:var(--accent); border-color:var(--accent); }
   .navlist { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:6px; box-shadow:var(--shadow); max-height:66vh; overflow:auto; }
   .navlist[hidden] { display:none; }
+  .navbar2 { margin-top:6px; }
+  .navbar2:empty { display:none; }
+  .setrow.qmrow { flex-direction:column; align-items:stretch; gap:10px; }
+  .qmslots { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
+  .qmslots select { width:100%; }
   .navitem { display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 13px; border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.98rem; border-radius:10px; cursor:pointer; }
   .navitem .ic { width:1.2rem; height:1.2rem; margin:0; color:var(--ink-faint); }
   .navitem:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); color:var(--ink); }
@@ -459,6 +479,24 @@
   .sealcard .sb { padding:13px 15px 15px; display:flex; flex-direction:column; gap:11px; }
   .sealcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; }
   .sealcard .ssub { font-size:.75rem; color:var(--ink-faint); margin-top:-7px; }
+  .sealcard .sdopen { cursor:pointer; }
+  .sealcard .sbox.sdopen:hover img { transform:scale(1.03); transition:transform .2s; }
+  .sealcard .snm.sdopen:hover { color:var(--accent-ink); }
+  /* sealed detail sheet */
+  .sealdet { padding:0 0 2px; }
+  .sdimg { aspect-ratio:1/1; max-height:300px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; padding:16px; border:1.5px solid var(--line-strong); box-sizing:border-box; }
+  .sdimg img { max-width:100%; max-height:100%; object-fit:contain; }
+  .sealdet h2 { font-family:var(--font-display); font-weight:800; margin:15px 0 8px; font-size:1.4rem; letter-spacing:-.01em; }
+  .sdstep { align-self:flex-start; }
+  .buylabel { font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin-top:6px; }
+  .buyrow { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  @media (max-width:440px){ .buyrow{ grid-template-columns:1fr; } }
+  .buybtn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px; border-radius:12px;
+    font-family:var(--font-display); font-weight:750; font-size:.86rem; text-decoration:none; color:var(--ink);
+    background:var(--surface-2); border:1.5px solid var(--line-strong); box-shadow:inset 0 1px 0 var(--edge); transition:transform .14s, border-color .14s, color .14s; }
+  .buybtn:hover { transform:translateY(-1px); border-color:var(--accent); color:var(--accent-ink); }
+  .buybtn .lnk { opacity:.55; }
   .qtyrow { display:flex; align-items:center; gap:12px; }
   .stepper { display:inline-flex; align-items:center; border:1.5px solid var(--line-strong); border-radius:10px; overflow:hidden; }
   .stepper button { border:none; background:var(--surface-2); color:var(--ink-soft); width:32px; height:32px; font-size:1.1rem; font-weight:700; line-height:1; }
@@ -1008,6 +1046,7 @@
       <button class="navq" data-page="collection" data-icon="grid"><span>Collection</span></button>
       <button class="navq navmore" id="navTrigger" data-icon="menu" type="button" aria-haspopup="true" aria-expanded="false"><span>Menu</span></button>
     </div>
+    <div class="navbar navbar2" id="navQuick"></div>
     <div class="navlist" id="navList" hidden></div>
   </div>
 
@@ -1175,9 +1214,9 @@
         </select>
         <select class="sortsel" id="sealView" aria-label="Layout">
           <option value="auto">View · Auto</option>
-          <option value="1">View · 1</option>
-          <option value="2">View · 2</option>
-          <option value="3">View · 3</option>
+          <option value="1">View · 1 column</option>
+          <option value="2">View · 2 columns</option>
+          <option value="3">View · 3 columns</option>
         </select>
       </div>
     </div>
@@ -1274,6 +1313,10 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Add cards to</div><div class="sdesc">When you tap “Collect” or a card’s binder button, add to this collection, or always ask which one.</div></div>
         <select class="sortsel" id="setDefaultAddSel"></select>
+      </div>
+      <div class="setrow qmrow">
+        <div class="setinfo"><div class="stitle">Customise quick menu</div><div class="sdesc">Pick up to four extra shortcuts for a second row of the menu, under Home, Quick Add, Collection and Menu. Choose “None” to leave a slot empty.</div></div>
+        <div class="qmslots" id="qmSlots"></div>
       </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it, no dimming for missing cards.</div></div>
@@ -1596,7 +1639,7 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","rewards"]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -2320,6 +2363,35 @@
     setTimeout(bring, 350); setTimeout(bring, 650);
   });
 
+  // ---- Pull-to-refresh (News and Releases): pull down at the top of the page to re-run it ----
+  (function(){
+    var PTR={news:1, releases:1}, THRESH=70;
+    var ind=document.createElement("div"); ind.className="ptr"; ind.innerHTML="<i></i>"; document.body.appendChild(ind);
+    var startY=0, active=false, dist=0, busy=false;
+    function eligible(){ return !!PTR[_curPage] && !busy && !(scrim && scrim.classList.contains("open")); }
+    function pageTop(){ return (window.scrollY || document.documentElement.scrollTop || 0) <= 0; }
+    window.addEventListener("touchstart", function(e){
+      if(!eligible() || e.touches.length!==1 || !pageTop()){ active=false; return; }
+      startY=e.touches[0].clientY; active=true; dist=0;
+    }, {passive:true});
+    window.addEventListener("touchmove", function(e){
+      if(!active) return;
+      dist=e.touches[0].clientY - startY;
+      if(dist<=0 || !pageTop()){ active=false; ind.classList.remove("show","pulling","ready"); ind.style.transform=""; return; }
+      ind.classList.add("show","pulling");
+      ind.style.transform="translateY("+(Math.min(dist*0.5, 78)-58)+"px)";
+      ind.classList.toggle("ready", dist>THRESH);
+    }, {passive:true});
+    window.addEventListener("touchend", function(){
+      if(!active) return; active=false; ind.classList.remove("pulling");
+      if(dist>THRESH){
+        busy=true; ind.classList.add("spinning"); ind.style.transform="translateY(12px)";
+        try{ if(_curPage==="news") renderNews(); else if(_curPage==="releases") renderReleases(); }catch(_){}
+        setTimeout(function(){ busy=false; ind.classList.remove("spinning","ready","show"); ind.style.transform=""; }, 900);
+      } else { ind.classList.remove("ready","show"); ind.style.transform=""; }
+    });
+  })();
+
   // ---- Import / export (lives in Settings → Backup & restore) ----
   function doExport(){
     var col=activeCol();
@@ -2694,9 +2766,9 @@
       var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       var el=document.createElement("div"); el.className="sealcard";
       el.innerHTML=
-        '<div class="sbox">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
+        '<div class="sbox sdopen" role="button" tabindex="0" title="View details">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
         '<div class="sb">'+
-          '<div class="snm">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
+          '<div class="snm sdopen" role="button" tabindex="0">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
           '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
             '<span class="sealval">'+money((+s.qty||0)*(+pr.mkt||0))+'</span></div>'+
           '<div class="priceg">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
@@ -2705,11 +2777,57 @@
       el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
       el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
       var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+      el.querySelectorAll(".sdopen").forEach(function(x){ x.onclick=function(){ openSealedDetail(p); };
+        x.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openSealedDetail(p); } }; });
       grid.appendChild(el);
     });
     var bar=$("sealedBar"); if(bar) bar.innerHTML=
       '<div class="hs"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>'+
       '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>';
+  }
+
+  // ---- Sealed product detail sheet + region-aware buy links ----
+  var AMAZON_DOMAIN={ "co.uk":"amazon.co.uk","com":"amazon.com","de":"amazon.de","com.au":"amazon.com.au","ca":"amazon.ca","fr":"amazon.fr","it":"amazon.it","es":"amazon.es" };
+  var REGION_SHORT={ "co.uk":"UK","com":"US","de":"DE","com.au":"AU","ca":"CA","fr":"FR","it":"IT","es":"ES" };
+  function sealBuyLinks(p){
+    var reg=SETTINGS.ebayRegion||"co.uk", ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
+    var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
+    return { region:(REGION_SHORT[reg]||reg.toUpperCase()),
+      ebay:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q,
+      amazon:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q,
+      official:"https://en.palworld-official-cardgame.com/" };
+  }
+  function openSealedDetail(p){
+    var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
+    var box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"", bl=sealBuyLinks(p);
+    $("mMain").innerHTML=
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="sealdet">'+
+        '<div class="sdimg">'+(box?'<img src="'+box+'" alt="'+esc(p.name)+'">':'')+'</div>'+
+        '<h2>'+esc(p.name)+'</h2>'+
+        '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(p.sub)+'</span><span class="eltag" style="background:var(--r-R)">'+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</span></div>'+
+        '<div class="statline">'+
+          '<div class="statbox"><span class="n">'+money(rrpShown)+'</span><span class="l">RRP</span></div>'+
+          '<div class="statbox"><span class="n">'+money(pr.mkt)+'</span><span class="l">Market</span></div>'+
+          '<div class="statbox"><span class="n">'+money((+s.qty||0)*(+pr.mkt||0))+'</span><span class="l">Your value</span></div>'+
+        '</div>'+
+        '<div class="meditor">'+
+          '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
+          '<div class="priceg priceui">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
+          (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Pull market</button>':'')+
+          '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
+          '<div class="buyrow">'+
+            '<a class="buybtn" href="'+bl.ebay+'" target="_blank" rel="noopener">eBay '+esc(bl.region)+' <span class="lnk">↗</span></a>'+
+            '<a class="buybtn" href="'+bl.amazon+'" target="_blank" rel="noopener">Amazon <span class="lnk">↗</span></a>'+
+            '<a class="buybtn" href="'+bl.official+'" target="_blank" rel="noopener">Official <span class="lnk">↗</span></a>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    var mm=$("mMain"), cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    mm.querySelectorAll(".sdstep button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); openSealedDetail(p); renderSealed(); renderHome(); }; });
+    mm.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
+    var sp=$("sdPull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+    var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
   }
 
   // ---- Portfolio value-over-time chart ----
@@ -3109,7 +3227,39 @@
   function updateNavMenu(p){
     var list=$("navList"); if(list) Array.prototype.forEach.call(list.querySelectorAll(".navitem"), function(b){ b.classList.toggle("active", b.getAttribute("data-page")===p); });
     Array.prototype.forEach.call(document.querySelectorAll(".navq[data-page]"), function(q){ q.classList.toggle("active", q.getAttribute("data-page")===p); });
-    var trig=$("navTrigger"); if(trig) trig.classList.toggle("active", NAV_PRIMARY.indexOf(p)===-1);
+    var trig=$("navTrigger"); if(trig) trig.classList.toggle("active", NAV_PRIMARY.indexOf(p)===-1 && quickMenuKeys().indexOf(p)===-1);
+  }
+  // ---- Customisable quick menu: a 2nd nav row of up to four user-chosen shortcuts ----
+  function quickPages(){
+    var out=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){
+      var p=tab.getAttribute("data-page"); if(NAV_PRIMARY.indexOf(p)!==-1) return;
+      out.push({ key:p, icon:tab.getAttribute("data-icon"), label:(tab.querySelector(".tablabel")||{}).textContent||p });
+    });
+    return out;
+  }
+  function quickMenuKeys(){ return (SETTINGS.quickMenu||[]).slice(0,4); }
+  function renderQuickRow(){
+    var row=$("navQuick"); if(!row) return; row.innerHTML="";
+    var pages=quickPages();
+    quickMenuKeys().forEach(function(k){
+      if(!k) return; var pg=pages.filter(function(x){return x.key===k;})[0]; if(!pg) return;
+      var b=document.createElement("button"); b.className="navq"; b.type="button"; b.setAttribute("data-page",k);
+      b.innerHTML=icon(pg.icon)+"<span>"+esc(pg.label)+"</span>";
+      b.onclick=function(){ showPage(k); closeNavMenu(); };
+      row.appendChild(b);
+    });
+    updateNavMenu(_curPage);
+  }
+  function buildQuickMenuSettings(){
+    var host=$("qmSlots"); if(!host) return; host.innerHTML="";
+    var pages=quickPages(), keys=quickMenuKeys();
+    for(var i=0;i<4;i++){ (function(idx){
+      var sel=document.createElement("select"); sel.className="sortsel";
+      var none=document.createElement("option"); none.value=""; none.textContent="Slot "+(idx+1)+" · None"; sel.appendChild(none);
+      pages.forEach(function(pg){ var o=document.createElement("option"); o.value=pg.key; o.textContent=pg.label; if(keys[idx]===pg.key) o.selected=true; sel.appendChild(o); });
+      sel.onchange=function(){ var arr=quickMenuKeys(); while(arr.length<4) arr.push(""); arr[idx]=sel.value; SETTINGS.quickMenu=arr; saveSettings(); renderQuickRow(); };
+      host.appendChild(sel);
+    })(i); }
   }
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
@@ -3784,6 +3934,7 @@
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
     var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
+    buildQuickMenuSettings();
   })();
 
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
@@ -3908,7 +4059,7 @@
   if(IS_NATIVE){ var _stores=document.querySelector(".stores"); if(_stores) _stores.style.display="none"; }
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
-  buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  buildNavMenu(); renderQuickRow(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
