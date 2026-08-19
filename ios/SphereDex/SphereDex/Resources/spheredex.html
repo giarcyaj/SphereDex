@@ -20,22 +20,27 @@
     --bg:#eef1f5; --surface:#f9fafc; --surface-2:#eceff4; --ink:#1b2129; --ink-soft:#55606d;
     --ink-faint:#8894a1; --line:#dfe4ea; --line-strong:#c7ced7; --accent:#c4611e; --accent-ink:#9a430f;
     --shadow:24px 32px 60px -30px rgba(20,30,45,.28); --dim:.4;
+    --gold:#cf9622; --gold-deep:#9a6b12; --edge:rgba(255,255,255,.7);
+    --kb:0px; /* on-screen keyboard height; native (Android) sets this so the modal can sit above it */
   }
   @media (prefers-color-scheme: dark){ :root{
-    --bg:#101418; --surface:#1a2028; --surface-2:#141a20; --ink:#eef2f5; --ink-soft:#a9b4c0;
-    --ink-faint:#71808e; --line:#26303a; --line-strong:#38454f; --accent:#f2933a; --accent-ink:#f8b56a;
-    --shadow:24px 34px 70px -34px rgba(0,0,0,.85); --dim:.3;
+    --bg:#0c1424; --surface:#17233b; --surface-2:#111c30; --ink:#eaf0ff; --ink-soft:#aeb9c9;
+    --ink-faint:#8194ad; --line:#26344f; --line-strong:#3b4d70; --accent:#f2933a; --accent-ink:#f8b56a;
+    --shadow:24px 34px 70px -34px rgba(0,0,0,.85); --dim:.32;
+    --gold:#f4c752; --gold-deep:#b8862a; --edge:rgba(255,255,255,.09);
   }}
   :root[data-theme="light"]{ --bg:#eef1f5; --surface:#f9fafc; --surface-2:#eceff4; --ink:#1b2129;
     --ink-soft:#55606d; --ink-faint:#8894a1; --line:#dfe4ea; --line-strong:#c7ced7; --accent:#c4611e;
-    --accent-ink:#9a430f; --shadow:24px 32px 60px -30px rgba(20,30,45,.28); --dim:.4; }
-  :root[data-theme="dark"]{ --bg:#101418; --surface:#1a2028; --surface-2:#141a20; --ink:#eef2f5;
-    --ink-soft:#a9b4c0; --ink-faint:#71808e; --line:#26303a; --line-strong:#38454f; --accent:#f2933a;
-    --accent-ink:#f8b56a; --shadow:24px 34px 70px -34px rgba(0,0,0,.85); --dim:.3; }
+    --accent-ink:#9a430f; --shadow:24px 32px 60px -30px rgba(20,30,45,.28); --dim:.4;
+    --gold:#cf9622; --gold-deep:#9a6b12; --edge:rgba(255,255,255,.7); }
+  :root[data-theme="dark"]{ --bg:#0c1424; --surface:#17233b; --surface-2:#111c30; --ink:#eaf0ff;
+    --ink-soft:#aeb9c9; --ink-faint:#8194ad; --line:#26344f; --line-strong:#3b4d70; --accent:#f2933a;
+    --accent-ink:#f8b56a; --shadow:24px 34px 70px -34px rgba(0,0,0,.85); --dim:.32;
+    --gold:#f4c752; --gold-deep:#b8862a; --edge:rgba(255,255,255,.09); }
 
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh;
+  body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh; overscroll-behavior-y:contain;
     background:
       radial-gradient(1100px 560px at 88% -12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
       radial-gradient(820px 460px at 4% -4%, color-mix(in srgb, var(--c-Red) 8%, transparent), transparent 55%),
@@ -47,17 +52,14 @@
      Native injects --sat/--sab/--sal/--sar; browsers fall back to env(safe-area-inset-*). */
   .wrap { max-width:1260px; margin:0 auto;
     padding-top: calc(22px + var(--sat, env(safe-area-inset-top, 0px)));
-    padding-bottom: calc(90px + var(--sab, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: calc(90px + max(var(--sab, env(safe-area-inset-bottom, 0px)), var(--kb, 0px)));
     padding-left: calc(20px + var(--sal, env(safe-area-inset-left, 0px)));
     padding-right: calc(20px + var(--sar, env(safe-area-inset-right, 0px))); }
 
   /* Masthead */
   header.mast { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; padding:6px 0 18px;
     margin-bottom:20px; border-bottom:2px solid var(--line-strong); }
-  .stores { position:absolute; top:0; right:0; display:flex; gap:6px; }
-  .storebtn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; border:1.5px solid var(--line); color:var(--ink-faint); text-decoration:none; opacity:.7; transition:opacity .15s, color .15s, border-color .15s; }
-  .storebtn:hover { opacity:1; color:var(--ink); border-color:var(--line-strong); }
-  .storebtn .ic { width:16px; height:16px; margin:0; }
+  .mastutil { position:absolute; top:0; right:0; display:flex; gap:6px; z-index:2; }
   .brand { display:flex; flex-direction:column; align-items:center; gap:9px; }
   .brandtext { text-align:center; }
   .sigil { width:54px; height:54px; flex:none; filter:drop-shadow(0 8px 16px rgba(0,0,0,.35)); }
@@ -65,11 +67,12 @@
   .brand h1 { font-family:var(--font-display); font-weight:800; margin:0; letter-spacing:-.02em; line-height:.95;
     font-size:clamp(1.45rem,1rem+2vw,2.1rem); text-wrap:balance; }
   .brand .sub { margin:5px 0 0; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; }
-  .ver { font-family:var(--font-mono); font-size:.32em; font-weight:500; color:var(--ink-faint); background:none; padding:0; letter-spacing:.03em; vertical-align:super; margin-left:6px; opacity:.8; }
+  .footver { display:inline-block; margin-top:12px; font-family:var(--font-mono); font-size:.9em; font-weight:500; color:var(--ink-faint); letter-spacing:.06em; opacity:.75; }
   .betatag { font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 18%,transparent); padding:2px 7px; border-radius:20px; margin-left:6px; vertical-align:middle; }
-  .toolbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .toolbtns { display:flex; gap:6px; flex-wrap:nowrap; justify-content:center; }
   .tbtn { border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:11px;
-    padding:9px 13px; font-size:.82rem; font-weight:650; display:inline-flex; align-items:center; gap:7px; transition:.15s; }
+    padding:9px 13px; font-size:.82rem; font-weight:650; display:inline-flex; align-items:center; gap:7px; transition:.15s;
+    box-shadow:inset 0 1px 0 var(--edge); }
   .tbtn:hover { border-color:var(--accent); color:var(--accent-ink); transform:translateY(-1px); }
   .tbtn.ghost { background:transparent; }
   .tbtn.login .ic { width:1rem; height:1rem; margin:0; }
@@ -77,6 +80,10 @@
   .tbtn.login:hover { color:#241705; box-shadow:0 6px 16px -8px rgba(230,184,85,.6); }
   .tbtn.login.in { background:transparent; border-color:var(--line-strong); color:var(--ink); font-weight:650; }
   .tbtn.login.in:hover { border-color:var(--accent); color:var(--accent-ink); }
+  /* Header controls: keep My Collection + currency + Log in on one row down to small phones */
+  .toolbtns .tbtn { padding-left:9px; padding-right:9px; gap:5px; }
+  .toolbtns select.tbtn { padding-right:18px; background-position:calc(100% - 11px) 55%, calc(100% - 7px) 55%; }
+  .toolbtns .tbtn.login { font-size:.78rem; }
   .modehead { margin:2px 0 14px; display:flex; align-items:center; gap:9px; }
   .tbtn.on { border-color:var(--accent); color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .tbtn.sortdir { font-variant-numeric:tabular-nums; min-width:74px; justify-content:center; }
@@ -84,7 +91,10 @@
   /* Dashboard */
   .dash { display:grid; grid-template-columns:1.5fr repeat(2,1fr); gap:14px; margin-bottom:20px; }
   .colorpanel { grid-column:1/-1; }
-  .panel { background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px 17px; }
+  .panel { background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px 17px;
+    box-shadow:inset 0 1px 0 var(--edge); }
+  .panel.xpwrap { background:linear-gradient(180deg, color-mix(in srgb,var(--gold) 8%, transparent), transparent 40%), var(--surface);
+    border-color:color-mix(in srgb,var(--gold) 32%, var(--line)); }
   .panel .lab { font-size:.67rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .dualpanel { cursor:pointer; user-select:none; transition:border-color .14s, background .14s; }
   .dualpanel:hover { border-color:var(--line-strong); background:var(--surface-2); }
@@ -92,15 +102,17 @@
   .dualdots { display:flex; gap:5px; margin-top:9px; }
   .dualdots span { width:6px; height:6px; border-radius:50%; background:var(--line-strong); transition:.16s; }
   .dualdots span.on { background:var(--accent); width:15px; border-radius:3px; }
-  .panel .big { font-family:var(--font-mono); font-size:1.75rem; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; margin-top:3px; }
+  .panel .big { font-family:var(--font-display); font-size:1.85rem; font-weight:850; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; margin-top:3px; }
   .panel .big small { font-size:.9rem; color:var(--ink-faint); font-weight:500; }
   .panel .meta { font-size:.77rem; color:var(--ink-soft); margin-top:2px; }
   .xprow { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-  .xprow .pct { font-family:var(--font-mono); font-size:1.4rem; font-weight:600; }
+  .xprow .pct { font-family:var(--font-display); font-size:1.5rem; font-weight:850; color:var(--accent-ink); }
   .xpbar { height:16px; border-radius:9px; background:var(--surface-2); border:1.5px solid var(--line-strong); overflow:hidden; margin-top:10px; }
-  .xpfill { height:100%; border-radius:8px 6px 6px 8px; min-width:2px; transition:width .5s cubic-bezier(.2,.7,.2,1);
-    background:linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, var(--r-RR)));
+  .xpfill { height:100%; border-radius:8px 6px 6px 8px; min-width:2px; position:relative; overflow:hidden; transition:width .5s cubic-bezier(.2,.7,.2,1);
+    background:linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--gold)));
     box-shadow:0 0 12px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .xpfill::after { content:""; position:absolute; inset:0; border-radius:inherit;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,.18) 0 8px, transparent 8px 18px); }
   .colorbars { display:flex; flex-flow:row wrap; gap:9px 20px; margin-top:10px; }
   .cbrow { display:flex; flex-direction:column; gap:5px; font-size:.74rem; flex:1 1 130px; min-width:120px; }
   .cbrow .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
@@ -208,6 +220,12 @@
     letter-spacing:.03em; color:#fff; background:var(--_rc); padding:3px 7px; border-radius:20px;
     box-shadow:0 2px 6px rgba(0,0,0,.35), 0 0 0 1.5px rgba(255,255,255,.35) inset; }
   .rgem.holo { background:conic-gradient(from 0deg, #ff5f6d, #ffc371, #47e0a0, #4f9dff, #b06ff0, #ff5f6d); color:#1a1a1a; }
+  /* Rare pulls get a light foil sheen sweeping across the real scan (chase-card feel). */
+  .card:has(.rgem.holo) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
+    background:linear-gradient(115deg, transparent 34%, rgba(255,255,255,.34) 46%, rgba(150,225,255,.28) 51%, transparent 64%);
+    background-size:250% 250%; animation:holoswp 3.8s linear infinite; }
+  @keyframes holoswp { 0%{ background-position:135% 0; } 100%{ background-position:-35% 0; } }
+  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.holo) .art::after { animation:none; } }
   .wish { position:absolute; top:34px; right:8px; z-index:3; width:28px; height:28px; border-radius:8px; border:none;
     background:rgba(0,0,0,.34); color:#fff; display:grid; place-items:center; font-size:.95rem; backdrop-filter:blur(3px); transition:.13s; opacity:.5; }
   .card:hover .wish, .wish.on { opacity:1; }
@@ -237,7 +255,7 @@
   .trend img { width:44px; height:60px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
   .trend .tnm { font-family:var(--font-display); font-weight:750; font-size:1rem; line-height:1.1; }
   .trend .tsub { font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint); margin-top:4px; }
-  .trend .tpct { margin-left:auto; font-family:var(--font-mono); font-weight:700; font-size:1.15rem; color:var(--el-Grass); white-space:nowrap; }
+  .trend .tpct { margin-left:auto; font-family:var(--font-display); font-weight:850; font-size:1.2rem; color:var(--el-Grass); white-space:nowrap; }
   .trend .tpct.down { color:var(--el-Fire); }
   .trendnote { color:var(--ink-faint); font-size:.85rem; background:var(--surface); border:1.5px dashed var(--line-strong); border-radius:16px; padding:14px 16px; }
   .movers { display:flex; flex-direction:column; gap:8px; }
@@ -256,12 +274,13 @@
   .scrim { position:fixed; inset:0; background:color-mix(in srgb,#0a0f14 64%,transparent); backdrop-filter:blur(4px);
     display:none; place-items:center; z-index:50;
     padding-top: calc(16px + var(--sat, env(safe-area-inset-top, 0px)));
-    padding-bottom: calc(16px + var(--sab, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: calc(16px + max(var(--sab, env(safe-area-inset-bottom, 0px)), var(--kb, 0px)));
     padding-left: calc(16px + var(--sal, env(safe-area-inset-left, 0px)));
     padding-right: calc(16px + var(--sar, env(safe-area-inset-right, 0px))); }
   .scrim.open { display:grid; }
-  .modal { background:var(--surface); border:1.5px solid var(--line-strong); border-radius:20px; max-width:580px; width:100%;
-    box-shadow:var(--shadow); overflow:hidden; max-height:92vh; overflow-y:auto; position:relative; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  .modal { background:linear-gradient(180deg, color-mix(in srgb,var(--gold) 7%, transparent), transparent 20%), var(--surface);
+    border:1.5px solid color-mix(in srgb,var(--gold) 24%, var(--line-strong)); border-radius:20px; max-width:580px; width:100%;
+    box-shadow:var(--shadow), inset 0 1px 0 var(--edge); overflow:hidden; max-height:min(92vh, calc(100vh - var(--kb, 0px) - 32px)); overflow-y:auto; position:relative; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
   /* Sticky close: a zero-height bar pinned to the top of the scrolling modal so the X is always reachable. */
   .mclosewrap { position:sticky; top:0; z-index:20; height:0; display:flex; justify-content:flex-end; pointer-events:none; }
   .mmain { padding:20px 22px; display:block; }
@@ -269,7 +288,8 @@
   .mmain > .mtags { margin-bottom:12px; }
   .mmain > .statline { margin-bottom:12px; }
   .martflo { float:right; width:clamp(120px,40%,158px); margin:2px 0 12px 18px; position:relative; aspect-ratio:63/88;
-    border-radius:12px; overflow:hidden; border:1.5px solid var(--line-strong); box-shadow:0 12px 26px -14px rgba(0,0,0,.55); }
+    border-radius:14px; overflow:hidden; border:2px solid color-mix(in srgb,var(--gold) 34%, var(--line-strong));
+    box-shadow:0 16px 34px -16px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.06); }
   .martflo .art { position:absolute; inset:0; aspect-ratio:auto; }
   .meditor { clear:both; display:flex; flex-direction:column; gap:13px; margin-top:14px; }
   .mclose { pointer-events:auto; position:relative; top:8px; margin:0; width:36px; height:36px; border-radius:10px; border:none;
@@ -283,9 +303,10 @@
   .promonote { margin-top:13px; padding:11px 13px; border-radius:11px; background:color-mix(in srgb,var(--accent) 9%,var(--surface)); border:1.5px solid color-mix(in srgb,var(--accent) 30%,var(--line)); display:flex; flex-direction:column; gap:4px; }
   .promonote .pnh { font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); }
   .promonote .pnt { font-size:.85rem; color:var(--ink); line-height:1.4; }
-  .statline { display:flex; gap:16px; padding:11px 0; border-top:1.5px solid var(--line); border-bottom:1.5px solid var(--line); }
+  .statline { display:flex; gap:16px; padding:12px 15px; border-radius:13px; background:var(--surface-2);
+    border:1.5px solid var(--line); box-shadow:inset 0 1px 0 var(--edge); }
   .statbox { display:flex; flex-direction:column; }
-  .statbox .n { font-family:var(--font-mono); font-size:1.25rem; font-weight:600; }
+  .statbox .n { font-family:var(--font-display); font-size:1.32rem; font-weight:850; }
   .statbox .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .field { display:flex; flex-direction:column; gap:5px; }
   .field label { font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -310,6 +331,21 @@
     color:var(--bg); padding:12px 20px; border-radius:12px; font-weight:650; font-size:.9rem; opacity:0; pointer-events:none;
     transition:.25s; z-index:60; box-shadow:var(--shadow); }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* pull-to-refresh indicator (News, Releases) */
+  .ptr { position:fixed; top:0; left:50%; margin-left:-20px; z-index:45; width:40px; height:40px; border-radius:50%;
+    display:grid; place-items:center; pointer-events:none; opacity:0; transform:translateY(-58px);
+    margin-top: calc(var(--sat, env(safe-area-inset-top, 0px)));
+    background:var(--surface); border:1.5px solid var(--line-strong); box-shadow:0 8px 18px -8px rgba(0,0,0,.55);
+    transition:transform .24s cubic-bezier(.2,.7,.2,1), opacity .18s; }
+  .ptr.pulling { transition:opacity .12s; }   /* follow the finger without lag */
+  .ptr.show { opacity:1; }
+  .ptr i { width:20px; height:20px; border-radius:50%; display:block;
+    border:2.5px solid color-mix(in srgb,var(--line-strong) 75%, transparent); border-top-color:var(--accent);
+    transition:transform .2s; }
+  .ptr.ready i { transform:rotate(180deg); }
+  .ptr.spinning i { animation:ptrspin .7s linear infinite; }
+  @keyframes ptrspin { to{ transform:rotate(360deg); } }
   .footnote { margin-top:36px; padding-top:18px; border-top:1.5px solid var(--line); color:var(--ink-faint); font-size:.8rem; text-wrap:pretty; text-align:center; max-width:64ch; margin-left:auto; margin-right:auto; }
   .footnote code { font-family:var(--font-mono); background:var(--surface-2); padding:1px 5px; border-radius:5px; }
   .footnote a { color:var(--accent-ink); }
@@ -319,7 +355,8 @@
   /* Desktop nav: icon + text on every tab, wrapping. */
   .tabs { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; padding-bottom:18px; margin-bottom:22px; border-bottom:2px solid var(--line-strong); }
   .tab { display:inline-flex; align-items:center; gap:7px; border:1.5px solid var(--line); background:var(--surface); color:var(--ink-soft);
-    font-family:var(--font-display); font-weight:700; font-size:.92rem; white-space:nowrap; cursor:pointer; padding:8px 13px; border-radius:11px; transition:background .14s, color .14s, border-color .14s; }
+    font-family:var(--font-display); font-weight:700; font-size:.92rem; white-space:nowrap; cursor:pointer; padding:8px 13px; border-radius:11px;
+    box-shadow:inset 0 1px 0 var(--edge); transition:background .14s, color .14s, border-color .14s; }
   .tab .ic { width:1.15rem; height:1.15rem; margin:0 !important; }
   .tab .tablabel { display:inline; }
   .tab:hover { color:var(--ink); border-color:var(--line-strong); }
@@ -327,13 +364,18 @@
   /* Mobile / app nav: Home · Quick Add · Collection + a Menu dropdown for the rest */
   .navmenu { display:none; position:relative; margin-bottom:22px; }
   .navbar { display:flex; gap:6px; }
-  .navq { flex:1; min-width:0; display:inline-flex; flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border:1.5px solid var(--line); background:var(--surface); color:var(--ink-soft); border-radius:12px; font-family:var(--font-display); font-weight:700; font-size:.72rem; cursor:pointer; }
+  .navq { flex:1; min-width:0; display:inline-flex; flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border:1.5px solid var(--line); background:var(--surface); color:var(--ink-soft); border-radius:12px; font-family:var(--font-display); font-weight:700; font-size:.72rem; cursor:pointer; box-shadow:inset 0 1px 0 var(--edge); }
   .navq .ic { width:1.35rem; height:1.35rem; margin:0 !important; }
   .navq span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
   .navq:hover { color:var(--ink); border-color:var(--line-strong); }
   .navq.active { color:#fff; background:var(--accent); border-color:var(--accent); }
   .navlist { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:6px; box-shadow:var(--shadow); max-height:66vh; overflow:auto; }
   .navlist[hidden] { display:none; }
+  .navbar2 { margin-top:6px; }
+  .navbar2:empty { display:none; }
+  .setrow.qmrow { flex-direction:column; align-items:stretch; gap:10px; }
+  .qmslots { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
+  .qmslots select { width:100%; }
   .navitem { display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 13px; border:none; background:transparent; color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.98rem; border-radius:10px; cursor:pointer; }
   .navitem .ic { width:1.2rem; height:1.2rem; margin:0; color:var(--ink-faint); }
   .navitem:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); color:var(--ink); }
@@ -346,22 +388,27 @@
   .sech { font-family:var(--font-display); font-size:1.2rem; font-weight:800; letter-spacing:-.01em; margin:4px 0 15px; }
 
   .colwrap { position:relative; display:flex; }
-  #colSel, #colSel option { font-size:.8rem; }
-  #colSel { border-top-right-radius:0; border-bottom-right-radius:0; max-width:160px; }
-  #colMenuBtn { border-top-left-radius:0; border-bottom-left-radius:0; border-left:none; padding:9px 10px; }
+  #colSel, #colSel option { font-size:.74rem; }
+  #colSel { max-width:150px; min-width:0; overflow:hidden; }
+  #curSel { font-size:.76rem; }
   .colmenu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; background:var(--surface); border:1.5px solid var(--line-strong);
     border-radius:12px; box-shadow:var(--shadow); padding:6px; display:flex; flex-direction:column; min-width:186px; }
   .colmenu[hidden] { display:none; }
   .colmenu button { border:none; background:transparent; color:var(--ink); text-align:left; padding:9px 11px; border-radius:8px; font-size:.86rem; font-weight:600; }
   .colmenu button:hover { background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink); }
 
-  .hero { background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:20px 22px; margin-bottom:26px; }
-  .herohead { display:flex; align-items:flex-start; justify-content:space-between; gap:20px 28px; flex-wrap:wrap; }
-  .herotitle { font-family:var(--font-mono); font-size:2.7rem; font-weight:600; letter-spacing:-.03em; line-height:1; }
+  .hero { position:relative; overflow:hidden; border-radius:18px; padding:20px 22px; margin-bottom:26px;
+    background:linear-gradient(180deg, color-mix(in srgb,var(--gold) 10%, transparent), transparent 46%), var(--surface);
+    border:1.5px solid color-mix(in srgb,var(--gold) 30%, var(--line));
+    box-shadow:inset 0 1px 0 var(--edge), 0 22px 46px -32px rgba(0,0,0,.6); }
+  .hero::after { content:""; position:absolute; right:-50px; top:-50px; width:150px; height:150px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, color-mix(in srgb,var(--gold) 16%, transparent), transparent 70%); }
+  .herohead { position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:20px 28px; flex-wrap:wrap; }
+  .herotitle { font-family:var(--font-display); font-size:2.9rem; font-weight:850; letter-spacing:-.02em; line-height:1; color:var(--accent-ink); }
   .herosub { color:var(--ink-faint); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; margin-top:5px; }
   .herostats { display:flex; gap:24px; flex-wrap:wrap; }
   .herostats .hs { display:flex; flex-direction:column; gap:2px; }
-  .herostats .hs .n { font-family:var(--font-mono); font-size:1.5rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1; }
+  .herostats .hs .n { font-family:var(--font-display); font-size:1.6rem; font-weight:850; font-variant-numeric:tabular-nums; line-height:1; }
   .herostats .hs .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .hero .xpbar { margin-top:18px; }
   .rankcard { display:flex; flex-direction:column; gap:8px; align-items:flex-start; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; padding:16px 18px; }
@@ -419,7 +466,7 @@
 
   .sealedbar { display:flex; gap:24px; margin-bottom:14px; flex-wrap:wrap; }
   .sealedbar .hs { display:flex; flex-direction:column; gap:2px; }
-  .sealedbar .hs .n { font-family:var(--font-mono); font-size:1.6rem; font-weight:600; }
+  .sealedbar .hs .n { font-family:var(--font-display); font-size:1.68rem; font-weight:850; }
   .sealedbar .hs .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .sealednote { font-size:.82rem; color:var(--ink-soft); margin:0 0 18px; max-width:640px; }
   .sealednote b { color:var(--ink); }
@@ -434,6 +481,35 @@
   .sealcard .sb { padding:13px 15px 15px; display:flex; flex-direction:column; gap:11px; }
   .sealcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; }
   .sealcard .ssub { font-size:.75rem; color:var(--ink-faint); margin-top:-7px; }
+  .sealcard .sdopen { cursor:pointer; }
+  .sealcard .sbox.sdopen:hover img { transform:scale(1.03); transition:transform .2s; }
+  .sealcard .snm.sdopen:hover { color:var(--accent-ink); }
+  /* sealed detail sheet */
+  .sealdet { padding:0 0 2px; }
+  .sdimg { aspect-ratio:1/1; max-height:300px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; padding:16px; border:1.5px solid var(--line-strong); box-sizing:border-box; }
+  .sdimg img { max-width:100%; max-height:100%; object-fit:contain; }
+  .sealdet h2 { font-family:var(--font-display); font-weight:800; margin:15px 0 8px; font-size:1.4rem; letter-spacing:-.01em; }
+  .sdstep { align-self:flex-start; }
+  .buylabel { font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin-top:6px; }
+  .buyrow { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  @media (max-width:440px){ .buyrow{ grid-template-columns:1fr; } }
+  .buybtn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px; border-radius:12px;
+    font-family:var(--font-display); font-weight:750; font-size:.86rem; text-decoration:none; color:var(--ink);
+    background:var(--surface-2); border:1.5px solid var(--line-strong); box-shadow:inset 0 1px 0 var(--edge); transition:transform .14s, border-color .14s, color .14s; }
+  .buybtn:hover { transform:translateY(-1px); border-color:var(--accent); color:var(--accent-ink); }
+  .buybtn .lnk { opacity:.55; }
+  /* pre-order sealed products */
+  .sealdivide { grid-column:1/-1; font-family:var(--font-display); font-weight:800; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-faint); padding:10px 2px 0; border-top:1.5px solid var(--line); margin-top:6px; }
+  .sealcard.preorder { border-style:dashed; }
+  .sealcard .sbox.preph, .sdimg.preph { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; text-align:center;
+    background:linear-gradient(160deg, color-mix(in srgb,var(--accent) 20%, var(--surface-2)), var(--surface-2)); }
+  .prtag { font-family:var(--font-display); font-weight:850; font-size:.6rem; letter-spacing:.1em; text-transform:uppercase; color:#241300;
+    background:linear-gradient(160deg,#ffe08a,var(--gold-deep)); padding:4px 11px; border-radius:20px; box-shadow:0 3px 8px rgba(0,0,0,.3); }
+  .prname { font-family:var(--font-display); font-weight:800; font-size:1rem; color:var(--ink-soft); padding:0 12px; line-height:1.15; }
+  .predate { font-family:var(--font-display); font-weight:700; font-size:.82rem; color:var(--accent-ink); }
+  .predate.big { font-size:1rem; margin:12px 0 2px; }
   .qtyrow { display:flex; align-items:center; gap:12px; }
   .stepper { display:inline-flex; align-items:center; border:1.5px solid var(--line-strong); border-radius:10px; overflow:hidden; }
   .stepper button { border:none; background:var(--surface-2); color:var(--ink-soft); width:32px; height:32px; font-size:1.1rem; font-weight:700; line-height:1; }
@@ -538,7 +614,7 @@
   /* portfolio chart */
   .pcard { background:var(--surface); border:1.5px solid var(--line); border-radius:18px; padding:18px 20px; margin-bottom:26px; }
   .pctop { display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
-  .pctop .pcval { font-family:var(--font-mono); font-size:1.7rem; font-weight:600; letter-spacing:-.02em; }
+  .pctop .pcval { font-family:var(--font-display); font-size:1.8rem; font-weight:850; letter-spacing:-.02em; }
   .pctop .pclab { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .pcfoot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; flex-wrap:wrap; }
   .pcrefsub { font-size:.72rem; color:var(--ink-faint); font-family:var(--font-mono); }
@@ -564,7 +640,7 @@
   .pcbig .pcchart { height:240px; }
   .pdstats { display:flex; gap:10px; margin-top:16px; }
   .pdstats .hs { flex:1; text-align:center; background:var(--surface-2,var(--surface)); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
-  .pdstats .hs .n { display:block; font-family:var(--font-mono); font-weight:700; font-size:1.02rem; }
+  .pdstats .hs .n { display:block; font-family:var(--font-display); font-weight:850; font-size:1.08rem; }
   .pdstats .hs .l { display:block; font-size:.72rem; color:var(--ink-faint); margin-top:3px; }
   .pdlist { display:flex; flex-direction:column; }
   .pdrow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
@@ -597,7 +673,7 @@
   #deckSel { max-width:200px; }
   .deckstats { display:flex; gap:22px; flex-wrap:wrap; margin:14px 0 16px; }
   .deckstats .hs { display:flex; flex-direction:column; gap:2px; }
-  .deckstats .hs .n { font-family:var(--font-mono); font-size:1.4rem; font-weight:600; }
+  .deckstats .hs .n { font-family:var(--font-display); font-size:1.46rem; font-weight:850; }
   .deckstats .hs .l { font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .deckadd { max-width:520px; margin-bottom:6px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
@@ -622,6 +698,22 @@
   .newsitem .ndate { font-family:var(--font-mono); font-size:.72rem; color:var(--accent-ink); font-weight:600; }
   .newsitem .ntitle { font-family:var(--font-display); font-weight:750; font-size:1rem; margin-top:3px; }
   .newsitem .nsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  /* notification bell + What's-new popup */
+  .bellbtn { position:relative; padding:9px 11px; }
+  .bellbtn svg { display:block; }
+  .themebtn { padding:9px 13px; font-size:1.1rem; line-height:1; }
+  .belldot { position:absolute; top:5px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--c-Red);
+    border:2px solid var(--surface); box-shadow:0 0 7px color-mix(in srgb,var(--c-Red) 80%,transparent); }
+  .belldot[hidden] { display:none; }
+  .newspop h2 { font-family:var(--font-display); font-weight:800; margin:2px 0 13px; font-size:1.35rem; letter-spacing:-.01em; }
+  .npitem { display:block; padding:12px 14px; border-radius:12px; background:var(--surface-2); border:1.5px solid var(--line);
+    margin-bottom:9px; text-decoration:none; color:var(--ink); transition:border-color .14s, transform .14s; }
+  .npitem:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .npdate { font-family:var(--font-mono); font-size:.66rem; color:var(--accent-ink); letter-spacing:.05em; font-weight:600; }
+  .nptitle { font-family:var(--font-display); font-weight:750; font-size:.98rem; margin-top:3px; }
+  .npsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  .npall { display:inline-block; margin-top:6px; font-size:.85rem; color:var(--accent-ink); font-weight:650; text-decoration:none; }
+  .npall:hover { text-decoration:underline; }
   /* donate */
   .donate { display:inline-block; margin-top:8px; color:var(--accent-ink); text-decoration:none; font-weight:650; border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--line-strong)); border-radius:20px; padding:3px 11px; }
   .donate:hover { background:color-mix(in srgb,var(--accent) 14%,transparent); }
@@ -641,12 +733,14 @@
     font-weight:700; font-size:.62rem; letter-spacing:.05em; text-transform:uppercase; color:#fff;
     background:linear-gradient(transparent, rgba(0,0,0,.6)); padding:16px 6px 7px; opacity:0; transition:opacity .14s; pointer-events:none; }
   .martflo:hover .fullhint { opacity:1; }
-  .lightbox { position:fixed; inset:0; z-index:70; display:none; place-items:center; padding:24px;
+  .lightbox { position:fixed; inset:0; z-index:70; display:none; place-items:start center;
+    padding: calc(74px + var(--sat, env(safe-area-inset-top, 0px))) 20px calc(24px + var(--sab, env(safe-area-inset-bottom, 0px)));
     background:color-mix(in srgb,#05080b 82%,transparent); backdrop-filter:blur(6px); }
   .lightbox.open { display:grid; }
-  .lightbox img { max-width:min(92vw,520px); max-height:92vh; width:auto; height:auto; border-radius:14px;
+  .lightbox img { max-width:min(92vw,520px); width:auto; height:auto; border-radius:14px;
+    max-height: calc(100vh - 100px - var(--sat, env(safe-area-inset-top, 0px)) - var(--sab, env(safe-area-inset-bottom, 0px)));
     box-shadow:0 30px 80px -20px rgba(0,0,0,.85); }
-  .lbclose { position:fixed; top:16px; right:16px; z-index:71; width:42px; height:42px; border-radius:12px;
+  .lbclose { position:fixed; top: calc(16px + var(--sat, env(safe-area-inset-top, 0px))); right:16px; z-index:71; width:42px; height:42px; border-radius:12px;
     border:1.5px solid rgba(255,255,255,.3); background:rgba(0,0,0,.45); color:#fff; font-size:1.15rem; }
   .lbclose:hover { background:rgba(0,0,0,.7); }
 
@@ -912,9 +1006,9 @@
 
 <div class="wrap">
   <header class="mast">
-    <div class="stores">
-      <a class="storebtn" id="playLink" href="#" data-icon="play" title="Get it on Google Play, coming soon" aria-label="Google Play"></a>
-      <a class="storebtn" id="iosLink" href="#" data-icon="apple" title="Download on the App Store, coming soon" aria-label="App Store"></a>
+    <div class="mastutil">
+      <button class="tbtn ghost bellbtn" id="bellBtn" type="button" title="What’s new" aria-label="What’s new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="belldot" id="bellDot" hidden></span></button>
+      <button class="tbtn ghost themebtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light / dark theme">◐</button>
     </div>
     <div class="brand">
       <div class="sigil">
@@ -940,7 +1034,7 @@
         </svg>
       </div>
       <div class="brandtext">
-        <h1>SphereDex <span class="ver">v0.9</span> <span class="betatag">beta</span></h1>
+        <h1>SphereDex <span class="betatag">beta</span></h1>
         <p class="sub">Palworld TCG collection tracker</p>
       </div>
     </div>
@@ -955,7 +1049,6 @@
         </div>
       </div>
       <select class="tbtn" id="curSel" title="Display currency" aria-label="Display currency"></select>
-      <button class="tbtn ghost" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
       <button class="tbtn login" id="loginBtn" type="button" title="Account"></button>
     </div>
   </header>
@@ -983,6 +1076,7 @@
       <button class="navq" data-page="collection" data-icon="grid"><span>Collection</span></button>
       <button class="navq navmore" id="navTrigger" data-icon="menu" type="button" aria-haspopup="true" aria-expanded="false"><span>Menu</span></button>
     </div>
+    <div class="navbar navbar2" id="navQuick"></div>
     <div class="navlist" id="navList" hidden></div>
   </div>
 
@@ -1150,9 +1244,9 @@
         </select>
         <select class="sortsel" id="sealView" aria-label="Layout">
           <option value="auto">View · Auto</option>
-          <option value="1">View · 1</option>
-          <option value="2">View · 2</option>
-          <option value="3">View · 3</option>
+          <option value="1">View · 1 column</option>
+          <option value="2">View · 2 columns</option>
+          <option value="3">View · 3 columns</option>
         </select>
       </div>
     </div>
@@ -1192,12 +1286,12 @@
           <button class="qinfobtn" type="button" data-info="scan" data-icon="info" aria-label="About scanning"></button>
         </div>
         <div class="qopt">
-          <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
-          <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
-        </div>
-        <div class="qopt">
           <button class="qoptbtn" type="button" id="qCsvBtn" data-icon="upload"><span>Import CSV</span></button>
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
+        </div>
+        <div class="qopt">
+          <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
+          <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
         </div>
       </div>
       <div class="qinfopanel" id="qInfoPanel" hidden></div>
@@ -1249,6 +1343,10 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Add cards to</div><div class="sdesc">When you tap “Collect” or a card’s binder button, add to this collection, or always ask which one.</div></div>
         <select class="sortsel" id="setDefaultAddSel"></select>
+      </div>
+      <div class="setrow qmrow">
+        <div class="setinfo"><div class="stitle">Customise quick menu</div><div class="sdesc">Pick up to four extra shortcuts for a second row of the menu, under Home, Quick Add, Collection and Menu. Choose “None” to leave a slot empty.</div></div>
+        <div class="qmslots" id="qmSlots"></div>
       </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it, no dimming for missing cards.</div></div>
@@ -1573,7 +1671,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1};
+  var SETTINGS = (function(){ var s={theme:"system",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:true,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -1703,7 +1801,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
-    stats(); renderHome(); renderReleases(); updateFilterCount(); save();
+    // Only refresh what is on screen. stats() updates the Collection dashboard (completion, sets, binder value).
+    // Home and Releases are rebuilt lazily when the user navigates to them (see showPage), not on every edit,
+    // and mutating callers own persistence (they call save() themselves) so render() no longer saves.
+    stats(); updateFilterCount();
   }
 
   function suffixOf(c){ var m=c.id.match(/-\d+([A-Z]+)$/); return m?m[1]:""; }
@@ -1740,6 +1841,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var colored = SETTINGS.noFade || hasAny(c.id);   // full colour if owned in ANY collection (or fading is off)
     var el=document.createElement("div");
     el.className="card"+(colored?"":" locked");
+    el.setAttribute("data-cid", c.id);
     el.style.setProperty("--_col", colVar(c.color));
     var elTags = c.els.map(function(e){ return '<span class="eltag" style="background:'+elVar(e)+'">'+e+'</span>'; }).join("");
     var costPow = [];
@@ -1769,11 +1871,20 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     el.querySelector(".ownbtn").addEventListener("click", function(ev){ ev.stopPropagation();
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
     var p=el.querySelector(".plus"), m=el.querySelector(".minus");
-    if (p) p.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty++; save(); render(); });
-    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty=Math.max(0,s.qty-1); save(); render(); });
+    if (p) p.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty++; save(); patchCard(c); });
+    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); s.qty=Math.max(0,s.qty-1); save(); patchCard(c); });
     el.querySelector(".art").addEventListener("click", function(ev){ if(ev.target.closest(".wish"))return; openDetail(c); });
     el.querySelector(".cbody").addEventListener("click", function(){ openDetail(c); });
     return el;
+  }
+  // Repaint just one card after a quantity change, instead of tearing down and rebuilding all 242 cells.
+  function patchCard(c){
+    // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
+    if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
+    var old=grid.querySelector('.card[data-cid="'+c.id+'"]');
+    if(!old){ render(); return; }
+    old.replaceWith(cardEl(c));
+    stats();   // keep the Collection dashboard (completion, sets, binder value) in sync
   }
 
   // ---- Stats ----
@@ -2162,9 +2273,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
               rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
               ls=rows.map(function(x){return x.p;});
           var lh=$("listHint");
-          if(ls.length){ var low=ls[0], lavg=ls.reduce(function(a,z){return a+z;},0)/ls.length;
-            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': from <b>'+money(low)+'</b> · average <b>'+money(lavg)+'</b> ('+ls.length+' live)';
-            var gl=$("glList"); if(gl) gl.textContent=money(low);
+          if(ls.length){ var low=ls[0], l5=ls.slice(0,5), l5avg=l5.reduce(function(a,z){return a+z;},0)/l5.length;
+            if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': avg of '+l5.length+' lowest <b>'+money(l5avg)+'</b> · from <b>'+money(low)+'</b> ('+ls.length+' live)';
+            var gl=$("glList"); if(gl) gl.textContent=money(l5avg);
             var lr=$("listRows"); if(lr) lr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
             if(!silent) toast("Live listings loaded");
           } else { if(lh && !us) lh.textContent="No current listings found."; var gl2=$("glList"); if(gl2 && !us && gl2.textContent==="…") gl2.textContent='n/a'; if(!silent) toast(b.note||"No current listings"); }
@@ -2252,6 +2363,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function resetKb(){ _kbActive=false; _clearKb(); }
   function kbApply(){
     var m=_modalEl(), vv=window.visualViewport; if(!m) return;
+    var _kb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb'))||0;
+    if(_kb>0){ _clearKb(); return; }   // Android reports the keyboard height via --kb; CSS keeps the sheet above it
     if(vv) _baseH=Math.max(_baseH, vv.height);   // tallest visible height ever = the no-keyboard height
     // Only adjust when the visible area is meaningfully smaller than that (i.e. a keyboard is up),
     // so desktop focus (no keyboard) leaves the centred sheet alone.
@@ -2283,6 +2396,46 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   scrim.addEventListener("focusout", function(){
     setTimeout(function(){ var a=document.activeElement; if(!(a && scrim.contains(a) && (a.tagName==="INPUT"||a.tagName==="TEXTAREA"))) resetKb(); }, 150);
   });
+  // Page-level inputs (Quick Add, Contact, Settings) sit outside the modal. With the keyboard up the
+  // page gains --kb of scroll room at the bottom, so bring the focused field into view above it.
+  document.addEventListener("focusin", function(e){
+    var t=e.target; if(!t || (t.tagName!=="INPUT" && t.tagName!=="TEXTAREA")) return;
+    if(scrim.contains(t)) return;   // the modal handles its own inputs
+    var bring=function(){
+      if(!(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kb'))>0)) return;  // only when a keyboard is actually up (Android); desktop/iOS handle their own
+      try{ t.scrollIntoView({block:"center"}); }catch(_){}
+    };
+    setTimeout(bring, 350); setTimeout(bring, 650);
+  });
+
+  // ---- Pull-to-refresh (News and Releases): pull down at the top of the page to re-run it ----
+  (function(){
+    var PTR={news:1, releases:1}, THRESH=70;
+    var ind=document.createElement("div"); ind.className="ptr"; ind.innerHTML="<i></i>"; document.body.appendChild(ind);
+    var startY=0, active=false, dist=0, busy=false;
+    function eligible(){ return !!PTR[_curPage] && !busy && !(scrim && scrim.classList.contains("open")); }
+    function pageTop(){ return (window.scrollY || document.documentElement.scrollTop || 0) <= 0; }
+    window.addEventListener("touchstart", function(e){
+      if(!eligible() || e.touches.length!==1 || !pageTop()){ active=false; return; }
+      startY=e.touches[0].clientY; active=true; dist=0;
+    }, {passive:true});
+    window.addEventListener("touchmove", function(e){
+      if(!active) return;
+      dist=e.touches[0].clientY - startY;
+      if(dist<=0 || !pageTop()){ active=false; ind.classList.remove("show","pulling","ready"); ind.style.transform=""; return; }
+      ind.classList.add("show","pulling");
+      ind.style.transform="translateY("+(Math.min(dist*0.5, 78)-58)+"px)";
+      ind.classList.toggle("ready", dist>THRESH);
+    }, {passive:true});
+    window.addEventListener("touchend", function(){
+      if(!active) return; active=false; ind.classList.remove("pulling");
+      if(dist>THRESH){
+        busy=true; ind.classList.add("spinning"); ind.style.transform="translateY(12px)";
+        try{ if(_curPage==="news") renderNews(); else if(_curPage==="releases") renderReleases(); }catch(_){}
+        setTimeout(function(){ busy=false; ind.classList.remove("spinning","ready","show"); ind.style.transform=""; }, 900);
+      } else { ind.classList.remove("ready","show"); ind.style.transform=""; }
+    });
+  })();
 
   // ---- Import / export (lives in Settings → Backup & restore) ----
   function doExport(){
@@ -2476,7 +2629,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
     if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
     if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ SEAL_ED=(e.target.value==="jp")?"jp":"en"; localStorage.setItem("palvault-sealed-ed",SEAL_ED); renderSealed(); renderHome(); }); }
-    var sv2=$("sealView"); if(sv2){ sv2.value=sealView; sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
+    var sv2=$("sealView"); if(sv2){ sv2.value=(localStorage.getItem("palvault-sealview")||"auto"); sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = sealSortDir<0 ? "↑ Asc" : "↓ Desc"; sd.classList.toggle("on", sealSortDir<0); } sp();
       sd.onclick=function(){ sealSortDir=-sealSortDir; sp(); renderSealed(); }; }
   })();
@@ -2558,7 +2711,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
 
   // The donation link is hidden inside the iOS app (App Store guideline 3.1.1 restricts external donation links).
   var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
-  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.'+_bmc;
+  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.'+_bmc+'<br><span class="footver">v0.9</span>';
 
   // ---- Per-product metadata: release date + box image + blurb ----
   var SET_META = {
@@ -2603,12 +2756,18 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     { id:"box-ebp01", name:"Booster Box", sub:"Dawn of Palpagos · 12 packs", box:"BOX_EBP01", q:"Palworld Dawn of Palpagos Booster Box" },
     { id:"pack-ebp01", name:"Booster Pack", sub:"Dawn of Palpagos · 7 cards", box:"PACK_EBP01", q:"Palworld Dawn of Palpagos Booster Pack" },
     { id:"td-rb", name:"Trial Deck, Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
-    { id:"td-gp", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" }
+    { id:"td-gp", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
+    // Upcoming products, open for pre-order (no images or market yet).
+    { id:"box-bp02", name:"Booster Box", sub:"Legends Awaken · 12 packs", box:"", q:"Palworld Legends Awaken Booster Box", pre:true, date:"Oct 30, 2026" },
+    { id:"pack-bp02", name:"Booster Pack", sub:"Legends Awaken · 7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", pre:true, date:"Oct 30, 2026" },
+    { id:"ss-vol1", name:"Sleeve & Card Set Vol. 1", sub:"5 cards · 75 sleeves", box:"", q:"Palworld Sleeve Card Set Vol 1", pre:true, date:"Oct 2, 2026" },
+    { id:"td-ea-rg", name:"Trial Deck, Red · Green", sub:"Eternal Ascent starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Red Green", pre:true, date:"Dec 18, 2026" },
+    { id:"td-ea-bp", name:"Trial Deck, Blue · Purple", sub:"Eternal Ascent starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Blue Purple", pre:true, date:"Dec 18, 2026" }
   ];
   function sealMap(){ var c=activeCol(); if(!c.sealed) c.sealed={}; return c.sealed; }
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
     ["qty","rrp","mkt","last","avg"].forEach(function(k){ if(s[k]==null) s[k]=0; }); return s; }
-  function sealedValue(){ var t=0; SEALED.forEach(function(p){ var s=sealItem(p.id); t+=(+s.qty||0)*(+sealPrice(s).mkt||0); }); return t; }
+  function sealedValue(){ var t=0; SEALED.forEach(function(p){ if(p.pre) return; var s=sealItem(p.id); t+=(+s.qty||0)*(+sealPrice(s).mkt||0); }); return t; }
   function cardsValue(){ return CARDS.reduce(function(a,c){ return a+cardValue(o(c.id)); },0); }
   function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
   // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
@@ -2640,40 +2799,126 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(localStorage.getItem("palvault-sealview")||"auto");
   function sealedList(){
     var q=sealQ.trim().toLowerCase();
-    var list=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
-    list.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
+    var all=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
+    var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
+    released.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
       if(sealSortKey==="value") return ((+sb.qty||0)*(+sealPrice(sb).mkt||0))-((+sa.qty||0)*(+sealPrice(sa).mkt||0));
       if(sealSortKey==="rrp") return (+sealPrice(sb).rrp||defaultRRP(b.id))-(+sealPrice(sa).rrp||defaultRRP(a.id));
       if(sealSortKey==="owned") return ((+sb.qty>0?1:0)-(+sa.qty>0?1:0)) || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
-    if(sealSortDir<0) list.reverse();
-    return list;
+    if(sealSortDir<0) released.reverse();
+    return released.concat(pre);   // pre-orders always after released products
   }
   function renderSealed(){
     var grid=$("sealedGrid"); if(!grid) return;
     grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
     grid.innerHTML="";
+    var seenPre=false;
     sealedList().forEach(function(p){
-      var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
-      var el=document.createElement("div"); el.className="sealcard";
-      el.innerHTML=
-        '<div class="sbox">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
-        '<div class="sb">'+
-          '<div class="snm">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
-          '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
-            '<span class="sealval">'+money((+s.qty||0)*(+pr.mkt||0))+'</span></div>'+
-          '<div class="priceg">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
-          (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Pull market</button>':'')+
-        '</div>';
-      el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
-      el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
-      var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+      if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Pre-orders · coming soon"; grid.appendChild(dv); }
+      var el=document.createElement("div"); el.className="sealcard"+(p.pre?" preorder":"");
+      if(p.pre){
+        el.innerHTML=
+          '<div class="sbox sdopen preph" role="button" tabindex="0" title="View details"><span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span></div>'+
+          '<div class="sb">'+
+            '<div class="snm sdopen" role="button" tabindex="0">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+'</div>'+
+            '<div class="predate">Out '+esc(p.date||"soon")+'</div>'+
+          '</div>';
+      } else {
+        var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
+        el.innerHTML=
+          '<div class="sbox sdopen" role="button" tabindex="0" title="View details">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
+          '<div class="sb">'+
+            '<div class="snm sdopen" role="button" tabindex="0">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
+            '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
+              '<span class="sealval">'+money((+s.qty||0)*(+pr.mkt||0))+'</span></div>'+
+            '<div class="priceg">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
+            (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Pull market</button>':'')+
+          '</div>';
+        el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
+        el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
+        var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+      }
+      el.querySelectorAll(".sdopen").forEach(function(x){ x.onclick=function(){ openSealedDetail(p); };
+        x.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openSealedDetail(p); } }; });
       grid.appendChild(el);
     });
     var bar=$("sealedBar"); if(bar) bar.innerHTML=
       '<div class="hs"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>'+
       '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>';
+  }
+
+  // ---- Sealed product detail sheet + region-aware buy links ----
+  var AMAZON_DOMAIN={ "co.uk":"amazon.co.uk","com":"amazon.com","de":"amazon.de","com.au":"amazon.com.au","ca":"amazon.ca","fr":"amazon.fr","it":"amazon.it","es":"amazon.es" };
+  var REGION_SHORT={ "co.uk":"UK","com":"US","de":"DE","com.au":"AU","ca":"CA","fr":"FR","it":"IT","es":"ES" };
+  // Curated Palworld-TCG stockists per marketplace. Fixed URLs point at each shop's Palworld range;
+  // "%q" (TCGplayer) is replaced with the product search. France/Italy fall back to eBay + Amazon.
+  var RETAILERS={
+    "co.uk":[["Magic Madhouse","https://magicmadhouse.co.uk/other-tcgs/palworld-tcg"],["The Card Vault","https://thecardvault.co.uk/collections/palworld-official-card-game-all-products"],["Chaos Cards","https://www.chaoscards.co.uk/shop/card-games/palworld-tcg"]],
+    "com":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
+    "ca":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"]],
+    "com.au":[["Good Games","https://www.goodgames.com.au/collections/palworld-official-card-game"],["GB Toys","https://gbtoys.com.au/collections/palworld-official-card-game"],["Collectible Madness","https://collectiblemadness.com.au/collections/palworld-official-card-game"]],
+    "de":[["Play-Maniac","https://www.play-maniac.de/collections/palworld-official-card-game"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
+    "es":[["Turol Games","https://www.turolgames.com/en/741-palworld"]]
+  };
+  function sealBuyLinks(p){
+    var reg=SETTINGS.ebayRegion||"co.uk", ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
+    var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
+    var links=[
+      {name:"eBay "+(REGION_SHORT[reg]||reg), url:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q},
+      {name:"Amazon", url:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q}
+    ];
+    (RETAILERS[reg]||[]).forEach(function(r){ links.push({name:r[0], url:r[1].replace("%q",q)}); });
+    links.push({name:"Official", url:"https://en.palworld-official-cardgame.com/products"});
+    return { region:(REGION_SHORT[reg]||reg.toUpperCase()), links:links };
+  }
+  function openSealedDetail(p){
+    if(p.pre){
+      var bl0=sealBuyLinks(p);
+      $("mMain").innerHTML=
+        '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+        '<div class="sealdet">'+
+          '<div class="sdimg preph"><span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span></div>'+
+          '<h2>'+esc(p.name)+'</h2>'+
+          '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(p.sub)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Pre-order</span></div>'+
+          '<div class="predate big">Releases '+esc(p.date||"soon")+'</div>'+
+          '<div class="meditor">'+
+            '<div class="buylabel">Pre-order · '+esc(bl0.region)+'</div>'+
+            '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
+            '<p class="qsub" style="margin-top:10px">Not released yet, so there is no market price. It will track once it launches.</p>'+
+          '</div>'+
+        '</div>';
+      var c0=$("mClose"); if(c0) c0.onclick=function(){ dismissOverlay(); };
+      var w0=scrim.classList.contains("open"); scrim.classList.add("open"); if(!w0) openOverlay(closeModal);
+      return;
+    }
+    var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
+    var box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"", bl=sealBuyLinks(p);
+    $("mMain").innerHTML=
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="sealdet">'+
+        '<div class="sdimg">'+(box?'<img src="'+box+'" alt="'+esc(p.name)+'">':'')+'</div>'+
+        '<h2>'+esc(p.name)+'</h2>'+
+        '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(p.sub)+'</span><span class="eltag" style="background:var(--r-R)">'+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</span></div>'+
+        '<div class="statline">'+
+          '<div class="statbox"><span class="n">'+money(rrpShown)+'</span><span class="l">RRP</span></div>'+
+          '<div class="statbox"><span class="n">'+money(pr.mkt)+'</span><span class="l">Market</span></div>'+
+          '<div class="statbox"><span class="n">'+money((+s.qty||0)*(+pr.mkt||0))+'</span><span class="l">Your value</span></div>'+
+        '</div>'+
+        '<div class="meditor">'+
+          '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
+          '<div class="priceg priceui">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
+          (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Pull market</button>':'')+
+          '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
+          '<div class="buyrow">'+bl.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
+        '</div>'+
+      '</div>';
+    var mm=$("mMain"), cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    mm.querySelectorAll(".sdstep button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); openSealedDetail(p); renderSealed(); renderHome(); }; });
+    mm.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
+    var sp=$("sdPull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+    var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
   }
 
   // ---- Portfolio value-over-time chart ----
@@ -3018,6 +3263,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){ el.classList.toggle("active", el.getAttribute("data-page")===p); });
     window.scrollTo(0,0);
     if (real==="collection"){ buildColSel(); applyColMode(); render(); }
+    if (p==="home") renderHome();
+    if (p==="releases") renderReleases();
     if (p==="sealed") renderSealed();
     if (p==="decks") renderDecks();
     if (p==="account") renderAccount();
@@ -3073,7 +3320,39 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function updateNavMenu(p){
     var list=$("navList"); if(list) Array.prototype.forEach.call(list.querySelectorAll(".navitem"), function(b){ b.classList.toggle("active", b.getAttribute("data-page")===p); });
     Array.prototype.forEach.call(document.querySelectorAll(".navq[data-page]"), function(q){ q.classList.toggle("active", q.getAttribute("data-page")===p); });
-    var trig=$("navTrigger"); if(trig) trig.classList.toggle("active", NAV_PRIMARY.indexOf(p)===-1);
+    var trig=$("navTrigger"); if(trig) trig.classList.toggle("active", NAV_PRIMARY.indexOf(p)===-1 && quickMenuKeys().indexOf(p)===-1);
+  }
+  // ---- Customisable quick menu: a 2nd nav row of up to four user-chosen shortcuts ----
+  function quickPages(){
+    var out=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){
+      var p=tab.getAttribute("data-page"); if(NAV_PRIMARY.indexOf(p)!==-1) return;
+      out.push({ key:p, icon:tab.getAttribute("data-icon"), label:(tab.querySelector(".tablabel")||{}).textContent||p });
+    });
+    return out;
+  }
+  function quickMenuKeys(){ return (SETTINGS.quickMenu||[]).slice(0,4); }
+  function renderQuickRow(){
+    var row=$("navQuick"); if(!row) return; row.innerHTML="";
+    var pages=quickPages();
+    quickMenuKeys().forEach(function(k){
+      if(!k) return; var pg=pages.filter(function(x){return x.key===k;})[0]; if(!pg) return;
+      var b=document.createElement("button"); b.className="navq"; b.type="button"; b.setAttribute("data-page",k);
+      b.innerHTML=icon(pg.icon)+"<span>"+esc(pg.label)+"</span>";
+      b.onclick=function(){ showPage(k); closeNavMenu(); };
+      row.appendChild(b);
+    });
+    updateNavMenu(_curPage);
+  }
+  function buildQuickMenuSettings(){
+    var host=$("qmSlots"); if(!host) return; host.innerHTML="";
+    var pages=quickPages(), keys=quickMenuKeys();
+    for(var i=0;i<4;i++){ (function(idx){
+      var sel=document.createElement("select"); sel.className="sortsel";
+      var none=document.createElement("option"); none.value=""; none.textContent="Slot "+(idx+1)+" · None"; sel.appendChild(none);
+      pages.forEach(function(pg){ var o=document.createElement("option"); o.value=pg.key; o.textContent=pg.label; if(keys[idx]===pg.key) o.selected=true; sel.appendChild(o); });
+      sel.onchange=function(){ var arr=quickMenuKeys(); while(arr.length<4) arr.push(""); arr[idx]=sel.value; SETTINGS.quickMenu=arr; saveSettings(); renderQuickRow(); };
+      host.appendChild(sel);
+    })(i); }
   }
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
@@ -3399,12 +3678,40 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
         return '<a class="newsitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
           (meta.length?'<div class="ndate">'+meta.join(' · ')+'</div>':'')+
-          '<div class="ntitle">'+esc(n.title)+'</div>'+
-          (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':'')+'</a>';
+          '<div class="ntitle">'+esc(decodeEntities(n.title))+'</div>'+
+          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>';
       }).join("");
+      _newsList = list; updateBell();
     }
     paint(NEWS_SEED, false);
     if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length) paint(r.body.items, true); }).catch(function(){}); }
+  }
+
+  // ---- New-announcement bell: a red dot + popup when there's news you haven't seen yet ----
+  var _newsList = NEWS_SEED.slice();
+  // Feed titles/summaries arrive HTML-entity-encoded (e.g. &#038; , &#8230;); decode before we re-escape for display.
+  function decodeEntities(s){ var t=document.createElement("textarea"); t.innerHTML=String(s==null?"":s); return t.value; }
+  function newsTopId(){ var t=_newsList[0]; return t ? (String(t.title||"")+"|"+String(t.date||"")) : ""; }
+  function updateBell(){ var d=$("bellDot"); if(!d) return; var top=newsTopId(); d.hidden = (!top || top===(SETTINGS.newsSeenTop||"")); }
+  function openNewsPopup(){
+    var items=_newsList.slice(0,12);
+    $("mMain").innerHTML=
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="newspop"><h2>What’s new</h2>'+
+      (items.length ? items.map(function(n){ var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
+        return '<a class="npitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
+          (meta.length?'<div class="npdate">'+meta.join(' · ')+'</div>':'')+
+          '<div class="nptitle">'+esc(decodeEntities(n.title||""))+'</div>'+
+          (n.summary?'<div class="npsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>'; }).join("")
+        : '<p class="qsub">No announcements yet.</p>')+
+      '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Open the official news site ↗</a></div>';
+    var cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    SETTINGS.newsSeenTop=newsTopId(); saveSettings(); updateBell();
+    var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
+  }
+  function primeNewsBell(){
+    updateBell();
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsList=r.body.items; updateBell(); } }).catch(function(){}); }
   }
 
   // ---- Quick Add ----
@@ -3748,6 +4055,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var ex=$("setExport"); if(ex) ex.onclick=doExport;
     var im=$("setImport"); if(im) im.onclick=doImport;
     var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
+    buildQuickMenuSettings();
   })();
 
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
@@ -3869,10 +4177,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
   // Inside the native app the "get the app" store buttons are pointless (and their fallback
   // toast wrongly says "you're on the web app"), so hide them when running natively.
-  if(IS_NATIVE){ var _stores=document.querySelector(".stores"); if(_stores) _stores.style.display="none"; }
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
-  buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  buildNavMenu(); renderQuickRow(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
@@ -3883,6 +4191,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   applyMode();
   applySettings();
   render();
+  renderHome(); renderReleases();   // populate Home (the default page) and Releases once at startup
   renderQuick();
   renderAccount();
   renderContact();
@@ -3891,7 +4200,6 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function paintFade(){ if(!ftg) return; ftg.textContent=SETTINGS.noFade?"Fade: off":"Fade: on"; ftg.classList.toggle("on", !SETTINGS.noFade); }
   if(ftg){ paintFade(); ftg.onclick=function(){ SETTINGS.noFade=!SETTINGS.noFade; saveSettings(); paintFade(); render(); var nf=$("setNoFade"); if(nf) nf.checked=!!SETTINGS.noFade; }; }
   // Store links are placeholders until the apps are published.
-  ["playLink","iosLink"].forEach(function(id){ var a=$(id); if(a) a.onclick=function(e){ e.preventDefault(); toast("Mobile apps coming soon, you're on the web app"); }; });
   maybeOnboard();
   // On open, refresh owned-card prices (staleness-gated + capped) so the total + graph stay current.
   function autoRefreshPrices(){ refreshCollectionPrices({auto:true}); }

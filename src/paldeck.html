@@ -59,10 +59,7 @@
   /* Masthead */
   header.mast { position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; padding:6px 0 18px;
     margin-bottom:20px; border-bottom:2px solid var(--line-strong); }
-  .stores { position:absolute; top:0; right:0; display:flex; gap:6px; }
-  .storebtn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; border:1.5px solid var(--line); color:var(--ink-faint); text-decoration:none; opacity:.7; transition:opacity .15s, color .15s, border-color .15s; }
-  .storebtn:hover { opacity:1; color:var(--ink); border-color:var(--line-strong); }
-  .storebtn .ic { width:16px; height:16px; margin:0; }
+  .mastutil { position:absolute; top:0; right:0; display:flex; gap:6px; z-index:2; }
   .brand { display:flex; flex-direction:column; align-items:center; gap:9px; }
   .brandtext { text-align:center; }
   .sigil { width:54px; height:54px; flex:none; filter:drop-shadow(0 8px 16px rgba(0,0,0,.35)); }
@@ -70,9 +67,9 @@
   .brand h1 { font-family:var(--font-display); font-weight:800; margin:0; letter-spacing:-.02em; line-height:.95;
     font-size:clamp(1.45rem,1rem+2vw,2.1rem); text-wrap:balance; }
   .brand .sub { margin:5px 0 0; font-size:.76rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; }
-  .ver { font-family:var(--font-mono); font-size:.32em; font-weight:500; color:var(--ink-faint); background:none; padding:0; letter-spacing:.03em; vertical-align:super; margin-left:6px; opacity:.8; }
+  .footver { display:inline-block; margin-top:12px; font-family:var(--font-mono); font-size:.9em; font-weight:500; color:var(--ink-faint); letter-spacing:.06em; opacity:.75; }
   .betatag { font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 18%,transparent); padding:2px 7px; border-radius:20px; margin-left:6px; vertical-align:middle; }
-  .toolbtns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .toolbtns { display:flex; gap:6px; flex-wrap:nowrap; justify-content:center; }
   .tbtn { border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:11px;
     padding:9px 13px; font-size:.82rem; font-weight:650; display:inline-flex; align-items:center; gap:7px; transition:.15s;
     box-shadow:inset 0 1px 0 var(--edge); }
@@ -83,6 +80,10 @@
   .tbtn.login:hover { color:#241705; box-shadow:0 6px 16px -8px rgba(230,184,85,.6); }
   .tbtn.login.in { background:transparent; border-color:var(--line-strong); color:var(--ink); font-weight:650; }
   .tbtn.login.in:hover { border-color:var(--accent); color:var(--accent-ink); }
+  /* Header controls: keep My Collection + currency + Log in on one row down to small phones */
+  .toolbtns .tbtn { padding-left:9px; padding-right:9px; gap:5px; }
+  .toolbtns select.tbtn { padding-right:18px; background-position:calc(100% - 11px) 55%, calc(100% - 7px) 55%; }
+  .toolbtns .tbtn.login { font-size:.78rem; }
   .modehead { margin:2px 0 14px; display:flex; align-items:center; gap:9px; }
   .tbtn.on { border-color:var(--accent); color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .tbtn.sortdir { font-variant-numeric:tabular-nums; min-width:74px; justify-content:center; }
@@ -387,8 +388,9 @@
   .sech { font-family:var(--font-display); font-size:1.2rem; font-weight:800; letter-spacing:-.01em; margin:4px 0 15px; }
 
   .colwrap { position:relative; display:flex; }
-  #colSel, #colSel option { font-size:.8rem; }
-  #colSel { max-width:160px; }
+  #colSel, #colSel option { font-size:.74rem; }
+  #colSel { max-width:150px; min-width:0; overflow:hidden; }
+  #curSel { font-size:.76rem; }
   .colmenu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; background:var(--surface); border:1.5px solid var(--line-strong);
     border-radius:12px; box-shadow:var(--shadow); padding:6px; display:flex; flex-direction:column; min-width:186px; }
   .colmenu[hidden] { display:none; }
@@ -1004,6 +1006,10 @@
 
 <div class="wrap">
   <header class="mast">
+    <div class="mastutil">
+      <button class="tbtn ghost bellbtn" id="bellBtn" type="button" title="What’s new" aria-label="What’s new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="belldot" id="bellDot" hidden></span></button>
+      <button class="tbtn ghost themebtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light / dark theme">◐</button>
+    </div>
     <div class="brand">
       <div class="sigil">
         <svg viewBox="0 0 100 100" role="img" aria-label="SphereDex">
@@ -1028,7 +1034,7 @@
         </svg>
       </div>
       <div class="brandtext">
-        <h1>SphereDex <span class="ver">v0.9</span> <span class="betatag">beta</span></h1>
+        <h1>SphereDex <span class="betatag">beta</span></h1>
         <p class="sub">Palworld TCG collection tracker</p>
       </div>
     </div>
@@ -1043,8 +1049,6 @@
         </div>
       </div>
       <select class="tbtn" id="curSel" title="Display currency" aria-label="Display currency"></select>
-      <button class="tbtn ghost bellbtn" id="bellBtn" type="button" title="What’s new" aria-label="What’s new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="belldot" id="bellDot" hidden></span></button>
-      <button class="tbtn ghost themebtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light / dark theme">◐</button>
       <button class="tbtn login" id="loginBtn" type="button" title="Account"></button>
     </div>
   </header>
@@ -2705,7 +2709,7 @@
 
   // The donation link is hidden inside the iOS app (App Store guideline 3.1.1 restricts external donation links).
   var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
-  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.'+_bmc;
+  $("foot").innerHTML = '<strong>SphereDex is in beta</strong>, features and data may change; keep an Export as backup. Fan-made tracker for the Palworld TCG. Card data &amp; artwork © Pocketpair / Bushiroad. Everything saves in your browser.'+_bmc+'<br><span class="footver">v0.9</span>';
 
   // ---- Per-product metadata: release date + box image + blurb ----
   var SET_META = {
