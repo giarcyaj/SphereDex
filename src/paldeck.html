@@ -685,6 +685,21 @@
   .newsitem .ndate { font-family:var(--font-mono); font-size:.72rem; color:var(--accent-ink); font-weight:600; }
   .newsitem .ntitle { font-family:var(--font-display); font-weight:750; font-size:1rem; margin-top:3px; }
   .newsitem .nsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  /* notification bell + What's-new popup */
+  .bellbtn { position:relative; padding:9px 11px; }
+  .bellbtn svg { display:block; }
+  .belldot { position:absolute; top:5px; right:6px; width:9px; height:9px; border-radius:50%; background:var(--c-Red);
+    border:2px solid var(--surface); box-shadow:0 0 7px color-mix(in srgb,var(--c-Red) 80%,transparent); }
+  .belldot[hidden] { display:none; }
+  .newspop h2 { font-family:var(--font-display); font-weight:800; margin:2px 0 13px; font-size:1.35rem; letter-spacing:-.01em; }
+  .npitem { display:block; padding:12px 14px; border-radius:12px; background:var(--surface-2); border:1.5px solid var(--line);
+    margin-bottom:9px; text-decoration:none; color:var(--ink); transition:border-color .14s, transform .14s; }
+  .npitem:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .npdate { font-family:var(--font-mono); font-size:.66rem; color:var(--accent-ink); letter-spacing:.05em; font-weight:600; }
+  .nptitle { font-family:var(--font-display); font-weight:750; font-size:.98rem; margin-top:3px; }
+  .npsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  .npall { display:inline-block; margin-top:6px; font-size:.85rem; color:var(--accent-ink); font-weight:650; text-decoration:none; }
+  .npall:hover { text-decoration:underline; }
   /* donate */
   .donate { display:inline-block; margin-top:8px; color:var(--accent-ink); text-decoration:none; font-weight:650; border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--line-strong)); border-radius:20px; padding:3px 11px; }
   .donate:hover { background:color-mix(in srgb,var(--accent) 14%,transparent); }
@@ -1018,6 +1033,7 @@
         </div>
       </div>
       <select class="tbtn" id="curSel" title="Display currency" aria-label="Display currency"></select>
+      <button class="tbtn ghost bellbtn" id="bellBtn" type="button" title="What’s new" aria-label="What’s new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="belldot" id="bellDot" hidden></span></button>
       <button class="tbtn ghost" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
       <button class="tbtn login" id="loginBtn" type="button" title="Account"></button>
     </div>
@@ -2789,13 +2805,26 @@
   // ---- Sealed product detail sheet + region-aware buy links ----
   var AMAZON_DOMAIN={ "co.uk":"amazon.co.uk","com":"amazon.com","de":"amazon.de","com.au":"amazon.com.au","ca":"amazon.ca","fr":"amazon.fr","it":"amazon.it","es":"amazon.es" };
   var REGION_SHORT={ "co.uk":"UK","com":"US","de":"DE","com.au":"AU","ca":"CA","fr":"FR","it":"IT","es":"ES" };
+  // Curated Palworld-TCG stockists per marketplace. Fixed URLs point at each shop's Palworld range;
+  // "%q" (TCGplayer) is replaced with the product search. France/Italy fall back to eBay + Amazon.
+  var RETAILERS={
+    "co.uk":[["Magic Madhouse","https://magicmadhouse.co.uk/other-tcgs/palworld-tcg"],["The Card Vault","https://thecardvault.co.uk/collections/palworld-official-card-game-all-products"],["Chaos Cards","https://www.chaoscards.co.uk/shop/card-games/palworld-tcg"]],
+    "com":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
+    "ca":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"]],
+    "com.au":[["Good Games","https://www.goodgames.com.au/collections/palworld-official-card-game"],["GB Toys","https://gbtoys.com.au/collections/palworld-official-card-game"],["Collectible Madness","https://collectiblemadness.com.au/collections/palworld-official-card-game"]],
+    "de":[["Play-Maniac","https://www.play-maniac.de/collections/palworld-official-card-game"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
+    "es":[["Turol Games","https://www.turolgames.com/en/741-palworld"]]
+  };
   function sealBuyLinks(p){
     var reg=SETTINGS.ebayRegion||"co.uk", ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
-    return { region:(REGION_SHORT[reg]||reg.toUpperCase()),
-      ebay:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q,
-      amazon:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q,
-      official:"https://en.palworld-official-cardgame.com/" };
+    var links=[
+      {name:"eBay "+(REGION_SHORT[reg]||reg), url:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q},
+      {name:"Amazon", url:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q}
+    ];
+    (RETAILERS[reg]||[]).forEach(function(r){ links.push({name:r[0], url:r[1].replace("%q",q)}); });
+    links.push({name:"Official", url:"https://en.palworld-official-cardgame.com/products"});
+    return { region:(REGION_SHORT[reg]||reg.toUpperCase()), links:links };
   }
   function openSealedDetail(p){
     var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
@@ -2816,11 +2845,7 @@
           '<div class="priceg priceui">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
           (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Pull market</button>':'')+
           '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
-          '<div class="buyrow">'+
-            '<a class="buybtn" href="'+bl.ebay+'" target="_blank" rel="noopener">eBay '+esc(bl.region)+' <span class="lnk">↗</span></a>'+
-            '<a class="buybtn" href="'+bl.amazon+'" target="_blank" rel="noopener">Amazon <span class="lnk">↗</span></a>'+
-            '<a class="buybtn" href="'+bl.official+'" target="_blank" rel="noopener">Official <span class="lnk">↗</span></a>'+
-          '</div>'+
+          '<div class="buyrow">'+bl.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
         '</div>'+
       '</div>';
     var mm=$("mMain"), cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
@@ -3585,12 +3610,40 @@
         var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
         return '<a class="newsitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
           (meta.length?'<div class="ndate">'+meta.join(' · ')+'</div>':'')+
-          '<div class="ntitle">'+esc(n.title)+'</div>'+
-          (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':'')+'</a>';
+          '<div class="ntitle">'+esc(decodeEntities(n.title))+'</div>'+
+          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>';
       }).join("");
+      _newsList = list; updateBell();
     }
     paint(NEWS_SEED, false);
     if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length) paint(r.body.items, true); }).catch(function(){}); }
+  }
+
+  // ---- New-announcement bell: a red dot + popup when there's news you haven't seen yet ----
+  var _newsList = NEWS_SEED.slice();
+  // Feed titles/summaries arrive HTML-entity-encoded (e.g. &#038; , &#8230;); decode before we re-escape for display.
+  function decodeEntities(s){ var t=document.createElement("textarea"); t.innerHTML=String(s==null?"":s); return t.value; }
+  function newsTopId(){ var t=_newsList[0]; return t ? (String(t.title||"")+"|"+String(t.date||"")) : ""; }
+  function updateBell(){ var d=$("bellDot"); if(!d) return; var top=newsTopId(); d.hidden = (!top || top===(SETTINGS.newsSeenTop||"")); }
+  function openNewsPopup(){
+    var items=_newsList.slice(0,12);
+    $("mMain").innerHTML=
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="newspop"><h2>What’s new</h2>'+
+      (items.length ? items.map(function(n){ var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
+        return '<a class="npitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
+          (meta.length?'<div class="npdate">'+meta.join(' · ')+'</div>':'')+
+          '<div class="nptitle">'+esc(decodeEntities(n.title||""))+'</div>'+
+          (n.summary?'<div class="npsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>'; }).join("")
+        : '<p class="qsub">No announcements yet.</p>')+
+      '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Open the official news site ↗</a></div>';
+    var cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    SETTINGS.newsSeenTop=newsTopId(); saveSettings(); updateBell();
+    var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
+  }
+  function primeNewsBell(){
+    updateBell();
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsList=r.body.items; updateBell(); } }).catch(function(){}); }
   }
 
   // ---- Quick Add ----
@@ -4060,6 +4113,7 @@
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); renderQuickRow(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
