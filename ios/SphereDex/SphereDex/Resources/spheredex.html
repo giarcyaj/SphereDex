@@ -1235,7 +1235,7 @@
     <div class="panel xpwrap" id="ownedPanel" role="button" tabindex="0" title="See everything you have collected">
       <div class="xprow"><span class="lab">Master set completion</span><span class="pct" id="pctNum">0%</span></div>
       <div class="xpbar"><div class="xpfill" id="xpfill" style="width:0"></div></div>
-      <div class="meta" id="ownMeta">0 of 242 cards collected</div>
+      <div class="meta" id="ownMeta">0 of 255 cards collected</div>
     </div>
     <div class="panel" id="valPanel" role="button" tabindex="0" title="Tap to switch: last 5 sold / live listings">
       <div class="lab" id="valLab">Binder value</div>
@@ -1994,7 +1994,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     el.querySelector(".cbody").addEventListener("click", function(){ openDetail(c); });
     return el;
   }
-  // Repaint just one card after a quantity change, instead of tearing down and rebuilding all 242 cells.
+  // Repaint just one card after a quantity change, instead of tearing down and rebuilding every card cell.
   function patchCard(c){
     // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
     if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
