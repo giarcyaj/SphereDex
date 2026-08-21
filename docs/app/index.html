@@ -1464,8 +1464,11 @@
         <select class="sortsel" id="setGrader"></select>
       </div>
       <div class="setrow priceui">
-        <div class="setinfo"><div class="stitle">Refresh all prices</div><div class="sdesc">Update the market value of every card you own from the latest eBay sales.</div></div>
+        <div class="setinfo"><div class="stitle">Refresh all prices</div><div class="sdesc">Prices refresh automatically every day. Tap to pull the latest now for every card in your chosen market.</div></div>
         <button class="btn sec" id="fetchPrices" style="flex:0 0 auto">Refresh now</button>
+      </div>
+      <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Where prices come from</div><div class="sdesc">Values show real sold prices in your currency where available (eBay sold, then live listings). Anything marked <b>≈</b> is a completed-sale price converted from USD. Data: <a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a> and eBay.</div></div>
       </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection to a JSON file, import a backup, or import a spreadsheet (CSV) of card numbers and quantities as a new collection.</div></div>
@@ -1732,10 +1735,14 @@
   // Server-side price book (all cards, from /api/prices) so we can rank EVERY card by value, not
   // just owned ones. Kept separate from owned state so the daily bulk prices never overwrite the
   // precise per-card values you pull for cards you own.
-  var PRICEBOOK={};   // id -> current market price (value sort + reference display)
+  var PRICEBOOK={};   // id -> current market price, in the chosen market's currency (value sort + reference display)
   var PRICEPREV={};   // id -> previous day's market price (day-over-day movers)
+  var PRICEMETA={};   // id -> 1 when that price was converted from USD (Palworld fallback), else 0
   // Best market unit price for a card: your precise owned value if set, otherwise the price book.
   function mktOf(id){ var e=own[id]; if(e&&+e.mkt>0) return +e.mkt; var pb=PRICEBOOK[id]; return pb!=null?+pb:0; }
+  // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
+  // figure. Your own entered value (owned cards) is always native, so it is never flagged converted.
+  function isConverted(id){ var e=own[id]; if(e&&+e.mkt>0) return false; return !!PRICEMETA[id]; }
   // Binder value can be shown two ways: last 5 sold (e.sold) or live listings (e.list); each falls back to e.mkt.
   var valueBasis="sold";
   function unitPrice(s, basis){ if(basis==="sold") return (s.sold!=null&&s.sold>0)?s.sold:(+s.mkt||0); if(basis==="list") return (s.list!=null&&s.list>0)?s.list:(+s.mkt||0); return (+s.mkt||0); }
@@ -1945,8 +1952,9 @@
     if (c.atk!=="") costPow.push(icon('sword')+'<b>'+c.atk+'</b>');
     var val = cardValue(s);
     var refUnit = mktOf(c.id);
-    var priceTag = val>0 ? '<span class="val">'+money(val)+'</span>'
-      : (refUnit>0 ? '<span class="val ref" title="Market price (not in your collection)">'+money(refUnit)+'</span>' : '');
+    var conv = isConverted(c.id);   // "≈" marks a USD->local conversion (Palworld fallback)
+    var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+(conv?'≈':'')+money(val)+'</span>'
+      : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+(conv?'≈':'')+money(refUnit)+'</span>' : '');
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var wished = isWished(c.id);
@@ -3553,15 +3561,28 @@
   }
   function renderTrending(){
     var el=$("trendCard"); if(!el) return;
-    var sub=$("moverSub"); if(sub) sub.textContent = (moverScope==="all")
-      ? "The biggest 24h risers and fallers across the whole set."
-      : "The biggest 24h risers and fallers in your collection.";
+    // Baseline coverage in the current scope: how many priced cards have a previous day to compare.
+    var onlyOwned=(moverScope!=="all"), priced=0, based=0;
+    CARDS.forEach(function(c){
+      if(onlyOwned && !has(o(c.id))) return;
+      if(!(+PRICEBOOK[c.id]>0)) return; priced++;
+      if(+PRICEPREV[c.id]>0) based++;
+    });
+    var ramping = priced>0 && based < priced*0.5;   // day-over-day baseline still filling in
+    var sub=$("moverSub"); if(sub){
+      var base=(moverScope==="all")
+        ? "The biggest 24h risers and fallers across the whole set."
+        : "The biggest 24h risers and fallers in your collection.";
+      sub.textContent = base + (ramping ? " Still building a day-over-day baseline, so this fills out over the next day or two." : "");
+    }
     var up=moverCard("up", moverScope), down=moverCard("down", moverScope);
     el.onclick=null;
     if(!up && !down){ el.className="trendnote"; el.textContent = !apiBase()
       ? "Connect a price server in Settings to see market movers."
-      : (moverScope==="all" ? "Movers appear once the price server has a day of price history to compare."
-                            : "Movers appear once you own cards with server prices and a day of history."); return; }
+      : priced===0 ? "Loading prices. Tap Refresh now in Settings if this stays empty."
+      : based===0 ? "Prices are loaded, but movers need a previous day to compare against. The baseline fills in automatically each day; tap Refresh now in Settings to pull the latest."
+      : (moverScope==="all" ? "No cards have moved yet today. Fresh prices arrive through the day."
+                            : "None of your priced cards have moved yet today."); return; }
     el.className="movers"; el.innerHTML="";
     function lbl(t){ var d=document.createElement("div"); d.className="moverlbl"; d.textContent=t; return d; }
     if(up){ el.appendChild(lbl("Biggest riser")); el.appendChild(moverEl(up,"up")); }
@@ -4171,7 +4192,7 @@
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; localStorage.setItem("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
-    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
@@ -4288,11 +4309,12 @@
   function fetchServerPrices(silent){
     if(!apiBase()){ if(!silent) toast("Prices are unavailable right now"); return; }
     var ids=CARDS.map(function(c){return c.id;});
-    api("/api/prices?ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
+    var reg=encodeURIComponent(SETTINGS.ebayRegion||"co.uk");
+    api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
       if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
       var p=r.body.prices||{}, n=0;
-      Object.keys(p).forEach(function(id){ var row=p[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
-      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); }catch(_){}
+      Object.keys(p).forEach(function(id){ var row=p[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
+      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); }catch(_){}
       if(n){ render(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
     }).catch(function(){ if(!silent) toast("Price fetch failed"); });
@@ -4303,7 +4325,7 @@
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ fetchServerPrices(false); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background at most once every ~12h (the server updates the data about daily).
-    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; }catch(_){ PRICEBOOK={}; PRICEPREV={}; }
+    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; }catch(_){ PRICEBOOK={}; PRICEPREV={}; PRICEMETA={}; }
     if(apiBase()){
       var lastAt=+localStorage.getItem("palvault-pricebook-at")||0;
       if(Date.now()-lastAt > 12*3600*1000) fetchServerPrices(true);
