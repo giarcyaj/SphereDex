@@ -47,6 +47,7 @@
     --gold:#ffb020; --gold-deep:#b8791a; --edge:rgba(120,220,240,.10); }
 
   * { box-sizing: border-box; }
+  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   [hidden] { display: none !important; }
   body { margin:0; font-family:var(--font-body); color:var(--ink); line-height:1.5; min-height:100vh; overscroll-behavior-y:contain;
     background:
@@ -1008,9 +1009,9 @@
   /* ---- Detail bubbles (progressive disclosure) ---- */
   .bubrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:4px; }
   .bubrow.glance{ margin-top:12px; }
-  .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:7px; padding:12px 10px; border-radius:14px;
-    border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.82rem; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
-  .bub .ic{ width:1.15rem; height:1.15rem; margin:0; flex:none; }
+  .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:5px; padding:12px 7px; border-radius:14px;
+    border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.8rem; letter-spacing:-.2px; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
+  .bub .ic{ width:1.05rem; height:1.05rem; margin:0; flex:none; }
   .bub span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bub .chev{ width:.95rem; height:.95rem; margin-left:2px; opacity:.6; transition:transform .18s; }
   .bub:hover{ color:var(--ink); border-color:var(--ink-faint); }
@@ -2226,7 +2227,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function panelOpen(id){ var p=$(id); return p && !p.hidden; }
     function paintBubbles(){
       var owned=has(o(c.id)), wished=isWished(c.id), fav=isFav(c.id);
-      var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'In Collection':'Collect')+'</span>'; }
+      var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'Collected':'Collect')+'</span>'; }
       var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
       var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
