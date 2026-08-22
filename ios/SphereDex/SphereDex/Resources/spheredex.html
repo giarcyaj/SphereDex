@@ -1742,7 +1742,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // Owned in ANY collection, drives the colour/fade of a card, regardless of which collection is active.
   function hasAny(id){ for(var i=0;i<STATE.cols.length;i++){ var e=STATE.cols[i].own[id]; if(e && (e.qty>0 || (e.graded && e.graded.length>0))) return true; } return false; }
   // eBay "sold listings" search for a card, on the region set in Settings.
-  function ebayUrl(c){ var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+"&LH_Sold=1&LH_Complete=1&_ipg=60"; }
+  function ebayUrl(c, sold){ if(sold===undefined) sold=true; var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+(sold?"&LH_Sold=1&LH_Complete=1":"")+"&_ipg=60"; }
   function cardValue(s){ var v=(+s.qty||0)*(+s.mkt||0); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
   // Server-side price book (all cards, from /api/prices) so we can rank EVERY card by value, not
   // just owned ones. Kept separate from owned state so the daily bulk prices never overwrite the
@@ -2197,17 +2197,16 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<button class="bub glancebub" id="bubPsa" type="button"><span class="gllab">PSA 10 sold</span><b class="glval" id="glPsa">'+SPIN+'</b></button>'+
       '</div>'+
       '<div class="bubpanel priceui" id="panelSold" hidden>'+
-        '<div class="glabel"><span>Last 5 sold</span><span style="display:flex;gap:8px">'+
-          '<button class="addgrade" id="pullSold" type="button" hidden>'+icon('refresh')+' Refresh</button>'+
-          '<button class="addgrade" id="addSale" type="button">'+icon('plus')+' Add</button></span></div>'+
-        '<div id="salesList"></div>'+
+        '<div class="glabel"><span>Last 5 sold</span><button class="addgrade" id="pullSold" type="button" hidden>'+icon('refresh')+' Refresh</button></div>'+
         '<div class="salesavg" id="salesAvg"></div>'+
+        '<div id="salesList"></div>'+
         '<a class="ebaysearch" id="ebaySearch" href="#" target="_blank" rel="noopener">'+icon('search')+' Search sold listings on eBay ↗</a>'+
       '</div>'+
       '<div class="bubpanel priceui" id="panelList" hidden>'+
         '<div class="glabel"><span>Live listings</span><button class="addgrade" id="pullList" type="button" hidden>'+icon('refresh')+' Refresh</button></div>'+
         '<div class="salesavg" id="listHint">Loading current listings…</div>'+
         '<div id="listRows"></div>'+
+        '<a class="ebaysearch" id="ebaySearchLive" href="#" target="_blank" rel="noopener">'+icon('search')+' Search live listings on eBay ↗</a>'+
       '</div>'+
       '<div class="bubpanel priceui" id="panelPsa" hidden>'+
         '<div class="glabel"><span>PSA 10 sold</span><button class="addgrade" id="pullPsa" type="button" hidden>'+icon('refresh')+' Refresh</button></div>'+
@@ -2324,7 +2323,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
     function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
     var glLoading = !!apiBase();   // spinner shows while the auto-load pulls are in flight
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'Add sold prices (or Pull) to average the last 5.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(2) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
     // Once all the price pulls have settled, swap any spinners still showing for "n/a".
     function finishLoading(){ glLoading=false; refreshAvg(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
@@ -2337,22 +2336,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     }
     renderGradeGuide();
     function renderSales(){
-      var host=$("salesList"); if(!host) return; host.innerHTML="";
-      salesWork.forEach(function(sale,i){
-        var row=document.createElement("div"); row.className="salerow";
-        row.innerHTML=
-          '<input class="gv sPrice" type="number" min="0" step="0.01" placeholder="price '+CUR.sym+'" value="'+(sale.p||0)+'">'+
-          '<input class="su sUrl" type="url" inputmode="url" placeholder="eBay listing link (optional)" value="'+esc(sale.url||"")+'">'+
-          (sale.url? '<a class="sview" href="'+esc(sale.url)+'" target="_blank" rel="noopener" title="Open listing">↗</a>' : '<span class="sview off">↗</span>')+
-          '<button class="grm" type="button" title="Remove" aria-label="Remove sale">✕</button>';
-        row.querySelector(".sPrice").oninput=function(){ sale.p=parseFloat(this.value)||0; refreshAvg(); };
-        row.querySelector(".sUrl").oninput=function(){ sale.url=this.value.trim(); var v=row.querySelector(".sview"); if(v){ if(sale.url){ v.outerHTML='<a class="sview" href="'+esc(sale.url)+'" target="_blank" rel="noopener" title="Open listing">↗</a>'; } else { v.outerHTML='<span class="sview off">↗</span>'; } } };
-        row.querySelector(".grm").onclick=function(){ salesWork.splice(i,1); renderSales(); refreshAvg(); };
-        host.appendChild(row);
-      });
+      var host=$("salesList"); if(!host) return;
+      // Read-only list, styled like Live listings: each sold price links to its eBay listing.
+      host.innerHTML = salesWork.slice(0,5).map(function(sale){
+        var p=money(+sale.p||0);
+        return '<div class="salerow ro">'+(sale.url
+          ? '<a class="lprice" href="'+esc(sale.url)+'" target="_blank" rel="noopener">'+p+' ↗</a>'
+          : '<span class="lprice">'+p+'</span>')+'</div>';
+      }).join("");
     }
-    $("addSale").onclick=function(){ salesWork.push({p:0,url:""}); renderSales(); };
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
+    var esl=$("ebaySearchLive"); if(esl) esl.href=ebayUrl(c, false);
     // Live prices via the backend. Sold + Listings AUTO-LOAD on open; Graded is a manual tap.
     (function(){
       if(!apiBase()){ finishLoading(); return; }
