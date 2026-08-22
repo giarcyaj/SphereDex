@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#101725</color>
+    <!-- Brand cyan; tints the small icon / accent on FCM notifications. -->
+    <color name="notification_accent">#12E3F5</color>
 </resources>

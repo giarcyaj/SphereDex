@@ -3,6 +3,14 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Push is optional at build time: apply the google-services plugin only when the config file is
+// present, so the app still builds before Firebase is configured. Drop app/google-services.json in
+// (Firebase console -> Project settings -> your Android app) to activate push. The plugins DSL can't
+// take a conditional, so this legacy apply(...) does it after the block.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "app.spheredex"
     compileSdk = 35
@@ -61,4 +69,9 @@ dependencies {
 
     // Card art
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Push notifications (Firebase Cloud Messaging only - no Analytics, per our privacy policy).
+    // Inert until app/google-services.json is added; the code guards every FCM call until then.
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
+    implementation("com.google.firebase:firebase-messaging")
 }

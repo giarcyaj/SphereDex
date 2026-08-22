@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: notifications require an explicit runtime grant (requested on first launch). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
@@ -18,6 +20,7 @@
             android:name=".MainActivity"
             android:exported="false"
             android:label="SphereDex"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
@@ -112,5 +115,25 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.SphereDex" />
+
+        <!-- Firebase Cloud Messaging. Dormant until google-services.json is added. -->
+        <service
+            android:name=".SphereMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <!-- Defaults the system uses for notification-payload pushes delivered while backgrounded.
+             The channel itself is still created in code (Push.ensureChannel). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="spheredex" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_spheredex" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
     </application>
 </manifest>

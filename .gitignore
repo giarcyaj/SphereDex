@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# Firebase config (kept out of the public repo; CI writes it from the
+# GOOGLE_SERVICES_JSON_BASE64 secret at build time, like the signing keystore).
+app/google-services.json
+
 # Xcode user state & build artifacts (iOS)
 ios/**/xcuserdata/
 ios/**/*.xcuserstate

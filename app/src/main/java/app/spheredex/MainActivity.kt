@@ -1,11 +1,13 @@
 package app.spheredex
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
@@ -19,6 +21,7 @@ import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 /**
  * The app is the full SphereDex web tracker (bundled in assets) running full-screen in a WebView.
@@ -28,6 +31,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private var insetJs: String? = null
+    private var pageLoaded = false
+    private var pendingPushUrl: String? = null
+
+    // Android 13+ notification permission. Result ignored: if declined, the user can still opt in
+    // later from system settings, and the app works fully without it.
+    private val notifPermLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     /** Push the current safe-area insets into the web app as CSS variables (--sat/--sab/--sal/--sar). */
     private fun applyInsets() { insetJs?.let { js -> web.evaluateJavascript(js, null) } }
@@ -73,7 +83,11 @@ class MainActivity : ComponentActivity() {
                     return false
                 }
                 // Re-apply insets once the page's DOM exists (the listener may fire before load).
-                override fun onPageFinished(view: WebView, url: String) { applyInsets() }
+                override fun onPageFinished(view: WebView, url: String) {
+                    applyInsets()
+                    pageLoaded = true
+                    applyPendingPushUrl()   // a notification tapped before the page loaded
+                }
             }
             // Make window.prompt/confirm/alert work (WebView blocks them by default),
             // so "New collection", rename, and delete confirmations pop up natively.
@@ -152,6 +166,45 @@ class MainActivity : ComponentActivity() {
                 else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
             }
         })
+
+        // Push notifications. All inert until app/google-services.json is added: the channel/permission
+        // are harmless without it, and fetchAndRegister no-ops while Firebase has no default app.
+        Push.ensureChannel(this)
+        askNotificationPermission()
+        Push.fetchAndRegister(this)
+        handleDeepLink(intent)   // launched by tapping a notification (cold start)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)        // keep getIntent() in sync
+        handleDeepLink(intent)   // notification tapped while the app was already running
+    }
+
+    /** Ask for POST_NOTIFICATIONS on Android 13+. On older versions it is granted at install. */
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    /** A tapped notification may carry a "url" extra (a route into the web app). Defer until loaded. */
+    private fun handleDeepLink(intent: Intent?) {
+        intent?.getStringExtra("url")?.takeIf { it.isNotBlank() }?.let {
+            pendingPushUrl = it
+            applyPendingPushUrl()
+        }
+    }
+
+    private fun applyPendingPushUrl() {
+        if (!pageLoaded) return
+        val u = pendingPushUrl ?: return
+        pendingPushUrl = null
+        val safe = u.replace("\\", "").replace("'", "")
+        web.evaluateJavascript("window.SDOpenPush && window.SDOpenPush('$safe')", null)
     }
 
     private fun launchScanner(collection: String) {
