@@ -1480,6 +1480,21 @@
       <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Where prices come from</div><div class="sdesc">Values show real sold prices in your currency where available (eBay sold, then live listings). Anything marked <b>≈</b> is a completed-sale price converted from USD. Data: <a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a> and eBay.</div></div>
       </div>
+      <div id="notifGroup" style="display:none;flex-direction:column;gap:14px">
+        <div style="font-weight:800;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-top:4px">Notifications</div>
+        <div class="setrow">
+          <div class="setinfo"><div class="stitle">New release alerts</div><div class="sdesc">Get notified when a new Palworld TCG set or product is announced.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifReleases"><span class="track"></span></label>
+        </div>
+        <div class="setrow">
+          <div class="setinfo"><div class="stitle">News alerts</div><div class="sdesc">Get notified about the latest official Palworld TCG news.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifNews"><span class="track"></span></label>
+        </div>
+        <div class="setrow">
+          <div class="setinfo"><div class="stitle">New set added to SphereDex</div><div class="sdesc">Get notified when new cards become available to collect in the app.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
+        </div>
+      </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection to a JSON file, import a backup, or import a spreadsheet (CSV) of card numbers and quantities as a new collection.</div></div>
         <div style="display:flex;gap:9px;flex:0 0 auto;flex-wrap:wrap"><button class="btn sec" id="setExport">⭱ Export</button><button class="btn sec" id="setImport">⭳ Import</button></div>
@@ -1786,7 +1801,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true}};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -4279,6 +4294,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
+    // Notifications (native app only): each toggle maps to a per-device push category on the backend.
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true};
+    var androidPush=(window.AndroidPush && typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush:null;
+    var ng=$("notifGroup"); if(ng) ng.style.display=androidPush?"flex":"none";
+    function syncNotif(){ if(androidPush){ try{ androidPush.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
+    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"]].forEach(function(p){
+      var el=$(p[0]); if(!el) return;
+      el.checked=SETTINGS.notif[p[1]]!==false;
+      el.onchange=function(){ SETTINGS.notif[p[1]]=el.checked; saveSettings(); syncNotif(); };
+    });
+    syncNotif();  // reflect saved (incl. cloud-synced) prefs into the native layer at startup
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); paintLogin(); };

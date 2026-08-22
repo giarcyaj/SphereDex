@@ -130,6 +130,7 @@ class MainActivity : ComponentActivity() {
             }
             addJavascriptInterface(WebBridge(), "AndroidScan")
             addJavascriptInterface(IconBridge(), "AndroidIcon")
+            addJavascriptInterface(PushBridge(), "AndroidPush")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -245,6 +246,18 @@ class MainActivity : ComponentActivity() {
         fun setIcon(key: String) {
             runOnUiThread { try { applyIcon(key) } catch (_: Exception) {} }
         }
+    }
+
+    /** Exposed to the web app as window.AndroidPush. The Settings UI calls setPrefs() with a JSON
+     *  object of category toggles; we persist it and re-register the token so the backend honours it.
+     *  getPrefs() lets the web read the device's stored prefs to seed the toggles. */
+    inner class PushBridge {
+        @JavascriptInterface
+        fun setPrefs(json: String) {
+            try { Push.applyPrefs(this@MainActivity, json) } catch (_: Exception) {}
+        }
+        @JavascriptInterface
+        fun getPrefs(): String = try { Push.currentPrefs(this@MainActivity) } catch (_: Exception) { "" }
     }
 
     /** Exposed to the web app as window.AndroidScan */

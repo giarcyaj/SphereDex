@@ -23,7 +23,7 @@ class SphereMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Push.registerToken(token)
+        Push.registerToken(this, token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

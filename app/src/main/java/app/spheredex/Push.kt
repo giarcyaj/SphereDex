@@ -24,6 +24,21 @@ object Push {
     const val CHANNEL_ID = "spheredex"
     private const val BACKEND = "https://spheredex-backend.craigjayedit.workers.dev"
     private const val TAG = "SpherePush"
+    private const val PREFS_STORE = "spheredex_push"
+    private const val PREFS_KEY = "prefs"
+    // Which categories the device wants. Default: everything on until the user changes it in Settings.
+    private const val DEFAULT_PREFS = "{\"releases\":true,\"news\":true,\"newSets\":true}"
+
+    /** The device's current notification prefs as a JSON string (set by the web Settings UI). */
+    fun currentPrefs(ctx: Context): String =
+        ctx.getSharedPreferences(PREFS_STORE, Context.MODE_PRIVATE).getString(PREFS_KEY, DEFAULT_PREFS) ?: DEFAULT_PREFS
+
+    /** Store new prefs (JSON from the web bridge) and re-register the token so the backend sees them. */
+    fun applyPrefs(ctx: Context, prefsJson: String) {
+        try { JSONObject(prefsJson) } catch (_: Exception) { return }   // ignore malformed input
+        ctx.getSharedPreferences(PREFS_STORE, Context.MODE_PRIVATE).edit().putString(PREFS_KEY, prefsJson).apply()
+        fetchAndRegister(ctx)
+    }
 
     /** Create the notification channel (idempotent). Required on Android O+. */
     fun ensureChannel(ctx: Context) {
@@ -44,7 +59,7 @@ object Push {
         if (!firebaseReady(ctx)) return
         try {
             FirebaseMessaging.getInstance().token.addOnCompleteListener { t ->
-                if (t.isSuccessful) t.result?.let { registerToken(it) }
+                if (t.isSuccessful) t.result?.let { registerToken(ctx, it) }
                 else Log.w(TAG, "token fetch failed", t.exception)
             }
         } catch (e: Throwable) {
@@ -52,8 +67,9 @@ object Push {
         }
     }
 
-    /** POST { token, platform } to the backend on a background thread. Best-effort; failures are logged. */
-    fun registerToken(token: String) {
+    /** POST { token, platform, prefs } to the backend on a background thread. Best-effort; logged on failure. */
+    fun registerToken(ctx: Context, token: String) {
+        val prefs = currentPrefs(ctx)
         Thread {
             var conn: HttpURLConnection? = null
             try {
@@ -64,8 +80,9 @@ object Push {
                     readTimeout = 10000
                     setRequestProperty("Content-Type", "application/json")
                 }
-                val body = JSONObject().put("token", token).put("platform", "android").toString()
-                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val body = JSONObject().put("token", token).put("platform", "android")
+                try { body.put("prefs", JSONObject(prefs)) } catch (_: Exception) { /* send without prefs */ }
+                conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
                 conn.inputStream.use { it.readBytes() }   // drain so the connection can be reused
             } catch (e: Exception) {
                 Log.w(TAG, "register failed", e)
