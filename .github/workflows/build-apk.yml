@@ -43,17 +43,21 @@ jobs:
             echo "No GOOGLE_SERVICES_JSON_BASE64 secret set - building without push (google-services plugin skipped)."
             exit 0
           fi
-          # Accept either base64 (recommended) or raw JSON pasted straight into the secret,
-          # and tolerate any line-wrapping/whitespace from copy-paste.
-          if printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '[:space:]' | head -c1 | grep -q '{'; then
+          # Accept the raw JSON pasted straight into the secret (recommended - it's a text file),
+          # or base64. Never let a decode error abort before the JSON validation below.
+          echo "secret length: $(printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | wc -c | tr -d ' ') chars"
+          CLEAN=$(printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '[:space:]')
+          if [ "$(printf '%s' "$CLEAN" | head -c1)" = "{" ]; then
+            echo "detected: raw JSON"
             printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" > app/google-services.json
           else
-            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '[:space:]' | base64 -d > app/google-services.json
+            echo "detected: base64 (decoding, ignoring stray characters)"
+            printf '%s' "$CLEAN" | base64 -d -i > app/google-services.json 2>/dev/null || true
           fi
-          if python3 -c "import json; json.load(open('app/google-services.json'))" 2>/dev/null; then
+          if python3 -c "import json,sys; d=json.load(open('app/google-services.json')); print('  project:', d['project_info']['project_id'])" 2>/dev/null; then
             echo "Wrote app/google-services.json ($(wc -c < app/google-services.json) bytes) - push enabled."
           else
-            echo "::error::GOOGLE_SERVICES_JSON_BASE64 did not resolve to valid JSON. Re-copy it and update the secret."
+            echo "::error::GOOGLE_SERVICES_JSON_BASE64 is not valid. Paste the RAW contents of app/google-services.json (it starts with a brace), replacing the secret's value."
             exit 1
           fi
 
