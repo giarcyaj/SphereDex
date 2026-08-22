@@ -1750,6 +1750,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   var PRICEBOOK={};   // id -> current market price, in the chosen market's currency (value sort + reference display)
   var PRICEPREV={};   // id -> previous day's market price (day-over-day movers)
   var PRICEMETA={};   // id -> 1 when that price was converted from USD (Palworld fallback), else 0
+  var PWMOVERS=[];    // Palworld Prices weekly movers [{id,dir,pct,priceUsd}] - cold-start fallback only
   // Best market unit price for a card: your precise owned value if set, otherwise the price book.
   function mktOf(id){ var e=own[id]; if(e&&+e.mkt>0) return +e.mkt; var pb=PRICEBOOK[id]; return pb!=null?+pb:0; }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
@@ -3585,6 +3586,24 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     el.onclick=function(){ openDetail(m.c); };
     return el;
   }
+  // Cold-start fallback: Palworld Prices weekly (7d-vs-30d) movers, shown only when our own
+  // day-over-day movers have no baseline yet. USD-sourced, credited on the card.
+  var CARD_BY_ID=null;
+  function cardById(id){ if(!CARD_BY_ID){ CARD_BY_ID={}; CARDS.forEach(function(c){ CARD_BY_ID[c.id]=c; }); } return CARD_BY_ID[id]; }
+  function pwPick(dir){
+    var best=null;
+    PWMOVERS.forEach(function(m){ if(m.dir!==dir) return; var c=cardById(m.id); if(!c) return;
+      if(!best || Math.abs(+m.pct)>Math.abs(+best.m.pct)) best={m:m,c:c}; });
+    return best;
+  }
+  function pwMoverEl(m, c){
+    var el=document.createElement("div"); el.className="trend";
+    el.innerHTML='<img src="'+imgSrc(c)+'" alt="">'+
+      '<div><div class="tnm">'+esc(c.name)+'</div><div class="tsub">'+c.id+' · $'+(+m.priceUsd).toFixed(2)+' · 7d median</div></div>'+
+      '<div class="tpct '+m.dir+'">'+(m.dir==="up"?"▲":"▼")+' '+Math.abs(+m.pct).toFixed(1)+'%</div>';
+    el.onclick=function(){ openDetail(c); };
+    return el;
+  }
   function renderTrending(){
     var el=$("trendCard"); if(!el) return;
     // Baseline coverage in the current scope: how many priced cards have a previous day to compare.
@@ -3603,14 +3622,25 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     }
     var up=moverCard("up", moverScope), down=moverCard("down", moverScope);
     el.onclick=null;
-    if(!up && !down){ el.className="trendnote"; el.textContent = !apiBase()
-      ? "Connect a price server in Settings to see market movers."
-      : priced===0 ? "Loading prices. Tap Refresh now in Settings if this stays empty."
-      : based===0 ? "Prices are loaded, but movers need a previous day to compare against. The baseline fills in automatically each day; tap Refresh now in Settings to pull the latest."
-      : (moverScope==="all" ? "No cards have moved yet today. Fresh prices arrive through the day."
-                            : "None of your priced cards have moved yet today."); return; }
-    el.className="movers"; el.innerHTML="";
     function lbl(t){ var d=document.createElement("div"); d.className="moverlbl"; d.textContent=t; return d; }
+    if(!up && !down){
+      // No day-over-day movers yet -> fall back to Palworld Prices' weekly movers if we have them.
+      var pwU=pwPick("up"), pwD=pwPick("down");
+      if(pwU || pwD){
+        el.className="movers"; el.innerHTML="";
+        var attr=lbl("Trending this week · via Palworld Prices"); attr.style.opacity=".72"; el.appendChild(attr);
+        if(pwU){ el.appendChild(lbl("Biggest riser")); el.appendChild(pwMoverEl(pwU.m, pwU.c)); }
+        if(pwD){ el.appendChild(lbl("Biggest faller")); el.appendChild(pwMoverEl(pwD.m, pwD.c)); }
+        return;
+      }
+      el.className="trendnote"; el.textContent = !apiBase()
+        ? "Connect a price server in Settings to see market movers."
+        : priced===0 ? "Loading prices. Tap Refresh now in Settings if this stays empty."
+        : based===0 ? "Prices are loaded, but movers need a previous day to compare against. The baseline fills in automatically each day; tap Refresh now in Settings to pull the latest."
+        : (moverScope==="all" ? "No cards have moved yet today. Fresh prices arrive through the day."
+                              : "None of your priced cards have moved yet today."); return;
+    }
+    el.className="movers"; el.innerHTML="";
     if(up){ el.appendChild(lbl("Biggest riser")); el.appendChild(moverEl(up,"up")); }
     if(down){ el.appendChild(lbl("Biggest faller")); el.appendChild(moverEl(down,"down")); }
   }
@@ -4378,6 +4408,16 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       else if(!silent) toast("No market prices available yet");
     }).catch(function(){ if(!silent) toast("Price fetch failed"); });
   }
+  // Palworld Prices weekly movers - cold-start fallback for Biggest Movers (see renderTrending).
+  function fetchPwMovers(silent){
+    if(!apiBase()) return;
+    api("/api/movers","GET").then(function(r){
+      if(r.ok && r.body && r.body.movers){ PWMOVERS=r.body.movers;
+        try{ localStorage.setItem("palvault-pwmovers", JSON.stringify(PWMOVERS)); localStorage.setItem("palvault-pwmovers-at", String(Date.now())); }catch(_){}
+        renderTrending();
+      }
+    }).catch(function(){});
+  }
   (function(){
     var su=$("setServerUrl"); if(su){ su.value=SETTINGS.serverUrl||"";
       su.onchange=function(){ SETTINGS.serverUrl=su.value.trim(); saveSettings(); renderAccount(); }; }
@@ -4388,6 +4428,12 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(apiBase()){
       var lastAt=+localStorage.getItem("palvault-pricebook-at")||0;
       if(Date.now()-lastAt > 12*3600*1000) fetchServerPrices(true);
+    }
+    // Palworld movers fallback: load cached, refresh at most every ~6h (the feed updates ~daily).
+    try{ PWMOVERS=JSON.parse(localStorage.getItem("palvault-pwmovers")||"[]")||[]; }catch(_){ PWMOVERS=[]; }
+    if(apiBase()){
+      var pwAt=+localStorage.getItem("palvault-pwmovers-at")||0;
+      if(Date.now()-pwAt > 6*3600*1000) fetchPwMovers(true);
     }
     // Movers scope toggle (Collection | All cards)
     var msWrap=$("moverScope");
