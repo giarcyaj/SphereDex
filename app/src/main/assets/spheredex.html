@@ -2893,8 +2893,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(!apiBase()){ toast("Prices are unavailable right now"); return; }
     var region=SETTINGS.ebayRegion||"co.uk", orig=btn?btn.innerHTML:"";
     var pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
+    // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
+    var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
     if(btn){ btn.disabled=true; btn.innerHTML=icon('refresh')+' …'; }
-    function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):""); }
     function applySold(b){ pr.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; }
     function applyList(b){ pr.mkt=+b.market||0; if(b.avg!=null) pr.avg=+b.avg||0; }
     function finish(msg){ if(btn){ btn.disabled=false; btn.innerHTML=orig; } save(); renderSealed(); renderHome(); if(msg) toast(msg); }
