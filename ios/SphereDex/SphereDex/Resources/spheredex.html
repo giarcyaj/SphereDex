@@ -816,7 +816,7 @@
     font-weight:700; font-size:.62rem; letter-spacing:.05em; text-transform:uppercase; color:#fff;
     background:linear-gradient(transparent, rgba(0,0,0,.6)); padding:16px 6px 7px; opacity:0; transition:opacity .14s; pointer-events:none; }
   .martflo:hover .fullhint { opacity:1; }
-  .lightbox { position:fixed; inset:0; z-index:70; display:none; place-items:start center;
+  .lightbox { position:fixed; inset:0; z-index:230; display:none; place-items:start center;
     padding: calc(74px + var(--sat, env(safe-area-inset-top, 0px))) 20px calc(24px + var(--sab, env(safe-area-inset-bottom, 0px)));
     background:color-mix(in srgb,#05080b 82%,transparent); backdrop-filter:blur(6px); }
   .lightbox.open { display:grid; }
@@ -961,7 +961,7 @@
   .scanbox{ width:100%; max-width:400px; max-height:calc(100dvh - 40px); overflow-y:auto; background:var(--surface);
     border:1.5px solid var(--line-strong); border-radius:18px; padding:18px; box-shadow:var(--shadow); }
   .scanhead{ display:flex; gap:14px; align-items:center; margin-bottom:16px; }
-  .scanhead img{ width:80px; height:auto; border-radius:9px; border:1px solid var(--line-strong); flex:none; background:var(--surface-2); }
+  .scanhead img{ width:80px; height:auto; border-radius:9px; border:1px solid var(--line-strong); flex:none; background:var(--surface-2); cursor:zoom-in; }
   .scaneyebrow{ font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--accent-ink); font-weight:800; margin-bottom:3px; }
   .scanmeta h3{ font-family:var(--font-display); font-weight:750; font-size:1.05rem; margin:0 0 3px; line-height:1.2; }
   .scannum{ font-family:var(--font-mono); font-size:.78rem; color:var(--ink-faint); }
@@ -1627,7 +1627,7 @@
 <div class="scanscrim" id="scanScrim" hidden>
   <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="scanName">
     <div class="scanhead">
-      <img id="scanImg" alt="" />
+      <img id="scanImg" alt="" role="button" tabindex="0" title="Tap to enlarge" aria-label="Enlarge scanned card image" />
       <div class="scanmeta">
         <div class="scaneyebrow">Scanned card</div>
         <h3 id="scanName"></h3>
@@ -4205,6 +4205,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); });
     $("scanCancel").onclick=dismissOverlay;
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
+    var si=$("scanImg"); if(si){ si.onclick=function(){ if(scanState.card) openLightbox(scanState.card); }; si.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(scanState.card) openLightbox(scanState.card); } }; }
     scanScrim.addEventListener("click", function(e){ if(e.target===scanScrim) dismissOverlay(); });
     document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scanScrim.hidden) dismissOverlay(); });
     $("scanConfirm").onclick=function(){
