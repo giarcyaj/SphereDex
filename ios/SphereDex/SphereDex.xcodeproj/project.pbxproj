@@ -24,7 +24,7 @@
 		8A2A3D958E7652D82EE66999 /* spheredex.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = spheredex.html; sourceTree = "<group>"; };
 		9532463024A8988D29DAB8CE /* CardResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardResolver.swift; sourceTree = "<group>"; };
 		F63CFC5D087FAA9D47FAC6B3 /* SphereDexApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SphereDexApp.swift; sourceTree = "<group>"; };
-		F69BC5415C0F12B4BD9B3A31 /* SphereDex.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SphereDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F69BC5415C0F12B4BD9B3A31 /* SphereDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SphereDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -97,7 +97,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					44B11A2B80624E24077577E8 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -156,7 +155,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = V3W6JL5FF7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SphereDex/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -179,7 +178,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = V3W6JL5FF7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SphereDex/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
