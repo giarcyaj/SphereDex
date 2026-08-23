@@ -68,7 +68,8 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
 
     private func configureSession() {
         session.beginConfiguration()
-        session.sessionPreset = .hd1280x720
+        // Prefer 1080p so a small printed card number keeps enough pixels to read; fall back if unsupported.
+        session.sessionPreset = session.canSetSessionPreset(.hd1920x1080) ? .hd1920x1080 : .hd1280x720
         if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
            let input = try? AVCaptureDeviceInput(device: device),
            session.canAddInput(input) {
@@ -179,8 +180,12 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
                 }
             }
         }
-        request.recognitionLevel = .fast
-        request.usesLanguageCorrection = false
+        // .accurate reliably reads the small printed card number that .fast misses; frames that arrive
+        // while a request is in flight are dropped (alwaysDiscardsLateVideoFrames), so this stays live.
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false          // card codes are not words
+        request.minimumTextHeight = 0.015               // the number is small in-frame; the ~0.031 default skips it
+        request.recognitionLanguages = ["en-US"]
         try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right).perform([request])
     }
 }
