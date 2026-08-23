@@ -2742,7 +2742,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     SETTINGS.theme = eff==="dark"?"light":"dark"; saveSettings(); applyTheme();
   };
   // Set the display currency (and keep the header dropdown in sync). Used by the picker and by region changes.
-  function applyCurrency(code){ var c=CURRENCIES.filter(function(x){return x.code===code;})[0]; if(!c) return; CUR=c; localStorage.setItem("paldeck-currency",CUR.code); var sel=$("curSel"); if(sel) sel.value=CUR.code; render(); }
+  function applyCurrency(code){ var c=CURRENCIES.filter(function(x){return x.code===code;})[0]; if(!c) return; CUR=c; localStorage.setItem("paldeck-currency",CUR.code); var sel=$("curSel"); if(sel) sel.value=CUR.code; render(); if(typeof renderHome==="function") renderHome(); if(typeof renderSealed==="function") renderSealed(); }
   (function(){
     var sel=$("curSel");
     CURRENCIES.forEach(function(c){ var op=document.createElement("option"); op.value=c.code; op.textContent=c.code+" "+c.sym; if(c.code===CUR.code) op.selected=true; sel.appendChild(op); });
