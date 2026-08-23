@@ -4247,6 +4247,15 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   };
   // Native camera reads this to show which collection a scan will go to.
   window.SDActiveCollection = function(){ try{ return activeCol().name || ""; }catch(e){ return ""; } };
+  // Bridge for a tapped push notification (Android + iOS): route the notification's url. An external
+  // link (e.g. a news article) opens in the system browser; a bare page name switches pages.
+  window.SDOpenPush = function(url){
+    try{
+      if(!url) return;
+      if(/^https?:\/\//i.test(url)){ window.open(url,"_blank","noopener"); return; }
+      if(typeof showPage==="function") showPage(url);
+    }catch(e){}
+  };
   // Quick Add method chooser: Scan (native only), Text input, Import CSV, each with an info toggle.
   (function(){
     var native = window.AndroidScan && typeof window.AndroidScan.scan==="function";
@@ -4302,9 +4311,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
     if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true};
-    var androidPush=(window.AndroidPush && typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush:null;
-    var ng=$("notifGroup"); if(ng) ng.style.display=androidPush?"flex":"none";
-    function syncNotif(){ if(androidPush){ try{ androidPush.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
+    var nativePush=(window.AndroidPush && typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
+      :((window.IOSPush && typeof window.IOSPush.setPrefs==="function")?window.IOSPush:null);
+    var ng=$("notifGroup"); if(ng) ng.style.display=nativePush?"flex":"none";
+    function syncNotif(){ if(nativePush){ try{ nativePush.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
     [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"]].forEach(function(p){
       var el=$(p[0]); if(!el) return;
       el.checked=SETTINGS.notif[p[1]]!==false;

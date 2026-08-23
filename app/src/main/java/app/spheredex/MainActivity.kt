@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 cacheMode = WebSettings.LOAD_DEFAULT
                 setSupportMultipleWindows(true)   // so target="_blank" links reach onCreateWindow (below)
+                javaScriptCanOpenWindowsAutomatically = true   // let SDOpenPush's window.open (no user gesture on a notification tap) reach onCreateWindow
             }
             overScrollMode = WebView.OVER_SCROLL_NEVER
             // Keep the app inside the WebView, but open real web links (eBay, Buy Me a Coffee) in the browser.
