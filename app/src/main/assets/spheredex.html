@@ -94,7 +94,10 @@
   /* Header controls: keep My Collection + currency + Log in on one row down to small phones */
   .toolbtns .tbtn { padding-left:9px; padding-right:9px; gap:5px; }
   .toolbtns select.tbtn { padding-right:18px; background-position:calc(100% - 11px) 55%, calc(100% - 7px) 55%; }
-  .toolbtns .tbtn.login { font-size:.78rem; }
+  .toolbtns .tbtn.login { font-size:.78rem; flex:0 0 auto; white-space:nowrap; }
+  /* Keep the currency select at its natural width and let the collection name truncate, so "Log in" never wraps onto two lines on small phones. */
+  .toolbtns #curSel { flex:0 0 auto; }
+  .toolbtns .colwrap { min-width:0; }
   .modehead { margin:2px 0 14px; display:flex; align-items:center; gap:9px; }
   .tbtn.on { border-color:var(--accent); color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .tbtn.sortdir { font-variant-numeric:tabular-nums; min-width:74px; justify-content:center; }
