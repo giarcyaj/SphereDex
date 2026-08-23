@@ -4413,11 +4413,74 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
           '<input class="sortsel" id="acctEmail" type="email" autocomplete="email" placeholder="you@email.com">'+
           '<div class="pwwrap"><input class="sortsel" id="acctPw" type="password" autocomplete="current-password" placeholder="password (8+ characters)"><button type="button" class="pweye" id="acctPwEye" aria-label="Show password">'+EYE_ON+'</button></div>'+
           '<div style="display:flex;gap:9px"><button class="btn primary" id="acctSignIn" style="flex:1">Sign in</button><button class="btn sec" id="signupBtn" style="flex:1">Create account</button></div>'+
+          '<button type="button" id="acctForgot" style="align-self:flex-start;background:none;border:0;padding:2px 0;margin-top:2px;color:var(--accent-ink);font:inherit;font-size:.82rem;text-decoration:underline;cursor:pointer">Forgot password?</button>'+
           '<div class="sdesc" id="acctMsg"></div>'+
         '</div>';
       $("acctSignIn").onclick=function(){ doAuth("login"); }; $("signupBtn").onclick=function(){ doAuth("signup"); };
+      $("acctForgot").onclick=function(){ RESET_EMAIL=(($("acctEmail")||{}).value||"").trim(); renderForgotRequest(); };
       var pe=$("acctPwEye"); if(pe) pe.onclick=function(){ var i=$("acctPw"); var show=i.type==="password"; i.type=show?"text":"password"; this.innerHTML=show?EYE_OFF:EYE_ON; this.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
     }
+  }
+  // ---- Forgot password: request a code, then reset with the code (renders into acctCard) ----
+  var RESET_EMAIL="";
+  function fpMsg(m,bad){ var el=$("fpMsg"); if(el){ el.textContent=m; el.style.color=bad?"var(--el-Fire)":"var(--accent-ink)"; } }
+  function renderForgotRequest(){
+    var el=$("acctCard"); if(!el) return;
+    el.innerHTML='<div class="stitle">Reset your password</div>'+
+      '<p class="sdesc" style="margin:8px 0 14px">Enter your account email and we will send an 8-digit reset code.</p>'+
+      '<div class="acctform" style="flex-direction:column;align-items:stretch;gap:9px;max-width:340px">'+
+        '<input class="sortsel" id="fpEmail" type="email" autocomplete="email" placeholder="you@email.com">'+
+        '<button class="btn primary" id="fpSend">Send reset code</button>'+
+        '<button class="btn sec" id="fpBack" type="button">Back to sign in</button>'+
+        '<div class="sdesc" id="fpMsg"></div>'+
+      '</div>';
+    var em=$("fpEmail"); if(em) em.value=RESET_EMAIL||"";
+    $("fpBack").onclick=renderAccount;
+    $("fpSend").onclick=function(){
+      var email=(($("fpEmail")||{}).value||"").trim();
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ fpMsg("Enter a valid email.", true); return; }
+      RESET_EMAIL=email;
+      var b=$("fpSend"); b.disabled=true; b.textContent="Sending…";
+      api("/api/forgot-password","POST",{email:email}).then(function(r){
+        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't send a code right now.", true); b.disabled=false; b.textContent="Send reset code"; return; }
+        renderForgotReset(true);
+      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); b.disabled=false; b.textContent="Send reset code"; });
+    };
+  }
+  function renderForgotReset(justSent){
+    var el=$("acctCard"); if(!el) return;
+    el.innerHTML='<div class="stitle">Enter your reset code</div>'+
+      '<p class="sdesc" style="margin:8px 0 14px">If an account exists for <b>'+esc(RESET_EMAIL)+'</b>, we sent an 8-digit code. It expires in 20 minutes.</p>'+
+      '<div class="acctform" style="flex-direction:column;align-items:stretch;gap:9px;max-width:340px">'+
+        '<input class="sortsel" id="fpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="8-digit code">'+
+        '<div class="pwwrap"><input class="sortsel" id="fpPw" type="password" autocomplete="new-password" placeholder="new password (8+ characters)"><button type="button" class="pweye" id="fpPwEye" aria-label="Show password">'+EYE_ON+'</button></div>'+
+        '<button class="btn primary" id="fpReset">Reset password</button>'+
+        '<div style="display:flex;gap:9px"><button class="btn sec" id="fpResend" type="button" style="flex:1">Resend code</button><button class="btn sec" id="fpBack2" type="button" style="flex:1">Back to sign in</button></div>'+
+        '<div class="sdesc" id="fpMsg"></div>'+
+      '</div>';
+    if(justSent) fpMsg("Code sent. Check your email, including spam.", false);
+    var pe=$("fpPwEye"); if(pe) pe.onclick=function(){ var i=$("fpPw"); var show=i.type==="password"; i.type=show?"text":"password"; this.innerHTML=show?EYE_OFF:EYE_ON; this.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
+    $("fpBack2").onclick=renderAccount;
+    $("fpResend").onclick=function(){
+      var b=$("fpResend"); b.disabled=true; b.textContent="Sending…";
+      api("/api/forgot-password","POST",{email:RESET_EMAIL}).then(function(r){
+        b.disabled=false; b.textContent="Resend code";
+        if(r.ok) fpMsg("New code sent if you have an account. Give it a minute.", false);
+        else fpMsg((r.body&&r.body.error)||"Couldn't resend right now.", true);
+      }).catch(function(){ b.disabled=false; b.textContent="Resend code"; });
+    };
+    $("fpReset").onclick=function(){
+      var code=(($("fpCode")||{}).value||"").trim(), pw=($("fpPw")||{}).value||"";
+      if(!/^\d{8}$/.test(code)){ fpMsg("Enter the 8-digit code from your email.", true); return; }
+      if(pw.length<8){ fpMsg("Choose a password of at least 8 characters.", true); return; }
+      var b=$("fpReset"); b.disabled=true; b.textContent="Resetting…";
+      api("/api/reset-password","POST",{email:RESET_EMAIL,code:code,password:pw}).then(function(r){
+        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't reset your password.", true); b.disabled=false; b.textContent="Reset password"; return; }
+        AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
+        RESET_EMAIL="";
+        renderAccount(); pullState(); toast("Password reset. Signed in as "+AUTH.email);
+      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); b.disabled=false; b.textContent="Reset password"; });
+    };
   }
   // Pull the server price book (all cards) into PRICEBOOK so "Sort by Value" ranks every card, not
   // just owned ones. We do NOT write these onto owned cards, so the daily bulk (asking-price) data
