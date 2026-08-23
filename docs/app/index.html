@@ -4335,9 +4335,14 @@
   function apiBase(){ return (SETTINGS.serverUrl||"").replace(/\/+$/,""); }
   function api(path, method, body){
     var base=apiBase(); if(!base) return Promise.reject(new Error("Prices are unavailable right now."));
+    var hadToken=!!AUTH.token;
     var headers={"Content-Type":"application/json"}; if(AUTH.token) headers["Authorization"]="Bearer "+AUTH.token;
     return fetch(base+path,{method:method||"GET",headers:headers,body:body?JSON.stringify(body):undefined})
-      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok,status:r.status,body:j}; }); });
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){
+        // A 401 on a request we sent a token with means the session is no longer valid.
+        if(r.status===401 && hadToken) handleSessionExpired();
+        return {ok:r.ok,status:r.status,body:j};
+      }); });
   }
   function adoptRemote(blob, rev){
     STATE=blob; AUTH.serverRev=rev; saveAuth();
@@ -4373,6 +4378,16 @@
     }).catch(function(e){ acctMsg(String(e.message||e), true); });
   }
   function signOut(){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Signed out (data stays on this device)"); }
+  // Server rejected our token: it expired, the account was deleted, or the password was reset on
+  // another device (which invalidates older sessions). Drop the dead token locally and prompt a
+  // fresh sign-in; the collection stays on this device. The AUTH.token guard collapses concurrent
+  // 401s into a single sign-out + toast.
+  function handleSessionExpired(){
+    if(!AUTH.token) return;
+    AUTH={serverRev:0}; saveAuth();
+    if(typeof renderAccount==="function") renderAccount();
+    toast("Signed out. Please sign in again to keep syncing.");
+  }
   function acctMsg(m,bad){ var el=$("acctMsg"); if(el){ el.textContent=m; el.style.color=bad?"var(--el-Fire)":"var(--accent-ink)"; } }
   function setSyncStatus(s){ var el=$("syncStat"); if(el) el.textContent=s; }
   var EYE_ON='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
