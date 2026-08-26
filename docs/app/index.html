@@ -1020,7 +1020,7 @@
   /* ---- Detail bubbles (progressive disclosure) ---- */
   .bubrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:4px; }
   .bubrow.glance{ margin-top:12px; }
-  .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:5px; padding:12px 7px; border-radius:14px;
+  .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:4px; padding:12px 5px; border-radius:14px;
     border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.8rem; letter-spacing:-.2px; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
   .bub .ic{ width:1.05rem; height:1.05rem; margin:0; flex:none; }
   .bub span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1787,7 +1787,7 @@
   function binderValue(basis){ return CARDS.reduce(function(a,c){ return a+cardValueBasis(o(c.id),basis); },0); }
 
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
-  function money(n){ n=+n||0; return CUR.sym + n.toLocaleString(undefined,{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
+  function money(n){ n=+n||0; return CUR.sym + n.toLocaleString("en-GB",{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
   var sortDir = (parseInt(localStorage.getItem("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
@@ -2252,7 +2252,7 @@
     function paintBubbles(){
       var owned=has(o(c.id)), wished=isWished(c.id), fav=isFav(c.id);
       var bc=$("bubColl"); if(bc){ bc.className="bub coll"+(owned?" on":"")+(panelOpen("panelColl")?" open":""); bc.setAttribute("aria-expanded",panelOpen("panelColl")?"true":"false"); bc.innerHTML=icon('book')+'<span>'+(owned?'Collected':'Collect')+'</span>'; }
-      var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>'+(wished?'Wishlisted':'Wishlist')+'</span>'; }
+      var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>Wishlist</span>'; }
       var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
     // Quick-remove line: shows current holdings once a card is in the collection.
@@ -2843,7 +2843,7 @@
     sc.onclick=function(e){ if(e.target===sc) close(); };
     inp.onkeydown=function(e){ if(e.key==="Enter") ok.click(); else if(e.key==="Escape") close(); };
   }
-  function fmt(n){ n=+n||0; return n.toLocaleString(undefined,{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}); }
+  function fmt(n){ n=+n||0; return n.toLocaleString("en-GB",{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}); }
 
   // The donation link is hidden inside the iOS app (App Store guideline 3.1.1 restricts external donation links).
   var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://buymeacoffee.com/spheredex" target="_blank" rel="noopener" aria-label="Buy me a coffee"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0D0C22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Buy me a coffee</span></a>';
