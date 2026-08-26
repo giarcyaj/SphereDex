@@ -255,6 +255,10 @@
     box-shadow:inset 0 2px 3px rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.35), 0 0 8px -2px var(--c); }
   .elgem>svg { position:relative; width:11px; height:11px; fill:#fff; z-index:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
   .marte .elgem { width:24px; height:24px; } .marte .elgem>svg { width:14px; height:14px; }
+  /* The 45deg-rotated gem diamond pokes ~4px past its box on each side, so two
+     adjacent gems (dual-type cards) need extra room or their points touch. */
+  .elgem + .elgem { margin-left:4px; }
+  .marte .elgem + .elgem { margin-left:6px; }
   .colorpip { font-size:.6rem; font-weight:750; letter-spacing:.06em; text-transform:uppercase; color:#fff; padding:2px 7px; border-radius:20px; background:var(--_col); margin-left:auto; }
   .cstats { display:flex; align-items:center; justify-content:center; gap:8px; font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint); margin-top:auto; font-variant-numeric:tabular-nums; }
   .cstats b { color:var(--ink-soft); font-weight:600; }
@@ -421,7 +425,7 @@
   .navitem:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); color:var(--ink); }
   .navitem.active { color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .navitem.active .ic { color:var(--accent-ink); }
-  @media (max-width:760px){ .tabs { display:none; } .navmenu { display:block; } }
+  @media (max-width:1024px){ .tabs { display:none; } .navmenu { display:block; } }
   .page { display:none; }
   .page.active { display:block; animation:fade .2s ease; }
   @keyframes fade { from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
@@ -1097,8 +1101,153 @@
   /* Collector mode, hide every price / value surface */
   .collector .priceui{ display:none !important; }
   .collector #portfolioCard, .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval, .collector #curSel{ display:none !important; }
+  /* Graded / PSA slab tracking is a value feature, so it follows the prices toggle: hidden in the no-prices collector mode. */
+  .collector .tab[data-page="graded"], .collector .navitem[data-page="graded"],
+  .collector #ownGradedTog, .collector .gradedbadge,
+  .collector #typeSeg, .collector #gradedAdd, .collector #gradeList,
+  .collector #scanTypeRow, .collector #scanGradeWrap{ display:none !important; }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+  /* =====================================================================
+     Flex-gap fallback for old WebViews (Chromium <84 / Safari <14.1).
+     Only applied when the feature-detect adds .no-flexgap to <html>.
+     GRID gap is supported on those engines and is NOT touched here.
+     Each affected flex container: neutralise gap, then reproduce spacing
+     with adjacent-sibling margins (no trailing margin on the main axis).
+     ===================================================================== */
+
+  /* ---- ROW containers (nowrap): reproduce column-gap as margin-left ---- */
+  .no-flexgap .mastutil{gap:0}.no-flexgap .mastutil>*+*{margin-left:6px}
+  .no-flexgap .brand{gap:0}.no-flexgap .brand>*+*{margin-left:13px}
+  .no-flexgap .toolbtns{gap:0}.no-flexgap .toolbtns>*+*{margin-left:6px}
+  .no-flexgap .tbtn{gap:0}.no-flexgap .tbtn>*+*{margin-left:7px}
+  .no-flexgap .toolbtns .tbtn{gap:0}.no-flexgap .toolbtns .tbtn>*+*{margin-left:5px}
+  .no-flexgap .modehead{gap:0}.no-flexgap .modehead>*+*{margin-left:9px}
+  .no-flexgap .panel .lab{gap:0}.no-flexgap .panel .lab>*+*{margin-left:7px}
+  .no-flexgap .dualdots{gap:0}.no-flexgap .dualdots>*+*{margin-left:5px}
+  .no-flexgap .setpill{gap:0}.no-flexgap .setpill>*+*{margin-left:6px}
+  .no-flexgap .gradedbadge{gap:0}.no-flexgap .gradedbadge>*+*{margin-left:4px}
+  .no-flexgap .graderow{gap:0}.no-flexgap .graderow>*+*{margin-left:7px}
+  .no-flexgap .salerow{gap:0}.no-flexgap .salerow>*+*{margin-left:7px}
+  .no-flexgap .search{gap:0}.no-flexgap .search>*+*{margin-left:9px}
+  .no-flexgap .chip{gap:0}.no-flexgap .chip>*+*{margin-left:6px}
+  .no-flexgap .hoveradd{gap:0}.no-flexgap .hoveradd>*+*{margin-left:12px}
+  .no-flexgap .cstats{gap:0}.no-flexgap .cstats>*+*{margin-left:8px}
+  .no-flexgap .ownbtn{gap:0}.no-flexgap .ownbtn>*+*{margin-left:6px}
+  .no-flexgap .wishbtn{gap:0}.no-flexgap .wishbtn>*+*{margin-left:5px}
+  .no-flexgap .trend{gap:0}.no-flexgap .trend>*+*{margin-left:14px}
+  .no-flexgap .moverscope{gap:0}.no-flexgap .moverscope>*+*{margin-left:2px}
+  .no-flexgap .statline{gap:0}.no-flexgap .statline>*+*{margin-left:16px}
+  .no-flexgap .fieldrow{gap:0}.no-flexgap .fieldrow>*+*{margin-left:12px}
+  .no-flexgap .mfoot{gap:0}.no-flexgap .mfoot>*+*{margin-left:10px}
+  .no-flexgap .btn{gap:0}.no-flexgap .btn>*+*{margin-left:7px}
+  .no-flexgap .tab{gap:0}.no-flexgap .tab>*+*{margin-left:7px}
+  .no-flexgap .navbar{gap:0}.no-flexgap .navbar>*+*{margin-left:6px}
+  .no-flexgap .hudtabs{gap:0}.no-flexgap .hudtabs>*+*{margin-left:4px}
+  .no-flexgap .ordlab{gap:0}.no-flexgap .ordlab>*+*{margin-left:9px}
+  .no-flexgap .ordbtns{gap:0}.no-flexgap .ordbtns>*+*{margin-left:6px}
+  .no-flexgap .navitem{gap:0}.no-flexgap .navitem>*+*{margin-left:11px}
+  .no-flexgap .sech{gap:0}.no-flexgap .sech>*+*{margin-left:10px}
+  .no-flexgap .hlbl{gap:0}.no-flexgap .hlbl>*+*{margin-left:8px}
+  .no-flexgap .rankbadge{gap:0}.no-flexgap .rankbadge>*+*{margin-left:8px}
+  .no-flexgap .setcard .smeta{gap:0}.no-flexgap .setcard .smeta>*+*{margin-left:10px}
+  .no-flexgap .buybtn{gap:0}.no-flexgap .buybtn>*+*{margin-left:6px}
+  .no-flexgap .qtyrow{gap:0}.no-flexgap .qtyrow>*+*{margin-left:12px}
+  .no-flexgap .qopt{gap:0}.no-flexgap .qopt>*+*{margin-left:8px}
+  .no-flexgap .qoptbtn{gap:0}.no-flexgap .qoptbtn>*+*{margin-left:12px}
+  .no-flexgap .qra{gap:0}.no-flexgap .qra>*+*{margin-left:12px}
+  .no-flexgap .qsg{gap:0}.no-flexgap .qsg>*+*{margin-left:11px}
+  .no-flexgap .qsg .qsm{gap:0}.no-flexgap .qsg .qsm>*+*{margin-left:8px}
+  .no-flexgap .qsg .qsadd{gap:0}.no-flexgap .qsg .qsadd>*+*{margin-left:4px}
+  .no-flexgap .filteractions{gap:0}.no-flexgap .filteractions>*+*{margin-left:10px}
+  .no-flexgap .pctop .pclab{gap:0}.no-flexgap .pctop .pclab>*+*{margin-left:9px}
+  .no-flexgap .pcrefbtn{gap:0}.no-flexgap .pcrefbtn>*+*{margin-left:6px}
+  .no-flexgap .pdstats{gap:0}.no-flexgap .pdstats>*+*{margin-left:10px}
+  .no-flexgap .pdrow{gap:0}.no-flexgap .pdrow>*+*{margin-left:10px}
+  .no-flexgap .collectedbar .cbtogs{gap:0}.no-flexgap .collectedbar .cbtogs>*+*{margin-left:8px}
+  .no-flexgap .ownchip{gap:0}.no-flexgap .ownchip>*+*{margin-left:6px}
+  .no-flexgap .ownseal{gap:0}.no-flexgap .ownseal>*+*{margin-left:12px}
+  .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}
+  .no-flexgap .decksug button{gap:0}.no-flexgap .decksug button>*+*{margin-left:10px}
+  .no-flexgap .deckrow{gap:0}.no-flexgap .deckrow>*+*{margin-left:12px}
+  .no-flexgap .npitem{gap:0}.no-flexgap .npitem>*+*{margin-left:8px}
+  .no-flexgap #foot a.bmc{gap:0}.no-flexgap #foot a.bmc>*+*{margin-left:5px}
+  .no-flexgap .keychip{gap:0}.no-flexgap .keychip>*+*{margin-left:7px}
+  .no-flexgap .rwname{gap:0}.no-flexgap .rwname>*+*{margin-left:6px}
+  .no-flexgap .troph{gap:0}.no-flexgap .troph>*+*{margin-left:7px}
+  .no-flexgap .askbtns{gap:0}.no-flexgap .askbtns>*+*{margin-left:9px}
+  .no-flexgap .scanhead{gap:0}.no-flexgap .scanhead>*+*{margin-left:14px}
+  .no-flexgap .segrow{gap:0}.no-flexgap .segrow>*+*{margin-left:8px}
+  .no-flexgap .scanvar{gap:0}.no-flexgap .scanvar>*+*{margin-left:10px}
+  .no-flexgap .detactions{gap:0}.no-flexgap .detactions>*+*{margin-left:10px}
+  .no-flexgap .detact{gap:0}.no-flexgap .detact>*+*{margin-left:8px}
+  .no-flexgap .bub{gap:0}.no-flexgap .bub>*+*{margin-left:4px}
+  .no-flexgap .seg{gap:0}.no-flexgap .seg>*+*{margin-left:3px}
+  .no-flexgap .ownpill{gap:0}.no-flexgap .ownpill>*+*{margin-left:6px}
+  .no-flexgap .ggrow{gap:0}.no-flexgap .ggrow>*+*{margin-left:8px}
+  .no-flexgap .ctopic{gap:0}.no-flexgap .ctopic>*+*{margin-left:10px}
+
+  /* ---- ROW containers that WRAP: margin-left = column-gap on siblings,
+          margin-bottom = row-gap on every child so wrapped rows are spaced ---- */
+  .no-flexgap .colorbars{gap:0}.no-flexgap .colorbars>*+*{margin-left:20px}.no-flexgap .colorbars>*{margin-bottom:9px}
+  .no-flexgap .setpills{gap:0}.no-flexgap .setpills>*+*{margin-left:7px}.no-flexgap .setpills>*{margin-bottom:7px}
+  .no-flexgap .searchrow{gap:0}.no-flexgap .searchrow>*+*{margin-left:10px}.no-flexgap .searchrow>*{margin-bottom:10px}
+  .no-flexgap .ctrlrow{gap:0}.no-flexgap .ctrlrow>*+*{margin-left:10px}.no-flexgap .ctrlrow>*{margin-bottom:10px}
+  .no-flexgap .chiprow{gap:0}.no-flexgap .chiprow>*+*{margin-left:7px}.no-flexgap .chiprow>*{margin-bottom:7px}
+  .no-flexgap .crow{gap:0}.no-flexgap .crow>*+*{margin-left:4px}.no-flexgap .crow>*{margin-bottom:4px}
+  .no-flexgap .tabs{gap:0}.no-flexgap .tabs>*+*{margin-left:6px}.no-flexgap .tabs>*{margin-bottom:6px}
+  .no-flexgap .herostats{gap:0}.no-flexgap .herostats>*+*{margin-left:8px}.no-flexgap .herostats>*{margin-bottom:8px}
+  .no-flexgap .setcard .setfoot{gap:0}.no-flexgap .setcard .setfoot>*+*{margin-left:9px}.no-flexgap .setcard .setfoot>*{margin-bottom:9px}
+  .no-flexgap .sealedbar{gap:0}.no-flexgap .sealedbar>*+*{margin-left:24px}.no-flexgap .sealedbar>*{margin-bottom:24px}
+  .no-flexgap .pcbtns{gap:0}.no-flexgap .pcbtns>*+*{margin-left:8px}.no-flexgap .pcbtns>*{margin-bottom:8px}
+  .no-flexgap .collectedbar{gap:0}.no-flexgap .collectedbar>*+*{margin-left:10px}.no-flexgap .collectedbar>*{margin-bottom:10px}
+  .no-flexgap .deckstats{gap:0}.no-flexgap .deckstats>*+*{margin-left:22px}.no-flexgap .deckstats>*{margin-bottom:22px}
+  .no-flexgap .keychips{gap:0}.no-flexgap .keychips>*+*{margin-left:8px}.no-flexgap .keychips>*{margin-bottom:8px}
+  .no-flexgap .trophyrow{gap:0}.no-flexgap .trophyrow>*+*{margin-left:14px}.no-flexgap .trophyrow>*{margin-bottom:10px}
+  .no-flexgap .addgrid{gap:0}.no-flexgap .addgrid>*+*{margin-left:10px}.no-flexgap .addgrid>*{margin-bottom:10px}
+  .no-flexgap .ownline{gap:0}.no-flexgap .ownline>*+*{margin-left:8px}.no-flexgap .ownline>*{margin-bottom:8px}
+  .no-flexgap .acctform{gap:0}.no-flexgap .acctform>*+*{margin-left:10px}.no-flexgap .acctform>*{margin-bottom:10px}
+
+  /* ---- COLUMN containers: reproduce row-gap as margin-top on siblings ---- */
+  .no-flexgap header.mast{gap:0}.no-flexgap header.mast>*+*{margin-top:14px}
+  .no-flexgap .cbrow{gap:0}.no-flexgap .cbrow>*+*{margin-top:5px}
+  .no-flexgap .graded{gap:0}.no-flexgap .graded>*+*{margin-top:8px}
+  .no-flexgap .controls{gap:0}.no-flexgap .controls>*+*{margin-top:11px}
+  .no-flexgap .grid.binder{gap:0}.no-flexgap .grid.binder>*+*{margin-top:24px}
+  .no-flexgap .cbody{gap:0}.no-flexgap .cbody>*+*{margin-top:5px}
+  .no-flexgap .movers{gap:0}.no-flexgap .movers>*+*{margin-top:8px}
+  .no-flexgap .meditor{gap:0}.no-flexgap .meditor>*+*{margin-top:13px}
+  .no-flexgap .promonote{gap:0}.no-flexgap .promonote>*+*{margin-top:4px}
+  .no-flexgap .field{gap:0}.no-flexgap .field>*+*{margin-top:5px}
+  .no-flexgap .navq{gap:0}.no-flexgap .navq>*+*{margin-top:4px}
+  .no-flexgap .setrow.qmrow{gap:0}.no-flexgap .setrow.qmrow>*+*{margin-top:10px}
+  .no-flexgap .qmslots{gap:0}.no-flexgap .qmslots>*+*{margin-top:7px}
+  .no-flexgap .herostats .hs{gap:0}.no-flexgap .herostats .hs>*+*{margin-top:3px}
+  .no-flexgap .rankcard{gap:0}.no-flexgap .rankcard>*+*{margin-top:8px}
+  .no-flexgap .setcard .sbody{gap:0}.no-flexgap .setcard .sbody>*+*{margin-top:9px}
+  .no-flexgap .timeline{gap:0}.no-flexgap .timeline>*+*{margin-top:16px}
+  .no-flexgap .sealedbar .hs{gap:0}.no-flexgap .sealedbar .hs>*+*{margin-top:2px}
+  .no-flexgap .sealcard .sb{gap:0}.no-flexgap .sealcard .sb>*+*{margin-top:11px}
+  .no-flexgap .sealcard .sbox.preph{gap:0}.no-flexgap .sdimg.preph{gap:0}.no-flexgap .sealcard .sbox.preph>*+*,.no-flexgap .sdimg.preph>*+*{margin-top:9px}
+  .no-flexgap .priceg .pf{gap:0}.no-flexgap .priceg .pf>*+*{margin-top:3px}
+  .no-flexgap .qmethods{gap:0}.no-flexgap .qmethods>*+*{margin-top:10px}
+  .no-flexgap .qrecent{gap:0}.no-flexgap .qrecent>*+*{margin-top:8px}
+  .no-flexgap .filterpanel{gap:0}.no-flexgap .filterpanel>*+*{margin-top:11px}
+  .no-flexgap .setwrap{gap:0}.no-flexgap .setwrap>*+*{margin-top:14px}
+  .no-flexgap .chooselist{gap:0}.no-flexgap .chooselist>*+*{margin-top:8px}
+  .no-flexgap .pctip{gap:0}.no-flexgap .pctip>*+*{margin-top:1px}
+  .no-flexgap .ownsealed{gap:0}.no-flexgap .ownsealed>*+*{margin-top:10px}
+  .no-flexgap .deckstats .hs{gap:0}.no-flexgap .deckstats .hs>*+*{margin-top:2px}
+  .no-flexgap .decklist{gap:0}.no-flexgap .decklist>*+*{margin-top:8px}
+  .no-flexgap .newslist{gap:0}.no-flexgap .newslist>*+*{margin-top:10px}
+  .no-flexgap .keygrid{gap:0}.no-flexgap .keygrid>*+*{margin-top:8px}
+  .no-flexgap .keysets{gap:0}.no-flexgap .keysets>*+*{margin-top:6px}
+  .no-flexgap .scanvariants{gap:0}.no-flexgap .scanvariants>*+*{margin-top:7px}
+  .no-flexgap .martflo .detactions{gap:0}.no-flexgap .martflo .detactions>*+*{margin-top:8px}
+  .no-flexgap .glancebub{gap:0}.no-flexgap .glancebub>*+*{margin-top:3px}
+  .no-flexgap .bubpanel{gap:0}.no-flexgap .bubpanel>*+*{margin-top:10px}
+  .no-flexgap #notifGroup{gap:0}.no-flexgap #notifGroup>*+*{margin-top:14px}
 </style>
 
 <div class="wrap">
@@ -1662,7 +1811,7 @@
         <div class="scanlab">Collection</div>
         <select id="scanColSel"></select>
       </div>
-      <div class="scanfield">
+      <div class="scanfield" id="scanTypeRow">
         <div class="scanlab">Type</div>
         <div class="segrow" id="scanType">
           <button type="button" class="seg" data-type="raw">Raw</button>
@@ -1689,6 +1838,12 @@
 
 <!--CARD_IMG_INJECT-->
 <script>
+/* Flex-gap support probe: old WebViews (Chromium <84 / Safari <14.1) ignore
+   `gap` on flex containers, collapsing spacing so pills/badges overlap. If gap
+   is unsupported, tag <html> so the .no-flexgap margin fallback (in <style>)
+   takes over. Runs before render() so the first paint is already correct. */
+(function(){try{var d=document,t=d.createElement('div');t.style.cssText='display:flex;flex-direction:row;gap:1px;position:absolute;left:-9999px;top:-9999px;visibility:hidden;width:auto;height:auto;pointer-events:none;';var a=d.createElement('span'),b=d.createElement('span');a.style.cssText=b.style.cssText='display:block;width:1px;height:1px;flex:0 0 auto;padding:0;margin:0;border:0;';t.appendChild(a);t.appendChild(b);(d.body||d.documentElement).appendChild(t);var supported=t.scrollWidth>=3;/* two 1px children + 1px gap = 3; if gap ignored = 2 */if(t.parentNode)t.parentNode.removeChild(t);if(!supported){d.documentElement.className+=(d.documentElement.className?' ':'')+'no-flexgap';}}catch(e){/* leave default (assume supported) on any failure */}})();
+
 (function(){
   "use strict";
 
@@ -1763,8 +1918,12 @@
     CARDS.forEach(function(card){ var s=own[card.id]; if(s){ cc+=(+s.qty||0); gg+=(s.graded?s.graded.length:0); } });
     if(typeof SEALED!=="undefined"){ var m=activeCol().sealed||{}; SEALED.forEach(function(p){ var s=m[p.id]; if(s) sl+=(+s.qty||0); }); }
     return {cards:cc, graded:gg, sealed:sl}; }
+  // Local calendar day as YYYY-MM-DD in the device timezone (not UTC), so the snapshot
+  // day-key and the "since" date match the user's own clock instead of running a day ahead.
+  function todayKey(){ var d=new Date(), m=d.getMonth()+1, day=d.getDate();
+    return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day; }
   // Save today's point once there's a value or any owned items. Overwrites today with the latest all day; new day = new point.
-  function snapshot(){ var c=activeCol(); if(!c.hist) c.hist={}; var d=new Date().toISOString().slice(0,10);
+  function snapshot(){ var c=activeCol(); if(!c.hist) c.hist={}; var d=todayKey();
     var v=Math.round((cardsValue()+sealedValue())*100)/100, ct=collCounts();
     if(v>0 || ct.cards || ct.graded || ct.sealed) c.hist[d]={v:v, cards:ct.cards, graded:ct.graded, sealed:ct.sealed}; }
   function switchCol(id){ clearModes(); STATE.active=id; own=activeCol().own; save(); buildColSel(); if(typeof applyColMode==="function") applyColMode(); render(); }
@@ -1782,6 +1941,7 @@
   var PRICEBOOK={};   // id -> current market price, in the chosen market's currency (value sort + reference display)
   var PRICEPREV={};   // id -> previous day's market price (day-over-day movers)
   var PRICEMETA={};   // id -> 1 when that price was converted from USD (Palworld fallback), else 0
+  var PRICEASOF=0;    // ms timestamp the SERVER last refreshed the price book (its daily 1am cron), 0 if unknown
   var PWMOVERS=[];    // Palworld Prices weekly movers [{id,dir,pct,priceUsd}] - cold-start fallback only
   // Best market unit price for a card: your precise owned value if set, otherwise the price book.
   function mktOf(id){ var e=own[id]; if(e&&+e.mkt>0) return +e.mkt; var pb=PRICEBOOK[id]; return pb!=null?+pb:0; }
@@ -3082,7 +3242,12 @@
   // ---- Collection price refresh (owned cards only; keeps the portfolio total + graph current) ----
   var priceRefreshing=false;
   function relTime(ts){ if(!ts) return "never"; var m=Math.round((Date.now()-ts)/60000); if(m<1) return "just now"; if(m<60) return m+"m ago"; var h=Math.round(m/60); if(h<24) return h+"h ago"; return Math.round(h/24)+"d ago"; }
-  function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(el) el.textContent="Prices refreshed "+relTime(SETTINGS.lastPriceRefresh); }
+  // Prefer the SERVER's own refresh time (its daily 1am price job) so the label reflects how fresh the
+  // market data is, not just when this app last topped up owned cards. Fall back to the app's own
+  // refresh only until the server reports a time (offline, or an older backend without refreshedAt).
+  function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(!el) return;
+    el.textContent = PRICEASOF ? ("Prices updated "+relTime(PRICEASOF))
+                               : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh)); }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
   //   both=false (default, used by the quick on-open refresh): one value via the ladder
@@ -3154,7 +3319,7 @@
   }
   function renderPortfolio(){
     var card=$("portfolioCard"); if(!card) return;
-    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=new Date().toISOString().slice(0,10), ct=collCounts();
+    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=todayKey(), ct=collCounts();
     var live={d:today, v:cur, cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     // Make sure today's live figure is always the last point on the chart.
     if(series.length && series[series.length-1].d===today) series[series.length-1]=live;
@@ -3184,7 +3349,7 @@
   // Full-page portfolio view (reached by tapping the home chart).
   function renderPortfolioDetail(){
     var host=$("pdHost"); if(!host) return;
-    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=new Date().toISOString().slice(0,10), ct=collCounts();
+    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=todayKey(), ct=collCounts();
     var live={d:today, v:cur, cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     if(series.length && series[series.length-1].d===today) series[series.length-1]=live; else series=series.concat([live]);
     var first=series[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
@@ -3403,6 +3568,8 @@
   // previous page (dismissing an open modal first) instead of closing the app.
   var _curPage="home", _histReady=false;
   function showPage(p, _pop){
+    // Graded is a value feature; in the no-prices collector mode fall back to the plain collection view.
+    if(p==="graded" && SETTINGS.mode==="collector") p="collection";
     // Wishlist, Favourites & Graded are modes of the collection page, so they inherit its search / sort / filters.
     var virtual = (p==="favourites" || p==="graded" || p==="wishlist" || p==="owned");
     var real = virtual ? "collection" : p;
@@ -4552,9 +4719,11 @@
       if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
       var p=r.body.prices||{}, n=0;
       Object.keys(p).forEach(function(id){ var row=p[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
-      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); }catch(_){}
+      var ra=r.body.refreshedAt ? Date.parse(r.body.refreshedAt) : 0; if(ra) PRICEASOF=ra;   // server's own refresh time (daily 1am cron)
+      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); }catch(_){}
       if(n){ render(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
+      updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
     }).catch(function(){ if(!silent) toast("Price fetch failed"); });
   }
   // Palworld Prices weekly movers - cold-start fallback for Biggest Movers (see renderTrending).
@@ -4573,7 +4742,7 @@
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ fetchServerPrices(false); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background at most once every ~12h (the server updates the data about daily).
-    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; }catch(_){ PRICEBOOK={}; PRICEPREV={}; PRICEMETA={}; }
+    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; }catch(_){ PRICEBOOK={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; }
     if(apiBase()){
       var lastAt=+localStorage.getItem("palvault-pricebook-at")||0;
       if(Date.now()-lastAt > 12*3600*1000) fetchServerPrices(true);
