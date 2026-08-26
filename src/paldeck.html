@@ -319,7 +319,10 @@
     background:rgba(10,15,20,.62); color:#fff; font-size:1.05rem; backdrop-filter:blur(4px); display:grid; place-items:center; box-shadow:0 3px 10px rgba(0,0,0,.4); }
   .mclose:hover { background:rgba(10,15,20,.82); }
   .mmain h2 { font-family:var(--font-display); margin:0; font-size:1.4rem; letter-spacing:-.01em; line-height:1.05; }
-  .mtags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .mtags { display:flex; flex-wrap:wrap; align-items:center; }
+  /* Space badges with margins, not flex `gap`: older WebViews (Chrome <84 / Safari <14.1) support
+     grid-gap but NOT flex-gap, so gap here silently collapsed and the pills touched/overlapped. */
+  .mtags > * { margin:0 6px 5px 0; }
   .kv { display:grid; grid-template-columns:auto 1fr; gap:5px 14px; font-size:.86rem; }
   .kv dt { color:var(--ink-faint); font-weight:600; }
   .kv dd { margin:0; color:var(--ink); font-weight:500; }
