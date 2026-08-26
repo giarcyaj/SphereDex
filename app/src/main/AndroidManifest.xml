@@ -22,7 +22,7 @@
             android:label="SphereDex"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale|density|smallestScreenSize|locale|layoutDirection" />
 
         <!-- Launcher aliases: exactly one is enabled at a time. Default (classic / Pal blue) is on;
              each unlocked-sphere reward enables its own and disables the rest via PackageManager. -->

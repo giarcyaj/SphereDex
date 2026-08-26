@@ -121,7 +121,8 @@ class MainActivity : ComponentActivity() {
                     tmp.webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(w: WebView, r2: WebResourceRequest): Boolean {
                             try { startActivity(Intent(Intent.ACTION_VIEW, r2.url)) } catch (_: Exception) {}
-                            w.destroy(); return true
+                            w.post { w.destroy() }   // defer teardown off this WebView's own callback stack
+                            return true
                         }
                     }
                     (resultMsg.obj as WebView.WebViewTransport).webView = tmp

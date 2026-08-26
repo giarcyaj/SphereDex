@@ -130,9 +130,8 @@ class ScannerActivity : ComponentActivity() {
                         if (handled) return@addOnSuccessListener
                         for (block in result.textBlocks) {
                             val num = extractCardNumber(block.text) ?: continue
-                            val card = store.resolve(num)
-                            if (card != null) { returnCard(card.number); break }
-                            break
+                            val card = store.resolve(num) ?: continue   // keep scanning later blocks (matches iOS)
+                            returnCard(card.number); break
                         }
                     }
                     .addOnCompleteListener { proxy.close() }
@@ -145,5 +144,6 @@ class ScannerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         exec.shutdown()
+        try { recognizer.close() } catch (_: Exception) {}   // release ML Kit native OCR resources
     }
 }

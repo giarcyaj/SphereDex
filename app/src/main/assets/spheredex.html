@@ -789,12 +789,18 @@
     border:2px solid var(--surface); box-shadow:0 0 7px color-mix(in srgb,var(--c-Red) 80%,transparent); }
   .belldot[hidden] { display:none; }
   .newspop h2 { font-family:var(--font-display); font-weight:800; margin:2px 0 13px; font-size:1.35rem; letter-spacing:-.01em; }
-  .npitem { display:block; padding:12px 14px; border-radius:12px; background:var(--surface-2); border:1.5px solid var(--line);
-    margin-bottom:9px; text-decoration:none; color:var(--ink); transition:border-color .14s, transform .14s; }
+  .npitem { display:flex; align-items:flex-start; gap:8px; padding:12px 14px; border-radius:12px; background:var(--surface-2); border:1.5px solid var(--line);
+    margin-bottom:9px; transition:border-color .14s, transform .14s; }
   .npitem:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .nplink { flex:1; min-width:0; text-decoration:none; color:var(--ink); display:block; }
+  .npx { flex:0 0 auto; background:none; border:0; color:var(--ink-soft); font-size:.95rem; line-height:1; padding:3px 5px; margin:-2px -3px 0 0; border-radius:6px; cursor:pointer; }
+  .npx:hover { color:var(--c-Red); }
   .npdate { font-family:var(--font-mono); font-size:.66rem; color:var(--accent-ink); letter-spacing:.05em; font-weight:600; }
   .nptitle { font-family:var(--font-display); font-weight:750; font-size:.98rem; margin-top:3px; }
   .npsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  .nprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; }
+  .npclear { background:none; border:1.5px solid var(--line); color:var(--ink-soft); font-size:.82rem; font-weight:650; padding:6px 10px; border-radius:8px; cursor:pointer; }
+  .npclear:hover { border-color:var(--c-Red); color:var(--c-Red); }
   .npall { display:inline-block; margin-top:6px; font-size:.85rem; color:var(--accent-ink); font-weight:650; text-decoration:none; }
   .npall:hover { text-decoration:underline; }
   /* donate */
@@ -1806,7 +1812,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true}};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:"co.uk",fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
@@ -3935,35 +3941,56 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       }).join("");
       _newsList = list; updateBell();
     }
-    paint(NEWS_SEED, false);
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length) paint(r.body.items, true); }).catch(function(){}); }
+    paint(_newsCache||NEWS_SEED, !!_newsCache);   // keep the last live list offline; SEED only until the first successful load
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; paint(r.body.items, true); } }).catch(function(){}); }
   }
 
   // ---- New-announcement bell: a red dot + popup when there's news you haven't seen yet ----
   var _newsList = NEWS_SEED.slice();
+  var _newsCache = null;   // last successful /api/news, so offline revisits keep live news instead of dropping to SEED
   // Feed titles/summaries arrive HTML-entity-encoded (e.g. &#038; , &#8230;); decode before we re-escape for display.
   function decodeEntities(s){ var t=document.createElement("textarea"); t.innerHTML=String(s==null?"":s); return t.value; }
-  function newsTopId(){ var t=_newsList[0]; return t ? (String(t.title||"")+"|"+String(t.date||"")) : ""; }
+  // Per-item dismiss: a stable id + a persisted dismissed-list so the user can clear old notifications.
+  function newsId(n){ return (n&&(n.link||""))+"|"+(n&&(n.title||"")); }
+  function newsDismissedSet(){ if(!SETTINGS.newsDismissed) SETTINGS.newsDismissed=[]; return SETTINGS.newsDismissed; }
+  function visibleNews(){ var d=newsDismissedSet(); return _newsList.filter(function(n){ return d.indexOf(newsId(n))===-1; }); }
+  function dismissNews(id){ var d=newsDismissedSet(); if(id && d.indexOf(id)===-1){ d.push(id); if(d.length>300) d.splice(0,d.length-300); saveSettings(); } }
+  function newsTopId(){ var t=visibleNews()[0]; return t ? (String(t.title||"")+"|"+String(t.date||"")) : ""; }
   function updateBell(){ var d=$("bellDot"); if(!d) return; var top=newsTopId(); d.hidden = (!top || top===(SETTINGS.newsSeenTop||"")); }
   function openNewsPopup(){
-    var items=_newsList.slice(0,12);
-    $("mMain").innerHTML=
-      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
-      '<div class="newspop"><h2>What’s new</h2>'+
-      (items.length ? items.map(function(n){ var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
-        return '<a class="npitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
-          (meta.length?'<div class="npdate">'+meta.join(' · ')+'</div>':'')+
-          '<div class="nptitle">'+esc(decodeEntities(n.title||""))+'</div>'+
-          (n.summary?'<div class="npsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>'; }).join("")
-        : '<p class="qsub">No announcements yet.</p>')+
-      '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Open the official news site ↗</a></div>';
-    var cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    function build(){
+      var items=visibleNews().slice(0,12);
+      $("mMain").innerHTML=
+        '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+        '<div class="newspop"><h2>What’s new</h2>'+
+        (items.length ? items.map(function(n){ var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
+          return '<div class="npitem" data-id="'+esc(newsId(n))+'">'+
+            '<a class="nplink" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
+              (meta.length?'<div class="npdate">'+meta.join(' · ')+'</div>':'')+
+              '<div class="nptitle">'+esc(decodeEntities(n.title||""))+'</div>'+
+              (n.summary?'<div class="npsum">'+esc(decodeEntities(n.summary))+'</div>':'')+
+            '</a>'+
+            '<button class="npx" type="button" aria-label="Dismiss this notification">✕</button>'+
+          '</div>'; }).join("")
+          : '<p class="qsub">You’re all caught up.</p>')+
+        (items.length
+          ? '<div class="nprow"><button class="npclear" id="npClearAll" type="button">Clear all</button>'+
+            '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Official news site ↗</a></div>'
+          : '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Open the official news site ↗</a>')+
+        '</div>';
+      var cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+      var xs=$("mMain").querySelectorAll(".npitem .npx");
+      for(var i=0;i<xs.length;i++){ (function(btn){ btn.onclick=function(e){ e.preventDefault(); e.stopPropagation();
+        var row=btn.parentNode; dismissNews(row&&row.getAttribute("data-id")); build(); updateBell(); }; })(xs[i]); }
+      var ca=$("npClearAll"); if(ca) ca.onclick=function(){ visibleNews().forEach(function(n){ dismissNews(newsId(n)); }); build(); updateBell(); };
+    }
+    build();
     SETTINGS.newsSeenTop=newsTopId(); saveSettings(); updateBell();
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
   }
   function primeNewsBell(){
     updateBell();
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsList=r.body.items; updateBell(); } }).catch(function(){}); }
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; _newsList=r.body.items; updateBell(); } }).catch(function(){}); }
   }
 
   // ---- Quick Add ----
