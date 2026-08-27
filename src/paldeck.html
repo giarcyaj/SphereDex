@@ -728,6 +728,18 @@
   .pctip .pctd { font-size:.7rem; opacity:.72; }
   .pctip .pctc { font-size:.68rem; opacity:.6; }
   .pcnote { font-size:.78rem; color:var(--ink-faint); margin-top:6px; }
+  /* Per-day dots overlaid on the portfolio chart (kept round via %-positioning, see chartSVG). */
+  .pcdots { position:absolute; inset:0; pointer-events:none; }
+  .pcdot { position:absolute; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 1.5px var(--surface); }
+  .pcdot.pcdotnow { width:9px; height:9px; margin:-4.5px 0 0 -4.5px; box-shadow:0 0 0 2px var(--surface); box-shadow:0 0 0 2px var(--surface), 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
+  /* Destructive "Start fresh today" variant of the footer button. */
+  .pcfresh:hover { border-color:var(--el-Fire); color:var(--el-Fire); }
+  /* Reusable confirm ("are you sure?") dialog, rendered into the shared #mMain overlay. */
+  .confirmbox { padding:2px 2px 4px; }
+  .confirmbox h2 { font-family:var(--font-display); font-weight:800; font-size:1.25rem; margin:0 0 8px; }
+  .confirmbox p { color:var(--ink-soft); font-size:.92rem; line-height:1.5; margin:0 0 18px; }
+  .confirmbtns { display:flex; gap:10px; }
+  .confirmbtns .btn { flex:1; }
   /* portfolio detail page */
   .backbtn { background:none; border:none; color:var(--ink-soft); font-family:inherit; font-size:.95rem; font-weight:600; cursor:pointer; padding:2px 6px 2px 0; margin-bottom:10px; }
   .backbtn:hover { color:var(--ink); }
@@ -811,8 +823,9 @@
   .nptitle { font-family:var(--font-display); font-weight:750; font-size:.98rem; margin-top:3px; }
   .npsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
   .nprow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; }
-  .npclear { background:none; border:1.5px solid var(--line); color:var(--ink-soft); font-size:.82rem; font-weight:650; padding:6px 10px; border-radius:8px; cursor:pointer; }
-  .npclear:hover { border-color:var(--c-Red); color:var(--c-Red); }
+  /* Prominent "Dismiss all": full-width, filled, sits right under the heading so it is always visible. */
+  .npclear { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; box-sizing:border-box; margin:0 0 13px; background:var(--surface-2); background:color-mix(in srgb, var(--c-Red) 15%, var(--surface)); border:1.5px solid var(--c-Red); color:var(--c-Red); font-family:var(--font-display); font-size:.92rem; font-weight:750; padding:10px 14px; border-radius:10px; cursor:pointer; }
+  .npclear:hover { background:color-mix(in srgb, var(--c-Red) 26%, var(--surface)); }
   .npall { display:inline-block; margin-top:6px; font-size:.85rem; color:var(--accent-ink); font-weight:650; text-decoration:none; }
   .npall:hover { text-decoration:underline; }
   /* donate */
@@ -937,7 +950,7 @@
   .obinput{ width:100%; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:12px 14px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; margin-bottom:18px; }
   .obinput:focus{ outline:none; border-color:var(--accent); }
   .obchoices{ display:grid; gap:12px; }
-  .obchoice{ display:grid; gap:3px; text-align:left; padding:15px 16px; border-radius:16px; border:2px solid var(--line-strong); background:var(--surface-2); color:var(--ink); cursor:pointer; transition:transform .14s, border-color .14s, box-shadow .14s; }
+  .obchoice{ display:grid; gap:3px; justify-items:center; text-align:center; padding:15px 16px; border-radius:16px; border:2px solid var(--line-strong); background:var(--surface-2); color:var(--ink); cursor:pointer; transition:transform .14s, border-color .14s, box-shadow .14s; }
   .obchoice:hover{ border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
   .obregion{ display:grid; gap:6px; margin-top:14px; text-align:left; }
   .obreglab{ font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); }
@@ -3317,6 +3330,31 @@
     }
     pump();
   }
+  // Reusable "are you sure?" dialog, rendered into the shared #mMain overlay.
+  function confirmDialog(title, message, confirmLabel, onConfirm){
+    var wasOpen=scrim.classList.contains("open");
+    $("mMain").innerHTML=
+      '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
+      '<div class="confirmbox"><h2>'+esc(title)+'</h2><p>'+esc(message)+'</p>'+
+      '<div class="confirmbtns"><button class="btn sec" id="cfCancel" type="button">Cancel</button>'+
+      '<button class="btn danger" id="cfOk" type="button">'+esc(confirmLabel)+'</button></div></div>';
+    scrim.classList.add("open"); if(!wasOpen) openOverlay(closeModal);
+    var cl=$("mClose"); if(cl) cl.onclick=function(){ dismissOverlay(); };
+    var cc=$("cfCancel"); if(cc) cc.onclick=function(){ dismissOverlay(); };
+    var ok=$("cfOk"); if(ok) ok.onclick=function(){ if(onConfirm) onConfirm(); dismissOverlay(); };
+  }
+  // "Start fresh today": wipe the saved portfolio history from before today so the graph + since-date restart now.
+  function startFreshToday(){
+    activeCol().hist={};   // save() -> snapshot() re-adds today's point below
+    save();
+    if(typeof renderHome==="function") renderHome();   // repaints the portfolio card (renderHome -> renderPortfolio)
+    var pg=document.getElementById("page-portfolio");
+    if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+    toast("History cleared, tracking starts fresh today");
+  }
+  function askStartFresh(){
+    confirmDialog("Start fresh today?", "This clears your saved portfolio history from before today. Your graph and the 'since' date will restart from today. This cannot be undone.", "Start fresh", startFreshToday);
+  }
   function renderPortfolio(){
     var card=$("portfolioCard"); if(!card) return;
     var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, today=todayKey(), ct=collCounts();
@@ -3339,11 +3377,13 @@
         '<span class="pcbtns">'+
           '<button class="pcrefbtn" id="portHistBtn" type="button">'+icon('chart')+' Portfolio history</button>'+
           (apiBase()?'<button class="pcrefbtn pricerefresh priceui" id="refreshPricesBtn" type="button">'+icon('refresh')+' Refresh prices</button>':'')+
+          (series.length>=2?'<button class="pcrefbtn pcfresh" id="startFreshBtn" type="button">Start fresh today</button>':'')+
         '</span></div>'+
       (series.length<2?'<div class="pcnote">Your total is saved each day, so the line grows as the days pass.</div>':'<div class="pcnote">Tap the chart for the full history and a day-by-day breakdown.</div>');
     wireChart(series, null, function(){ showPage("portfolio"); });
     var rb=$("refreshPricesBtn"); if(rb) rb.onclick=function(){ refreshCollectionPrices({auto:false}); };
     var ph=$("portHistBtn"); if(ph) ph.onclick=function(){ showPage("portfolio"); };
+    var sf=$("startFreshBtn"); if(sf) sf.onclick=askStartFresh;
     updateRefreshLabel();
   }
   // Full-page portfolio view (reached by tapping the home chart).
@@ -3373,10 +3413,12 @@
         '<div class="hs"><span class="n">'+money(lo)+'</span><span class="l">Low</span></div>'+
         '<div class="hs"><span class="n">'+series.length+'</span><span class="l">Day'+(series.length===1?"":"s")+' tracked</span></div></div>'+
       (series.length<2?'<div class="pcnote">Your total is saved once a day, so this history fills in as the days pass.</div>':'')+
+      (series.length>=2?'<div class="pcfoot" style="justify-content:flex-end;margin-top:14px"><button class="pcrefbtn pcfresh" id="startFreshBtnD" type="button">Start fresh today</button></div>':'')+
       '<h2 class="sech" style="margin-top:26px">Day by day</h2>'+
       '<div class="pdlist">'+rows+'</div>';
     wireChart(series, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
     var bk=$("pdBack"); if(bk) bk.onclick=function(){ if(_histReady && history.length>1) history.back(); else showPage("home"); };
+    var sfd=$("startFreshBtnD"); if(sfd) sfd.onclick=askStartFresh;
   }
   function wireChart(series, ids, onClick){
     ids=ids||{}; var wrap=$(ids.wrap||"pcWrap"), tip=$(ids.tip||"pcTip"), mk=$(ids.mark||"pcMark"); if(!wrap||!tip||!mk) return;
@@ -3412,13 +3454,18 @@
     var xw=W-pad*2, yh=H-pad*2;
     function X(i){ return n<=1? W/2 : pad+(i/(n-1))*xw; }
     function Y(v){ return pad+yh-((v-mn)/(mx-mn))*yh; }
-    if(n<=1){ return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-dasharray="4 5"/></svg>'; }
+    // One dot per day. Drawn as %-positioned HTML overlay (not SVG circles) so they stay perfectly
+    // round despite the chart's stretched preserveAspectRatio="none" viewBox. Last dot = today, emphasised.
+    var dots='<div class="pcdots" aria-hidden="true">'+series.map(function(s,i){
+      return '<span class="pcdot'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(s.v)/H*100).toFixed(3)+'%"></span>';
+    }).join("")+'</div>';
+    if(n<=1){ return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-dasharray="4 5"/></svg>'+dots; }
     var line=series.map(function(s,i){ return (i?"L":"M")+X(i)+" "+Y(s.v); }).join(" ");
     var area=line+" L"+X(n-1)+" "+(H-pad)+" L"+X(0)+" "+(H-pad)+" Z";
     return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
       '<defs><linearGradient id="pcg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>'+
       '<path d="'+area+'" fill="url(#pcg)"/>'+
-      '<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+      '<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>'+dots;
   }
 
   // ---- Deck builder ----
@@ -4136,6 +4183,7 @@
       $("mMain").innerHTML=
         '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
         '<div class="newspop"><h2>What’s new</h2>'+
+        (items.length ? '<button class="npclear" id="npClearAll" type="button" aria-label="Dismiss all notifications">✕ Dismiss all</button>' : '')+
         (items.length ? items.map(function(n){ var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
           return '<div class="npitem" data-id="'+esc(newsId(n))+'">'+
             '<a class="nplink" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
@@ -4146,10 +4194,7 @@
             '<button class="npx" type="button" aria-label="Dismiss this notification">✕</button>'+
           '</div>'; }).join("")
           : '<p class="qsub">You’re all caught up.</p>')+
-        (items.length
-          ? '<div class="nprow"><button class="npclear" id="npClearAll" type="button">Clear all</button>'+
-            '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Official news site ↗</a></div>'
-          : '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">Open the official news site ↗</a>')+
+        '<a class="npall" href="'+OFFICIAL_NEWS+'" target="_blank" rel="noopener">'+(items.length?'Official news site ↗':'Open the official news site ↗')+'</a>'+
         '</div>';
       var cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
       var xs=$("mMain").querySelectorAll(".npitem .npx");
