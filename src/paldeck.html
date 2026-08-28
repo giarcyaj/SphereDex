@@ -529,7 +529,7 @@
   .sealedgrid.cols-3 { grid-template-columns:repeat(3,1fr); }
   @media (max-width:560px){ .sealedgrid.cols-3{ grid-template-columns:repeat(2,1fr);} }
   .sealcard { background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
-  .sealcard .sbox { aspect-ratio:1/1; background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; }
+  .sealcard .sbox { aspect-ratio:1/1; background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; position:relative; }
   .sealcard .sbox img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
   .sealcard .sb { padding:13px 15px 15px; display:flex; flex-direction:column; gap:11px; }
   .sealcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; }
@@ -540,8 +540,10 @@
   /* sealed detail sheet */
   .sealdet { padding:0 0 2px; }
   .sdimg { aspect-ratio:1/1; max-height:300px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden;
-    display:flex; align-items:center; justify-content:center; padding:16px; border:1.5px solid var(--line-strong); box-sizing:border-box; }
+    display:flex; align-items:center; justify-content:center; padding:16px; border:1.5px solid var(--line-strong); box-sizing:border-box; position:relative; }
   .sdimg img { max-width:100%; max-height:100%; object-fit:contain; }
+  /* Pre-order badge overlaid on the corner of a product image (vs the centered .preph placeholder). */
+  .prtag.prcorner { position:absolute; top:8px; left:8px; z-index:2; }
   /* Product art sits on white in light mode; use a dark panel in dark mode (placeholders keep their gradient). */
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .sealcard .sbox:not(.preph),
     :root:not([data-theme="light"]) .sdimg:not(.preph){ background:var(--surface-2); } }
@@ -3082,7 +3084,7 @@
     // Upcoming products, open for pre-order (no images or market yet).
     { id:"box-bp02", name:"Booster Box", sub:"Legends Awaken · 12 packs", box:"", q:"Palworld Legends Awaken Booster Box", pre:true, date:"Oct 30, 2026" },
     { id:"pack-bp02", name:"Booster Pack", sub:"Legends Awaken · 7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", pre:true, date:"Oct 30, 2026" },
-    { id:"ss-vol1", name:"Sleeve & Card Set Vol. 1", sub:"5 cards · 75 sleeves", box:"", q:"Palworld Sleeve Card Set Vol 1", pre:true, date:"Oct 2, 2026" },
+    { id:"ss-vol1", name:"Sleeve & Card Set Vol. 1", sub:"5 cards · 75 sleeves", box:"BOX_SS01", q:"Palworld Sleeve Card Set Vol 1", pre:true, date:"Oct 16, 2026" },
     { id:"td-ea-rg", name:"Trial Deck, Red · Green", sub:"Eternal Ascent starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Red Green", pre:true, date:"Dec 18, 2026" },
     { id:"td-ea-bp", name:"Trial Deck, Blue · Purple", sub:"Eternal Ascent starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Blue Purple", pre:true, date:"Dec 18, 2026" }
   ];
@@ -3143,8 +3145,11 @@
       if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Pre-orders · coming soon"; grid.appendChild(dv); }
       var el=document.createElement("div"); el.className="sealcard"+(p.pre?" preorder":"");
       if(p.pre){
+        var pbox=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
         el.innerHTML=
-          '<div class="sbox sdopen preph" role="button" tabindex="0" title="View details"><span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span></div>'+
+          '<div class="sbox sdopen'+(pbox?'':' preph')+'" role="button" tabindex="0" title="View details">'+
+            (pbox?'<img src="'+pbox+'" alt="'+esc(p.name)+'"><span class="prtag prcorner">Pre-order</span>'
+                 :'<span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span>')+'</div>'+
           '<div class="sb">'+
             '<div class="snm sdopen" role="button" tabindex="0">'+esc(p.name)+'</div><div class="ssub">'+esc(p.sub)+'</div>'+
             '<div class="predate">Out '+esc(p.date||"soon")+'</div>'+
@@ -3200,10 +3205,11 @@
   function openSealedDetail(p){
     if(p.pre){
       var bl0=sealBuyLinks(p);
+      var dbox=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       $("mMain").innerHTML=
         '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
         '<div class="sealdet">'+
-          '<div class="sdimg preph"><span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span></div>'+
+          '<div class="sdimg'+(dbox?'':' preph')+'">'+(dbox?'<img src="'+dbox+'" alt="'+esc(p.name)+'"><span class="prtag prcorner">Pre-order</span>':'<span class="prtag">Pre-order</span><span class="prname">'+esc(p.name)+'</span>')+'</div>'+
           '<h2>'+esc(p.name)+'</h2>'+
           '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(p.sub)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Pre-order</span></div>'+
           '<div class="predate big">Releases '+esc(p.date||"soon")+'</div>'+
