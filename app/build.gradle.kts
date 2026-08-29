@@ -60,7 +60,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     // Camera + on-device OCR
-    val camerax = "1.3.4"
+    // CameraX 1.4.0+ ships 16 KB-page-aligned native libs (libimage_processing_util_jni.so);
+    // 1.3.x was compiled for 4 KB pages and fails Google Play's 16 KB page-size check.
+    val camerax = "1.4.2"
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")
