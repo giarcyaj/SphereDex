@@ -67,9 +67,13 @@
   .btn.primary:hover{color:#04222a;filter:brightness(1.05)}
   .btn.gold{background:linear-gradient(180deg,#ffc24d,#f0a017);color:#241400;border-color:transparent;
     box-shadow:0 12px 30px -14px rgba(255,176,32,.6)}
-  .btn.dark{background:linear-gradient(180deg,#2c313c,#12151c);color:#fff;border-color:transparent;
-    box-shadow:0 12px 30px -14px rgba(0,0,0,.55)}
-  .btn.dark:hover{color:#fff;filter:brightness(1.14)}
+  /* official app store / google play badges */
+  .storebadge{display:inline-flex;align-items:center;border-radius:11px;transition:transform .15s,filter .15s}
+  .storebadge:hover{transform:translateY(-1px);filter:brightness(1.06)}
+  .storebadge:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:11px}
+  .storebadge img{display:block;height:46px;width:auto}
+  .storebadge.gp img{height:56px}
+  @media(max-width:760px){ .storebadge img{height:44px} .storebadge.gp img{height:54px} }
   .navlinks .btn{padding:9px 15px}
   @media(max-width:760px){ .navlinks a:not(.btn){display:none} .nav .wrap{gap:10px} }
 
@@ -209,8 +213,8 @@
     <p class="sub">Every card, real market prices, and the movers that matter, in one clean binder. Free, works offline, and saves right in your browser.</p>
     <div class="cta">
       <a class="btn primary" href="app/">Open the web app</a>
-      <a class="btn dark" href="https://apps.apple.com/app/spheredex/id6804377686">Download on the App Store</a>
-      <a class="btn gold" href="https://play.google.com/store/apps/details?id=app.spheredex">Get it on Google Play</a>
+      <a class="storebadge" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><img src="badges/app-store-badge.svg" alt="Download on the App Store" width="138" height="46"></a>
+      <a class="storebadge gp" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><img src="badges/google-play-badge.png" alt="Get it on Google Play" width="145" height="56"></a>
     </div>
     <div class="trust">
       <span><i class="dot"></i>255 cards tracked</span>
@@ -326,8 +330,8 @@
   <p class="muted" style="max-width:46ch;margin:14px auto 0;font-size:1.1rem">Open it in your browser right now, or download it on the App Store or Google Play.</p>
   <div class="cta">
     <a class="btn primary" href="app/">Open the web app</a>
-    <a class="btn dark" href="https://apps.apple.com/app/spheredex/id6804377686">Download on the App Store</a>
-    <a class="btn gold" href="https://play.google.com/store/apps/details?id=app.spheredex">Get it on Google Play</a>
+    <a class="storebadge" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><img src="badges/app-store-badge.svg" alt="Download on the App Store" width="138" height="46"></a>
+    <a class="storebadge gp" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><img src="badges/google-play-badge.png" alt="Get it on Google Play" width="145" height="56"></a>
   </div>
 </div></section>
 
