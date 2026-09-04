@@ -2158,6 +2158,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     });
     var s = filters.sort;
     out.sort(function(a,b){
+      var pr=(a.set==="PR2026"?1:0)-(b.set==="PR2026"?1:0); if(pr) return pr;   // promos always sink to the bottom, whatever the sort
       if (s==="name") return a.name.localeCompare(b.name) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="rarity") return (RARE_ORDER[b.rare]-RARE_ORDER[a.rare]) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="value") return (mktOf(b.id)-mktOf(a.id)) || a.setIdx-b.setIdx || a.seq-b.seq;
@@ -4355,12 +4356,31 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       row.onclick=function(){ openSet(k); };
       tl.appendChild(row);
     });
-    var up=document.createElement("div"); up.className="trow tupcoming";
-    var bp2=(window.CARD_IMG&&window.CARD_IMG.BOX_BP02)||"";
-    up.innerHTML='<div class="tbox">'+(bp2?'<img src="'+bp2+'" alt="Booster 02, Legends Awaken">':'<span class="ph">BP02</span>')+'</div>'+
-      '<div class="tinfo"><h3>Booster 02 · Legends Awaken</h3><div class="tdate">On sale October 30, 2026, preorders open</div>'+
-      '<div class="tsub" style="font-size:.82rem;color:var(--ink-soft);margin-top:5px">Plus Sleeve &amp; Card Set Vol. 1. Cards appear here once the list is published.</div></div>';
-    tl.appendChild(up);
+    // Upcoming products, generated from the sealed pre-order list (sorted by date) so this timeline stays
+    // current automatically as pre-orders are added or re-dated — no separate hardcoded schedule to go stale.
+    var UMON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    function upDate(d){ var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(d||"");
+      if(m&&UMON[m[1].toLowerCase()]!=null) return new Date(+m[3],UMON[m[1].toLowerCase()],+m[2]).getTime();
+      var mo=/([A-Za-z]{3})[a-z]*\s+(\d{4})/.exec(d||""); if(mo&&UMON[mo[1].toLowerCase()]!=null) return new Date(+mo[2],UMON[mo[1].toLowerCase()],28).getTime();
+      return Infinity; }
+    // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
+    var ugroups=[], ugmap={};
+    SEALED.filter(function(p){ return p.pre; }).forEach(function(p){
+      var key=(p.set||p.name)+"|"+(p.date||""), g=ugmap[key];
+      if(!g){ g=ugmap[key]={ title:(p.set||p.name), date:p.date, box:p.box, items:[], first:p }; ugroups.push(g); }
+      var typ=(p.set&&p.name)?p.name:(p.sub||"");   // the product type shown under the set headline
+      if(typ && g.items.indexOf(typ)<0) g.items.push(typ);
+      if(!g.box && p.box) g.box=p.box;
+    });
+    ugroups.sort(function(a,b){ return upDate(a.date)-upDate(b.date); }).forEach(function(g){
+      var img=(window.CARD_IMG&&window.CARD_IMG[g.box])?window.CARD_IMG[g.box]:"", subline=g.items.join(" · ");
+      var up=document.createElement("div"); up.className="trow tupcoming clickable";
+      up.innerHTML='<div class="tbox">'+(img?'<img src="'+img+'" alt="'+esc(g.title)+'">':'<span class="ph">Soon</span>')+'</div>'+
+        '<div class="tinfo"><h3>'+esc(g.title)+' →</h3><div class="tdate">Out '+esc(g.date||"soon")+' · pre-order</div>'+
+        (subline?'<div class="tsub" style="font-size:.82rem;color:var(--ink-soft);margin-top:5px">'+esc(subline)+'</div>':'')+'</div>';
+      up.onclick=function(){ openSealedDetail(g.first); };
+      tl.appendChild(up);
+    });
   }
 
   // ---- News ----
