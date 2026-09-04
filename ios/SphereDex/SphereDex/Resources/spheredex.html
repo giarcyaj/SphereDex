@@ -1637,6 +1637,13 @@
         <label class="switch"><input type="checkbox" id="setNoFade"><span class="track"></span></label>
       </div>
       <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Collection price mode</div><div class="sdesc">Which price your collection is valued at. <b>Live listings</b> — the average of the lowest current listings, refreshed automatically every day. <b>Last sold</b> — the average of recent sold prices, refreshed automatically about weekly (and whenever you tap “Refresh prices”).</div></div>
+        <select class="sortsel" id="setPriceMode">
+          <option value="live">Live listings</option>
+          <option value="sold">Last sold</option>
+        </select>
+      </div>
+      <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">eBay region</div><div class="sdesc">Which eBay marketplace the “Search sold listings” links open. Match it to where you buy and sell.</div></div>
         <select class="sortsel" id="setEbayRegion">
           <option value="co.uk">United Kingdom (ebay.co.uk)</option>
@@ -1971,21 +1978,35 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // Server-side price book (all cards, from /api/prices) so we can rank EVERY card by value, not
   // just owned ones. Kept separate from owned state so the daily bulk prices never overwrite the
   // precise per-card values you pull for cards you own.
-  var PRICEBOOK={};   // id -> current market price, in the chosen market's currency (value sort + reference display)
-  var PRICEPREV={};   // id -> previous day's market price (day-over-day movers)
+  var PRICEBOOK={};   // id -> LIVE-listings market price (daily), in the chosen market's currency (value sort + reference display)
+  var PRICEBOOK_SOLD={}; // id -> LAST-SOLD market price (weekly rotation), same currency; used when price mode = "last sold"
+  var PRICEPREV={};   // id -> previous day's market price (day-over-day movers, from the live book)
   var PRICEMETA={};   // id -> 1 when that price was converted from USD (Palworld fallback), else 0
   var PRICEASOF=0;    // ms timestamp the SERVER last refreshed the price book (its daily 1am cron), 0 if unknown
+  var LIVE_ASOF=0, SOLD_ASOF=0;  // per-mode server refresh times (live = daily, sold = weekly) so the label names the right one
   var PWMOVERS=[];    // Palworld Prices weekly movers [{id,dir,pct,priceUsd}] - cold-start fallback only
-  // Best market unit price for a card: your precise owned value if set, otherwise the price book.
-  function mktOf(id){ var e=own[id]; if(e&&+e.mkt>0) return +e.mkt; var pb=PRICEBOOK[id]; return pb!=null?+pb:0; }
+  // Collection price mode (set in Settings): "live" = live listings (refreshed daily, automatic),
+  // "sold" = last sold (weekly automatic + your manual refresh). Drives every value across the app.
+  function priceMode(){ return (typeof SETTINGS!=="undefined"&&SETTINGS.priceMode==="sold")?"sold":"live"; }
+  function basisOf(){ return priceMode()==="sold"?"sold":"list"; }  // maps the mode onto the sold/list value basis
+  // Unit market price for a card in the ACTIVE mode: your precise owned figure for that mode if set,
+  // else the bulk book for that mode, else your owned headline, else 0.
+  function unitOf(id){ var e=own[id], sold=(priceMode()==="sold");
+    if(e){ var pv=sold?e.sold:e.list; if(pv!=null&&+pv>0) return +pv; }
+    var bk=sold?PRICEBOOK_SOLD:PRICEBOOK, pb=bk[id]; if(pb!=null) return +pb;
+    if(e&&+e.mkt>0) return +e.mkt; return 0; }
+  // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
+  function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
   // figure. Your own entered value (owned cards) is always native, so it is never flagged converted.
   function isConverted(id){ var e=own[id]; if(e&&+e.mkt>0) return false; return !!PRICEMETA[id]; }
-  // Binder value can be shown two ways: last 5 sold (e.sold) or live listings (e.list); each falls back to e.mkt.
-  var valueBasis="sold";
+  // Binder value follows the collection price mode: last 5 sold (e.sold) or live listings (e.list). Synced to SETTINGS.priceMode.
+  var valueBasis="list";
   function unitPrice(s, basis){ if(basis==="sold") return (s.sold!=null&&s.sold>0)?s.sold:(+s.mkt||0); if(basis==="list") return (s.list!=null&&s.list>0)?s.list:(+s.mkt||0); return (+s.mkt||0); }
   function cardValueBasis(s, basis){ var v=(+s.qty||0)*unitPrice(s,basis); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
-  function binderValue(basis){ return CARDS.reduce(function(a,c){ return a+cardValueBasis(o(c.id),basis); },0); }
+  // Binder total, mode-aware (mirrors the home portfolio's cards value): owned precise figure for the
+  // active mode, else the bulk book, else headline. `basis` kept for callers but the active mode wins.
+  function binderValue(basis){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=(+e.qty||0)*unitOf(c.id); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; },0); }
 
   var CUR = CURRENCIES.filter(function(c){ return c.code===(localStorage.getItem("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
   // Format locale follows the chosen market region; a saved currency still sets the symbol/decimals.
@@ -2016,8 +2037,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
+  valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
   var viewMode = localStorage.getItem("palvault-view") || SETTINGS.defaultView || "auto";
   var $ = function(id){ return document.getElementById(id); };
@@ -2301,7 +2323,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
   })();
   (function(){ var p=$("valPanel"); if(!p) return;
-    function toggle(){ if(wishMode) return; valueBasis=(valueBasis==="sold")?"list":"sold"; stats(); }
+    function toggle(){ if(wishMode) return; SETTINGS.priceMode=(priceMode()==="sold")?"live":"sold"; valueBasis=basisOf(); saveSettings();
+      var pm=$("setPriceMode"); if(pm) pm.value=SETTINGS.priceMode; updateRefreshLabel(); stats(); if(typeof renderPortfolio==="function") renderPortfolio(); }
     p.addEventListener("click", toggle);
     p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
   })();
@@ -3117,7 +3140,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
     ["qty","rrp","mkt","last","avg"].forEach(function(k){ if(s[k]==null) s[k]=0; }); return s; }
   function sealedValue(){ var t=0; SEALED.forEach(function(p){ if(p.pre) return; var s=sealItem(p.id); t+=(+s.qty||0)*(+sealPrice(s).mkt||0); }); return t; }
-  function cardsValue(){ return CARDS.reduce(function(a,c){ return a+cardValue(o(c.id)); },0); }
+  function cardsValue(){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=(+e.qty||0)*unitOf(c.id); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; },0); }
   function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
   // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
   // listings → (US sold → US listings, if the fallback setting is on). Sequential = quota-light.
@@ -3301,8 +3324,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // market data is, not just when this app last topped up owned cards. Fall back to the app's own
   // refresh only until the server reports a time (offline, or an older backend without refreshedAt).
   function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(!el) return;
-    el.textContent = PRICEASOF ? ("Prices updated "+relTime(PRICEASOF))
-                               : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh)); }
+    var sold=(priceMode()==="sold"), asof=sold?SOLD_ASOF:LIVE_ASOF, word=sold?"Last sold":"Live listings";
+    el.textContent = asof ? (word+" updated "+relTime(asof))
+                          : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF))
+                                       : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh))); }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
   //   both=false (default, used by the quick on-open refresh): one value via the ladder
@@ -4632,6 +4657,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; localStorage.setItem("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
+    var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
@@ -4842,10 +4868,16 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var reg=encodeURIComponent(SETTINGS.ebayRegion||"co.uk");
     api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
       if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
-      var p=r.body.prices||{}, n=0;
-      Object.keys(p).forEach(function(id){ var row=p[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
+      var base=r.body.prices||{}, liveMap=r.body.live||{}, soldMap=r.body.sold||{}, n=0;
+      // The server now returns two books: live listings (daily) and last sold (weekly). Until either
+      // table is populated it comes back empty, so fall back to the blended book so value-sort still works.
+      var liveSrc=Object.keys(liveMap).length?liveMap:base, soldSrc=Object.keys(soldMap).length?soldMap:base;
+      Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
+      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null) PRICEBOOK_SOLD[id]=+row.market; });
+      LIVE_ASOF=r.body.liveRefreshedAt?Date.parse(r.body.liveRefreshedAt):0;   // server's daily live-listings refresh
+      SOLD_ASOF=r.body.soldRefreshedAt?Date.parse(r.body.soldRefreshedAt):0;   // server's weekly last-sold rotation
       var ra=r.body.refreshedAt ? Date.parse(r.body.refreshedAt) : 0; if(ra) PRICEASOF=ra;   // server's own refresh time (daily 1am cron)
-      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); }catch(_){}
+      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       if(n){ render(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
       updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
@@ -4867,7 +4899,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ fetchServerPrices(false); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background at most once every ~12h (the server updates the data about daily).
-    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; }catch(_){ PRICEBOOK={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; }
+    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
     if(apiBase()){
       var lastAt=+localStorage.getItem("palvault-pricebook-at")||0;
       if(Date.now()-lastAt > 12*3600*1000) fetchServerPrices(true);
