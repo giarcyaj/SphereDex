@@ -66,12 +66,18 @@
     box-shadow:0 12px 30px -12px rgba(18,227,245,.6)}
   .btn.primary:hover{color:#04222a;filter:brightness(1.05)}
   /* official app store / google play badges */
-  .storebadge{display:inline-flex;align-items:center;border-radius:11px;transition:transform .15s,filter .15s}
-  .storebadge:hover{transform:translateY(-1px);filter:brightness(1.06)}
-  .storebadge:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:11px}
-  .storebadge img{display:block;height:46px;width:auto}
-  .storebadge.gp img{height:56px}
-  @media(max-width:760px){ .storebadge img{height:44px} .storebadge.gp img{height:54px} }
+  /* unified store buttons — web app / App Store / Google Play, all the same size + design */
+  .storebtn{display:inline-flex;align-items:center;gap:12px;min-width:200px;padding:11px 20px;
+    border-radius:13px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--ink);
+    cursor:pointer;transition:transform .15s,border-color .15s,color .15s;box-shadow:inset 0 1px 0 var(--edge)}
+  .storebtn:hover{border-color:var(--accent);color:#fff;transform:translateY(-1px)}
+  .storebtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .storebtn svg{width:26px;height:26px;flex:none}
+  .storebtn .t{display:flex;flex-direction:column;line-height:1.12;text-align:left;font-family:var(--font-disp)}
+  .storebtn .t .s{font-size:.62rem;letter-spacing:.03em;color:var(--ink-faint);font-weight:600}
+  .storebtn .t .b{font-size:1.06rem;font-weight:700}
+  .storebtn:hover .t .s{color:var(--ink-soft)}
+  @media(max-width:760px){ .storebtn{min-width:0;flex:1 1 46%} }
   .navlinks .btn{padding:9px 15px}
   @media(max-width:760px){ .navlinks a:not(.btn){display:none} .nav .wrap{gap:10px} }
 
@@ -186,6 +192,9 @@
   <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
   <symbol id="ic-free" viewBox="0 0 24 24"><path d="M20.5 12.5 12 21l-8.5-8.5V4h8.5z"/><circle cx="8" cy="8" r="1.4"/></symbol>
   <symbol id="ic-sync" viewBox="0 0 24 24"><path d="M18 8.5A6.5 6.5 0 0 0 6.2 7"/><path d="M6 5.5V9H2.5"/><path d="M6 15.5A6.5 6.5 0 0 0 17.8 17"/><path d="M18 18.5V15h3.5"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.6 2.5 3.9 5.6 3.9 9s-1.3 6.5-3.9 9c-2.6-2.5-3.9-5.6-3.9-9S9.4 5.5 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-apple" viewBox="0 0 24 24"><path fill="currentColor" d="M17.05 12.04c-.03-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.62-.81-2.67-.79-1.37.02-2.64.8-3.35 2.03-1.43 2.48-.37 6.15 1.02 8.17.68.99 1.49 2.1 2.55 2.06 1.03-.04 1.42-.66 2.66-.66 1.24 0 1.59.66 2.67.64 1.1-.02 1.8-1 2.48-2 .78-1.15 1.1-2.26 1.12-2.32-.02-.01-2.15-.83-2.11-3.23zM14.77 5.5c.57-.69.95-1.65.85-2.6-.82.03-1.81.55-2.4 1.24-.53.61-1 1.58-.87 2.51.91.07 1.85-.46 2.42-1.15z"/></symbol>
+  <symbol id="ic-gplay" viewBox="0 0 24 24"><path fill="currentColor" d="M5 3.4c0-.8.86-1.3 1.55-.9l13.2 8.6c.63.4.63 1.3 0 1.7l-13.2 8.6c-.7.4-1.55-.1-1.55-.9V3.4z"/></symbol>
 </defs></svg>
 
 <nav class="nav"><div class="wrap">
@@ -204,9 +213,9 @@
     <h1>Track, value, and <span class="hl">complete</span> your Palworld TCG set.</h1>
     <p class="sub">Every card, real market prices, and the movers that matter. Free, no account, works offline, and you can switch prices off for a clean binder with no numbers.</p>
     <div class="cta">
-      <a class="btn primary" href="app/">Open the web app</a>
-      <a class="storebadge" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><img src="badges/app-store-badge.svg" alt="Download on the App Store" width="138" height="46"></a>
-      <a class="storebadge gp" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><img src="badges/google-play-badge.png" alt="Get it on Google Play" width="145" height="56"></a>
+      <a class="storebtn" href="app/"><svg aria-hidden="true"><use href="#ic-globe"/></svg><span class="t"><span class="s">Open the</span><span class="b">Web app</span></span></a>
+      <a class="storebtn" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg><span class="t"><span class="s">Download on the</span><span class="b">App Store</span></span></a>
+      <a class="storebtn" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><svg aria-hidden="true"><use href="#ic-gplay"/></svg><span class="t"><span class="s">Get it on</span><span class="b">Google Play</span></span></a>
     </div>
   </div>
 
@@ -316,9 +325,9 @@
   <h2 style="margin-top:12px">Start your Palpagos collection.</h2>
   <p class="muted" style="max-width:46ch;margin:14px auto 0;font-size:1.1rem">Open it in your browser right now, or download it on the App Store or Google Play.</p>
   <div class="cta">
-    <a class="btn primary" href="app/">Open the web app</a>
-    <a class="storebadge" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><img src="badges/app-store-badge.svg" alt="Download on the App Store" width="138" height="46"></a>
-    <a class="storebadge gp" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><img src="badges/google-play-badge.png" alt="Get it on Google Play" width="145" height="56"></a>
+    <a class="storebtn" href="app/"><svg aria-hidden="true"><use href="#ic-globe"/></svg><span class="t"><span class="s">Open the</span><span class="b">Web app</span></span></a>
+    <a class="storebtn" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg><span class="t"><span class="s">Download on the</span><span class="b">App Store</span></span></a>
+    <a class="storebtn" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><svg aria-hidden="true"><use href="#ic-gplay"/></svg><span class="t"><span class="s">Get it on</span><span class="b">Google Play</span></span></a>
   </div>
 </div></section>
 
