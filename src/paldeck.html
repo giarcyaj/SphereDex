@@ -1994,6 +1994,8 @@
   // eBay "sold listings" search for a card, on the region set in Settings.
   function ebayUrl(c, sold){ if(sold===undefined) sold=true; var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+(sold?"&LH_Sold=1&LH_Complete=1":"")+"&_ipg=60"; }
   function cardValue(s){ var v=(+s.qty||0)*(+s.mkt||0); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
+  // Mode-aware owned-card value (qty * the active-mode unit + graded), so a card tile matches the portfolio total.
+  function cardValueMode(id, mode){ var e=o(id); var v=(+e.qty||0)*unitOf(id,mode); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
   // Server-side price book (all cards, from /api/prices) so we can rank EVERY card by value, not
   // just owned ones. Kept separate from owned state so the daily bulk prices never overwrite the
   // precise per-card values you pull for cards you own.
@@ -2008,11 +2010,21 @@
   // "sold" = last sold (weekly automatic + your manual refresh). Drives every value across the app.
   function priceMode(){ return (typeof SETTINGS!=="undefined"&&SETTINGS.priceMode==="sold")?"sold":"live"; }
   function basisOf(){ return priceMode()==="sold"?"sold":"list"; }  // maps the mode onto the sold/list value basis
-  // Unit market price for a card in the ACTIVE mode: your precise owned figure for that mode if set,
-  // else the bulk book for that mode, else your owned headline, else 0.
+  // Unit market price for a card in the ACTIVE mode. LIVE: precise e.list -> the daily live book (owned or
+  // not) -> the sold-derived headline as a last resort. SOLD: precise e.sold -> the sold headline -> the
+  // weekly sold book. So live never shows a sold figure while a live book value exists, and vice-versa.
   function unitOf(id, mode){ var e=own[id], sold=((mode||priceMode())==="sold");
-    if(e){ var pv=sold?e.sold:e.list; if(pv!=null&&+pv>0) return +pv; if(+e.mkt>0) return +e.mkt; }   // precise owned value wins over the coarse bulk book
-    var bk=sold?PRICEBOOK_SOLD:PRICEBOOK, pb=bk[id]; if(pb!=null) return +pb;
+    if(sold){
+      // Sold mode: your precise last-sold, then the sold-preferred owned headline, then the weekly bulk sold book.
+      if(e){ if(+e.sold>0) return +e.sold; if(+e.mkt>0) return +e.mkt; }
+      var pbs=PRICEBOOK_SOLD[id]; if(pbs!=null) return +pbs;
+    } else {
+      // Live mode: your precise live figure (rarely set per-card), then the DAILY live book (owned or not),
+      // and only as a last resort the sold-derived headline — never let e.mkt (sold) masquerade as live.
+      if(e && +e.list>0) return +e.list;
+      var pbl=PRICEBOOK[id]; if(pbl!=null) return +pbl;
+      if(e && +e.mkt>0) return +e.mkt;
+    }
     return 0; }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
   function mktOf(id){ return unitOf(id); }
@@ -2236,7 +2248,7 @@
     if (c.cost!=="") costPow.push('◇<b>'+c.cost+'</b>');
     if (c.power!=="") costPow.push('◈<b>'+c.power+'</b>');
     if (c.atk!=="") costPow.push(icon('sword')+'<b>'+c.atk+'</b>');
-    var val = cardValue(s);
+    var val = cardValueMode(c.id);   // mode-aware, matches the portfolio/binder totals
     var refUnit = mktOf(c.id);
     var conv = isConverted(c.id);   // "≈" marks a USD->local conversion (Palworld fallback)
     var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+(conv?'≈':'')+money(val)+'</span>'
@@ -3177,8 +3189,11 @@
   // Fetch a sealed product's last-5-sold AND live-listings prices (both, like a card's dual refresh) into
   // pr.sold / pr.list, plus a headline pr.mkt. Returns a promise; updates the open detail sheet's slots in place.
   var _sealDetailId=null;   // id of the sealed product whose detail sheet is currently open (for slot updates)
+  var _sealPulling={};      // product ids with a fetch in flight, so an auto-load + a qty tap don't double-fetch
   function pullSealed(p, s, btn){
     if(!apiBase()){ if(btn) toast("Prices are unavailable right now"); return Promise.resolve(); }
+    if(_sealPulling[p.id]) return Promise.resolve();   // a pull for this product is already running
+    _sealPulling[p.id]=true;
     var region=SETTINGS.ebayRegion||"co.uk", done=busyBtn(btn), pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
     var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
@@ -3197,11 +3212,12 @@
       if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]) return Promise.all([getSold("com"), getList("com")]);
       return res;
     }).then(function(){
+      delete _sealPulling[p.id];
       pr.mkt=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:(+pr.mkt||0));   // headline = sold preferred, else list
       pr.pAt=Date.now(); done(); paintSlots(false); save(); renderSealed(); renderHome();
       if(btn) toast(((+pr.sold>0)||(+pr.list>0))? ("Prices updated · "+money(sealUnit(s))) : "No market data found");
       return pr;
-    }).catch(function(){ done(); paintSlots(false); if(btn) toast("Price pull failed"); });
+    }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
   var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(localStorage.getItem("palvault-sealview")||"auto");
   function sealedList(){
@@ -3209,7 +3225,7 @@
     var all=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
     var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
     released.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
-      if(sealSortKey==="value") return ((+sb.qty||0)*(+sealPrice(sb).mkt||0))-((+sa.qty||0)*(+sealPrice(sa).mkt||0));
+      if(sealSortKey==="value") return ((+sb.qty||0)*sealUnit(sb))-((+sa.qty||0)*sealUnit(sa));   // mode-aware, matches the shown value
       if(sealSortKey==="rrp") return (+sealPrice(sb).rrp||defaultRRP(b.id))-(+sealPrice(sa).rrp||defaultRRP(a.id));
       if(sealSortKey==="owned") return ((+sb.qty>0?1:0)-(+sa.qty>0?1:0)) || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
@@ -4821,16 +4837,19 @@
   var pushTimer=null;
   function pushCloud(now, btn){
     if(!AUTH || !AUTH.token || !apiBase()) return;
-    clearTimeout(pushTimer);
-    var done = btn ? busyBtn(btn, "Syncing…") : function(){};
-    pushTimer=setTimeout(function(){
+    function doPush(done){
       setSyncStatus("syncing…");
       api("/api/state","PUT",{rev:AUTH.serverRev,blob:STATE}).then(function(r){
         if(r.status===409 && r.body.blob){ adoptRemote(r.body.blob, r.body.rev); toast("Synced newer data from another device"); }
         else if(r.ok){ AUTH.serverRev=r.body.rev; saveAuth(); setSyncStatus("synced"); }
         else setSyncStatus("sync error");
-      }).catch(function(){ setSyncStatus("offline"); }).then(done);
-    }, now?150:1400);
+      }).catch(function(){ setSyncStatus("offline"); }).then(done||function(){});
+    }
+    clearTimeout(pushTimer);
+    // Manual "Sync now" (with a button) runs immediately on its own promise chain, so its spinner is never
+    // orphaned by a background save()->pushCloud() that would clearTimeout a debounced timer holding done().
+    if(btn){ doPush(busyBtn(btn, "Syncing…")); return; }
+    pushTimer=setTimeout(function(){ doPush(); }, now?150:1400);
   }
   function doAuth(kind, btn){
     var email=($("acctEmail")||{}).value, pw=($("acctPw")||{}).value;
