@@ -578,6 +578,11 @@
   .stepper button:hover { color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); }
   .stepper .qv { font-family:var(--font-mono); min-width:30px; text-align:center; font-weight:600; }
   .sealval { font-family:var(--font-mono); font-size:.9rem; color:var(--accent-ink); font-weight:600; }
+  /* Read-only fetched sealed prices (sold vs live), mirroring card pricing. */
+  .sealprices { display:flex; flex-wrap:wrap; gap:6px 14px; margin:2px 0 2px; font-size:.78rem; color:var(--ink-soft); }
+  .sealprices .spx { display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; }
+  .sealprices .spdot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .sealprices .spsold { background:var(--azure); } .sealprices .splive { background:var(--up); }
   .priceg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .priceg .pf { display:flex; flex-direction:column; gap:3px; }
   .priceg .pf label { font-size:.58rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -765,6 +770,9 @@
   .pdrow .pdchg { font-family:var(--font-mono); font-size:.76rem; font-weight:700; white-space:nowrap; text-align:right; min-width:70px; font-variant-numeric:tabular-nums; }
   .pdrow .pdup { color:var(--el-Grass); } .pdrow .pddown { color:var(--el-Fire); } .pdrow .pdflat { color:var(--ink-faint); }
   .pdrow .pdv { font-family:var(--font-mono); font-weight:700; min-width:62px; text-align:right; }
+  .pdrow .pddel { flex:0 0 auto; width:26px; height:26px; margin-left:2px; border:none; background:none; color:var(--ink-faint); font-size:.9rem; line-height:1; border-radius:7px; cursor:pointer; opacity:.5; transition:opacity .12s, color .12s, background .12s; }
+  .pdrow .pddel:hover, .pdrow .pddel:focus-visible { opacity:1; color:var(--down); background:color-mix(in srgb, var(--down) 15%, transparent); outline:none; }
+  .pdrow .pddel.ph { background:none; cursor:default; pointer-events:none; }
   /* collected mode (owned cards + sealed) */
   #ownedPanel, #valPanel { cursor:pointer; }
   .collectedbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
@@ -2003,9 +2011,9 @@
   // Unit market price for a card in the ACTIVE mode: your precise owned figure for that mode if set,
   // else the bulk book for that mode, else your owned headline, else 0.
   function unitOf(id, mode){ var e=own[id], sold=((mode||priceMode())==="sold");
-    if(e){ var pv=sold?e.sold:e.list; if(pv!=null&&+pv>0) return +pv; }
+    if(e){ var pv=sold?e.sold:e.list; if(pv!=null&&+pv>0) return +pv; if(+e.mkt>0) return +e.mkt; }   // precise owned value wins over the coarse bulk book
     var bk=sold?PRICEBOOK_SOLD:PRICEBOOK, pb=bk[id]; if(pb!=null) return +pb;
-    if(e&&+e.mkt>0) return +e.mkt; return 0; }
+    return 0; }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
   function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
@@ -2033,10 +2041,12 @@
   // Declared here (before the sealed controls are wired) so the dropdown's initial value is set correctly.
   var SEAL_ED = (localStorage.getItem("palvault-sealed-ed")==="jp") ? "jp" : "en";
   var SEAL_EDITIONS = { en:{ label:"English", kw:"English" }, jp:{ label:"Japanese", kw:"Japanese" } };
+  // Per-edition sealed price. sold = avg of last 5 sold, list = live-listings market (both fetched like
+  // cards); mkt = headline (sold preferred, else list); pAt = ms of the last fetch (staleness gate).
   function sealPrice(s){ var e=(SEAL_ED==="jp")?"jp":"en";
-    if(!s.ed){ s.ed={ en:{rrp:+s.rrp||0,mkt:+s.mkt||0,last:+s.last||0,avg:+s.avg||0}, jp:{rrp:0,mkt:0,last:0,avg:0} }; }
-    var b=s.ed[e]; if(!b){ b=s.ed[e]={rrp:0,mkt:0,last:0,avg:0}; }
-    ["rrp","mkt","last","avg"].forEach(function(k){ if(b[k]==null) b[k]=0; }); return b; }
+    if(!s.ed){ s.ed={ en:{rrp:+s.rrp||0,mkt:+s.mkt||0,last:+s.last||0,avg:+s.avg||0,sold:0,list:0,pAt:0}, jp:{rrp:0,mkt:0,last:0,avg:0,sold:0,list:0,pAt:0} }; }
+    var b=s.ed[e]; if(!b){ b=s.ed[e]={rrp:0,mkt:0,last:0,avg:0,sold:0,list:0,pAt:0}; }
+    ["rrp","mkt","last","avg","sold","list","pAt"].forEach(function(k){ if(b[k]==null) b[k]=0; }); return b; }
   // Recommended retail price defaults, per currency. GBP is UK retail from The Card Vault
   // (box £45.60, pack £3.80, trial deck £18.00), which matches Chaos Cards / Magic Madhouse.
   // JPY is the official Bushiroad MSRP (box ¥5,280, pack ¥440, trial deck ¥1,980). USD/EUR/AUD/CAD
@@ -2335,7 +2345,7 @@
   })();
   (function(){ var p=$("valPanel"); if(!p) return;
     function toggle(){ if(wishMode) return; SETTINGS.priceMode=(priceMode()==="sold")?"live":"sold"; valueBasis=basisOf(); saveSettings();
-      var pm=$("setPriceMode"); if(pm) pm.value=SETTINGS.priceMode; updateRefreshLabel(); stats(); if(typeof renderPortfolio==="function") renderPortfolio(); }
+      var pm=$("setPriceMode"); if(pm) pm.value=SETTINGS.priceMode; updateRefreshLabel(); stats(); render(); if(typeof renderPortfolio==="function") renderPortfolio(); }
     p.addEventListener("click", toggle);
     p.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } });
   })();
@@ -2617,7 +2627,7 @@
       var region=SETTINGS.ebayRegion||"co.uk";
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
       function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
-      function busy(btn){ if(!btn) return function(){}; btn.disabled=true; var o=btn.innerHTML; btn.innerHTML=icon('refresh')+' …'; return function(){ btn.disabled=false; btn.innerHTML=o; }; }
+      function busy(btn){ return busyBtn(btn); }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
       if(ps) ps.hidden=false; if(pl) pl.hidden=false; if(pg) pg.hidden=false;
       // Card Price ladder: your-region sold average → your-region listings low → (US sold → US listings, if the setting is on).
@@ -3022,6 +3032,11 @@
   var toastEl=$("toast"), toastT;
   function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove("show"); },2200); }
   function esc(s){ return String(s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];}); }
+  // Consistent button loading state: disable the button + show a spinning refresh icon (via .spin) with an
+  // optional label, so every async action across the app looks the same. Returns a done() that restores it.
+  function busyBtn(btn, label){ if(!btn) return function(){}; var html=btn.innerHTML, dis=btn.disabled;
+    btn.disabled=true; btn.classList.add("spin"); btn.innerHTML=icon('refresh')+(label?(' '+esc(label)):'');
+    return function(){ btn.disabled=dis; btn.classList.remove("spin"); btn.innerHTML=html; }; }
 
   // ---- Inline icon set (in-house, stroke = currentColor; replaces emoji) ----
   var SPIN='<span class="dspin"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>';
@@ -3150,37 +3165,43 @@
   function sealMap(){ var c=activeCol(); if(!c.sealed) c.sealed={}; return c.sealed; }
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
     ["qty","rrp","mkt","last","avg"].forEach(function(k){ if(s[k]==null) s[k]=0; }); return s; }
-  function sealedValue(){ var t=0; SEALED.forEach(function(p){ if(p.pre) return; var s=sealItem(p.id); t+=(+s.qty||0)*(+sealPrice(s).mkt||0); }); return t; }
+  // A sealed product's unit price in the active mode (last sold vs live listings), mirroring cards' unitOf.
+  function sealUnit(s, mode){ var pr=sealPrice(s), sold=((mode||priceMode())==="sold"); var pv=sold?pr.sold:pr.list; if(pv!=null&&+pv>0) return +pv; return +pr.mkt||0; }
+  function sealedValueMode(mode){ var t=0; SEALED.forEach(function(p){ if(p.pre) return; var s=sealItem(p.id); t+=(+s.qty||0)*sealUnit(s,mode); }); return t; }
+  function sealedValue(){ return sealedValueMode(priceMode()); }
   function cardsValueMode(mode){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=(+e.qty||0)*unitOf(c.id,mode); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return a+v; },0); }
   function cardsValue(){ return cardsValueMode(priceMode()); }
   function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
   // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
   // listings → (US sold → US listings, if the fallback setting is on). Sequential = quota-light.
+  // Fetch a sealed product's last-5-sold AND live-listings prices (both, like a card's dual refresh) into
+  // pr.sold / pr.list, plus a headline pr.mkt. Returns a promise; updates the open detail sheet's slots in place.
+  var _sealDetailId=null;   // id of the sealed product whose detail sheet is currently open (for slot updates)
   function pullSealed(p, s, btn){
-    if(!apiBase()){ toast("Prices are unavailable right now"); return; }
-    var region=SETTINGS.ebayRegion||"co.uk", orig=btn?btn.innerHTML:"";
-    var pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
+    if(!apiBase()){ if(btn) toast("Prices are unavailable right now"); return Promise.resolve(); }
+    var region=SETTINGS.ebayRegion||"co.uk", done=busyBtn(btn), pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
     var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
-    if(btn){ btn.disabled=true; btn.innerHTML=icon('refresh')+' …'; }
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):""); }
-    function applySold(b){ pr.mkt=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; }
-    function applyList(b){ pr.mkt=+b.market||0; if(b.avg!=null) pr.avg=+b.avg||0; }
-    function finish(msg){ if(btn){ btn.disabled=false; btn.innerHTML=orig; } save(); renderSealed(); renderHome(); if(msg) toast(msg); }
-    api(url("soldcomps",region),"GET").then(function(r){
-      var b=(r&&r.body)||{}; if(b.market!=null){ applySold(b); finish("Pulled sold · "+money(pr.mkt)); return; }
-      return api(url("ebay-active",region),"GET").then(function(r2){
-        var b2=(r2&&r2.body)||{}; if(b2.market!=null){ applyList(b2); finish("From listings · "+money(pr.mkt)); return; }
-        if(SETTINGS.fallbackUS && region!=="com"){
-          return api(url("soldcomps","com"),"GET").then(function(r3){
-            var b3=(r3&&r3.body)||{}; if(b3.market!=null){ applySold(b3); finish("US sold · "+money(pr.mkt)); return; }
-            return api(url("ebay-active","com"),"GET").then(function(r4){
-              var b4=(r4&&r4.body)||{}; if(b4.market!=null){ applyList(b4); finish("US listings · "+money(pr.mkt)); }
-              else finish("No market data found"); });
-          });
-        } else finish("No market data found");
-      });
-    }).catch(function(){ finish("Price pull failed"); });
+    function getSold(reg){ return api(url("soldcomps",reg),"GET").then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; return true; } return false; }).catch(function(){ return false; }); }
+    function getList(reg){ return api(url("ebay-active",reg),"GET").then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.list=+b.market||0; return true; } return false; }).catch(function(){ return false; }); }
+    // Update the open detail sheet's price slots in place (only if this product's sheet is showing).
+    function paintSlots(loading){
+      if(_sealDetailId!==p.id) return;
+      var a=$("sdSold"); if(a) a.innerHTML = loading? SPIN : ((+pr.sold>0)?money(pr.sold):"n/a");
+      var b=$("sdList"); if(b) b.innerHTML = loading? SPIN : ((+pr.list>0)?money(pr.list):"n/a");
+      var v=$("sdVal"); if(v && !loading) v.textContent = money((+s.qty||0)*sealUnit(s));
+    }
+    paintSlots(true);
+    return Promise.all([getSold(region), getList(region)]).then(function(res){
+      if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]) return Promise.all([getSold("com"), getList("com")]);
+      return res;
+    }).then(function(){
+      pr.mkt=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:(+pr.mkt||0));   // headline = sold preferred, else list
+      pr.pAt=Date.now(); done(); paintSlots(false); save(); renderSealed(); renderHome();
+      if(btn) toast(((+pr.sold>0)||(+pr.list>0))? ("Prices updated · "+money(sealUnit(s))) : "No market data found");
+      return pr;
+    }).catch(function(){ done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
   var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(localStorage.getItem("palvault-sealview")||"auto");
   function sealedList(){
@@ -3228,12 +3249,11 @@
           '<div class="sb">'+
             '<div class="snm sdopen" role="button" tabindex="0">'+esc(title)+'</div><div class="ssub">'+esc(subline)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
             '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
-              '<span class="sealval">'+money((+s.qty||0)*(+pr.mkt||0))+'</span></div>'+
-            '<div class="priceg">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
-            (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Pull market</button>':'')+
+              '<span class="sealval">'+money((+s.qty||0)*sealUnit(s))+'</span></div>'+
+            '<div class="sealprices priceui"><span class="spx"><i class="spdot spsold"></i>Sold '+((+pr.sold>0)?money(pr.sold):'—')+'</span><span class="spx"><i class="spdot splive"></i>Live '+((+pr.list>0)?money(pr.list):'—')+'</span></div>'+
+            (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Refresh</button>':'')+
           '</div>';
         el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
-        el.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
         var sp=el.querySelector(".sealpull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
       }
       el.querySelectorAll(".sdopen").forEach(function(x){ x.onclick=function(){ openSealedDetail(p); };
@@ -3300,23 +3320,26 @@
         '<div class="sdimg">'+(box?'<img src="'+box+'" alt="'+esc(title)+'">':'')+'</div>'+
         '<h2>'+esc(title)+'</h2>'+
         '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-R)">'+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</span></div>'+
-        '<div class="statline">'+
+        (function(){ var willLoad=apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000);
+        return '<div class="statline">'+
           '<div class="statbox"><span class="n">'+money(rrpShown)+'</span><span class="l">RRP</span></div>'+
-          '<div class="statbox"><span class="n">'+money(pr.mkt)+'</span><span class="l">Market</span></div>'+
-          '<div class="statbox"><span class="n">'+money((+s.qty||0)*(+pr.mkt||0))+'</span><span class="l">Your value</span></div>'+
-        '</div>'+
+          '<div class="statbox priceui"><span class="n" id="sdSold">'+(willLoad?SPIN:((+pr.sold>0)?money(pr.sold):"n/a"))+'</span><span class="l">Last 5 sold</span></div>'+
+          '<div class="statbox priceui"><span class="n" id="sdList">'+(willLoad?SPIN:((+pr.list>0)?money(pr.list):"n/a"))+'</span><span class="l">Live listings</span></div>'+
+          '<div class="statbox priceui"><span class="n" id="sdVal">'+money((+s.qty||0)*sealUnit(s))+'</span><span class="l">Your value</span></div>'+
+        '</div>'; })()+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
-          '<div class="priceg priceui">'+priceField("rrp","RRP",rrpShown)+priceField("mkt","Market",pr.mkt)+priceField("last","Last sold",pr.last)+priceField("avg","Avg sold",pr.avg)+'</div>'+
-          (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Pull market</button>':'')+
+          (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Refresh prices</button>':'')+
+          '<p class="qsub priceui" style="margin:8px 0 0;font-size:.76rem">Last 5 sold and live listings are pulled from the market, the same as cards. Your value uses your chosen price mode ('+(priceMode()==="sold"?"last sold":"live listings")+', change it in Settings).</p>'+
           '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
           '<div class="buyrow">'+bl.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
         '</div>'+
       '</div>';
-    var mm=$("mMain"), cls=$("mClose"); if(cls) cls.onclick=function(){ dismissOverlay(); };
+    _sealDetailId=p.id;   // let pullSealed update this sheet's price slots in place
+    var mm=$("mMain"), cls=$("mClose"); if(cls) cls.onclick=function(){ _sealDetailId=null; dismissOverlay(); };
     mm.querySelectorAll(".sdstep button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); openSealedDetail(p); renderSealed(); renderHome(); }; });
-    mm.querySelectorAll(".priceg input").forEach(function(inp){ inp.onchange=function(){ pr[inp.getAttribute("data-k")]=parseFloat(inp.value)||0; save(); renderSealed(); renderHome(); }; });
     var sp=$("sdPull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+    if(apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000)) pullSealed(p, s, null);   // auto-load fresh prices on open (fills the spinner slots)
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
   }
 
@@ -3427,13 +3450,18 @@
       var sold=r.body.sold||{}, n=0;
       Object.keys(sold).forEach(function(id){ var row=sold[id]; if(row && row.market!=null){ PRICEBOOK_SOLD[id]=+row.market; var e=col.own[id]; if(e) e.sold=+row.market; n++; } });
       if(r.body.soldRefreshedAt){ var t=Date.parse(r.body.soldRefreshedAt); if(t) SOLD_ASOF=t; }
-      try{ localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); if(SOLD_ASOF){ localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); localStorage.setItem("palvault-sold-mark-asof", String(SOLD_ASOF)); } }catch(_){}
-      stampSoldMark();   // blue mark on today's point (saves)
-      save();
-      if(typeof renderHome==="function") renderHome();   // repaint the portfolio card + its chart now
-      var pg=document.getElementById("page-portfolio");
-      if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
-      render();
+      try{ localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
+      save();   // persist the refreshed sold prices onto the (captured) collection either way
+      // Only stamp the blue mark + repaint if we're still on the collection we refreshed — a mid-flight
+      // collection switch must not brand a different collection with a mark it never earned.
+      if(activeCol()===col){
+        stampSoldMark();   // blue mark on today's point for THIS collection (saves)
+        try{ if(SOLD_ASOF) localStorage.setItem("palvault-sold-mark-asof", String(SOLD_ASOF)); }catch(_){}
+        if(typeof renderHome==="function") renderHome();   // repaint the portfolio card + its chart now
+        var pg=document.getElementById("page-portfolio");
+        if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+        render();
+      }
       toast(n? ("Last sold updated · "+n+" card"+(n>1?"s":"")) : "No sold prices found yet");
     }).catch(function(){ toast("Last-sold refresh failed"); }).then(function(){
       soldRefreshing=false;
@@ -3484,7 +3512,7 @@
       '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series)+
         '<div class="pcmark" id="pcMark" hidden></div><div class="pctip" id="pcTip" hidden></div>'+
       '</div>'+
-      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">Live listings · daily</span><span class="lg lgsold">Last sold</span></div>'+
+      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">'+(priceMode()==="sold"?"Last sold":"Live listings")+'</span><span class="lg lgsold">Last sold</span></div>'+
       '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
         '<span class="pcbtns">'+
           '<button class="pcrefbtn" id="portHistBtn" type="button">'+icon('chart')+' Portfolio history</button>'+
@@ -3513,14 +3541,15 @@
               : (d>0.005) ? '<span class="pdup">&#9650; '+money(d)+'</span>'
               : (d<-0.005) ? '<span class="pddown">&#9660; '+money(Math.abs(d))+'</span>'
               : '<span class="pdflat">&#8211;</span>';
-      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdchg">'+chg+'</span><span class="pdv">'+money(s.v)+'</span></div>';
+      var del = (s.d!==today) ? '<button class="pddel" type="button" data-day="'+s.d+'" title="Delete this day" aria-label="Delete '+fmtFull(s.d)+' from history">✕</button>' : '<span class="pddel ph" aria-hidden="true"></span>';
+      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdchg">'+chg+'</span><span class="pdv">'+money(s.v)+'</span>'+del+'</div>';
     }).join("");
     host.innerHTML=
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(series[0].d)+'</span></div></div>'+
       '<div class="pcchartwrap pcbig" id="pdWrap">'+ chartSVG(series)+
         '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div></div>'+
-      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">Live listings · daily</span><span class="lg lgsold">Last sold · manual / weekly</span></div>'+
+      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">'+(priceMode()==="sold"?"Last sold":"Live listings")+'</span><span class="lg lgsold">Last sold · marks</span></div>'+
       '<div class="pdstats"><div class="hs"><span class="n">'+money(hi)+'</span><span class="l">High</span></div>'+
         '<div class="hs"><span class="n">'+money(lo)+'</span><span class="l">Low</span></div>'+
         '<div class="hs"><span class="n">'+series.length+'</span><span class="l">Day'+(series.length===1?"":"s")+' tracked</span></div></div>'+
@@ -3531,12 +3560,25 @@
     wireChart(series, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
     var bk=$("pdBack"); if(bk) bk.onclick=function(){ if(_histReady && history.length>1) history.back(); else showPage("home"); };
     var sfd=$("startFreshBtnD"); if(sfd) sfd.onclick=askStartFresh;
+    Array.prototype.forEach.call(host.querySelectorAll(".pddel[data-day]"), function(b){ b.onclick=function(e){ e.stopPropagation(); askDeleteDay(b.getAttribute("data-day")); }; });
+  }
+  // Remove a single saved day from the portfolio history (destructive, so confirm first).
+  function askDeleteDay(dayKey){
+    var h=activeCol().hist||{}, pt=h[dayKey];
+    var val=(pt && typeof pt==="object" && pt.v!=null) ? (" · "+money(+pt.v||0)) : (typeof pt==="number" ? (" · "+money(pt)) : "");
+    confirmDialog("Delete this day?", fmtFull(dayKey)+val+" will be removed from your portfolio history. This can’t be undone.", "Delete", function(){
+      if(activeCol().hist) delete activeCol().hist[dayKey]; save();
+      if(typeof renderHome==="function") renderHome();
+      var pg=document.getElementById("page-portfolio");
+      if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+      toast("Day removed from history");
+    });
   }
   function wireChart(series, ids, onClick){
     ids=ids||{}; var wrap=$(ids.wrap||"pcWrap"), tip=$(ids.tip||"pcTip"), mk=$(ids.mark||"pcMark"); if(!wrap||!tip||!mk) return;
     var n=series.length; if(!n) return;
     var W=600,H=150,pad=8, xw=W-pad*2, yh=H-pad*2;
-    function lv(s){ return (s.vLive!=null?+s.vLive:(+s.v||0)); }   // the green line rides the live value
+    function lv(s){ return (+s.v||0); }   // the green line rides the active-mode value (matches headline/High-Low/rows)
     var liveVals=series.map(lv), soldVals=series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
     var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
@@ -3565,7 +3607,7 @@
   // sold refresh happened). The y-range spans both so neither clips. Live falls back to v for old history.
   function chartSVG(series){
     var W=600,H=150,pad=8,n=series.length;
-    function lv(s){ return (s.vLive!=null?+s.vLive:(+s.v||0)); }
+    function lv(s){ return (+s.v||0); }   // green line = your portfolio value in the active mode (blue vSold dots overlay it)
     var liveVals=series.map(lv), soldVals=series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
     var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
@@ -3935,16 +3977,16 @@
     var base=contactBase();
     if(!base){ ctStatus("Messaging needs the app’s server to be set up, try again later.", true); return; }
     var email=(($("ctEmail")||{}).value||"").trim();
-    var btn=$("ctSend"); if(btn){ btn.disabled=true; }
+    var btn=$("ctSend"), done=busyBtn(btn, "Sending…");
     ctStatus("Sending…", false);
     fetch(base+"/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:ctTopic,message:msg,from:email})})
       .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok,body:j}; }); })
       .then(function(r){
-        if(btn) btn.disabled=false;
+        done();
         if(r.ok){ ctStatus("Thanks, your message was sent.", false); $("ctMsg").value=""; }
         else ctStatus((r.body&&r.body.error)||"Couldn’t send right now, please try again later.", true);
       })
-      .catch(function(){ if(btn) btn.disabled=false; ctStatus("Couldn’t reach the server, please try again later.", true); });
+      .catch(function(){ done(); ctStatus("Couldn’t reach the server, please try again later.", true); });
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
     t.onclick=function(){ showPage(t.getAttribute("data-page")); };
@@ -4197,7 +4239,7 @@
     if(rr){ rr.style.setProperty("--rc",rk.c);
       rr.innerHTML='<span class="rankbadge" style="--rc:'+rk.c+'"><span class="rankdot"></span>'+rk.name+'</span>'+
         '<div class="rankmeta">'+pct+'% of all cards collected'+(rk.next?' · next: '+esc(rk.next):' · maxed out!')+'</div>'; }
-    var value=0; CARDS.forEach(function(c){ value+=cardValue(o(c.id)); });
+    var value=binderValue();   // mode-aware, so the hero binder matches the portfolio total + the Cards-page binder
     var spH=setProgress();
     var setsDone=SET_ORDER.filter(function(k){ return spH.tot[k]>0 && spH.owned[k]>=spH.tot[k]; }).length;
     $("heroStats").innerHTML=
@@ -4777,25 +4819,28 @@
     });
   }
   var pushTimer=null;
-  function pushCloud(now){
+  function pushCloud(now, btn){
     if(!AUTH || !AUTH.token || !apiBase()) return;
     clearTimeout(pushTimer);
+    var done = btn ? busyBtn(btn, "Syncing…") : function(){};
     pushTimer=setTimeout(function(){
       setSyncStatus("syncing…");
       api("/api/state","PUT",{rev:AUTH.serverRev,blob:STATE}).then(function(r){
         if(r.status===409 && r.body.blob){ adoptRemote(r.body.blob, r.body.rev); toast("Synced newer data from another device"); }
         else if(r.ok){ AUTH.serverRev=r.body.rev; saveAuth(); setSyncStatus("synced"); }
         else setSyncStatus("sync error");
-      }).catch(function(){ setSyncStatus("offline"); });
+      }).catch(function(){ setSyncStatus("offline"); }).then(done);
     }, now?150:1400);
   }
-  function doAuth(kind){
+  function doAuth(kind, btn){
     var email=($("acctEmail")||{}).value, pw=($("acctPw")||{}).value;
+    var done=busyBtn(btn, kind==="signup"?"Creating…":"Signing in…");
     api("/api/"+kind,"POST",{email:email,password:pw}).then(function(r){
+      done();
       if(!r.ok){ acctMsg(r.body.error||"Sign-in failed.", true); return; }
       AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
       renderAccount(); pullState(); toast("Signed in as "+AUTH.email);
-    }).catch(function(e){ acctMsg(String(e.message||e), true); });
+    }).catch(function(e){ done(); acctMsg(String(e.message||e), true); });
   }
   function signOut(){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Signed out (data stays on this device)"); }
   // Server rejected our token: it expired, the account was deleted, or the password was reset on
@@ -4818,7 +4863,7 @@
     if(!apiBase()){ el.innerHTML='<div class="stitle">Cloud sync</div><p class="sdesc" style="margin:8px 0 0">Cloud sync is unavailable right now. Your collection stays saved on this device, and you can move it with Export / Import.</p>'; return; }
     if(AUTH.token){
       el.innerHTML='<div class="stitle">Signed in</div><p class="sdesc" style="margin:8px 0 12px">'+esc(AUTH.email||"")+' · <span id="syncStat">synced</span></p><div class="acctform"><button class="btn sec" id="syncNow">Sync now</button><button class="btn sec" id="signOutBtn">Sign out</button></div><div id="delZone" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px"></div>';
-      $("syncNow").onclick=function(){ pushCloud(true); }; $("signOutBtn").onclick=signOut;
+      $("syncNow").onclick=function(){ pushCloud(true, this); }; $("signOutBtn").onclick=signOut;
       var dz=$("delZone");
       function delInitial(){
         dz.innerHTML='<button class="btn danger" id="delAcctBtn">Delete account</button>'+
@@ -4832,8 +4877,8 @@
         $("delNo").onclick=delInitial; $("delYes").onclick=delGo;
       }
       function delGo(){
-        var y=$("delYes"), m=$("delMsg"); if(y){ y.disabled=true; y.textContent="Deleting…"; }
-        function fail(t){ if(m){ m.textContent=t; m.style.color="var(--el-Fire)"; } if(y){ y.disabled=false; y.textContent="Yes, delete"; } }
+        var y=$("delYes"), m=$("delMsg"); var doneDel=busyBtn(y, "Deleting…");
+        function fail(t){ if(m){ m.textContent=t; m.style.color="var(--el-Fire)"; } doneDel(); }
         api("/api/account","DELETE").then(function(r){
           if(r&&r.ok){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Your account has been deleted"); }
           else fail((r&&r.body&&r.body.error)||"Couldn't delete the account. Please try again.");
@@ -4849,7 +4894,7 @@
           '<button type="button" id="acctForgot" style="align-self:flex-start;background:none;border:0;padding:2px 0;margin-top:2px;color:var(--accent-ink);font:inherit;font-size:.82rem;text-decoration:underline;cursor:pointer">Forgot password?</button>'+
           '<div class="sdesc" id="acctMsg"></div>'+
         '</div>';
-      $("acctSignIn").onclick=function(){ doAuth("login"); }; $("signupBtn").onclick=function(){ doAuth("signup"); };
+      $("acctSignIn").onclick=function(){ doAuth("login", this); }; $("signupBtn").onclick=function(){ doAuth("signup", this); };
       $("acctForgot").onclick=function(){ RESET_EMAIL=(($("acctEmail")||{}).value||"").trim(); renderForgotRequest(); };
       var pe=$("acctPwEye"); if(pe) pe.onclick=function(){ var i=$("acctPw"); var show=i.type==="password"; i.type=show?"text":"password"; this.innerHTML=show?EYE_OFF:EYE_ON; this.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
     }
@@ -4873,11 +4918,11 @@
       var email=(($("fpEmail")||{}).value||"").trim();
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ fpMsg("Enter a valid email.", true); return; }
       RESET_EMAIL=email;
-      var b=$("fpSend"); b.disabled=true; b.textContent="Sending…";
+      var b=$("fpSend"), done=busyBtn(b,"Sending…");
       api("/api/forgot-password","POST",{email:email}).then(function(r){
-        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't send a code right now.", true); b.disabled=false; b.textContent="Send reset code"; return; }
+        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't send a code right now.", true); done(); return; }
         renderForgotReset(true);
-      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); b.disabled=false; b.textContent="Send reset code"; });
+      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); done(); });
     };
   }
   function renderForgotReset(justSent){
@@ -4895,34 +4940,34 @@
     var pe=$("fpPwEye"); if(pe) pe.onclick=function(){ var i=$("fpPw"); var show=i.type==="password"; i.type=show?"text":"password"; this.innerHTML=show?EYE_OFF:EYE_ON; this.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
     $("fpBack2").onclick=renderAccount;
     $("fpResend").onclick=function(){
-      var b=$("fpResend"); b.disabled=true; b.textContent="Sending…";
+      var b=$("fpResend"), done=busyBtn(b,"Sending…");
       api("/api/forgot-password","POST",{email:RESET_EMAIL}).then(function(r){
-        b.disabled=false; b.textContent="Resend code";
+        done();
         if(r.ok) fpMsg("New code sent if you have an account. Give it a minute.", false);
         else fpMsg((r.body&&r.body.error)||"Couldn't resend right now.", true);
-      }).catch(function(){ b.disabled=false; b.textContent="Resend code"; });
+      }).catch(function(){ done(); });
     };
     $("fpReset").onclick=function(){
       var code=(($("fpCode")||{}).value||"").trim(), pw=($("fpPw")||{}).value||"";
       if(!/^\d{8}$/.test(code)){ fpMsg("Enter the 8-digit code from your email.", true); return; }
       if(pw.length<8){ fpMsg("Choose a password of at least 8 characters.", true); return; }
-      var b=$("fpReset"); b.disabled=true; b.textContent="Resetting…";
+      var b=$("fpReset"), done=busyBtn(b,"Resetting…");
       api("/api/reset-password","POST",{email:RESET_EMAIL,code:code,password:pw}).then(function(r){
-        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't reset your password.", true); b.disabled=false; b.textContent="Reset password"; return; }
+        if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't reset your password.", true); done(); return; }
         AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
         RESET_EMAIL="";
         renderAccount(); pullState(); toast("Password reset. Signed in as "+AUTH.email);
-      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); b.disabled=false; b.textContent="Reset password"; });
+      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); done(); });
     };
   }
   // Pull the server price book (all cards) into PRICEBOOK so "Sort by Value" ranks every card, not
   // just owned ones. We do NOT write these onto owned cards, so the daily bulk (asking-price) data
   // never overwrites the precise sold values you pull per card. Pass silent for background use.
   function fetchServerPrices(silent){
-    if(!apiBase()){ if(!silent) toast("Prices are unavailable right now"); return; }
+    if(!apiBase()){ if(!silent) toast("Prices are unavailable right now"); return Promise.resolve(); }
     var ids=CARDS.map(function(c){return c.id;});
     var reg=encodeURIComponent(SETTINGS.ebayRegion||"co.uk");
-    api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
+    return api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
       if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
       var base=r.body.prices||{}, liveMap=r.body.live||{}, soldMap=r.body.sold||{}, n=0;
       // The server now returns two books: live listings (daily) and last sold (weekly). Until either
@@ -4930,8 +4975,10 @@
       var liveSrc=Object.keys(liveMap).length?liveMap:base, soldSrc=Object.keys(soldMap).length?soldMap:base;
       Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
       Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null) PRICEBOOK_SOLD[id]=+row.market; });
-      LIVE_ASOF=r.body.liveRefreshedAt?Date.parse(r.body.liveRefreshedAt):0;   // server's daily live-listings refresh
-      SOLD_ASOF=r.body.soldRefreshedAt?Date.parse(r.body.soldRefreshedAt):0;   // server's weekly last-sold rotation
+      // Only overwrite when the server actually reports a time; an empty table (no timestamp) must NOT wipe the
+      // value we loaded from localStorage, or the mode-specific "updated Xd ago" label is lost until a full reload.
+      if(r.body.liveRefreshedAt){ var _lt=Date.parse(r.body.liveRefreshedAt); if(_lt) LIVE_ASOF=_lt; }   // server's daily live-listings refresh
+      if(r.body.soldRefreshedAt){ var _st=Date.parse(r.body.soldRefreshedAt); if(_st) SOLD_ASOF=_st; }   // server's weekly last-sold rotation
       var ra=r.body.refreshedAt ? Date.parse(r.body.refreshedAt) : 0; if(ra) PRICEASOF=ra;   // server's own refresh time (daily 1am cron)
       try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       // Drop a blue "last sold" mark automatically when the server's weekly sold rotation produced newer
@@ -4956,7 +5003,7 @@
   (function(){
     var su=$("setServerUrl"); if(su){ su.value=SETTINGS.serverUrl||"";
       su.onchange=function(){ SETTINGS.serverUrl=su.value.trim(); saveSettings(); renderAccount(); }; }
-    var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ fetchServerPrices(false); };
+    var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ var done=busyBtn(fp,"Refreshing…"); Promise.resolve(fetchServerPrices(false)).then(done,done); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background at most once every ~12h (the server updates the data about daily).
     try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
