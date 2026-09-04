@@ -3173,13 +3173,57 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     // Upcoming products, open for pre-order (no images or market yet).
     // 2nd Edition = a reprint of the "Dawn of Palpagos" set; identical cards, each marked with a "II" in the
     // bottom-right corner (announced Sep 4 2026, ships late Oct). Per-card 1st/2nd edition tracking is a future add.
-    { id:"box-ebp01-2e", set:"Dawn of Palpagos", name:"Booster Box · 2nd Edition", sub:"12 packs · cards marked “II”", box:"", q:"Palworld Dawn of Palpagos 2nd Edition Booster Box", pre:true, date:"late Oct 2026" },
-    { id:"box-bp02", set:"Legends Awaken", name:"Booster Box", sub:"12 packs", box:"", q:"Palworld Legends Awaken Booster Box", pre:true, date:"Oct 30, 2026" },
-    { id:"pack-bp02", set:"Legends Awaken", name:"Booster Pack", sub:"7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", pre:true, date:"Oct 30, 2026" },
-    { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"5 cards · 75 sleeves", box:"BOX_SS01", q:"Palworld Sleeve Card Set Vol 1", pre:true, date:"Oct 16, 2026" },
-    { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Red Green", pre:true, date:"Dec 18, 2026" },
-    { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Blue Purple", pre:true, date:"Dec 18, 2026" }
+    // nk = distinctive news keywords: a news item mentioning one of these + a "Month D, YYYY" date overrides
+    // this product's release date automatically (see buildReleaseOverrides). "2nd Edition" / "Card Set Vol"
+    // are used instead of the set name so they don't match the 1st-edition set's news.
+    { id:"box-ebp01-2e", set:"Dawn of Palpagos", name:"Booster Box · 2nd Edition", sub:"12 packs · cards marked “II”", box:"", q:"Palworld Dawn of Palpagos 2nd Edition Booster Box", nk:["2nd Edition"], pre:true, date:"late Oct 2026" },
+    { id:"box-bp02", set:"Legends Awaken", name:"Booster Box", sub:"12 packs", box:"", q:"Palworld Legends Awaken Booster Box", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
+    { id:"pack-bp02", set:"Legends Awaken", name:"Booster Pack", sub:"7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
+    { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"5 cards · 75 sleeves", box:"BOX_SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
+    { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["Eternal Ascent"], pre:true, date:"Dec 18, 2026" },
+    { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["Eternal Ascent"], pre:true, date:"Dec 18, 2026" }
   ];
+  // ---- Auto release-date updates from the news feed ----
+  // The backend refreshes the official news nightly; the app parses a concrete "Month D, YYYY" out of any
+  // headline that names an upcoming product (its nk keywords) with a release signal, and overrides that
+  // product's baked pre-order date. So a date announced/shifted in the news updates Sealed + Releases itself.
+  var RELEASE_OVERRIDES = {};   // sealed id -> "MMM D, YYYY" adopted from the newest matching news item
+  function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
+  var _SHORTM=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
+  // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
+  // are often truncated mid-date and drop the year. A release month well before the news month rolls to next year.
+  function parseNewsDate(text, newsIso){
+    var m=/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/i.exec(text||"");
+    if(!m) return null; var mo=_MONIX[m[1].toLowerCase()], day=+m[2], yr=m[3]?+m[3]:0;
+    if(mo==null||day<1||day>31) return null;
+    if(!yr){ var ny=/(20\d{2})-(\d{2})/.exec(newsIso||"");
+      if(ny){ yr=+ny[1]; if(mo < (+ny[2]-1)-1) yr+=1; } else { yr=new Date().getFullYear(); } }
+    return _SHORTM[mo]+" "+day+", "+yr;
+  }
+  // Match each upcoming product to the NEWEST news item that names it AND signals a release, then adopt its date.
+  function buildReleaseOverrides(items){
+    if(!items||!items.length) return false;
+    var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
+    var changed=false;
+    SEALED.forEach(function(p){ if(!p.pre) return;
+      var keys=(p.nk&&p.nk.length)?p.nk:[p.set||p.name];
+      for(var i=0;i<items.length;i++){ var it=items[i]||{};
+        var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
+        if(!keys.some(function(k){ return lc.indexOf(String(k).toLowerCase())>=0; })) continue;
+        if(!SIGNAL.test(text)) continue;
+        var d=parseNewsDate(text, it.date); if(!d) continue;
+        if(RELEASE_OVERRIDES[p.id]!==d){ RELEASE_OVERRIDES[p.id]=d; changed=true; } break;   // newest match wins
+      }
+    });
+    return changed;
+  }
+  // Rebuild overrides from a news list and repaint Sealed / Releases if a date actually moved.
+  function refreshReleaseDates(items){ if(!buildReleaseOverrides(items)) return;
+    try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(_){}
+    try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(_){}
+  }
   function sealMap(){ var c=activeCol(); if(!c.sealed) c.sealed={}; return c.sealed; }
   function sealItem(id){ var m=sealMap(); var s=m[id]; if(!s){ s=m[id]={qty:0,rrp:0,mkt:0,last:0,avg:0}; }
     ["qty","rrp","mkt","last","avg"].forEach(function(k){ if(s[k]==null) s[k]=0; }); return s; }
@@ -3239,7 +3283,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     if(sealSortDir<0) released.reverse();
     // Pre-orders always sit after released products, ordered by soonest release first (undated last).
     var MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-    function preDate(p){ var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(p.date||""); if(!m||MON[m[1].toLowerCase()]==null) return Infinity; return new Date(+m[3], MON[m[1].toLowerCase()], +m[2]).getTime(); }
+    function preDate(p){ var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(sealDate(p)||""); if(!m||MON[m[1].toLowerCase()]==null) return Infinity; return new Date(+m[3], MON[m[1].toLowerCase()], +m[2]).getTime(); }
     pre.sort(function(a,b){ return preDate(a)-preDate(b); });
     return released.concat(pre);
   }
@@ -3262,7 +3306,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
                  :'<span class="prtag">Pre-order</span><span class="prname">'+esc(title)+'</span>')+'</div>'+
           '<div class="sb">'+
             '<div class="snm sdopen" role="button" tabindex="0">'+esc(title)+'</div><div class="ssub">'+esc(subline)+'</div>'+
-            '<div class="predate">Out '+esc(p.date||"soon")+'</div>'+
+            '<div class="predate">Out '+esc(sealDate(p)||"soon")+'</div>'+
           '</div>';
       } else {
         var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id)), box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
@@ -3323,7 +3367,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
           '<div class="sdimg'+(dbox?'':' preph')+'">'+(dbox?'<img src="'+dbox+'" alt="'+esc(title)+'"><span class="prtag prcorner">Pre-order</span>':'<span class="prtag">Pre-order</span><span class="prname">'+esc(title)+'</span>')+'</div>'+
           '<h2>'+esc(title)+'</h2>'+
           '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Pre-order</span></div>'+
-          '<div class="predate big">Releases '+esc(p.date||"soon")+'</div>'+
+          '<div class="predate big">Releases '+esc(sealDate(p)||"soon")+'</div>'+
           '<div class="meditor">'+
             '<div class="buylabel">Pre-order · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
@@ -4366,8 +4410,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
     var ugroups=[], ugmap={};
     SEALED.filter(function(p){ return p.pre; }).forEach(function(p){
-      var key=(p.set||p.name)+"|"+(p.date||""), g=ugmap[key];
-      if(!g){ g=ugmap[key]={ title:(p.set||p.name), date:p.date, box:p.box, items:[], first:p }; ugroups.push(g); }
+      var pd=sealDate(p), key=(p.set||p.name)+"|"+(pd||""), g=ugmap[key];
+      if(!g){ g=ugmap[key]={ title:(p.set||p.name), date:pd, box:p.box, items:[], first:p }; ugroups.push(g); }
       var typ=(p.set&&p.name)?p.name:(p.sub||"");   // the product type shown under the set headline
       if(typ && g.items.indexOf(typ)<0) g.items.push(typ);
       if(!g.box && p.box) g.box=p.box;
@@ -4406,7 +4450,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       _newsList = list; updateBell();
     }
     paint(_newsCache||NEWS_SEED, !!_newsCache);   // keep the last live list offline; SEED only until the first successful load
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; paint(r.body.items, true); } }).catch(function(){}); }
+    refreshReleaseDates(_newsCache||NEWS_SEED);
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; paint(r.body.items, true); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
   }
 
   // ---- New-announcement bell: a red dot + popup when there's news you haven't seen yet ----
@@ -4452,7 +4497,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   }
   function primeNewsBell(){
     updateBell();
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; _newsList=r.body.items; updateBell(); } }).catch(function(){}); }
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; _newsList=r.body.items; updateBell(); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
   }
 
   // ---- Quick Add ----
