@@ -753,6 +753,10 @@
   .pcdot { position:absolute; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; background:var(--up); box-shadow:0 0 0 1.5px var(--surface); }
   .pcdot.pcdotnow { width:9px; height:9px; margin:-4.5px 0 0 -4.5px; box-shadow:0 0 0 2px var(--surface); box-shadow:0 0 0 2px var(--surface), 0 0 0 4px color-mix(in srgb, var(--up) 35%, transparent); }
   .pcdot.pcdotsold { width:8px; height:8px; margin:-4px 0 0 -4px; background:var(--azure); box-shadow:0 0 0 1.5px var(--surface); z-index:1; }
+  /* history page in Last-sold mode: recolour the whole chart blue (dots + selected marker) */
+  .pcsold .pcdot { background:var(--azure); }
+  .pcsold .pcdot.pcdotnow { box-shadow:0 0 0 2px var(--surface), 0 0 0 4px color-mix(in srgb, var(--azure) 35%, transparent); }
+  .pcsold .pcmark { background:var(--azure); box-shadow:0 0 0 4px color-mix(in srgb, var(--azure) 30%, transparent); }
   .pclegend { display:flex; gap:16px; margin:9px 2px 0; font-size:.72rem; color:var(--ink-faint); }
   .pclegend .lg { display:inline-flex; align-items:center; gap:6px; }
   .pclegend .lg::before { content:""; width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
@@ -3668,22 +3672,6 @@
   }
   // Portfolio day-by-day price source: "live" | "sold" (null = follow the global price mode).
   var pdMode=null;
-  // Re-express each day's value in the chosen day-by-day mode, keeping vSold for the blue marks.
-  // Live = vLive (a value every day). Sold = the sampled last-sold value carried forward between
-  // refreshes (falling back to live only for early days before the first sold reading exists).
-  function portfolioModeSeries(series, mode){
-    var lastSold=null;
-    return series.map(function(s){
-      var v;
-      if(mode==="sold"){
-        // today carries the live current sold total (vSoldCur); history uses stamped last-sold marks (vSold).
-        var samp=(s.vSoldCur!=null?+s.vSoldCur:(s.vSold!=null?+s.vSold:null));
-        if(samp!=null) lastSold=samp;
-        v=(lastSold!=null?lastSold:(+s.vLive||+s.v||0));   // before the first sold reading, backfill live so the line stays continuous
-      } else v=(+s.vLive||+s.v||0);
-      return {d:s.d, v:v, vLive:s.vLive, vSold:s.vSold, cards:s.cards, graded:s.graded, sealed:s.sealed};
-    });
-  }
   // Full-page portfolio view (reached by tapping the home chart).
   function renderPortfolioDetail(){
     var host=$("pdHost"); if(!host) return;
@@ -3691,18 +3679,25 @@
     var storedToday=(activeCol().hist||{})[today]||{};
     var live={d:today, v:Math.round((cardsValue()+sealedValue())*100)/100, vLive:curLive, vSold:(storedToday.vSold!=null?+storedToday.vSold:null), vSoldCur:curSold, cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     if(raw.length && raw[raw.length-1].d===today) raw[raw.length-1]=live; else raw=raw.concat([live]);
-    var mode=(pdMode||priceMode());
-    var series=portfolioModeSeries(raw, mode);   // green line + High/Low + day rows all follow the chosen mode
-    var cur=series[series.length-1].v;
-    // Stats window: in sold mode, measure the headline delta + High/Low only from the first day with a genuine
-    // last-sold reading (else just today), so we never compare a sold total against a live-backfilled baseline.
-    var i0=0; if(mode==="sold"){ i0=series.length-1; for(var _i=0;_i<raw.length;_i++){ if(raw[_i].vSold!=null){ i0=_i; break; } } }
-    var win=series.slice(i0);
-    var first=win[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
+    var mode=(pdMode||priceMode()), isSold=(mode==="sold");
+    // One series per mode. LIVE: every day valued at live listings (green line, a point each day).
+    // SOLD: only the days that carry a last-sold reading, plus today's current sold total, valued at last sold
+    // (blue markers). So each mode shows only its own colour on the graph and only its own days in Day by day.
+    var pts;
+    if(isSold){
+      pts=raw.filter(function(d){ return d.vSold!=null || d.d===today; }).map(function(d){
+        var v=(d.d===today)?(d.vSoldCur!=null?+d.vSoldCur:(d.vSold!=null?+d.vSold:0)):(+d.vSold||0);
+        return {d:d.d, v:v, cards:d.cards, graded:d.graded, sealed:d.sealed};
+      });
+    } else {
+      pts=raw.map(function(d){ return {d:d.d, v:(+d.vLive||+d.v||0), cards:d.cards, graded:d.graded, sealed:d.sealed}; });
+    }
+    var cur=pts[pts.length-1].v;
+    var first=pts[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
     var dir=delta>0.005?"up":(delta<-0.005?"down":"flat"), sign=delta>0.005?"+":(delta<-0.005?"":"");
-    var vals=win.map(function(s){return s.v;}), hi=Math.max.apply(null,vals), lo=Math.min.apply(null,vals);
-    var soldSparse=(mode==="sold" && i0===series.length-1 && series.length>1);   // sold chosen but no historical sold reading yet
-    var rows=series.map(function(s,i){ return {s:s, delta:(i>0? s.v-series[i-1].v : null)}; }).reverse().map(function(row){
+    var vals=pts.map(function(s){return s.v;}), hi=Math.max.apply(null,vals), lo=Math.min.apply(null,vals);
+    var soldSparse=(isSold && pts.length<2);   // sold chosen but no last-sold history recorded yet
+    var rows=pts.map(function(s,i){ return {s:s, delta:(i>0? s.v-pts[i-1].v : null)}; }).reverse().map(function(row){
       var s=row.s, d=row.delta;
       var parts=[]; if(s.cards!=null) parts.push(s.cards+" card"+(s.cards===1?"":"s")); if(s.graded) parts.push(s.graded+" graded"); if(s.sealed) parts.push(s.sealed+" sealed");
       var chg = (d==null) ? '<span class="pdflat">·</span>'
@@ -3714,24 +3709,24 @@
     }).join("");
     host.innerHTML=
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
-        '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(win[0].d)+'</span></div></div>'+
-      '<div class="pcchartwrap pcbig" id="pdWrap">'+ chartSVG(series)+
+        '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(pts[0].d)+'</span></div></div>'+
+      '<div class="pcchartwrap pcbig'+(isSold?' pcsold':'')+'" id="pdWrap">'+ chartSVG(pts, {single:true, color:(isSold?"var(--azure)":"var(--up)"), gradId:"pdg"})+
         '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div></div>'+
-      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">'+(mode==="sold"?"Last sold":"Live listings")+'</span><span class="lg lgsold">Last sold · marks</span></div>'+
+      '<div class="pclegend priceui" aria-hidden="true">'+(isSold?'<span class="lg lgsold">Last sold</span>':'<span class="lg lglive">Live listings</span>')+'</div>'+
       '<div class="pdstats"><div class="hs"><span class="n">'+money(hi)+'</span><span class="l">High</span></div>'+
         '<div class="hs"><span class="n">'+money(lo)+'</span><span class="l">Low</span></div>'+
-        '<div class="hs"><span class="n">'+series.length+'</span><span class="l">Day'+(series.length===1?"":"s")+' tracked</span></div></div>'+
+        '<div class="hs"><span class="n">'+pts.length+'</span><span class="l">'+(isSold?('Sold reading'+(pts.length===1?"":"s")):('Day'+(pts.length===1?"":"s")+' tracked'))+'</span></div></div>'+
       '<div class="pdmoderow priceui"><span class="pdmlbl">Day by day priced from</span>'+
         '<span class="seg" id="pdModeSeg">'+
           '<button class="segb'+(mode==="live"?" on":"")+'" data-m="live" type="button">Live listings</button>'+
-          '<button class="segb'+(mode==="sold"?" on":"")+'" data-m="sold" type="button">Last sold</button>'+
+          '<button class="segb'+(isSold?" on":"")+'" data-m="sold" type="button">Last sold</button>'+
         '</span></div>'+
-      (series.length<2?'<div class="pcnote">Your total is saved once a day, so this history fills in as the days pass.</div>'
-        :(soldSparse?'<div class="pcnote">Last sold values fill in each time you tap Refresh last sold, so this line builds from today.</div>':''))+
-      (series.length>=2?'<div class="pcfoot" style="justify-content:flex-end;margin-top:14px"><button class="pcrefbtn pcfresh" id="startFreshBtnD" type="button">Start fresh today</button></div>':'')+
+      (soldSparse?'<div class="pcnote">Last sold values fill in each time you tap Refresh last sold, so this view builds up over time.</div>'
+        :(pts.length<2?'<div class="pcnote">Your total is saved once a day, so this history fills in as the days pass.</div>':''))+
+      (pts.length>=2?'<div class="pcfoot" style="justify-content:flex-end;margin-top:14px"><button class="pcrefbtn pcfresh" id="startFreshBtnD" type="button">Start fresh today</button></div>':'')+
       '<h2 class="sech" style="margin-top:26px">Day by day</h2>'+
       '<div class="pdlist">'+rows+'</div>';
-    wireChart(series, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
+    wireChart(pts, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
     var seg=$("pdModeSeg"); if(seg) Array.prototype.forEach.call(seg.querySelectorAll(".segb"), function(b){ b.onclick=function(){ pdMode=b.getAttribute("data-m"); renderPortfolioDetail(); }; });
     var bk=$("pdBack"); if(bk) bk.onclick=function(){ if(_histReady && history.length>1) history.back(); else showPage("home"); };
     var sfd=$("startFreshBtnD"); if(sfd) sfd.onclick=askStartFresh;
@@ -3778,32 +3773,32 @@
       wrap.ontouchstart=wrap.ontouchmove=function(e){ var t=e.touches&&e.touches[0]; if(t) show(at(t.clientX)); };
     }
   }
-  // Two series: a green line (live listings, one point per day) + blue marks (last sold, only on the days a
-  // sold refresh happened). The y-range spans both so neither clips. Live falls back to v for old history.
-  function chartSVG(series){
+  // A single value line + dots. Home card (no opts): green line, with blue last-sold dots overlaid on the days a
+  // sold refresh happened. History page passes {single:true, color, gradId} to draw ONE colour with no overlay
+  // (green for live, blue for sold) — the series it receives already holds only the points for that mode.
+  function chartSVG(series, opts){
+    opts=opts||{};
+    var single=!!opts.single, color=opts.color||"var(--up)", gradId=opts.gradId||"pcg";
     var W=600,H=150,pad=8,n=series.length;
-    function lv(s){ return (+s.v||0); }   // green line = your portfolio value in the active mode (blue vSold dots overlay it)
-    var liveVals=series.map(lv), soldVals=series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
+    function lv(s){ return (+s.v||0); }
+    var liveVals=series.map(lv), soldVals=single?[]:series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
     var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
     var xw=W-pad*2, yh=H-pad*2;
     function X(i){ return n<=1? W/2 : pad+(i/(n-1))*xw; }
     function Y(v){ return pad+yh-((v-mn)/(mx-mn))*yh; }
-    // One dot per day. Drawn as %-positioned HTML overlay (not SVG circles) so they stay perfectly round
-    // despite the chart's stretched preserveAspectRatio="none" viewBox. Green = live (last = today, emphasised);
-    // a blue dot is added on any day that carries a last-sold mark.
     var dots='<div class="pcdots" aria-hidden="true">'+series.map(function(s,i){
       var out='<span class="pcdot'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(lv(s))/H*100).toFixed(3)+'%"></span>';
-      if(s.vSold!=null) out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>';
+      if(!single && s.vSold!=null) out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>';
       return out;
     }).join("")+'</div>';
     if(n<=1){ return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-dasharray="4 5"/></svg>'+dots; }
     var line=series.map(function(s,i){ return (i?"L":"M")+X(i)+" "+Y(lv(s)); }).join(" ");
     var area=line+" L"+X(n-1)+" "+(H-pad)+" L"+X(0)+" "+(H-pad)+" Z";
     return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
-      '<defs><linearGradient id="pcg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--up)" stop-opacity="0.24"/><stop offset="1" stop-color="var(--up)" stop-opacity="0"/></linearGradient></defs>'+
-      '<path d="'+area+'" fill="url(#pcg)"/>'+
-      '<path d="'+line+'" fill="none" stroke="var(--up)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>'+dots;
+      '<defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+color+'" stop-opacity="0.24"/><stop offset="1" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>'+
+      '<path d="'+area+'" fill="url(#'+gradId+')"/>'+
+      '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>'+dots;
   }
 
   // ---- Deck builder ----
