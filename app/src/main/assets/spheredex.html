@@ -137,8 +137,10 @@
   select.tbtn { -webkit-appearance:none; appearance:none; padding-right:26px; background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%); background-position:calc(100% - 14px) 55%, calc(100% - 9px) 55%; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
 
   /* card value + graded badge */
-  .cstats .val { color:var(--accent-ink); font-weight:600; }
+  .cstats .val { color:var(--accent-ink); font-weight:600; display:inline-flex; align-items:center; gap:4px; }
   .cstats .val.ref { color:var(--ink-faint); font-weight:500; opacity:.85; }   /* market reference price for cards you do not own */
+  .val .pmdot { width:7px; height:7px; border-radius:50%; background:var(--up); flex:none; }   /* live-listings price */
+  .val .pmdot.sold { background:var(--azure); }   /* last-sold price */
   .gradedbadge { position:absolute; bottom:8px; left:8px; z-index:3; font-family:var(--font-mono); font-size:.6rem; font-weight:700;
     color:#fff; background:rgba(0,0,0,.5); padding:2px 7px; border-radius:20px; backdrop-filter:blur(2px); display:inline-flex; gap:4px; align-items:center; }
   /* graded editor */
@@ -484,7 +486,17 @@
   .setbox.artbox { position:relative; }
   .setbox.artbox .setart { width:100%; height:100%; object-fit:cover; display:block; }
   .setbox.artbox .setlogobadge { position:absolute; top:7px; left:8px; width:42%; max-width:104px; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.7)); pointer-events:none; }
-  .collagebox { background:radial-gradient(120% 120% at 50% 0,color-mix(in srgb,var(--accent) 16%,var(--surface-2)),var(--surface-2)); }
+  /* Promo "hero": a forest-lit 3-card scene that echoes the All Cards collection image, built live from promo art */
+  .collagebox { position:relative; overflow:hidden;
+    background:
+      radial-gradient(72% 58% at 20% 8%, rgba(255,244,205,.34), rgba(255,244,205,0) 58%),
+      radial-gradient(135% 118% at 50% 122%, #18421f 0%, #0d2416 52%, #061309 100%); }
+  .collagebox::before { content:""; position:absolute; inset:-20% -10% auto -10%; height:150%; z-index:1; pointer-events:none;
+    background:linear-gradient(122deg, rgba(255,240,200,.24) 0%, rgba(255,240,200,0) 24%, rgba(255,240,200,.12) 33%, rgba(255,240,200,0) 45%);
+    mix-blend-mode:screen; }
+  .collagebox::after { content:""; position:absolute; left:50%; bottom:6%; width:80%; height:15%; z-index:1; pointer-events:none;
+    transform:translateX(-50%); border-radius:50%;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.6), rgba(0,0,0,0) 70%); }
   .collage { position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
   .collage img { position:absolute; height:80%; border-radius:6px; box-shadow:0 3px 9px rgba(0,0,0,.45); border:1.5px solid rgba(255,255,255,.16); background:var(--surface); }
   .collage.n1 img { position:static; height:88%; }
@@ -493,6 +505,16 @@
   .collage.n3 img:nth-child(1){ transform:translateX(-52%) rotate(-11deg); z-index:1; }
   .collage.n3 img:nth-child(2){ transform:translateY(-3%) rotate(0deg); z-index:3; }
   .collage.n3 img:nth-child(3){ transform:translateX(52%) rotate(11deg); z-index:2; }
+  /* hero-scale the cards so they stand on the mossy floor like the collection image */
+  .collagebox .collage { align-items:flex-end; padding-bottom:8%; z-index:2; }
+  .collagebox .collage img { width:auto; height:84%; object-fit:contain; border-radius:7px; border-color:rgba(255,255,255,.24);
+    box-shadow:0 11px 22px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4); background:#0c1a12; }
+  .collagebox .collage.n1 img { height:92%; }
+  .collagebox .collage.n3 img:nth-child(1){ transform:translateX(-56%) rotate(-12deg); }
+  .collagebox .collage.n3 img:nth-child(2){ transform:translateY(-3%) rotate(0deg); height:90%; }
+  .collagebox .collage.n3 img:nth-child(3){ transform:translateX(56%) rotate(12deg); }
+  .collagebox .collage.n2 img:nth-child(1){ transform:translateX(-34%) rotate(-9deg); }
+  .collagebox .collage.n2 img:nth-child(2){ transform:translateX(34%) rotate(9deg); }
   .setbox .ph { font-family:var(--font-display); font-weight:800; font-size:1.3rem; color:var(--ink-faint); padding:10px; text-align:center; }
   .setcard.allcard { border-color:color-mix(in srgb,var(--accent) 40%,var(--line-strong)); }
   .setbox.allbox { background:radial-gradient(120% 120% at 50% 0, color-mix(in srgb,var(--accent) 28%,var(--surface-2)), var(--surface-2)); }
@@ -1073,6 +1095,7 @@
   .bubrow.sealbubs{ grid-template-columns:repeat(2,1fr); }   /* sealed detail: 4 price tiles as a 2x2 of bordered bubbles */
   .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:4px; padding:12px 5px; border-radius:14px;
     border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.8rem; letter-spacing:-.2px; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
+  a.bub{ text-decoration:none; }
   .bub .ic{ width:1.05rem; height:1.05rem; margin:0; flex:none; }
   .bub span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bub .chev{ width:.95rem; height:.95rem; margin-left:2px; opacity:.6; transition:transform .18s; }
@@ -1123,8 +1146,8 @@
   .ggnote{ grid-column:1/-1; font-size:.8rem; color:var(--ink-faint); margin-bottom:4px; }
   .ggrow{ display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:6px 10px; }
   .ggr{ flex:1; font-family:var(--font-mono); font-size:.82rem; color:var(--ink-soft); }
-  .ggv{ width:74px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:8px; padding:5px 7px; color:var(--ink); font-family:var(--font-mono); font-size:.82rem; }
-  .ggv:focus{ outline:none; border-color:var(--accent); }
+  .ggv{ min-width:74px; text-align:right; color:var(--ink); font-family:var(--font-mono); font-size:.82rem; font-weight:600; font-variant-numeric:tabular-nums; }
+  .ggv.ggempty{ color:var(--ink-faint); font-weight:500; }
 
   /* Contact page */
   .ctopics{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
@@ -1618,6 +1641,13 @@
         <div class="setinfo"><div class="stitle">Show prices &amp; values</div><div class="sdesc">On: values, market prices and eBay listings appear next to your cards. Off: a clean binder with no prices anywhere.</div></div>
         <label class="switch"><input type="checkbox" id="setPrices"><span class="track"></span></label>
       </div>
+      <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Collection price mode</div><div class="sdesc">Which price your collection is valued at. <b>Live listings</b> — the average of the lowest current listings, refreshed automatically every day. <b>Last sold</b> — the average of recent sold prices, refreshed automatically about weekly (and whenever you tap “Refresh prices”).</div></div>
+        <select class="sortsel" id="setPriceMode">
+          <option value="live">Live listings</option>
+          <option value="sold">Last sold</option>
+        </select>
+      </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Theme</div><div class="sdesc">Follow your device, or force light / dark. Remembered on this device.</div></div>
         <select class="sortsel" id="setThemeSel">
@@ -1658,13 +1688,6 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it, no dimming for missing cards.</div></div>
         <label class="switch"><input type="checkbox" id="setNoFade"><span class="track"></span></label>
-      </div>
-      <div class="setrow priceui">
-        <div class="setinfo"><div class="stitle">Collection price mode</div><div class="sdesc">Which price your collection is valued at. <b>Live listings</b> — the average of the lowest current listings, refreshed automatically every day. <b>Last sold</b> — the average of recent sold prices, refreshed automatically about weekly (and whenever you tap “Refresh prices”).</div></div>
-        <select class="sortsel" id="setPriceMode">
-          <option value="live">Live listings</option>
-          <option value="sold">Last sold</option>
-        </select>
       </div>
       <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">eBay region</div><div class="sdesc">Which eBay marketplace the “Search sold listings” links open. Match it to where you buy and sell.</div></div>
@@ -2286,8 +2309,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var val = cardValueMode(c.id);   // mode-aware, matches the portfolio/binder totals
     var refUnit = mktOf(c.id);
     var conv = isConverted(c.id);   // "≈" marks a USD->local conversion (Palworld fallback)
-    var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+(conv?'≈':'')+money(val)+'</span>'
-      : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+(conv?'≈':'')+money(refUnit)+'</span>' : '');
+    var pmSold = priceMode()==="sold";
+    var pmDot = '<i class="pmdot'+(pmSold?' sold':'')+'" title="'+(pmSold?'Last-sold price':'Live-listing price')+'"></i>';   // green=live, blue=sold
+    var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+pmDot+(conv?'≈':'')+money(val)+'</span>'
+      : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var wished = isWished(c.id);
@@ -2661,9 +2686,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function renderGradeGuide(){
       var host=$("gradeGuide"); if(!host) return;
       var guide=s.gradeGuide||{}; var grader=SETTINGS.defaultGrader||"PSA";
-      host.innerHTML='<div class="ggnote">Average of the last 5 <b>'+esc(grader)+'</b> sold at each grade. Enter what you know; live per-grade data fills these once a graded-sales feed is connected.</div>'+
-        GRADES.map(function(gr){ return '<label class="ggrow"><span class="ggr">'+esc(grader)+' '+esc(gr)+'</span><input class="ggv" data-grade="'+esc(gr)+'" type="number" min="0" step="0.01" placeholder="'+CUR.sym+'" value="'+(guide[gr]!=null?guide[gr]:"")+'"></label>'; }).join("");
-      Array.prototype.forEach.call(host.querySelectorAll(".ggv"), function(inp){ inp.oninput=function(){ if(!s.gradeGuide) s.gradeGuide={}; var v=parseFloat(this.value); if(isNaN(v)) delete s.gradeGuide[this.getAttribute("data-grade")]; else s.gradeGuide[this.getAttribute("data-grade")]=v; }; });
+      host.innerHTML='<div class="ggnote">Average of the last 5 <b>'+esc(grader)+'</b> sold at each grade. Live per-grade data fills these once a graded-sales feed is connected.</div>'+
+        GRADES.map(function(gr){ var v=guide[gr]; return '<div class="ggrow"><span class="ggr">'+esc(grader)+' '+esc(gr)+'</span><span class="ggv'+(v!=null?'':' ggempty')+'">'+(v!=null?money(v):"—")+'</span></div>'; }).join("");
     }
     renderGradeGuide();
     function renderSales(){
@@ -4325,8 +4349,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="rwtier" style="color:'+tier.c+'">'+esc(tier.name)+'</div>'+
         '<div class="rwbar"><span style="width:'+pct+'%;background:'+tier.c+'"></span></div>'+
         '<div class="rwmeta">'+owned+'/'+tot+' '+r+(complete?' · complete':(next?' · '+next.name+' at '+next.min+'%':''))+'</div>';
-      el.title="Show "+RARE_NAME[r]+" cards";
-      el.onclick=function(){ openRarity(r, complete?"all":"missing"); };
+      el.title="Show all "+RARE_NAME[r]+" cards";
+      el.onclick=function(){ openRarity(r, "all"); };
       host.appendChild(el);
     });
     var cap=$("rewardCap"); if(cap){
@@ -4429,8 +4453,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     all.innerHTML=
       '<div class="setbox allbox"><img src="'+ALLCARDS_IMG+'" alt="All cards"></div>'+
       '<div class="sbody">'+
-        '<div class="snm">Collection</div>'+
-        '<div class="smeta"><span>every set</span><b>'+oAll+'/'+tAll+'</b></div>'+
+        '<div class="snm">All Cards</div>'+
+        '<div class="smeta"><span>'+aw+'% complete</span><b>'+oAll+'/'+tAll+'</b></div>'+
         '<div class="strack"><span class="sfill" style="width:'+aw+'%"></span></div>'+
         '<div class="setfoot"><button class="missbtn" type="button">View all cards →</button></div>'+
       '</div>';
