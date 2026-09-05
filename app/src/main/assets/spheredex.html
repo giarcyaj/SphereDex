@@ -505,16 +505,16 @@
   .collage.n3 img:nth-child(1){ transform:translateX(-52%) rotate(-11deg); z-index:1; }
   .collage.n3 img:nth-child(2){ transform:translateY(-3%) rotate(0deg); z-index:3; }
   .collage.n3 img:nth-child(3){ transform:translateX(52%) rotate(11deg); z-index:2; }
-  /* hero-scale the cards so they stand on the mossy floor like the collection image */
-  .collagebox .collage { align-items:flex-end; padding-bottom:8%; z-index:2; }
-  .collagebox .collage img { width:auto; height:84%; object-fit:contain; border-radius:7px; border-color:rgba(255,255,255,.24);
+  /* hero-scale the cards, centred and sized so the fanned/rotated cards never clip the box */
+  .collagebox .collage { align-items:center; z-index:2; }
+  .collagebox .collage img { width:auto; height:74%; object-fit:contain; border-radius:7px; border-color:rgba(255,255,255,.24);
     box-shadow:0 11px 22px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4); background:#0c1a12; }
-  .collagebox .collage.n1 img { height:92%; }
-  .collagebox .collage.n3 img:nth-child(1){ transform:translateX(-56%) rotate(-12deg); }
-  .collagebox .collage.n3 img:nth-child(2){ transform:translateY(-3%) rotate(0deg); height:90%; }
-  .collagebox .collage.n3 img:nth-child(3){ transform:translateX(56%) rotate(12deg); }
-  .collagebox .collage.n2 img:nth-child(1){ transform:translateX(-34%) rotate(-9deg); }
-  .collagebox .collage.n2 img:nth-child(2){ transform:translateX(34%) rotate(9deg); }
+  .collagebox .collage.n1 img { height:84%; }
+  .collagebox .collage.n3 img:nth-child(1){ transform:translateX(-52%) rotate(-10deg); }
+  .collagebox .collage.n3 img:nth-child(2){ transform:rotate(0deg); height:82%; }
+  .collagebox .collage.n3 img:nth-child(3){ transform:translateX(52%) rotate(10deg); }
+  .collagebox .collage.n2 img:nth-child(1){ transform:translateX(-32%) rotate(-8deg); }
+  .collagebox .collage.n2 img:nth-child(2){ transform:translateX(32%) rotate(8deg); }
   .setbox .ph { font-family:var(--font-display); font-weight:800; font-size:1.3rem; color:var(--ink-faint); padding:10px; text-align:center; }
   .setcard.allcard { border-color:color-mix(in srgb,var(--accent) 40%,var(--line-strong)); }
   .setbox.allbox { background:radial-gradient(120% 120% at 50% 0, color-mix(in srgb,var(--accent) 28%,var(--surface-2)), var(--surface-2)); }
