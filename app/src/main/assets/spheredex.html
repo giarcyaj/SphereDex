@@ -418,7 +418,9 @@
   .setrow.qmrow { flex-direction:column; align-items:stretch; gap:10px; }
   .qmslots { display:flex; flex-direction:column; gap:7px; width:100%; }
   .ordrow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); }
-  .ordlab { display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:.9rem; color:var(--ink); }
+  .ordlab { display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:.9rem; color:var(--ink); flex:1; min-width:0; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+  .ordlab:active { cursor:grabbing; }
+  .ordrow.dragging .ordlab { cursor:grabbing; }
   .ordlab .ic { width:1.05rem; height:1.05rem; color:var(--accent-ink); }
   .ordbtns { display:inline-flex; gap:6px; }
   .ordbtn { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); font-size:.72rem; display:grid; place-items:center; cursor:pointer; }
@@ -4099,15 +4101,23 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // to SETTINGS.menuOrder on drop. Older WebViews without Pointer Events simply keep the buttons.
   function wireMenuDrag(host){
     if(!("PointerEvent" in window)) return;
-    Array.prototype.forEach.call(host.querySelectorAll(".ordgrip"), function(grip){
-      grip.addEventListener("pointerdown", function(e){
+    // Whole row-label is the drag handle (not just the tiny grip glyph) so it's easy to grab;
+    // the up/down buttons live outside .ordlab and stay clickable.
+    Array.prototype.forEach.call(host.querySelectorAll(".ordlab"), function(lab){
+      lab.addEventListener("pointerdown", function(e){
+        if(e.button && e.button!==0) return;
         e.preventDefault();
-        var dragEl=grip.closest ? grip.closest(".ordrow") : grip.parentNode.parentNode;
+        var dragEl=lab.closest ? lab.closest(".ordrow") : lab.parentNode;
         if(!dragEl || !dragEl.classList.contains("ordrow")) return;
-        var startY=e.clientY, moved=false;
+        var startY=e.clientY, moved=false, pid=e.pointerId;
         dragEl.classList.add("dragging");
-        try{ grip.setPointerCapture(e.pointerId); }catch(_){}
+        // Capture on the STABLE container (host never moves), NOT the grip/row: reordering
+        // rows via insertBefore detaches the dragged row's subtree, which would implicitly
+        // drop capture from the grip and kill pointermove/pointerup mid-drag. Listen on
+        // window too, so we get the (bubbled) move/up events regardless of capture routing.
+        try{ host.setPointerCapture(pid); }catch(_){}
         function onMove(ev){
+          if(ev.pointerId!==pid) return;
           if(Math.abs(ev.clientY-startY)>3) moved=true;
           var rows=Array.prototype.slice.call(host.children).filter(function(r){ return r!==dragEl; });
           var after=null;
@@ -4115,16 +4125,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
           if(after) host.insertBefore(dragEl, after); else host.appendChild(dragEl);
         }
         function onUp(ev){
-          grip.removeEventListener("pointermove", onMove);
-          grip.removeEventListener("pointerup", onUp);
-          grip.removeEventListener("pointercancel", onUp);
-          try{ grip.releasePointerCapture(ev.pointerId); }catch(_){}
+          if(ev.pointerId!==pid) return;
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+          try{ host.releasePointerCapture(pid); }catch(_){}
           dragEl.classList.remove("dragging");
           if(moved) commitMenuOrder(host);
         }
-        grip.addEventListener("pointermove", onMove);
-        grip.addEventListener("pointerup", onUp);
-        grip.addEventListener("pointercancel", onUp);
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
       });
     });
   }
