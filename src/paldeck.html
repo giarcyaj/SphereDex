@@ -5191,11 +5191,16 @@
       su.onchange=function(){ SETTINGS.serverUrl=su.value.trim(); saveSettings(); renderAccount(); }; }
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ var done=busyBtn(fp,"Refreshing…"); Promise.resolve(fetchServerPrices(false)).then(done,done); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
-    // then refresh in the background at most once every ~12h (the server updates the data about daily).
+    // then refresh in the background on the first open after the server's daily ~1am refresh (12h fallback).
     try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
     if(apiBase()){
       var lastAt=+localStorage.getItem("palvault-pricebook-at")||0;
-      if(Date.now()-lastAt > 12*3600*1000) fetchServerPrices(true);
+      // Pull a fresh book on the first open after the server's daily live refresh (~01:01 UTC) so "today"
+      // always reflects the latest live listings, with a 12h fallback so it still stays reasonably current.
+      var _now=Date.now(), _d=new Date(_now);
+      var _todayRefresh=Date.UTC(_d.getUTCFullYear(), _d.getUTCMonth(), _d.getUTCDate(), 1, 10, 0);
+      var _lastRefresh=(_now>=_todayRefresh)?_todayRefresh:(_todayRefresh-86400000);   // most recent ~1am UTC refresh
+      if(lastAt < _lastRefresh || _now-lastAt > 12*3600*1000) fetchServerPrices(true);
     }
     // Palworld movers fallback: load cached, refresh at most every ~6h (the feed updates ~daily).
     try{ PWMOVERS=JSON.parse(localStorage.getItem("palvault-pwmovers")||"[]")||[]; }catch(_){ PWMOVERS=[]; }
