@@ -337,14 +337,6 @@
   .statbox { display:flex; flex-direction:column; }
   .statbox .n { font-family:var(--font-display); font-size:1.32rem; font-weight:850; }
   .statbox .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
-  /* interactive stat tiles (sealed detail: RRP link + tap-to-open sold/live/value panels) */
-  .statbox.sbtn { cursor:pointer; background:none; border:none; font:inherit; color:inherit; text-align:left; padding:2px 0; margin:-2px 0; border-radius:8px; transition:opacity .12s; }
-  a.statbox.sbtn { text-decoration:none; }
-  .statbox.sbtn:hover { opacity:.8; }
-  .statbox.sbtn:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  .statbox.sbtn .l .caret { font-size:.9em; opacity:.65; display:inline-block; transition:transform .15s; }
-  .statbox.sbtn.open .l { color:var(--accent-ink); }
-  .statbox.sbtn.open .l .caret { transform:rotate(180deg); opacity:1; }
   /* portfolio day-by-day price-source toggle (sits under the High / Low / Days stats) */
   .pdmoderow { display:flex; align-items:center; gap:10px 12px; flex-wrap:wrap; margin:14px 0 2px; }
   .pdmoderow .pdmlbl { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -1078,6 +1070,7 @@
   /* ---- Detail bubbles (progressive disclosure) ---- */
   .bubrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:4px; }
   .bubrow.glance{ margin-top:12px; }
+  .bubrow.sealbubs{ grid-template-columns:repeat(2,1fr); }   /* sealed detail: 4 price tiles as a 2x2 of bordered bubbles */
   .bub{ width:100%; min-width:0; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:4px; padding:12px 5px; border-radius:14px;
     border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:var(--font-display); font-weight:700; font-size:.8rem; letter-spacing:-.2px; cursor:pointer; transition:.14s; -webkit-tap-highlight-color:transparent; }
   .bub .ic{ width:1.05rem; height:1.05rem; margin:0; flex:none; }
@@ -3460,11 +3453,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<h2>'+esc(title)+'</h2>'+
         '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-R)">'+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</span></div>'+
         (function(){ var willLoad=apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000);
-        return '<div class="statline sealstats">'+
-          '<a class="statbox sbtn" id="sdRrp" href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener"><span class="n">'+money(rrpShown)+'</span><span class="l">RRP <span class="caret">↗</span></span></a>'+
-          '<button class="statbox sbtn priceui" id="sdSoldBtn" type="button"><span class="n" id="sdSold">'+(willLoad?SPIN:((+pr.sold>0)?money(pr.sold):"n/a"))+'</span><span class="l">Last 5 sold <span class="caret">▾</span></span></button>'+
-          '<button class="statbox sbtn priceui" id="sdListBtn" type="button"><span class="n" id="sdList">'+(willLoad?SPIN:((+pr.list>0)?money(pr.list):"n/a"))+'</span><span class="l">Live listings <span class="caret">▾</span></span></button>'+
-          '<button class="statbox sbtn priceui" id="sdValBtn" type="button"><span class="n" id="sdVal">'+money((+s.qty||0)*sealUnit(s))+'</span><span class="l">Your value <span class="caret">▾</span></span></button>'+
+        return '<div class="bubrow glance sealbubs">'+
+          '<a class="bub glancebub" id="sdRrp" href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener"><span class="gllab">RRP ↗</span><b class="glval">'+money(rrpShown)+'</b></a>'+
+          '<button class="bub glancebub priceui" id="sdSoldBtn" type="button"><span class="gllab">Last 5 sold</span><b class="glval" id="sdSold">'+(willLoad?SPIN:((+pr.sold>0)?money(pr.sold):"n/a"))+'</b></button>'+
+          '<button class="bub glancebub priceui" id="sdListBtn" type="button"><span class="gllab">Live listings</span><b class="glval" id="sdList">'+(willLoad?SPIN:((+pr.list>0)?money(pr.list):"n/a"))+'</b></button>'+
+          '<button class="bub glancebub priceui" id="sdValBtn" type="button"><span class="gllab">Your value</span><b class="glval" id="sdVal">'+money((+s.qty||0)*sealUnit(s))+'</b></button>'+
         '</div>'+
         '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales)+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings)+'</div></div>'+
