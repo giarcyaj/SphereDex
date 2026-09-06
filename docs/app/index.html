@@ -241,6 +241,13 @@
     background-size:250% 250%; animation:holoswp 3.8s linear infinite; }
   @keyframes holoswp { 0%{ background-position:135% 0; } 100%{ background-position:-35% 0; } }
   @media (prefers-reduced-motion:reduce){ .card:has(.rgem.holo) .art::after { animation:none; } }
+  /* Soul (SSS) cards get a softer, twinkling glimmer rather than the OSR/SSP foil sweep. */
+  .rgem.glim { background:linear-gradient(135deg,#ffffff 0%, #dcccff 34%, #a9e8ff 63%, #ffe3f6 100%); color:#2a2140; }
+  .card:has(.rgem.glim) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
+    background:radial-gradient(58% 42% at 26% 28%, rgba(255,255,255,.42), transparent 55%), radial-gradient(48% 36% at 76% 72%, rgba(190,150,255,.32), transparent 55%), linear-gradient(120deg, transparent 42%, rgba(220,240,255,.30) 50%, transparent 58%);
+    background-size:190% 190%, 190% 190%, 240% 240%; animation:glimmer 6s ease-in-out infinite; }
+  @keyframes glimmer { 0%{ background-position:0% 0%, 100% 100%, 130% 0; opacity:.5; } 50%{ background-position:42% 34%, 58% 66%, 30% 0; opacity:1; } 100%{ background-position:0% 0%, 100% 100%, -30% 0; opacity:.5; } }
+  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.glim) .art::after { animation:none; } }
   .wish { position:absolute; top:34px; right:8px; z-index:3; width:28px; height:28px; border-radius:8px; border:none;
     background:rgba(0,0,0,.34); color:#fff; display:grid; place-items:center; font-size:.95rem; backdrop-filter:blur(3px); transition:.13s; opacity:.5; }
   .card:hover .wish, .wish.on { opacity:1; }
@@ -2346,7 +2353,7 @@
     var ec = tint?elVar(tint):colVar(c.color);
     var ec2 = c.els[1]?elVar(c.els[1]):(tint?elVar(tint):colVar(c.color));
     var mono = c.kind==="Pal" ? c.name.split(" ")[0] : (c.kind==="Soul"?"◆":c.name.charAt(0));
-    var rareCls = c.rare==="OSR" ? "rgem holo" : "rgem";
+    var rareCls = (c.rare==="OSR"||c.rare==="SSP") ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem");
     // Structure cards are printed landscape, rotate them to fill the portrait frame.
     var landCls = (c.kind==="Structure") ? " land" : "";
     var img;
@@ -2567,7 +2574,7 @@
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
     var s=o(c.id);
     var elTags = c.els.map(function(e){ return '<span class="elgem" style="--c:'+elVar(e)+'" title="'+e+'"><i></i><svg viewBox="0 0 24 24"><use href="#g-'+e.toLowerCase()+'"/></svg></span>'; }).join("");
-    var rareCls = c.rare==="OSR" ? "rgem holo" : "rgem"; rareCls = rareCls.replace("rgem","eltag");
+    var rareCls = (c.rare==="OSR"||c.rare==="SSP") ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem"); rareCls = rareCls.replace("rgem","eltag");
     var statBoxes = [];
     if (c.cost!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.cost+'</span><span class="l">Cost ◇</span></div>');
     if (c.power!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.power+'</span><span class="l">Power ◈</span></div>');
