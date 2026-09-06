@@ -80,7 +80,15 @@
   .storebtn:hover .t .s{color:var(--ink-soft)}
   @media(max-width:520px){ .cta{flex-direction:column;gap:10px} .storebtn{width:100%;flex:1 1 auto;justify-content:flex-start;padding:12px 16px;gap:12px} .storebtn svg{width:24px;height:24px} }
   .navlinks .btn{padding:9px 15px}
-  @media(max-width:760px){ .navlinks a:not(.btn){display:none} .nav .wrap{gap:10px} }
+  /* compact App Store / Google Play icon buttons, top-right of the nav (landing site only) */
+  .navstores{display:inline-flex;align-items:center;gap:8px}
+  .navstore{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:none;
+    border-radius:11px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--ink);
+    transition:transform .15s,border-color .15s,color .15s}
+  .navstore:hover{border-color:var(--accent);color:#fff;transform:translateY(-1px)}
+  .navstore:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .navstore svg{width:22px;height:22px;flex:none}
+  @media(max-width:760px){ .navlinks a:not(.btn):not(.navstore){display:none} .nav .wrap{gap:10px} .navlinks{gap:12px} }
 
   /* ---- hero ---- */
   .hero{padding:66px 0 30px;position:relative;overflow:hidden}
@@ -205,6 +213,10 @@
     <a href="roadmap.html">Roadmap</a>
     <a href="roadmap.html#contact">Contact</a>
     <a href="#get">Get it</a>
+    <span class="navstores">
+      <a class="navstore" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg></a>
+      <a class="navstore" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><svg aria-hidden="true"><use href="#ic-gplay"/></svg></a>
+    </span>
     <a class="btn primary" href="app/">Open the app</a>
   </span>
 </div></nav>
