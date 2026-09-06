@@ -11,6 +11,21 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;        // let backend / cross-origin pass straight through
+
+  // App shell (navigations / HTML docs): NETWORK-FIRST, so a new build reaches returning users right
+  // away without a cache-version bump. Falls back to the cached shell only when the network fails
+  // (offline). The whole app lives in index.html, so this is what actually needs to stay fresh.
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
+        .then(res => { if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
+        .catch(() => caches.open(CACHE).then(c => c.match(req).then(m => m || c.match('./index.html') || c.match('./'))))
+    );
+    return;
+  }
+
+  // Static assets (icons, manifest): cache-first with background refresh - fast, and rarely change.
   e.respondWith(caches.open(CACHE).then(cache =>
     cache.match(req).then(cached => {
       const net = fetch(req).then(res => { if (res && res.status === 200) cache.put(req, res.clone()); return res; }).catch(() => cached);
