@@ -3662,12 +3662,15 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   }
   function renderPortfolio(){
     var card=$("portfolioCard"); if(!card) return;
-    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, curLive=Math.round((cardsValueMode("live")+sealedValue())*100)/100, today=todayKey(), ct=collCounts();
+    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, curLive=Math.round((cardsValueMode("live")+sealedValue())*100)/100, curSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100, today=todayKey(), ct=collCounts();
     var storedToday=(activeCol().hist||{})[today]||{};
     var live={d:today, v:cur, vLive:curLive, vSold:(storedToday.vSold!=null?+storedToday.vSold:null), cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     // Make sure today's live figure is always the last point on the chart.
     if(series.length && series[series.length-1].d===today) series[series.length-1]=live;
     else series=series.concat([live]);
+    // Blue last-sold line: connect the days that carry a reading, plus today's current sold value.
+    series.forEach(function(s,i){ s.bSold=(s.vSold!=null)?+s.vSold:((i===series.length-1 && curSold>0)?curSold:null); });
+    var hasSold=series.some(function(s){ return s.bSold!=null; });
     var first=series[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
     var dir=delta>0.005?"up":(delta<-0.005?"down":"flat"), sign=delta>0.005?"+":(delta<-0.005?"":"");
     card.innerHTML=
@@ -3676,17 +3679,17 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="pcval">'+money(cur)+'</div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(series[0].d)+'</span></div>'+
       '</div>'+
-      '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series, {sold:priceMode()==="sold"})+
+      '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series, {dual:true})+
         '<div class="pcmark" id="pcMark" hidden></div><div class="pctip" id="pcTip" hidden></div>'+
       '</div>'+
-      '<div class="pclegend priceui" aria-hidden="true">'+(priceMode()==="sold"?'<span class="lg lglive">Last sold</span>':'<span class="lg lglive">Live listings</span><span class="lg lgsold">Last sold</span>')+'</div>'+
+      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">Live listings</span>'+(hasSold?'<span class="lg lgsold">Last sold</span>':'')+'</div>'+
       '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
         '<span class="pcbtns">'+
           '<button class="pcrefbtn" id="portHistBtn" type="button">'+icon('chart')+' Portfolio history</button>'+
           (apiBase()?'<button class="pcrefbtn soldrefresh priceui" id="refreshSoldBtn" type="button">'+icon('refresh')+' Refresh last sold</button>':'')+
         '</span></div>'+
       (series.length<2?'<div class="pcnote">Your total is saved each day, so the line grows as the days pass.</div>':'<div class="pcnote">Tap the chart for the full history and a day-by-day breakdown.</div>');
-    wireChart(series, null, function(){ showPage("portfolio"); });
+    wireChart(series, {dual:true}, function(){ showPage("portfolio"); });
     var rb=$("refreshSoldBtn"); if(rb) rb.onclick=function(){ refreshLastSold(); };
     var ph=$("portHistBtn"); if(ph) ph.onclick=function(){ showPage("portfolio"); };
     updateRefreshLabel();
@@ -3768,9 +3771,11 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function wireChart(series, ids, onClick){
     ids=ids||{}; var wrap=$(ids.wrap||"pcWrap"), tip=$(ids.tip||"pcTip"), mk=$(ids.mark||"pcMark"); if(!wrap||!tip||!mk) return;
     var n=series.length; if(!n) return;
+    var dual=!!ids.dual;
     var W=600,H=150,pad=8, xw=W-pad*2, yh=H-pad*2;
-    function lv(s){ return (+s.v||0); }   // the green line rides the active-mode value (matches headline/High-Low/rows)
-    var liveVals=series.map(lv), soldVals=series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
+    // In dual mode the marker rides the green live line; otherwise the active-mode value (matches headline/rows).
+    function lv(s){ return dual ? (+s.vLive||+s.v||0) : (+s.v||0); }
+    var liveVals=series.map(lv), soldVals=series.filter(function(s){return (dual?s.bSold:s.vSold)!=null;}).map(function(s){return +(dual?s.bSold:s.vSold);});
     var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
     function fx(i){ return (n<=1? W/2 : pad+(i/(n-1))*xw)/W; }
@@ -3779,7 +3784,8 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
       idx=Math.max(0,Math.min(n-1,idx)); var s=series[idx], x=fx(idx), y=fy(lv(s));
       mk.hidden=false; mk.style.left=(x*100)+"%"; mk.style.top=(y*100)+"%";
       var parts=[]; if(s.cards!=null) parts.push(s.cards+" card"+(s.cards===1?"":"s")); if(s.graded) parts.push(s.graded+" graded"); if(s.sealed) parts.push(s.sealed+" sealed");
-      tip.innerHTML='<b>'+money(lv(s))+'</b><span class="pctd">'+fmtFull(s.d)+'</span>'+(s.vSold!=null?'<span class="pctc" style="color:var(--azure)">Last sold '+money(+s.vSold)+'</span>':'')+(parts.length?'<span class="pctc">'+parts.join(" · ")+'</span>':(s.vSold!=null?'':'<span class="pctc">no items yet</span>'));
+      var soldShow=dual?s.bSold:s.vSold;
+      tip.innerHTML='<b>'+money(lv(s))+'</b><span class="pctd">'+fmtFull(s.d)+'</span>'+(soldShow!=null?'<span class="pctc" style="color:var(--azure)">Last sold '+money(+soldShow)+'</span>':'')+(parts.length?'<span class="pctc">'+parts.join(" · ")+'</span>':(soldShow!=null?'':'<span class="pctc">no items yet</span>'));
       tip.style.left=Math.max(9,Math.min(91,x*100))+"%"; tip.hidden=false;
     }
     function at(clientX){ var r=wrap.getBoundingClientRect(); return Math.round(((clientX-r.left)/r.width)*(n-1)); }
@@ -3799,30 +3805,37 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   // (green for live, blue for sold) — the series it receives already holds only the points for that mode.
   function chartSVG(series, opts){
     opts=opts||{};
-    var single=!!opts.single, color=opts.color||"var(--up)", gradId=opts.gradId||"pcg";
-    // The blue last-sold overlay is a contrast to the live line, so only show it in live mode
-    // (in sold mode the green line already IS the last-sold value, making the overlay redundant).
-    var showSold=!single && !opts.sold;
+    var single=!!opts.single, dual=!!opts.dual, color=opts.color||"var(--up)", gradId=opts.gradId||"pcg";
     var W=600,H=150,pad=8,n=series.length;
-    function lv(s){ return (+s.v||0); }
-    var liveVals=series.map(lv), soldVals=showSold?series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;}):[];
-    var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
+    // Green line = live listings in dual mode (so it contrasts the blue last-sold line), else the active value.
+    function gval(s){ return dual ? (+s.vLive||+s.v||0) : (+s.v||0); }
+    var greenVals=series.map(gval);
+    var blueVals = dual ? series.filter(function(s){return s.bSold!=null;}).map(function(s){return +s.bSold;})
+                        : (single?[]:series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;}));
+    var all=greenVals.concat(blueVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
     var xw=W-pad*2, yh=H-pad*2;
     function X(i){ return n<=1? W/2 : pad+(i/(n-1))*xw; }
     function Y(v){ return pad+yh-((v-mn)/(mx-mn))*yh; }
     var dots='<div class="pcdots" aria-hidden="true">'+series.map(function(s,i){
-      var out='<span class="pcdot'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(lv(s))/H*100).toFixed(3)+'%"></span>';
-      if(showSold && s.vSold!=null) out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>';
+      var out='<span class="pcdot'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(gval(s))/H*100).toFixed(3)+'%"></span>';
+      if(dual){ if(s.bSold!=null) out+='<span class="pcdot pcdotsold'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.bSold)/H*100).toFixed(3)+'%"></span>'; }
+      else if(!single && s.vSold!=null){ out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>'; }
       return out;
     }).join("")+'</div>';
     if(n<=1){ return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-dasharray="4 5"/></svg>'+dots; }
-    var line=series.map(function(s,i){ return (i?"L":"M")+X(i)+" "+Y(lv(s)); }).join(" ");
+    var line=series.map(function(s,i){ return (i?"L":"M")+X(i)+" "+Y(gval(s)); }).join(" ");
     var area=line+" L"+X(n-1)+" "+(H-pad)+" L"+X(0)+" "+(H-pad)+" Z";
-    return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
+    var svg='<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
       '<defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+color+'" stop-opacity="0.24"/><stop offset="1" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>'+
       '<path d="'+area+'" fill="url(#'+gradId+')"/>'+
-      '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>'+dots;
+      '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>';
+    if(dual){
+      var bp="", started=false;
+      series.forEach(function(s,i){ if(s.bSold!=null){ bp+=(started?" L":"M")+X(i)+" "+Y(+s.bSold); started=true; } });
+      if(bp) svg+='<path d="'+bp+'" fill="none" stroke="var(--azure)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    return svg+'</svg>'+dots;
   }
 
   // ---- Deck builder ----
