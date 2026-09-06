@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SphereDex Roadmap - what's shipped and what's next</title>
+<meta name="description" content="What is shipped, what I am building now, and ideas I am considering for SphereDex, the free Palworld TCG collection tracker. A living list shaped by your feedback.">
+<meta name="theme-color" content="#08151f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08151f; --surface:#12242f; --surface-2:#0e1e28;
+    --ink:#eef6fa; --ink-soft:#a8bcc8; --ink-faint:#7c95a3;
+    --line:#143b45; --line-strong:#1d5560;
+    --accent:#12e3f5; --accent-ink:#5fe6f4;
+    --gold:#ffb020; --gold-ink:#ffcf5e;
+    --s1:#3f9fe0; --s2:#57c14a; --s3:#f2c53d; --s4:#ef5a3c; --s5:#9e50d2;
+    --edge:rgba(120,220,240,.10);
+    --shadow:24px 34px 70px -34px rgba(0,6,12,.85);
+    --font-disp:"Chakra Petch","Bahnschrift",ui-sans-serif,system-ui,sans-serif;
+    --font-brand:"Baloo 2",var(--font-disp);
+    --font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --wrap:1080px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.55;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1100px 620px at 82% -8%,rgba(18,227,245,.09),transparent 60%),radial-gradient(900px 560px at 6% 4%,rgba(255,176,32,.06),transparent 55%);
+    background-attachment:fixed}
+  a{color:var(--accent-ink);text-decoration:none}
+  .wrap{max-width:var(--wrap);margin:0 auto;padding:0 22px}
+  .eyebrow{font-family:var(--font-disp);font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:.74rem;color:var(--accent-ink)}
+  h1,h2,h3{font-family:var(--font-disp);font-weight:700;line-height:1.05;margin:0}
+
+  .nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(8,21,31,.92),rgba(8,21,31,.55));border-bottom:1px solid var(--line)}
+  .nav .wrap{display:flex;align-items:center;gap:16px;height:64px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--font-brand);font-weight:800;font-size:1.32rem;color:var(--ink)}
+  .brand .sph{width:34px;height:34px;flex:none}
+  .navlinks{margin-left:auto;display:flex;align-items:center;gap:26px}
+  .navlinks a{color:var(--ink-soft);font-family:var(--font-disp);font-weight:600;font-size:.92rem}
+  .navlinks a:hover{color:var(--ink)} .navlinks a.on{color:var(--accent-ink)}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-disp);font-weight:700;border-radius:13px;padding:10px 16px;
+    border:1.5px solid transparent;background:linear-gradient(180deg,#18e9fb,#0bbfd0);color:#04222a;box-shadow:0 12px 30px -12px rgba(18,227,245,.6);font-size:.92rem}
+  @media(max-width:760px){ .navlinks a:not(.btn):not(.on){display:none} }
+
+  .head{padding:60px 0 8px}
+  .head h1{font-size:clamp(2.4rem,6vw,4rem);letter-spacing:-.01em;margin:12px 0 0}
+  .head .sub{margin-top:16px;font-size:1.15rem;max-width:56ch;color:var(--ink-soft)}
+  .updated{margin-top:14px;font-family:var(--font-disp);font-weight:600;font-size:.8rem;letter-spacing:.04em;color:var(--ink-faint)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:38px 0 20px}
+  @media(max-width:820px){ .cols{grid-template-columns:1fr} }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 22px 8px;box-shadow:inset 0 1px 0 var(--edge)}
+  .card h2{font-family:var(--font-brand);font-weight:700;font-size:1.32rem;display:flex;align-items:center;gap:12px}
+  .card h2 .d{width:12px;height:12px;border-radius:50%;flex:none}
+  .card.shipped h2 .d{background:var(--s2);box-shadow:0 0 0 5px rgba(87,193,74,.14)}
+  .card.now h2 .d{background:var(--s1);box-shadow:0 0 0 5px rgba(63,159,224,.14)}
+  .card.planned h2 .d{background:var(--s3);box-shadow:0 0 0 5px rgba(242,197,61,.14)}
+  .card.ideas h2 .d{background:var(--s5);box-shadow:0 0 0 5px rgba(158,80,210,.14)}
+  .card .cap{color:var(--ink-faint);font-size:.86rem;margin:6px 0 4px}
+  ul.items{list-style:none;margin:14px 0 16px;padding:0;display:grid;gap:11px}
+  ul.items li{position:relative;padding-left:26px;font-size:1rem;color:var(--ink);line-height:1.5}
+  ul.items li::before{content:"";position:absolute;left:4px;top:.55em;width:8px;height:8px;border-radius:50%;background:var(--line-strong)}
+  .card.shipped ul.items li::before{background:var(--s2)}
+  .card.now ul.items li::before{background:var(--s1)}
+  .card.planned ul.items li::before{background:var(--s3)}
+  .card.ideas ul.items li::before{background:var(--s5)}
+  .card.shipped ul.items li{color:var(--ink-soft)}
+
+  .foot-cta{margin:26px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 24px;text-align:center;
+    background-image:radial-gradient(700px 240px at 50% 0%,rgba(18,227,245,.08),transparent 70%)}
+  .foot-cta h3{font-family:var(--font-brand);font-weight:700;font-size:1.4rem}
+  .foot-cta p{color:var(--ink-soft);margin:8px auto 16px;max-width:48ch}
+  .foot-cta .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .foot-cta .lk{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line-strong);border-radius:12px;padding:11px 18px;
+    font-family:var(--font-disp);font-weight:700;color:var(--ink);background:var(--surface-2)}
+  .foot-cta .lk:hover{border-color:var(--accent);color:#fff}
+
+  .foot{border-top:1px solid var(--line);padding:30px 0 46px;margin-top:52px;color:var(--ink-soft);font-size:.86rem}
+  .foot .wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+  .foot a{color:var(--ink-soft)} .disc{max-width:60ch;line-height:1.5}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="sph" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="21" fill="none" stroke="url(#sg)" stroke-width="3"/>
+    <circle cx="24" cy="24" r="16.5" fill="#0b1a23"/>
+    <path d="M30 17c-3-2.4-9-2.6-11 .3-2 2.9 1 5 5 6.1 4 1.1 7 3.2 5 6.1-2 2.9-8 2.7-11 .3" fill="none" stroke="url(#sg)" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="38" cy="10" r="2.4" fill="#ffcf5e"/>
+    <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5fe6f4"/><stop offset="1" stop-color="#ffb020"/></linearGradient>
+  </symbol>
+</defs></svg>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="index.html"><svg class="sph" aria-hidden="true"><use href="#sph"/></svg>SphereDex</a>
+  <span class="navlinks">
+    <a href="index.html#features">Features</a>
+    <a href="index.html#prices">Prices</a>
+    <a class="on" href="roadmap.html">Roadmap</a>
+    <a class="btn" href="app/">Open the app</a>
+  </span>
+</div></nav>
+
+<header class="head"><div class="wrap">
+  <span class="eyebrow">What I am building</span>
+  <h1>Roadmap</h1>
+  <p class="sub">What is shipped, what I am building now, and ideas I am weighing up. This is a living list and the order can change, but your feedback genuinely moves things up it.</p>
+  <div class="updated">Updated September 2026</div>
+</div></header>
+
+<main class="wrap">
+  <div class="cols">
+    <section class="card now">
+      <h2><span class="d"></span>Working on now</h2>
+      <p class="cap">In progress, landing soon.</p>
+      <ul class="items">
+        <li>Tracking 1st versus 2nd edition per card, ready for the Dawn of Palpagos 2nd Edition reprint</li>
+        <li>Price alerts, so you can be notified when a card you follow moves</li>
+      </ul>
+    </section>
+
+    <section class="card planned">
+      <h2><span class="d"></span>Planned</h2>
+      <p class="cap">Coming, once the pieces are in place.</p>
+      <ul class="items">
+        <li>Per grade graded prices (PSA and others) once a graded sales feed is connected</li>
+        <li>New sets added as they release</li>
+        <li>Faster, smarter card scanning</li>
+      </ul>
+    </section>
+
+    <section class="card ideas">
+      <h2><span class="d"></span>Ideas I am considering</h2>
+      <p class="cap">Not promises. Tell me if you want these.</p>
+      <ul class="items">
+        <li>Deck building</li>
+        <li>Trade and wishlist matching with other collectors</li>
+        <li>Better import and export</li>
+      </ul>
+    </section>
+
+    <section class="card shipped">
+      <h2><span class="d"></span>Recently shipped</h2>
+      <p class="cap">Done and in your hands.</p>
+      <ul class="items">
+        <li>Drag to reorder the menu, and it sticks</li>
+        <li>Promo cards with proper art and a showcase tile</li>
+        <li>A green or blue dot on card prices for live versus last sold</li>
+        <li>Tap any rarity to jump to every card in it</li>
+        <li>Day by day portfolio history, switchable between live and sold</li>
+        <li>Cleaner graded price guide and sealed product pages</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="foot-cta">
+    <h3>Got an idea, or spotted something off?</h3>
+    <p>This roadmap is shaped by what collectors actually ask for. Send a card that looks wrong, a set to add, or a feature you want.</p>
+    <div class="row">
+      <a class="lk" href="app/">Open the app</a>
+      <a class="lk" href="index.html">Back to home</a>
+    </div>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <a class="brand" href="index.html" style="font-size:1.1rem"><svg class="sph" aria-hidden="true" style="width:26px;height:26px"><use href="#sph"/></svg>SphereDex</a>
+  <p class="disc">SphereDex is a free, fan made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. Not affiliated with or endorsed by Pocketpair or Bushiroad.</p>
+  <span><a href="index.html">Home</a> &middot; <a href="app/">Open the app</a> &middot; <a href="privacy.html">Privacy</a></span>
+</div></footer>
+
+</body>
+</html>
