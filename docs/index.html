@@ -53,7 +53,8 @@
   .nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);
     background:linear-gradient(180deg,rgba(8,21,31,.92),rgba(8,21,31,.55));border-bottom:1px solid var(--line)}
   .nav .wrap{display:flex;align-items:center;gap:16px;height:64px}
-  .brand{display:flex;align-items:center;gap:11px;font-family:var(--font-brand);font-weight:800;font-size:1.32rem;letter-spacing:.01em}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--font-brand);font-weight:800;font-size:1.32rem;letter-spacing:.01em;color:var(--ink);text-decoration:none;-webkit-tap-highlight-color:transparent}
+  a.brand:hover{color:var(--ink)}
   .brand .sph{width:34px;height:34px;flex:none}
   .navlinks{margin-left:auto;display:flex;align-items:center;gap:26px}
   .navlinks a{color:var(--ink-soft);font-family:var(--font-disp);font-weight:600;font-size:.92rem;-webkit-tap-highlight-color:transparent;user-select:none}
@@ -198,7 +199,7 @@
 </defs></svg>
 
 <nav class="nav"><div class="wrap">
-  <span class="brand"><svg class="sph" aria-hidden="true"><use href="#sph"/></svg>SphereDex</span>
+  <a class="brand" href="#top" aria-label="SphereDex, back to top"><svg class="sph" aria-hidden="true"><use href="#sph"/></svg>SphereDex</a>
   <span class="navlinks">
     <a href="#features">Features</a>
     <a href="#prices">Prices</a>
@@ -333,7 +334,7 @@
 </div></section>
 
 <footer class="foot"><div class="wrap">
-  <span class="brand" style="font-size:1.1rem"><svg class="sph" aria-hidden="true" style="width:26px;height:26px"><use href="#sph"/></svg>SphereDex</span>
+  <a class="brand" href="#top" style="font-size:1.1rem" aria-label="SphereDex, back to top"><svg class="sph" aria-hidden="true" style="width:26px;height:26px"><use href="#sph"/></svg>SphereDex</a>
   <p class="disc">SphereDex is a free, fan-made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. Not affiliated with or endorsed by Pocketpair or Bushiroad. Everything saves in your browser.</p>
   <span><a href="app/">Open the app</a> &middot; <a href="https://apps.apple.com/app/spheredex/id6804377686">App Store</a> &middot; <a href="https://play.google.com/store/apps/details?id=app.spheredex">Google Play</a> &middot; <a href="privacy.html">Privacy</a></span>
 </div></footer>
