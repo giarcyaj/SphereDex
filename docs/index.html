@@ -88,6 +88,7 @@
   .navstore:hover{border-color:var(--accent);color:#fff;transform:translateY(-1px)}
   .navstore:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .navstore svg{width:22px;height:22px;flex:none}
+  .navstore.apple svg{width:25px;height:25px}  /* Apple glyph is visually smaller in its box; nudge it up to match Play */
   @media(max-width:760px){ .navlinks a:not(.btn):not(.navstore){display:none} .nav .wrap{gap:10px} .navlinks{gap:12px} }
 
   /* ---- hero ---- */
@@ -214,7 +215,7 @@
     <a href="roadmap.html#contact">Contact</a>
     <a href="#get">Get it</a>
     <span class="navstores">
-      <a class="navstore" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg></a>
+      <a class="navstore apple" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg></a>
       <a class="navstore" href="https://play.google.com/store/apps/details?id=app.spheredex" aria-label="Get SphereDex on Google Play"><svg aria-hidden="true"><use href="#ic-gplay"/></svg></a>
     </span>
     <a class="btn primary" href="app/">Open the app</a>
