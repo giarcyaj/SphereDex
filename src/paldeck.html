@@ -1512,6 +1512,10 @@
         <option value="binder9">View · 9-pocket</option>
         <option value="binder12">View · 12-pocket</option>
       </select>
+      <select class="sortsel priceui" id="cardEd" aria-label="Edition for prices" title="Which edition's prices to show">
+        <option value="en">Edition · English</option>
+        <option value="jp">Edition · Japanese</option>
+      </select>
       <button class="tbtn" id="filterBtn" aria-expanded="false">⌕ Filters<span class="fcount" id="filterCount" hidden>0</span></button>
       <button class="tbtn ghost" id="fadeToggle" type="button" title="Fade uncollected cards"></button>
     </div>
@@ -2049,7 +2053,7 @@
   // Owned in ANY collection, drives the colour/fade of a card, regardless of which collection is active.
   function hasAny(id){ for(var i=0;i<STATE.cols.length;i++){ var e=STATE.cols[i].own[id]; if(e && (e.qty>0 || (e.graded && e.graded.length>0))) return true; } return false; }
   // eBay "sold listings" search for a card, on the region set in Settings.
-  function ebayUrl(c, sold){ if(sold===undefined) sold=true; var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+c.id+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+(sold?"&LH_Sold=1&LH_Complete=1":"")+"&_ipg=60"; }
+  function ebayUrl(c, sold){ if(sold===undefined) sold=true; var r=(SETTINGS&&SETTINGS.ebayRegion)||"co.uk"; var q=encodeURIComponent((c.name||"").replace(/–/g,"-")+" "+edCode(c.id)+(edKw()?" "+edKw():"")+" palworld card"); return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+(sold?"&LH_Sold=1&LH_Complete=1":"")+"&_ipg=60"; }
   function cardValue(s){ var v=(+s.qty||0)*(+s.mkt||0); (s.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
   // Mode-aware owned-card value (qty * the active-mode unit + graded), so a card tile matches the portfolio total.
   function cardValueMode(id, mode){ var e=o(id); var v=(+e.qty||0)*unitOf(id,mode); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return v; }
@@ -2116,6 +2120,47 @@
     if(!s.ed){ s.ed={ en:{rrp:+s.rrp||0,mkt:+s.mkt||0,last:+s.last||0,avg:+s.avg||0,sold:0,list:0,pAt:0}, jp:{rrp:0,mkt:0,last:0,avg:0,sold:0,list:0,pAt:0} }; }
     var b=s.ed[e]; if(!b){ b=s.ed[e]={rrp:0,mkt:0,last:0,avg:0,sold:0,list:0,pAt:0}; }
     ["rrp","mkt","last","avg","sold","list","pAt"].forEach(function(k){ if(b[k]==null) b[k]=0; }); return b; }
+  // ---- Singles edition (English / Japanese), unified with the sealed edition (SEAL_ED) ----
+  // Japanese singles are a different print with a different card code (EBP01-### vs BP01-###) and sell
+  // for different money, so the edition toggle swaps BOTH the price and the code used in searches.
+  // Per-edition prices are stored on each owned entry (e.ed.en/.jp); the FLAT price fields
+  // (mkt/sold/list/avg/last/pAt) always hold the CURRENTLY-selected edition, so unitOf, the binder
+  // total, the portfolio and the wishlist need no changes — they read the flat fields as before.
+  function edKw(){ return (SEAL_ED==="jp") ? "Japanese" : ""; }                        // eBay/search keyword for the edition
+  function edCode(id){ return (SEAL_ED==="jp") ? String(id||"").replace(/^E/,"") : id; } // EBP01-001 -> BP01-001 for JP
+  var EDPRICE_FIELDS=["mkt","last","avg","sold","list","pAt"];
+  // Stash the current flat prices under fromEd, load toEd's stored prices into the flat fields, across
+  // every collection. Preserves qty/graded/wish/cond/notes. First run seeds English from the existing
+  // flat values so nothing is lost.
+  function swapCardEdition(fromEd, toEd){
+    (STATE.cols||[]).forEach(function(col){ var m=col.own||{};
+      Object.keys(m).forEach(function(id){ var e=m[id]; if(!e) return;
+        if(!e.ed) e.ed={en:{},jp:{}}; if(!e.ed[fromEd]) e.ed[fromEd]={};
+        EDPRICE_FIELDS.forEach(function(k){ e.ed[fromEd][k]=+e[k]||0; });
+        var b=e.ed[toEd]||{}; EDPRICE_FIELDS.forEach(function(k){ e[k]=+b[k]||0; });
+      });
+    });
+  }
+  // Make the flat prices match SEAL_ED (called at load and on toggle). Persists WITHOUT a snapshot so
+  // it is safe to run during early init (save()/snapshot() are defined later).
+  function reconcileEdition(){ var applied=(localStorage.getItem("palvault-ed-applied")==="jp")?"jp":"en";
+    if(applied!==SEAL_ED){ swapCardEdition(applied, SEAL_ED);
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); localStorage.setItem("palvault-ed-applied", SEAL_ED); }catch(_){} } }
+  // The single entry point both toggles (#cardEd, #sealEd) call: switch edition, swap prices, resync
+  // the selectors, repaint everything that shows a price.
+  function setEdition(ed){ ed=(ed==="jp")?"jp":"en"; if(ed===SEAL_ED) return;
+    SEAL_ED=ed; try{ localStorage.setItem("palvault-sealed-ed",SEAL_ED); }catch(_){}
+    reconcileEdition();
+    var a=$("cardEd"); if(a) a.value=SEAL_ED; var b=$("sealEd"); if(b) b.value=SEAL_ED;
+    if(typeof save==="function") save();
+    if(typeof render==="function") render();
+    if(typeof renderHome==="function") renderHome();
+    if(typeof renderSealed==="function") renderSealed();
+    if(typeof renderPortfolio==="function") renderPortfolio();
+    if(typeof renderTrending==="function") renderTrending();
+    var pg=document.getElementById("page-portfolio"); if(pg&&pg.classList.contains("active")&&typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+  }
+  reconcileEdition();   // align the flat prices with the saved edition on load
   // Recommended retail price defaults, per currency. GBP is UK retail from The Card Vault
   // (box £45.60, pack £3.80, trial deck £18.00), which matches Chaos Cards / Magic Madhouse.
   // JPY is the official Bushiroad MSRP (box ¥5,280, pack ¥440, trial deck ¥1,980). USD/EUR/AUD/CAD
@@ -2707,7 +2752,7 @@
       if(!apiBase()){ finishLoading(); return; }
       var region=SETTINGS.ebayRegion||"co.uk";
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
-      function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
+      function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
       function busy(btn){ return busyBtn(btn); }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
       if(ps) ps.hidden=false; if(pl) pl.hidden=false; if(pg) pg.hidden=false;
@@ -3091,12 +3136,13 @@
   })();
   $("search").addEventListener("input", function(e){ filters.q=e.target.value; render(); });
   $("sortSel").addEventListener("change", function(e){ filters.sort=e.target.value; render(); });
+  (function(){ var ced=$("cardEd"); if(ced){ ced.value=SEAL_ED; ced.addEventListener("change", function(e){ setEdition(e.target.value); }); } })();
   // Sealed page controls (search + sort), mirroring the collection page.
   (function(){
     var ss=$("sealSearch"), so=$("sealSort"), sd=$("sealSortDir"), se=$("sealEd");
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
     if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
-    if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ SEAL_ED=(e.target.value==="jp")?"jp":"en"; localStorage.setItem("palvault-sealed-ed",SEAL_ED); renderSealed(); renderHome(); }); }
+    if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ setEdition(e.target.value); }); }
     var sv2=$("sealView"); if(sv2){ sv2.value=(localStorage.getItem("palvault-sealview")||"auto"); sv2.addEventListener("change", function(e){ sealView=e.target.value; localStorage.setItem("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = sealSortDir<0 ? "↑ Asc" : "↓ Desc"; sd.classList.toggle("on", sealSortDir<0); } sp();
       sd.onclick=function(){ sealSortDir=-sealSortDir; sp(); renderSealed(); }; }
@@ -3536,7 +3582,7 @@
   //     toggle has both numbers.
   function pullCardMarket(c, region, both){
     var e=o(c.id);
-    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name)+"&num="+encodeURIComponent(c.id)+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
     function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
     function applyList(b){ var v=+b.market||0; e.list=v; return v; }
     function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; return e.mkt; }
@@ -3613,7 +3659,9 @@
     api("/api/refresh-sold","POST",{ids:ids, region:region}).then(function(r){
       if(!r.ok){ toast((r.body&&r.body.error)?r.body.error:"Couldn't refresh last sold"); return; }
       var sold=r.body.sold||{}, n=0;
-      Object.keys(sold).forEach(function(id){ var row=sold[id]; if(row && row.market!=null){ PRICEBOOK_SOLD[id]=+row.market; var e=col.own[id]; if(e) e.sold=+row.market; n++; } });
+      // The bulk sold endpoint has no edition dimension (it returns English/market comps), so in JP
+      // edition only refresh the English fallback book, never overwrite a card's JP flat sold price.
+      Object.keys(sold).forEach(function(id){ var row=sold[id]; if(row && row.market!=null){ PRICEBOOK_SOLD[id]=+row.market; if(SEAL_ED!=="jp"){ var e=col.own[id]; if(e) e.sold=+row.market; } n++; } });
       if(r.body.soldRefreshedAt){ var t=Date.parse(r.body.soldRefreshedAt); if(t) SOLD_ASOF=t; }
       try{ localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       save();   // persist the refreshed sold prices onto the (captured) collection either way
