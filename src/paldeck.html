@@ -4384,7 +4384,7 @@
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
       ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
     });
-    showPage("collection"); render();
+    showPage("collection"); showCollGrid(true); render();
   }
   function renderTrophies(){
     var row=$("trophyRow"); if(!row) return;
