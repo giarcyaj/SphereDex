@@ -3676,10 +3676,10 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '<div class="pcval">'+money(cur)+'</div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(series[0].d)+'</span></div>'+
       '</div>'+
-      '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series)+
+      '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series, {sold:priceMode()==="sold"})+
         '<div class="pcmark" id="pcMark" hidden></div><div class="pctip" id="pcTip" hidden></div>'+
       '</div>'+
-      '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">'+(priceMode()==="sold"?"Last sold":"Live listings")+'</span><span class="lg lgsold">Last sold</span></div>'+
+      '<div class="pclegend priceui" aria-hidden="true">'+(priceMode()==="sold"?'<span class="lg lglive">Last sold</span>':'<span class="lg lglive">Live listings</span><span class="lg lgsold">Last sold</span>')+'</div>'+
       '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
         '<span class="pcbtns">'+
           '<button class="pcrefbtn" id="portHistBtn" type="button">'+icon('chart')+' Portfolio history</button>'+
@@ -3800,9 +3800,12 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
   function chartSVG(series, opts){
     opts=opts||{};
     var single=!!opts.single, color=opts.color||"var(--up)", gradId=opts.gradId||"pcg";
+    // The blue last-sold overlay is a contrast to the live line, so only show it in live mode
+    // (in sold mode the green line already IS the last-sold value, making the overlay redundant).
+    var showSold=!single && !opts.sold;
     var W=600,H=150,pad=8,n=series.length;
     function lv(s){ return (+s.v||0); }
-    var liveVals=series.map(lv), soldVals=single?[]:series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;});
+    var liveVals=series.map(lv), soldVals=showSold?series.filter(function(s){return s.vSold!=null;}).map(function(s){return +s.vSold;}):[];
     var all=liveVals.concat(soldVals), mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
     if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
     var xw=W-pad*2, yh=H-pad*2;
@@ -3810,7 +3813,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     function Y(v){ return pad+yh-((v-mn)/(mx-mn))*yh; }
     var dots='<div class="pcdots" aria-hidden="true">'+series.map(function(s,i){
       var out='<span class="pcdot'+(i===n-1?' pcdotnow':'')+'" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(lv(s))/H*100).toFixed(3)+'%"></span>';
-      if(!single && s.vSold!=null) out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>';
+      if(showSold && s.vSold!=null) out+='<span class="pcdot pcdotsold" style="left:'+(X(i)/W*100).toFixed(3)+'%;top:'+(Y(+s.vSold)/H*100).toFixed(3)+'%"></span>';
       return out;
     }).join("")+'</div>';
     if(n<=1){ return '<svg class="pcchart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-dasharray="4 5"/></svg>'+dots; }
