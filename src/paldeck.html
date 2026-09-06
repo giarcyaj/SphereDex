@@ -4241,8 +4241,13 @@
   }
   function pwMoverEl(m, c){
     var el=document.createElement("div"); el.className="trend";
+    // The /api/movers feed only carries a USD median, so never render that raw $ figure. Show the
+    // card's own market price in the user's currency/market instead (mktOf is region-converted); the
+    // % pill still reflects the Palworld weekly trend. If we have no local price yet, show none.
+    var loc=mktOf(c.id);
+    var sub = loc>0 ? (c.id+' · '+money(loc)) : c.id;
     el.innerHTML='<img src="'+imgSrc(c)+'" alt="">'+
-      '<div><div class="tnm">'+esc(c.name)+'</div><div class="tsub">'+c.id+' · $'+(+m.priceUsd).toFixed(2)+' · 7d median</div></div>'+
+      '<div><div class="tnm">'+esc(c.name)+'</div><div class="tsub">'+sub+'</div></div>'+
       '<div class="tpct '+m.dir+'">'+(m.dir==="up"?"▲":"▼")+' '+Math.abs(+m.pct).toFixed(1)+'%</div>';
     el.onclick=function(){ openDetail(c); };
     return el;
