@@ -76,6 +76,22 @@
   .foot-cta .lk{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line-strong);border-radius:12px;padding:11px 18px;
     font-family:var(--font-disp);font-weight:700;color:var(--ink);background:var(--surface-2)}
   .foot-cta .lk:hover{border-color:var(--accent);color:#fff}
+  .fbform{max-width:520px;margin:20px auto 0;display:grid;gap:12px;text-align:left}
+  .fbin{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:var(--surface-2);
+    border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-family:var(--font-body)}
+  .fbin::placeholder{color:var(--ink-faint)}
+  .fbin:focus{outline:none;border-color:var(--accent)}
+  textarea.fbin{resize:vertical;min-height:112px;line-height:1.5}
+  select.fbin{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:40px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%),linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%);
+    background-position:calc(100% - 20px) 55%,calc(100% - 14px) 55%;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+  .fbsend{font-family:var(--font-disp);font-weight:700;font-size:1rem;border:none;border-radius:12px;padding:13px 18px;cursor:pointer;
+    background:linear-gradient(180deg,#18e9fb,#0bbfd0);color:#04222a;box-shadow:0 12px 30px -12px rgba(18,227,245,.6)}
+  .fbsend:hover{filter:brightness(1.05)} .fbsend:disabled{opacity:.6;cursor:default}
+  .fbstatus{font-family:var(--font-disp);font-weight:600;font-size:.9rem;padding:11px 13px;border-radius:10px;text-align:left}
+  .fbstatus.ok{color:var(--s2);background:rgba(87,193,74,.12);border:1px solid rgba(87,193,74,.32)}
+  .fbstatus.bad{color:var(--s4);background:rgba(239,90,60,.12);border:1px solid rgba(239,90,60,.32)}
+  [hidden]{display:none!important}
 
   .foot{border-top:1px solid var(--line);padding:30px 0 46px;margin-top:52px;color:var(--ink-soft);font-size:.86rem}
   .foot .wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
@@ -156,10 +172,21 @@
     </section>
   </div>
 
-  <div class="foot-cta">
+  <div class="foot-cta" id="ideas">
     <h3>Got an idea, or spotted something off?</h3>
-    <p>This roadmap is shaped by what collectors actually ask for. Send a card that looks wrong, a set to add, or a feature you want.</p>
-    <div class="row">
+    <p>This roadmap is shaped by what collectors actually ask for. Send a card that looks wrong, a set to add, or a feature you want. I read every one.</p>
+    <form class="fbform" id="fbForm" novalidate>
+      <select id="fbTopic" class="fbin" aria-label="Type of message">
+        <option value="Feature request">Feature request</option>
+        <option value="General feedback">General feedback</option>
+        <option value="Report a bug">Report a bug</option>
+      </select>
+      <textarea id="fbMsg" class="fbin" rows="4" placeholder="Your idea or feedback. A card that looks wrong, a set to add, a feature you want..."></textarea>
+      <input id="fbEmail" class="fbin" type="email" placeholder="Email (optional, only if you want a reply)">
+      <button type="submit" class="fbsend" id="fbSend">Send it</button>
+      <div class="fbstatus" id="fbStatus" hidden></div>
+    </form>
+    <div class="row" style="margin-top:18px">
       <a class="lk" href="app/">Open the app</a>
       <a class="lk" href="index.html">Back to home</a>
     </div>
@@ -171,6 +198,29 @@
   <p class="disc">SphereDex is a free, fan made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. Not affiliated with or endorsed by Pocketpair or Bushiroad.</p>
   <span><a href="index.html">Home</a> &middot; <a href="app/">Open the app</a> &middot; <a href="privacy.html">Privacy</a></span>
 </div></footer>
+
+<script>
+(function(){
+  var API="https://spheredex-backend.craigjayedit.workers.dev/api/contact";
+  var f=document.getElementById('fbForm'), msg=document.getElementById('fbMsg'),
+      topic=document.getElementById('fbTopic'), email=document.getElementById('fbEmail'),
+      btn=document.getElementById('fbSend'), st=document.getElementById('fbStatus');
+  function status(t,cls){ st.hidden=false; st.textContent=t; st.className='fbstatus '+cls; }
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var m=(msg.value||'').trim();
+    if(m.length<3){ status('Please write your idea or feedback first.','bad'); msg.focus(); return; }
+    var orig=btn.textContent; btn.disabled=true; btn.textContent='Sending...';
+    fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:topic.value,message:m,from:(email.value||'').trim()})})
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok,body:j}; }); })
+      .then(function(r){ btn.disabled=false; btn.textContent=orig;
+        if(r.ok){ status('Thanks, your idea is in. I read every one.','ok'); msg.value=''; email.value=''; }
+        else status((r.body&&r.body.error)||'Could not send right now, please try again later.','bad'); })
+      .catch(function(){ btn.disabled=false; btn.textContent=orig; status('Could not reach the server, please try again later.','bad'); });
+  });
+})();
+</script>
 
 </body>
 </html>
