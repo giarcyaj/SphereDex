@@ -235,19 +235,20 @@
     letter-spacing:.03em; color:#fff; background:var(--_rc); padding:3px 7px; border-radius:20px;
     box-shadow:0 2px 6px rgba(0,0,0,.35), 0 0 0 1.5px rgba(255,255,255,.35) inset; }
   .rgem.holo { background:conic-gradient(from 0deg, #ff5f6d, #ffc371, #47e0a0, #4f9dff, #b06ff0, #ff5f6d); color:#1a1a1a; }
-  /* Rare pulls get a light foil sheen sweeping across the real scan (chase-card feel). */
-  .card:has(.rgem.holo) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
+  /* Only SSP gets the moving foil sheen (the "shine"); OSR keeps its rainbow gem but sits still. */
+  .card:has(.rgem.shine) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
     background:linear-gradient(115deg, transparent 34%, rgba(255,255,255,.34) 46%, rgba(150,225,255,.28) 51%, transparent 64%);
     background-size:250% 250%; animation:holoswp 3.8s linear infinite; }
   @keyframes holoswp { 0%{ background-position:135% 0; } 100%{ background-position:-35% 0; } }
-  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.holo) .art::after { animation:none; } }
-  /* Soul (SSS) cards get a softer, twinkling glimmer rather than the OSR/SSP foil sweep. */
+  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.shine) .art::after { animation:none; } }
+  /* Soul (SSS) cards get visible twinkling sparkles (two staggered layers), not a foil sweep. */
   .rgem.glim { background:linear-gradient(135deg,#ffffff 0%, #dcccff 34%, #a9e8ff 63%, #ffe3f6 100%); color:#2a2140; }
-  .card:has(.rgem.glim) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
-    background:radial-gradient(58% 42% at 26% 28%, rgba(255,255,255,.42), transparent 55%), radial-gradient(48% 36% at 76% 72%, rgba(190,150,255,.32), transparent 55%), linear-gradient(120deg, transparent 42%, rgba(220,240,255,.30) 50%, transparent 58%);
-    background-size:190% 190%, 190% 190%, 240% 240%; animation:glimmer 6s ease-in-out infinite; }
-  @keyframes glimmer { 0%{ background-position:0% 0%, 100% 100%, 130% 0; opacity:.5; } 50%{ background-position:42% 34%, 58% 66%, 30% 0; opacity:1; } 100%{ background-position:0% 0%, 100% 100%, -30% 0; opacity:.5; } }
-  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.glim) .art::after { animation:none; } }
+  .card:has(.rgem.glim) .art::before, .card:has(.rgem.glim) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; }
+  .card:has(.rgem.glim) .art::after { background:radial-gradient(circle at 24% 28%, #fff 0, #fff 1.2%, rgba(120,200,255,.95) 3%, rgba(120,200,255,0) 8%), radial-gradient(circle at 72% 20%, #fff 0, #fff 1%, rgba(200,150,255,.95) 3%, rgba(200,150,255,0) 8%), radial-gradient(circle at 84% 60%, #fff 0, #fff 1%, rgba(120,200,255,.95) 3%, rgba(120,200,255,0) 8%); animation:sparkA 2.1s ease-in-out infinite; }
+  .card:has(.rgem.glim) .art::before { background:radial-gradient(circle at 44% 72%, #fff 0, #fff 1.2%, rgba(255,150,235,.95) 3%, rgba(255,150,235,0) 8%), radial-gradient(circle at 60% 46%, #fff 0, #fff 1%, rgba(120,200,255,.95) 3%, rgba(120,200,255,0) 8%), radial-gradient(circle at 32% 84%, #fff 0, #fff 1%, rgba(200,150,255,.95) 3%, rgba(200,150,255,0) 8%); animation:sparkB 2.1s ease-in-out infinite; animation-delay:1.05s; }
+  @keyframes sparkA { 0%,100%{ opacity:.2; transform:scale(.6); } 50%{ opacity:1; transform:scale(1.12); } }
+  @keyframes sparkB { 0%,100%{ opacity:.2; transform:scale(.6); } 45%{ opacity:1; transform:scale(1.12); } }
+  @media (prefers-reduced-motion:reduce){ .card:has(.rgem.glim) .art::before, .card:has(.rgem.glim) .art::after { animation:none; opacity:.9; } }
   .wish { position:absolute; top:34px; right:8px; z-index:3; width:28px; height:28px; border-radius:8px; border:none;
     background:rgba(0,0,0,.34); color:#fff; display:grid; place-items:center; font-size:.95rem; backdrop-filter:blur(3px); transition:.13s; opacity:.5; }
   .card:hover .wish, .wish.on { opacity:1; }
@@ -2355,7 +2356,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var ec = tint?elVar(tint):colVar(c.color);
     var ec2 = c.els[1]?elVar(c.els[1]):(tint?elVar(tint):colVar(c.color));
     var mono = c.kind==="Pal" ? c.name.split(" ")[0] : (c.kind==="Soul"?"◆":c.name.charAt(0));
-    var rareCls = (c.rare==="OSR"||c.rare==="SSP") ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem");
+    var rareCls = c.rare==="SSP" ? "rgem holo shine" : (c.rare==="OSR" ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem"));
     // Structure cards are printed landscape, rotate them to fill the portrait frame.
     var landCls = (c.kind==="Structure") ? " land" : "";
     var img;
@@ -2576,7 +2577,7 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
     var s=o(c.id);
     var elTags = c.els.map(function(e){ return '<span class="elgem" style="--c:'+elVar(e)+'" title="'+e+'"><i></i><svg viewBox="0 0 24 24"><use href="#g-'+e.toLowerCase()+'"/></svg></span>'; }).join("");
-    var rareCls = (c.rare==="OSR"||c.rare==="SSP") ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem"); rareCls = rareCls.replace("rgem","eltag");
+    var rareCls = c.rare==="SSP" ? "rgem holo shine" : (c.rare==="OSR" ? "rgem holo" : (c.rare==="SSS" ? "rgem glim" : "rgem")); rareCls = rareCls.replace("rgem","eltag");
     var statBoxes = [];
     if (c.cost!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.cost+'</span><span class="l">Cost ◇</span></div>');
     if (c.power!=="") statBoxes.push('<div class="statbox"><span class="n">'+c.power+'</span><span class="l">Power ◈</span></div>');
