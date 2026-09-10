@@ -537,6 +537,8 @@
   .setcard.allcard { border-color:color-mix(in srgb,var(--accent) 40%,var(--line-strong)); }
   .setbox.allbox { background:radial-gradient(120% 120% at 50% 0, color-mix(in srgb,var(--accent) 28%,var(--surface-2)), var(--surface-2)); }
   .setbox.allbox .ph { color:var(--accent-ink); }
+  .setcard.upcomingcard { opacity:.92; }
+  .smeta .soonlbl { color:var(--accent-ink); font-weight:700; }
   .setcard .sbody { padding:13px 15px 15px; display:flex; flex-direction:column; gap:9px; }
   .setcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; letter-spacing:-.01em; }
   .setcard .smeta { font-size:.76rem; color:var(--ink-soft); display:flex; justify-content:center; gap:10px; }
@@ -1592,6 +1594,7 @@
         </label>
         <select class="sortsel" id="sealSort" aria-label="Sort sealed products">
           <option value="name">Sort · Name</option>
+          <option value="release">Sort · Release date</option>
           <option value="value">Sort · Value</option>
           <option value="rrp">Sort · RRP</option>
           <option value="owned">Sort · Owned first</option>
@@ -3330,6 +3333,23 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
       return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">';
     }).join("")+'</div>';
   }
+  // The three highest-priced cards, fanned into a collage for the "All Cards" hero (mirrors the Promo one).
+  function topCollageHTML(){
+    var book=(priceMode()==="sold")?PRICEBOOK_SOLD:PRICEBOOK;
+    function pr(id){ return +book[id]||+PRICEBOOK[id]||0; }
+    var ranked=CARDS.filter(function(c){ return pr(c.id)>0; }).sort(function(a,b){ return pr(b.id)-pr(a.id); });
+    if(!ranked.length) return "";                          // prices not loaded yet -> caller uses the baked image
+    var top=ranked.slice(0,3);
+    var ordered = (top.length>=3) ? [top[1], top[0], top[2]] : top;   // highest in the centre (drawn on top)
+    return '<div class="collage n'+ordered.length+'">'+ordered.map(function(c){ return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">'; }).join("")+'</div>';
+  }
+  // Browse-by-Set expansions: the released products grouped into their real set (Dawn of Palpagos = the
+  // booster + both trial decks), then the upcoming ones (informational, they have no cards in-app yet).
+  var BROWSE_EXPANSIONS = [
+    { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"July 30, 2026", art:(typeof BP01_ART!=="undefined"?BP01_ART:""), logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
+    { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", banner:"BOX_BANNER_BP02" },
+    { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", banner:"BOX_BANNER_TD03" }
+  ];
 
   // per-set owned/total for the current collection
   function setProgress(){
@@ -3348,10 +3368,10 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
   // ---- Sealed products ----
   var SEALED = [
     // set = bold headline (the set name); name = product type shown under it; sub = fine detail.
-    { id:"box-ebp01", set:"Dawn of Palpagos", name:"Booster Box", sub:"12 packs", box:"BOX_EBP01", q:"Palworld Dawn of Palpagos Booster Box" },
-    { id:"pack-ebp01", set:"Dawn of Palpagos", name:"Booster Pack", sub:"7 cards", box:"PACK_EBP01", q:"Palworld Dawn of Palpagos Booster Pack" },
-    { id:"td-rb", set:"Dawn of Palpagos", name:"Trial Deck, Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
-    { id:"td-gp", set:"Dawn of Palpagos", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
+    { id:"box-ebp01", set:"Dawn of Palpagos", name:"Booster Box", sub:"12 packs", box:"BOX_EBP01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Booster Box" },
+    { id:"pack-ebp01", set:"Dawn of Palpagos", name:"Booster Pack", sub:"7 cards", box:"PACK_EBP01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Booster Pack" },
+    { id:"td-rb", set:"Dawn of Palpagos", name:"Trial Deck, Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
+    { id:"td-gp", set:"Dawn of Palpagos", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
     // Sealed promo products, tracked alongside the individual promo cards (PR2026). No baked image yet
     // (box:"" shows the fallback tile). name carries "Pack" / "Deck" so the price query gets the right
     // kind (see pkind in pullSealed): the pack filter keeps single-card promo packs, the deck filter the demo deck.
@@ -3465,6 +3485,15 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
     var q=sealQ.trim().toLowerCase();
     var all=SEALED.filter(function(p){ return !q || (p.name+" "+p.sub).toLowerCase().indexOf(q)!==-1; });
     var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
+    var MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    function relDate(p){ var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(sealDate(p)||""); if(m&&MON[m[1].toLowerCase()]!=null) return new Date(+m[3], MON[m[1].toLowerCase()], +m[2]).getTime();
+      var mo=/([A-Za-z]{3})[a-z]*\s+(\d{4})/.exec(sealDate(p)||""); if(mo&&MON[mo[1].toLowerCase()]!=null) return new Date(+mo[2], MON[mo[1].toLowerCase()], 28).getTime(); return Infinity; }
+    // Release-date sort: one chronological run of everything (released then upcoming), oldest first (reverse for newest first).
+    if(sealSortKey==="release"){
+      var chron=all.slice().sort(function(a,b){ return (relDate(a)-relDate(b)) || a.name.localeCompare(b.name); });
+      if(sealSortDir<0) chron.reverse();
+      return chron;
+    }
     released.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
       if(sealSortKey==="value") return ((+sb.qty||0)*sealUnit(sb))-((+sa.qty||0)*sealUnit(sa));   // mode-aware, matches the shown value
       if(sealSortKey==="rrp") return (+sealPrice(sb).rrp||defaultRRP(b.id))-(+sealPrice(sa).rrp||defaultRRP(a.id));
@@ -3473,9 +3502,7 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
     });
     if(sealSortDir<0) released.reverse();
     // Pre-orders always sit after released products, ordered by soonest release first (undated last).
-    var MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-    function preDate(p){ var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(sealDate(p)||""); if(!m||MON[m[1].toLowerCase()]==null) return Infinity; return new Date(+m[3], MON[m[1].toLowerCase()], +m[2]).getTime(); }
-    pre.sort(function(a,b){ return preDate(a)-preDate(b); });
+    pre.sort(function(a,b){ return relDate(a)-relDate(b); });
     return released.concat(pre);
   }
   function renderSealed(){
@@ -4599,11 +4626,12 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
   function renderSetBrowse(){
     var br=$("setBrowse"); if(!br) return; br.innerHTML="";
     var sp=setProgress();
+    // 1) All Cards — the three highest-priced cards as a collage (falls back to the baked image until prices load).
     var oAll=0, tAll=0; SET_ORDER.forEach(function(k){ oAll+=sp.owned[k]; tAll+=sp.tot[k]; });
-    var aw=tAll?Math.round(oAll/tAll*100):0;
+    var aw=tAll?Math.round(oAll/tAll*100):0, topC=topCollageHTML();
     var all=document.createElement("div"); all.className="setcard allcard";
     all.innerHTML=
-      '<div class="setbox allbox"><img src="'+ALLCARDS_IMG+'" alt="All cards"></div>'+
+      '<div class="setbox '+(topC?"collagebox":"allbox")+'">'+(topC||'<img src="'+ALLCARDS_IMG+'" alt="All cards">')+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">All Cards</div>'+
         '<div class="smeta"><span>'+aw+'% complete</span><b>'+oAll+'/'+tAll+'</b></div>'+
@@ -4612,25 +4640,63 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
       '</div>';
     all.onclick=function(){ openAllCards(); };
     br.appendChild(all);
-    SET_ORDER.forEach(function(k){
-      var owned=sp.owned[k], tot=sp.tot[k], w=tot?Math.round(owned/tot*100):0, box=boxSrc(k), miss=tot-owned, meta=SET_META[k]||{}, logo=meta.logo, art=meta.art;
-      var el=document.createElement("div"); el.className="setcard";
-      var boxCls = art?' artbox':(logo?' logobox':(k==="PR2026"?' collagebox':(boxIsCard(k)?' contain':'')));
-      var boxInner = art
-        ? '<img class="setart" src="'+art+'" alt="'+esc(SETS[k].name)+'">'+(logo?'<img class="setlogobadge" src="'+logo+'" alt="Dawn of Palpagos">':'')
-        : (logo?'<img class="setlogo" src="'+logo+'" alt="'+esc(SETS[k].name)+'">':(k==="PR2026"?collageHTML(k):(box?'<img src="'+box+'" alt="'+esc(SETS[k].name)+'">':'<span class="ph">'+esc(SETS[k].short)+'</span>')));
-      el.innerHTML=
-        '<div class="setbox'+boxCls+'">'+boxInner+'</div>'+
-        '<div class="sbody">'+
-          '<div class="snm">'+esc(SETS[k].name)+'</div>'+
-          '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
-          '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
-          '<div class="setfoot">'+(meta.release?'<span class="setrel">'+esc(meta.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
-        '</div>';
-      el.onclick=function(){ openSet(k); };
-      el.querySelector(".missbtn").onclick=function(ev){ ev.stopPropagation(); openSet(k, miss>0?"missing":"all"); };
-      br.appendChild(el);
-    });
+    // 2) Promo Cards, then 3) the expansions (Dawn of Palpagos merged, then the upcoming sets).
+    br.appendChild(oneSetTile("PR2026", sp));
+    BROWSE_EXPANSIONS.forEach(function(x){ br.appendChild(x.upcoming ? upcomingTile(x) : expansionTile(x, sp)); });
+  }
+  // A single released set tile (used for Promo Cards).
+  function oneSetTile(k, sp){
+    var owned=sp.owned[k], tot=sp.tot[k], w=tot?Math.round(owned/tot*100):0, box=boxSrc(k), miss=tot-owned, meta=SET_META[k]||{}, logo=meta.logo, art=meta.art;
+    var el=document.createElement("div"); el.className="setcard";
+    var boxCls = art?' artbox':(logo?' logobox':(k==="PR2026"?' collagebox':(boxIsCard(k)?' contain':'')));
+    var boxInner = art
+      ? '<img class="setart" src="'+art+'" alt="'+esc(SETS[k].name)+'">'+(logo?'<img class="setlogobadge" src="'+logo+'" alt="Dawn of Palpagos">':'')
+      : (logo?'<img class="setlogo" src="'+logo+'" alt="'+esc(SETS[k].name)+'">':(k==="PR2026"?collageHTML(k):(box?'<img src="'+box+'" alt="'+esc(SETS[k].name)+'">':'<span class="ph">'+esc(SETS[k].short)+'</span>')));
+    el.innerHTML=
+      '<div class="setbox'+boxCls+'">'+boxInner+'</div>'+
+      '<div class="sbody">'+
+        '<div class="snm">'+esc(SETS[k].name)+'</div>'+
+        '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
+        '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
+        '<div class="setfoot">'+(meta.release?'<span class="setrel">'+esc(meta.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
+      '</div>';
+    el.onclick=function(){ openSet(k); };
+    el.querySelector(".missbtn").onclick=function(ev){ ev.stopPropagation(); openSet(k, miss>0?"missing":"all"); };
+    return el;
+  }
+  // A merged expansion tile (Dawn of Palpagos = booster + both trial decks): combined progress, one drill-down.
+  function expansionTile(x, sp){
+    var owned=0, tot=0; x.sets.forEach(function(k){ owned+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
+    var w=tot?Math.round(owned/tot*100):0, miss=tot-owned;
+    var el=document.createElement("div"); el.className="setcard";
+    var boxInner = x.art
+      ? '<img class="setart" src="'+x.art+'" alt="'+esc(x.name)+'">'+(x.logo?'<img class="setlogobadge" src="'+x.logo+'" alt="'+esc(x.name)+'">':'')
+      : '<span class="ph">'+esc(x.name)+'</span>';
+    el.innerHTML=
+      '<div class="setbox'+(x.art?' artbox':'')+'">'+boxInner+'</div>'+
+      '<div class="sbody">'+
+        '<div class="snm">'+esc(x.name)+'</div>'+
+        '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
+        '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
+        '<div class="setfoot">'+(x.release?'<span class="setrel">'+esc(x.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
+      '</div>';
+    el.onclick=function(){ openSetGroup(x.sets); };
+    el.querySelector(".missbtn").onclick=function(ev){ ev.stopPropagation(); openSetGroup(x.sets, miss>0?"missing":"all"); };
+    return el;
+  }
+  // An upcoming set tile (no cards in-app yet): its promo banner + release date, taps through to Releases.
+  function upcomingTile(x){
+    var img=(window.CARD_IMG&&window.CARD_IMG[x.banner])?window.CARD_IMG[x.banner]:"";
+    var el=document.createElement("div"); el.className="setcard upcomingcard";
+    el.innerHTML=
+      '<div class="setbox">'+(img?'<img src="'+img+'" alt="'+esc(x.name)+'">':'<span class="ph">Soon</span>')+'</div>'+
+      '<div class="sbody">'+
+        '<div class="snm">'+esc(x.name)+'</div>'+
+        '<div class="smeta"><span class="soonlbl">Coming soon</span></div>'+
+        '<div class="setfoot"><span class="setrel">'+esc(x.release)+'</span><button class="missbtn" type="button">See releases →</button></div>'+
+      '</div>';
+    el.onclick=function(){ showPage("releases"); if(typeof renderReleases==="function") renderReleases(); };
+    return el;
   }
   // Toggle the CARDS page between the sets landing and the card grid.
   function showCollGrid(show){ var s=$("collSets"), g=$("collGrid"); if(s) s.hidden=!!show; if(g) g.hidden=!show; }
@@ -4655,6 +4721,17 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
     var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist"};
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
       ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
+    });
+    showPage("collection"); showCollGrid(true); render();
+  }
+  // Open several sets at once (a Browse expansion that groups multiple products, e.g. Dawn of Palpagos).
+  function openSetGroup(sets, view){
+    view=view||"all";
+    filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view=view;
+    sets.forEach(function(k){ filters.sets[k]=true; });
+    document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
+    Array.prototype.forEach.call($("setChips").querySelectorAll(".chip"), function(ch){
+      if(sets.some(function(k){ return SETS[k] && ch.title===SETS[k].name; })) ch.setAttribute("aria-pressed","true");
     });
     showPage("collection"); showCollGrid(true); render();
   }
@@ -5375,7 +5452,7 @@ window.CARD_IMG={"BOX_BANNER_SS01":"data:image/webp;base64,UklGRj67AABXRUJQVlA4I
       // data than we've already marked (so the graph gets a fresh sold point about weekly without a manual tap).
       if(SOLD_ASOF){ var lastMark=+localStorage.getItem("palvault-sold-mark-asof")||0;
         if(SOLD_ASOF>lastMark){ try{ stampSoldMark(); localStorage.setItem("palvault-sold-mark-asof", String(SOLD_ASOF)); }catch(_){} } }
-      if(n){ render(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
+      if(n){ render(); if(typeof renderSetBrowse==="function") renderSetBrowse(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
       updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
     }).catch(function(){ if(!silent) toast("Price fetch failed"); });
