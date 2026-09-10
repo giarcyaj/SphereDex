@@ -539,6 +539,10 @@
   .setbox.allbox .ph { color:var(--accent-ink); }
   .setcard.upcomingcard { opacity:.92; }
   .smeta .soonlbl { color:var(--accent-ink); font-weight:700; }
+  /* Expansion cover: the set's card-art collage with its logo laid over a soft bottom scrim. */
+  .setbox.logohero { position:relative; }
+  .setbox.logohero::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,21,31,.04) 34%, rgba(8,21,31,.66)); pointer-events:none; }
+  .setbox.logohero .lhlogo { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); width:66%; max-width:240px; height:auto; z-index:2; filter:drop-shadow(0 3px 9px rgba(0,0,0,.85)); }
   .setcard .sbody { padding:13px 15px 15px; display:flex; flex-direction:column; gap:9px; }
   .setcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; letter-spacing:-.01em; }
   .setcard .smeta { font-size:.76rem; color:var(--ink-soft); display:flex; justify-content:center; gap:10px; }
@@ -3344,10 +3348,21 @@
   // Browse-by-Set expansions: the released products grouped into their real set (Dawn of Palpagos = the
   // booster + both trial decks), then the upcoming ones (informational, they have no cards in-app yet).
   var BROWSE_EXPANSIONS = [
-    { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"July 30, 2026", art:(typeof BP01_ART!=="undefined"?BP01_ART:""), logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
-    { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", banner:"BOX_BANNER_BP02" },
-    { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", banner:"BOX_BANNER_TD03" }
+    { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"July 30, 2026", logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
+    { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", logo:"LOGO_BP02" },
+    { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", logo:"LOGO_TD03" }
   ];
+  // Highest-priced cards among a group of sets, fanned into a collage (the Dawn of Palpagos tile artwork).
+  function setGroupCollageHTML(sets){
+    var book=(priceMode()==="sold")?PRICEBOOK_SOLD:PRICEBOOK;
+    function pr(id){ return +book[id]||+PRICEBOOK[id]||0; }
+    var cs=CARDS.filter(function(c){ return sets.indexOf(c.set)>=0 && c.kind!=="Soul"; });
+    cs.sort(function(a,b){ return pr(b.id)-pr(a.id); });   // priciest first; stable catalogue order when prices are equal/absent
+    var top=cs.slice(0,3);
+    var ordered=(top.length>=3)?[top[1],top[0],top[2]]:top;
+    if(!ordered.length) return "";
+    return '<div class="collage n'+ordered.length+'">'+ordered.map(function(c){ return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">'; }).join("")+'</div>';
+  }
 
   // per-set owned/total for the current collection
   function setProgress(){
@@ -4667,11 +4682,13 @@
     var owned=0, tot=0; x.sets.forEach(function(k){ owned+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
     var w=tot?Math.round(owned/tot*100):0, miss=tot-owned;
     var el=document.createElement("div"); el.className="setcard";
-    var boxInner = x.art
-      ? '<img class="setart" src="'+x.art+'" alt="'+esc(x.name)+'">'+(x.logo?'<img class="setlogobadge" src="'+x.logo+'" alt="'+esc(x.name)+'">':'')
-      : '<span class="ph">'+esc(x.name)+'</span>';
+    // Cover = the set's own card artwork (collage of its priciest cards) with the set logo over it.
+    var col=setGroupCollageHTML(x.sets);
+    var boxInner = col
+      ? col+(x.logo?'<img class="lhlogo" src="'+x.logo+'" alt="'+esc(x.name)+'">':'')
+      : (x.logo?'<img class="setlogo" src="'+x.logo+'" alt="'+esc(x.name)+'">':'<span class="ph">'+esc(x.name)+'</span>');
     el.innerHTML=
-      '<div class="setbox'+(x.art?' artbox':'')+'">'+boxInner+'</div>'+
+      '<div class="setbox'+(col?' collagebox logohero':' logobox')+'">'+boxInner+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">'+esc(x.name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
@@ -4684,10 +4701,10 @@
   }
   // An upcoming set tile (no cards in-app yet): its promo banner + release date, taps through to Releases.
   function upcomingTile(x){
-    var img=(window.CARD_IMG&&window.CARD_IMG[x.banner])?window.CARD_IMG[x.banner]:"";
+    var logo=(window.CARD_IMG&&window.CARD_IMG[x.logo])?window.CARD_IMG[x.logo]:"";
     var el=document.createElement("div"); el.className="setcard upcomingcard";
     el.innerHTML=
-      '<div class="setbox">'+(img?'<img src="'+img+'" alt="'+esc(x.name)+'">':'<span class="ph">Soon</span>')+'</div>'+
+      '<div class="setbox logobox">'+(logo?'<img class="setlogo" src="'+logo+'" alt="'+esc(x.name)+'">':'<span class="ph">Soon</span>')+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">'+esc(x.name)+'</div>'+
         '<div class="smeta"><span class="soonlbl">Coming soon</span></div>'+
