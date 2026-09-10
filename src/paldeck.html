@@ -543,10 +543,11 @@
   .setbox.logohero { position:relative; }
   .setbox.logohero::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,21,31,.04) 34%, rgba(8,21,31,.66)); pointer-events:none; }
   .setbox.logohero .lhlogo { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); width:66%; max-width:240px; height:auto; z-index:2; filter:drop-shadow(0 3px 9px rgba(0,0,0,.85)); }
-  /* Upcoming set: its logo (or just the title, if no logo revealed yet) on a plain dark tile. */
-  .setbox.plainbox { background:var(--surface-2); display:grid; place-items:center; }
-  .setbox.plainbox .plainlogo { width:90%; max-width:300px; height:auto; object-fit:contain; }
-  .setbox.plainbox .plaintitle { font-family:var(--font-display); font-weight:800; font-size:1.5rem; color:var(--ink); text-align:center; padding:0 16px; }
+  /* Upcoming set: its logo (or just the title, if no logo revealed yet) on a plain dark tile. Fixed
+     dark so the transparent logo's soft edges blend seamlessly (the logo is built for a dark ground). */
+  .setbox.plainbox { background:#0d1922; display:grid; place-items:center; }
+  .setbox.plainbox .plainlogo { width:86%; max-width:290px; height:auto; object-fit:contain; }
+  .setbox.plainbox .plaintitle { font-family:var(--font-display); font-weight:800; font-size:1.5rem; color:#eef6fa; text-align:center; padding:0 16px; }
   .setcard .sbody { padding:13px 15px 15px; display:flex; flex-direction:column; gap:9px; }
   .setcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; letter-spacing:-.01em; }
   .setcard .smeta { font-size:.76rem; color:var(--ink-soft); display:flex; justify-content:center; gap:10px; }
