@@ -160,6 +160,14 @@
   .salerow .grm { border:none; background:transparent; color:var(--el-Fire); font-size:1rem; width:26px; flex:none; cursor:pointer; }
   .ebaysearch { display:inline-block; margin-top:4px; font-size:.82rem; font-weight:650; color:var(--accent-ink); text-decoration:none; }
   .ebaysearch:hover { text-decoration:underline; }
+  /* Listing pill: PRICE · DATE · arrow (sold + live listings, card + sealed sheets). */
+  .apill { display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:9px 12px; margin-bottom:7px; text-decoration:none; color:inherit; transition:border-color .14s; }
+  .apill:hover { border-color:var(--accent); }
+  .apill .pr { font-family:var(--font-mono); font-weight:750; font-size:.95rem; color:var(--ink); flex:0 0 auto; min-width:60px; }
+  .apill .dt { color:var(--ink-soft); font-size:.8rem; margin-left:auto; }
+  .apill .ar { color:var(--accent-ink); font-weight:800; font-size:.95rem; flex:none; }
+  .apill.nolink { cursor:default; }
+  .no-flexgap .apill > * + * { margin-left:10px; }
   .valsum { font-size:.85rem; color:var(--ink-soft); background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
   .valsum b { font-family:var(--font-mono); font-size:1.05rem; color:var(--ink); font-weight:600; }
 
@@ -1710,6 +1718,13 @@
         <label class="switch"><input type="checkbox" id="setFallbackUS"><span class="track"></span></label>
       </div>
       <div class="setrow priceui">
+        <div class="setinfo"><div class="stitle">Listing dates</div><div class="sdesc">How the date on each sold and live listing is shown. <b>Relative</b> — how long ago (e.g. “2d ago”). <b>Exact</b> — the calendar date (e.g. “8 Sep”).</div></div>
+        <select class="sortsel" id="setDateFmt">
+          <option value="rel">Relative (2d ago)</option>
+          <option value="abs">Exact (8 Sep)</option>
+        </select>
+      </div>
+      <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Refresh all prices</div><div class="sdesc">Prices refresh automatically every day. Tap to pull the latest now for every card in your chosen market.</div></div>
         <button class="btn sec" id="fetchPrices" style="flex:0 0 auto">Refresh now</button>
       </div>
@@ -2135,6 +2150,24 @@
     try{ return new Intl.NumberFormat(fmtLocale(),{style:"currency",currency:CUR.code,currencyDisplay:"narrowSymbol",minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}).format(n); }
     catch(e){ try{ return new Intl.NumberFormat(fmtLocale(),{style:"currency",currency:CUR.code,minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}).format(n); }
       catch(e2){ return CUR.sym + n.toLocaleString(fmtLocale(),{minimumFractionDigits:CUR.dec,maximumFractionDigits:CUR.dec}); } } }
+  // ---- Listing pills: PRICE · DATE · ↗ (sold = "sold", live = "posted"). Date format follows the
+  // Defaults setting (relative "2d ago" vs exact "8 Sep"). Dates arrive as "YYYY-MM-DD" (UTC-anchored).
+  var _PILLMO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function _pillDate(s){ if(!s) return null; var d=new Date(String(s).length<=10?(s+"T00:00:00Z"):s); return isNaN(d.getTime())?null:d; }
+  function relDate(s){ var d=_pillDate(s); if(!d) return ""; var days=Math.floor((Date.now()-d.getTime())/86400000);
+    if(days<=0) return "today"; if(days===1) return "1d ago"; if(days<7) return days+"d ago";
+    if(days<31) return Math.floor(days/7)+"w ago"; if(days<365) return Math.floor(days/30)+"mo ago"; return Math.floor(days/365)+"y ago"; }
+  function absShort(s){ var d=_pillDate(s); if(!d) return ""; var t=d.getUTCDate()+" "+_PILLMO[d.getUTCMonth()];
+    if(d.getUTCFullYear()!==new Date().getUTCFullYear()) t+=" "+d.getUTCFullYear(); return t; }
+  function listingDate(s){ return (SETTINGS.dateFmt==="abs") ? absShort(s) : relDate(s); }
+  // One listing -> a Style-A row pill. kind "live" -> "posted", anything else -> "sold". Whole pill links out.
+  function listPillHtml(x, kind){
+    var p=money(+x.p||0), dt=x&&x.date?((kind==="live"?"posted ":"sold ")+listingDate(x.date)):"";
+    var inner='<span class="pr">'+p+'</span><span class="dt">'+esc(dt)+'</span>'+((x&&x.url)?'<span class="ar">↗</span>':'');
+    return (x&&x.url) ? '<a class="apill" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+inner+'</a>'
+                      : '<div class="apill nolink">'+inner+'</div>';
+  }
+  function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
   var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
   var sortDir = (parseInt(localStorage.getItem("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
@@ -2200,7 +2233,7 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
@@ -2693,7 +2726,7 @@
     function persist(){
       s.qty=Math.max(0,parseInt($("fQty").value,10)||0); s.cond=$("fCond").value;
       s.mkt=parseFloat($("fMkt").value)||0;
-      s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||""}; });
+      s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; });
       s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
       save(); render(); buildColSel();
@@ -2778,12 +2811,7 @@
     function renderSales(){
       var host=$("salesList"); if(!host) return;
       // Read-only list, styled like Live listings: each sold price links to its eBay listing.
-      host.innerHTML = salesWork.slice(0,5).map(function(sale){
-        var p=money(+sale.p||0);
-        return '<div class="salerow ro">'+(sale.url
-          ? '<a class="lprice" href="'+esc(sale.url)+'" target="_blank" rel="noopener">'+p+' ↗</a>'
-          : '<span class="lprice">'+p+'</span>')+'</div>';
-      }).join("");
+      host.innerHTML = listPillsHtml(salesWork.slice(0,5), "sold");
     }
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
     var esl=$("ebaySearchLive"); if(esl) esl.href=ebayUrl(c, false);
@@ -2812,7 +2840,7 @@
           if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
           var b=r.body||{}, sales=b.sales||[];
           setMarket((b.avg!=null?b.avg:b.market), basis);
-          if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||""}; }); renderSales(); }
+          if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }); renderSales(); }
           refreshAvg();
           if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
         }).catch(function(){ done(); if(!silent && fresh()) toast("Price pull failed"); });
@@ -2822,13 +2850,13 @@
         return api(salesUrl("ebay-active","",reg),"GET").then(function(r){ done(); if(!fresh()) return;
           if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
           var b=r.body||{}, us=(basis==="uslistings"),
-              rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
+              rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;}),
               ls=rows.map(function(x){return x.p;});
           var lh=$("listHint");
           if(ls.length){ var low=ls[0], l5=ls.slice(0,5), l5avg=l5.reduce(function(a,z){return a+z;},0)/l5.length;
             if(lh) lh.innerHTML=(us?'US listings':'Live listings')+': avg of '+l5.length+' lowest <b>'+money(l5avg)+'</b> · from <b>'+money(low)+'</b> ('+ls.length+' live)';
             var gl=$("glList"); if(gl) gl.textContent=money(l5avg);
-            var lr=$("listRows"); if(lr) lr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
+            var lr=$("listRows"); if(lr) lr.innerHTML=listPillsHtml(rows.slice(0,5), "live");
             if(!silent) toast("Live listings loaded");
           } else { if(lh && !us) lh.textContent="No current listings found."; var gl2=$("glList"); if(gl2 && !us && gl2.textContent==="…") gl2.textContent='n/a'; if(!silent) toast(b.note||"No current listings"); }
           setMarket(b.market, basis);
@@ -2838,13 +2866,13 @@
       function doPsa(silent, reg){ var done=busy($("pullPsa")); var grd=(SETTINGS.defaultGrader||"PSA");
         return api(salesUrl("soldcomps",grd+" 10",reg),"GET").then(function(r){ done(); if(!fresh()) return;
           if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
-          var b=r.body||{}, rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||""}; }).filter(function(x){return x.p>0;});
+          var b=r.body||{}, rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }).filter(function(x){return x.p>0;});
           var val=(b.avg!=null?b.avg:b.market), ph=$("psaHint"), gl=$("glPsa");
           if(val!=null && val>0){
             if(gl) gl.textContent=money(val);
             if(ph) ph.innerHTML='Average of last '+Math.min(5,rows.length||5)+' '+grd+' 10 sold: <b>'+money(val)+'</b>';
             if(!s.gradeGuide) s.gradeGuide={}; if(s.gradeGuide["10"]==null){ s.gradeGuide["10"]=val; renderGradeGuide(); }
-            var pr=$("psaRows"); if(pr) pr.innerHTML=rows.slice(0,5).map(function(x){ return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+money(x.p)+' ↗</a>':'<span class="lprice">'+money(x.p)+'</span>')+'</div>'; }).join("");
+            var pr=$("psaRows"); if(pr) pr.innerHTML=listPillsHtml(rows.slice(0,5), "sold");
             if(!silent) toast(grd+" 10 sales loaded");
           } else { if(gl && gl.textContent==="…") gl.textContent='n/a'; if(ph) ph.textContent="No "+grd+" 10 sales found yet."; if(!silent) toast(b.note||("No "+grd+" 10 sales yet")); }
         }).catch(function(){ done(); if(!silent && fresh()) toast(grd+" 10 pull failed"); });
@@ -3405,9 +3433,9 @@
     // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
     var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):""); }
-    function getSold(reg){ return api(url("soldcomps",reg),"GET").then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; pr.sales=(b.sales||[]).slice(0,5).map(function(x){return {p:+x.p||0,url:x.url||""};}); return true; } return false; }).catch(function(){ return false; }); }
+    function getSold(reg){ return api(url("soldcomps",reg),"GET").then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; pr.sales=(b.sales||[]).slice(0,5).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}); return true; } return false; }).catch(function(){ return false; }); }
     function getList(reg){ return api(url("ebay-active",reg),"GET").then(function(r){ var b=(r&&r.body)||{};
-      var rows=(b.sales||[]).map(function(x){return {p:+x.p||0,url:x.url||""};}).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;});
+      var rows=(b.sales||[]).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;});
       if(rows.length) pr.listings=rows.slice(0,5);
       if(b.market!=null){ pr.list=+b.market||0; return true; } return false; }).catch(function(){ return false; }); }
     // Update the open detail sheet's price slots + panels in place (only if this product's sheet is showing).
@@ -3523,13 +3551,12 @@
     var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
     return "https://www.ebay."+r+"/sch/i.html?_nkw="+q+(sold?"&LH_Sold=1&LH_Complete=1":"")+"&_ipg=60"; }
   // One list of eBay price rows (sold or live), each price linking to its listing — same markup as card details.
-  function sealRowsHtml(arr){ if(!arr||!arr.length) return '<div class="salesavg">No data yet. Tap Refresh prices to pull the latest.</div>';
-    return arr.slice(0,5).map(function(x){ var pm=money(+x.p||0);
-      return '<div class="salerow ro">'+(x.url?'<a class="lprice" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+pm+' ↗</a>':'<span class="lprice">'+pm+'</span>')+'</div>'; }).join(""); }
+  function sealRowsHtml(arr, kind){ if(!arr||!arr.length) return '<div class="salesavg">No data yet. Tap Refresh prices to pull the latest.</div>';
+    return listPillsHtml(arr.slice(0,5), kind); }
   // Fill the open sealed detail sheet's sold / live / value panels from the latest prices (on open + after each pull).
   function paintSealPanels(p, s, pr){
-    var sr=$("sdSoldRows"); if(sr) sr.innerHTML=sealRowsHtml(pr.sales);
-    var lr=$("sdListRows"); if(lr) lr.innerHTML=sealRowsHtml(pr.listings);
+    var sr=$("sdSoldRows"); if(sr) sr.innerHTML=sealRowsHtml(pr.sales, "sold");
+    var lr=$("sdListRows"); if(lr) lr.innerHTML=sealRowsHtml(pr.listings, "live");
     var sa=$("sdSoldAvg"); if(sa) sa.innerHTML=(+pr.avg>0||+pr.sold>0)?('Average of last 5 sold: <b>'+money(+pr.avg>0?pr.avg:pr.sold)+'</b>'):'';
     var lh=$("sdListHint"); if(lh) lh.innerHTML=(pr.listings&&pr.listings.length)?('Lowest current listings, from <b>'+money(pr.listings[0].p)+'</b>'):'';
     var vb=$("sdValBreak"); if(vb){ var unit=sealUnit(s), mode=(priceMode()==="sold"?"last sold":"live listings");
@@ -3574,8 +3601,8 @@
           '<button class="bub glancebub priceui" id="sdListBtn" type="button"><span class="gllab">Live listings</span><b class="glval" id="sdList">'+(willLoad?SPIN:((+pr.list>0)?money(pr.list):"n/a"))+'</b></button>'+
           '<button class="bub glancebub priceui" id="sdValBtn" type="button"><span class="gllab">Your value</span><b class="glval" id="sdVal">'+money((+s.qty||0)*sealUnit(s))+'</b></button>'+
         '</div>'+
-        '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales)+'</div></div>'+
-        '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings)+'</div></div>'+
+        '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales, "sold")+'</div></div>'+
+        '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
@@ -5092,6 +5119,7 @@
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
+    var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
     if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true};
     var nativePush=(window.AndroidPush && typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
