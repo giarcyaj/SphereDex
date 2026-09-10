@@ -2497,7 +2497,7 @@ window.CARD_IMG={"LOGO_BP02":"data:image/webp;base64,UklGRnzVAABXRUJQVlA4WAoAAAA
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected";
     _masterN = master.size; _chaseN = chase;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
-    _setsN = SET_ORDER.filter(function(k){ return SET_TOTAL[k]>0 && (bySet[k]||0)>=SET_TOTAL[k]; }).length; _setsT = SET_ORDER.length;
+    var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;
     _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
     paintDual();
     $("valStat").textContent = money(binderValue(valueBasis));
@@ -3359,6 +3359,17 @@ window.CARD_IMG={"LOGO_BP02":"data:image/webp;base64,UklGRnzVAABXRUJQVlA4WAoAAAA
     { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", logo:"LOGO_BP02" },
     { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026" }
   ];
+  // "Sets" counts released EXPANSIONS (Dawn of Palpagos = booster + both trial decks as one set), not
+  // the individual products; promos and unreleased sets don't count. sp = {owned:{},tot:{}} per set key.
+  function releasedExpansions(sp){
+    var done=0, tot=0;
+    BROWSE_EXPANSIONS.forEach(function(x){
+      if(x.upcoming || !x.sets) return;
+      var o=0, t=0; x.sets.forEach(function(k){ o+=(sp.owned[k]||0); t+=(sp.tot[k]||0); });
+      if(t>0){ tot++; if(o>=t) done++; }
+    });
+    return { done:done, tot:tot };
+  }
   // Highest-priced cards among a group of sets, fanned into a collage (the Dawn of Palpagos tile artwork).
   function setGroupCollageHTML(sets){
     var book=(priceMode()==="sold")?PRICEBOOK_SOLD:PRICEBOOK;
@@ -4629,10 +4640,10 @@ window.CARD_IMG={"LOGO_BP02":"data:image/webp;base64,UklGRnzVAABXRUJQVlA4WAoAAAA
         '<div class="rankmeta">'+pct+'% of all cards collected'+(rk.next?' · next: '+esc(rk.next):' · maxed out!')+'</div>'; }
     var value=binderValue();   // mode-aware, so the hero binder matches the portfolio total + the Cards-page binder
     var spH=setProgress();
-    var setsDone=SET_ORDER.filter(function(k){ return spH.tot[k]>0 && spH.owned[k]>=spH.tot[k]; }).length;
+    var exH=releasedExpansions(spH);
     $("heroStats").innerHTML=
       '<div class="hs"><span class="n">'+ownedP+'<span style="color:var(--ink-faint);font-size:.7em"> / '+total+'</span></span><span class="l">Cards</span></div>'+
-      '<div class="hs" title="Sets you\'ve completed 100%"><span class="n">'+setsDone+'<span style="color:var(--ink-faint);font-size:.7em"> / '+SET_ORDER.length+'</span></span><span class="l">Sets</span></div>'+
+      '<div class="hs" title="Released sets you\'ve completed 100%"><span class="n">'+exH.done+'<span style="color:var(--ink-faint);font-size:.7em"> / '+exH.tot+'</span></span><span class="l">Sets</span></div>'+
       '<div class="hs priceui"><span class="n">'+money(value)+'</span><span class="l">Binder value</span></div>'+
       '<div class="hs priceui"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>';
     renderPortfolio();
