@@ -3401,11 +3401,11 @@
     { id:"pack-ebp01", set:"Dawn of Palpagos", name:"Booster Pack", sub:"7 cards", box:"PACK_EBP01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Booster Pack" },
     { id:"td-rb", set:"Dawn of Palpagos", name:"Trial Deck, Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
     { id:"td-gp", set:"Dawn of Palpagos", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
-    // Sealed promo products, tracked alongside the individual promo cards (PR2026). No baked image yet
-    // (box:"" shows the fallback tile). name carries "Pack" / "Deck" so the price query gets the right
+    // Sealed promo products, tracked alongside the individual promo cards (PR2026). Both carry baked art
+    // (PACK_PRV1, DECK_DEMO). name carries "Pack" / "Deck" so the price query gets the right
     // kind (see pkind in pullSealed): the pack filter keeps single-card promo packs, the deck filter the demo deck.
     { id:"pr-pack-v1", set:"Promo Cards", name:"PR Card Pack Vol. 1", sub:"Sealed promo pack · 1 card", box:"PACK_PRV1", q:"Palworld PR Card Pack Vol 1" },
-    { id:"demo-deck",  set:"Promo Cards", name:"Demo Deck", sub:"Sealed demo starter deck", box:"", q:"Palworld Demo Deck" },
+    { id:"demo-deck",  set:"Promo Cards", name:"Demo Deck", sub:"Sealed demo starter deck", box:"DECK_DEMO", q:"Palworld Demo Deck" },
     // Upcoming products, open for pre-order (no images or market yet).
     // 2nd Edition = a reprint of the "Dawn of Palpagos" set; identical cards, each marked with a "II" in the
     // bottom-right corner (announced Sep 4 2026, ships late Oct). Per-card 1st/2nd edition tracking is a future add.
