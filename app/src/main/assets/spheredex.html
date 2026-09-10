@@ -2084,7 +2084,7 @@ window.CARD_IMG={"LOGO_BP02":"data:image/webp;base64,UklGRnzVAABXRUJQVlA4WAoAAAA
   // Count what's in the active collection right now (for the price-history tooltip).
   function collCounts(){ var cc=0, gg=0, sl=0;
     CARDS.forEach(function(card){ var s=own[card.id]; if(s){ cc+=(+s.qty||0); gg+=(s.graded?s.graded.length:0); } });
-    if(typeof SEALED!=="undefined"){ var m=activeCol().sealed||{}; SEALED.forEach(function(p){ var s=m[p.id]; if(s) sl+=(+s.qty||0); }); }
+    if(typeof SEALED!=="undefined"){ var m=activeCol().sealed||{}; SEALED.forEach(function(p){ if(p.pre) return; var s=m[p.id]; if(s) sl+=(+s.qty||0); }); }   // released only, matches sealed VALUE
     return {cards:cc, graded:gg, sealed:sl}; }
   // Local calendar day as YYYY-MM-DD in the device timezone (not UTC), so the snapshot
   // day-key and the "since" date match the user's own clock instead of running a day ahead.
