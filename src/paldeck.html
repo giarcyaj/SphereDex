@@ -2062,11 +2062,14 @@
   function todayKey(){ var d=new Date(), m=d.getMonth()+1, day=d.getDate();
     return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day; }
   // Save today's point once there's a value or any owned items. Overwrites today with the latest all day; new day = new point.
-  // v = active-mode headline value; vLive = live-listings value (the green graph line). vSold (blue marks) is
-  // stamped separately by stampSoldMark on a last-sold refresh, so we preserve any existing vSold here.
+  // v = active-mode headline value; vLive = live-listings value (green line); vSold = last-sold value (blue line).
+  // Record vSold DAILY too, so the last-sold line has a point every day (flat between the backend's weekly
+  // sold refreshes, but pinpointable per day). stampSoldMark still stamps it on an explicit refresh.
   function snapshot(){ var c=activeCol(); if(!c.hist) c.hist={}; var d=todayKey();
-    var v=Math.round((cardsValue()+sealedValue())*100)/100, vLive=Math.round((cardsValueMode("live")+sealedValueMode("live"))*100)/100, ct=collCounts();
-    if(v>0 || vLive>0 || ct.cards || ct.graded || ct.sealed){ var pt=c.hist[d]||{}; pt.v=v; pt.vLive=vLive; pt.cards=ct.cards; pt.graded=ct.graded; pt.sealed=ct.sealed; c.hist[d]=pt; } }
+    var v=Math.round((cardsValue()+sealedValue())*100)/100,
+        vLive=Math.round((cardsValueMode("live")+sealedValueMode("live"))*100)/100,
+        vSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100, ct=collCounts();
+    if(v>0 || vLive>0 || vSold>0 || ct.cards || ct.graded || ct.sealed){ var pt=c.hist[d]||{}; pt.v=v; pt.vLive=vLive; if(vSold>0) pt.vSold=vSold; pt.cards=ct.cards; pt.graded=ct.graded; pt.sealed=ct.sealed; c.hist[d]=pt; } }
   // Stamp today's (or a given day's) last-sold value as a blue graph mark; called on a last-sold refresh.
   function stampSoldMark(dayKey){ var c=activeCol(); if(!c.hist) c.hist={}; var d=dayKey||todayKey();
     var vSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100;
