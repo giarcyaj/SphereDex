@@ -3835,9 +3835,9 @@ window.CARD_IMG={"EBP01-001":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD
         '</span></div>'+
       (soldSparse?'<div class="pcnote">Last sold values fill in each time you tap Refresh last sold, so this view builds up over time.</div>'
         :(pts.length<2?'<div class="pcnote">Your total is saved once a day, so this history fills in as the days pass.</div>':''))+
-      (pts.length>=2?'<div class="pcfoot" style="justify-content:flex-end;margin-top:14px"><button class="pcrefbtn pcfresh" id="startFreshBtnD" type="button">Start fresh today</button></div>':'')+
       '<h2 class="sech" style="margin-top:26px">Day by day</h2>'+
-      '<div class="pdlist">'+rows+'</div>';
+      '<div class="pdlist">'+rows+'</div>'+
+      (pts.length>=2?'<div class="pcfoot" style="justify-content:center;margin-top:22px"><button class="pcrefbtn pcfresh" id="startFreshBtnD" type="button">Start fresh today</button></div>':'');
     wireChart(pts, {wrap:"pdWrap",tip:"pdTip",mark:"pdMark"});
     var seg=$("pdModeSeg"); if(seg) Array.prototype.forEach.call(seg.querySelectorAll(".segb"), function(b){ b.onclick=function(){ pdMode=b.getAttribute("data-m"); renderPortfolioDetail(); }; });
     var bk=$("pdBack"); if(bk) bk.onclick=function(){ if(_histReady && history.length>1) history.back(); else showPage("home"); };
