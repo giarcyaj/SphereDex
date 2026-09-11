@@ -594,7 +594,10 @@
   .sealcard .sbox.sdopen:hover img { transform:scale(1.03); transition:transform .2s; }
   .sealcard .snm.sdopen:hover { color:var(--accent-ink); }
   /* sealed detail sheet */
-  .sealdet { padding:0 0 2px; }
+  .sealdet { padding:0 0 2px; text-align:center; }
+  .sealdet .mtags { justify-content:center; }
+  .sealdet .field { align-items:center; }
+  .sealdet .sdstep { align-self:center; }
   .sdimg { aspect-ratio:1/1; max-height:300px; margin:0 auto; background:#fff; border-radius:14px; overflow:hidden;
     display:flex; align-items:center; justify-content:center; padding:16px; border:1.5px solid var(--line-strong); box-sizing:border-box; position:relative; }
   .sdimg img { max-width:100%; max-height:100%; object-fit:contain; }
@@ -3596,6 +3599,7 @@
           '<div class="sbox sdopen" role="button" tabindex="0" title="View details">'+(box?'<img src="'+box+'" alt="">':'')+'</div>'+
           '<div class="sb">'+
             '<div class="snm sdopen" role="button" tabindex="0">'+esc(title)+'</div><div class="ssub">'+esc(subline)+' · '+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</div>'+
+            (sealDate(p)?'<div class="predate" style="font-size:.74rem">Released '+esc(sealDate(p))+'</div>':'')+
             '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
               '<span class="sealval">'+money((+s.qty||0)*sealUnit(s))+'</span></div>'+
             '<div class="sealprices priceui"><span class="spx"><i class="spdot spsold"></i>Sold '+((+pr.sold>0)?money(pr.sold):'—')+'</span><span class="spx"><i class="spdot splive"></i>Live '+((+pr.list>0)?money(pr.list):'—')+'</span></div>'+
@@ -3626,6 +3630,20 @@
     "de":[["Play-Maniac","https://www.play-maniac.de/collections/palworld-official-card-game"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
     "es":[["Turol Games","https://www.turolgames.com/en/741-palworld"]]
   };
+  // Deep links to the exact product page, per SEALED id, for the shops that expose stable product URLs
+  // (the two Shopify stockists we also poll for stock). Other shops (Amazon, Magic Madhouse, Chaos
+  // Cards) have no per-product mapping, so they fall back to their search / category page. Keep these
+  // handles in step with STOCK_TRACKED / the backend STOCK_PRODUCTS when products change.
+  var TCV="https://thecardvault.co.uk/products/", TC="https://totalcards.net/products/";
+  var SEAL_SHOP_URLS={
+    "box-ebp01":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-booster-box-12x-packs","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-booster-box-12-packs"},
+    "pack-ebp01":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-booster-pack","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-booster-pack"},
+    "td-rb":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-red-and-blue-trial-deck","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-trial-deck-red-blue"},
+    "td-gp":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-trial-deck-green-purple"},
+    "ss-vol1":{"The Card Vault":TCV+"palworld-official-card-game-sleeve-card-set-vol-1","Total Cards":TC+"palworld-official-card-game-sleeve-card-set-vol-1"},
+    "box-bp02":{"The Card Vault":TCV+"palworld-official-card-game-legends-awaken-booster-box-12x-packs","Total Cards":TC+"palworld-official-card-game-legends-awaken-booster-box-12-packs"},
+    "pack-bp02":{"The Card Vault":TCV+"palworld-official-card-game-legends-awaken-booster-pack","Total Cards":TC+"palworld-official-card-game-legends-awaken-booster-pack"}
+  };
   function sealBuyLinks(p){
     var reg=SETTINGS.ebayRegion||"co.uk", ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
@@ -3633,7 +3651,7 @@
       {name:"eBay "+(REGION_SHORT[reg]||reg), url:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q},
       {name:"Amazon", url:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q}
     ];
-    (RETAILERS[reg]||[]).forEach(function(r){ links.push({name:r[0], url:r[1].replace("%q",q)}); });
+    (RETAILERS[reg]||[]).forEach(function(r){ var pu=(SEAL_SHOP_URLS[p.id]||{})[r[0]]; links.push({name:r[0], url:pu||r[1].replace("%q",q)}); });
     links.push({name:"Official", url:SEAL_OFFICIAL_URL});
     return { region:(REGION_SHORT[reg]||reg.toUpperCase()), links:links };
   }
@@ -3689,6 +3707,7 @@
         '<div class="sdimg">'+(box?'<img src="'+box+'" alt="'+esc(title)+'">':'')+'</div>'+
         '<h2>'+esc(title)+'</h2>'+
         '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-R)">'+esc((SEAL_EDITIONS[SEAL_ED]||{}).label||"English")+'</span></div>'+
+        (sealDate(p)?'<div class="predate" style="margin:2px 0 10px">Released '+esc(sealDate(p))+'</div>':'')+
         (function(){ var willLoad=apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000);
         return '<div class="bubrow glance sealbubs">'+
           '<a class="bub glancebub" id="sdRrp" href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener"><span class="gllab">RRP ↗</span><b class="glval">'+money(rrpShown)+'</b></a>'+
