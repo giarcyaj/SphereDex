@@ -608,8 +608,8 @@
   .sealdet h2 { font-family:var(--font-display); font-weight:800; margin:15px 0 8px; font-size:1.4rem; letter-spacing:-.01em; }
   .sdstep { align-self:flex-start; }
   .buylabel { font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin-top:6px; }
-  .buyrow { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-  @media (max-width:440px){ .buyrow{ grid-template-columns:1fr; } }
+  .buyrow { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:5px; scrollbar-width:thin; }
+  .buyrow .buybtn { flex:0 0 auto; }
   .buybtn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px; border-radius:12px;
     font-family:var(--font-display); font-weight:750; font-size:.86rem; text-decoration:none; color:var(--ink);
     background:var(--surface-2); border:1.5px solid var(--line-strong); box-shadow:inset 0 1px 0 var(--edge); transition:transform .14s, border-color .14s, color .14s; }
@@ -1251,6 +1251,8 @@
   .no-flexgap .rankbadge{gap:0}.no-flexgap .rankbadge>*+*{margin-left:8px}
   .no-flexgap .setcard .smeta{gap:0}.no-flexgap .setcard .smeta>*+*{margin-left:10px}
   .no-flexgap .buybtn{gap:0}.no-flexgap .buybtn>*+*{margin-left:6px}
+  .no-flexgap .buyrow>*+*{margin-left:8px}
+  .no-flexgap .sdbtnrow>*+*{margin-left:8px}
   .no-flexgap .qtyrow{gap:0}.no-flexgap .qtyrow>*+*{margin-left:12px}
   .no-flexgap .qopt{gap:0}.no-flexgap .qopt>*+*{margin-left:8px}
   .no-flexgap .qoptbtn{gap:0}.no-flexgap .qoptbtn>*+*{margin-left:12px}
@@ -3617,7 +3619,7 @@
   // Curated Palworld-TCG stockists per marketplace. Fixed URLs point at each shop's Palworld range;
   // "%q" (TCGplayer) is replaced with the product search. France/Italy fall back to eBay + Amazon.
   var RETAILERS={
-    "co.uk":[["Magic Madhouse","https://magicmadhouse.co.uk/other-tcgs/palworld-tcg"],["The Card Vault","https://thecardvault.co.uk/collections/palworld-official-card-game-all-products"],["Chaos Cards","https://www.chaoscards.co.uk/shop/card-games/palworld-tcg"]],
+    "co.uk":[["Magic Madhouse","https://magicmadhouse.co.uk/other-tcgs/palworld-tcg"],["The Card Vault","https://thecardvault.co.uk/collections/palworld-official-card-game-all-products"],["Total Cards","https://totalcards.net/collections/palworld-official-card-game"],["Chaos Cards","https://www.chaoscards.co.uk/shop/card-games/palworld-tcg"]],
     "com":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
     "ca":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"]],
     "com.au":[["Good Games","https://www.goodgames.com.au/collections/palworld-official-card-game"],["GB Toys","https://gbtoys.com.au/collections/palworld-official-card-game"],["Collectible Madness","https://collectiblemadness.com.au/collections/palworld-official-card-game"]],
