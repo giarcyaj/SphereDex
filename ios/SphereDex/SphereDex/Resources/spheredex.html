@@ -2251,7 +2251,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true,stock:true,stockWatch:[]},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
@@ -2272,12 +2272,16 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     saveSettings(); syncPushPrefs();
     return i<0;   // true = now on
   }
-  // A full-width "Alert me when in stock" button for the sealed detail sheet (native push only).
-  function stockAlertRow(p){
-    if(!nativePushIface()) return "";
-    var on=stockAlertOn(p.id), st=on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"";
-    return '<div style="margin-top:9px"><button class="buybtn" id="sdStockAlert" type="button" style="width:100%;justify-content:center;font-weight:650;'+st+'">'+
-      (on?'Stock alerts on for this':'Alert me when in stock')+'</button></div>';
+  // Sealed product ids the stock-alert checker actually tracks at UK retail (mirror of STOCK_PRODUCTS
+  // in spheredex-backend/src/stock.ts). The "Stock alerts" button only shows for these, so we never
+  // offer an alert that can't fire (promos, or products not yet listed at a tracked shop).
+  var STOCK_TRACKED=["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02"];
+  // A "Stock alerts on/off" button (bell) for the sealed detail sheet, sized to sit beside Refresh
+  // prices in a flex row. Native push only, and only for products the checker tracks.
+  function stockAlertBtn(p){
+    if(!nativePushIface() || STOCK_TRACKED.indexOf(p.id)<0) return "";
+    var on=stockAlertOn(p.id), st="flex:1 1 auto;justify-content:center;"+(on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
+    return '<button class="btn sec sdalert" id="sdStockAlert" type="button" style="'+st+'">'+icon('bell')+' Stock alerts '+(on?'on':'off')+'</button>';
   }
   // Account-level settings that sync to the signed-in account (piggybacked on the state blob under
   // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme,
@@ -3286,6 +3290,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     chart:'<path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/>',
     camera:'<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.3"/><path d="M8.5 7l1.3-2.3h4.4L15.5 7"/>',
     search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
     upload:'<path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>',
     info:'<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.7" r="1" fill="currentColor" stroke="none"/>',
     ticket:'<path d="M4 8.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 1.6 1.6 0 0 0 0 3.2 1.6 1.6 0 0 1 0 3.2 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 1.6 1.6 0 0 0 0-3.2 1.6 1.6 0 0 1 0-3.2z"/><path d="M14 6.5v11" stroke-dasharray="2.5 2.5"/>',
@@ -3667,7 +3672,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
           '<div class="meditor">'+
             '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
-            stockAlertRow(p)+
+            (stockAlertBtn(p)?'<div class="sdbtnrow" style="display:flex;margin-top:9px">'+stockAlertBtn(p)+'</div>':'')+
             '<p class="qsub" style="margin-top:10px">Not released yet, so there is no market price. It will track once it launches.</p>'+
           '</div>'+
         '</div>';
@@ -3696,11 +3701,13 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
-          (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button">'+icon('refresh')+' Refresh prices</button>':'')+
+          '<div class="sdbtnrow" style="display:flex;gap:8px;flex-wrap:wrap">'+
+            (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button" style="flex:1 1 auto">'+icon('refresh')+' Refresh prices</button>':'')+
+            stockAlertBtn(p)+
+          '</div>'+
           '<p class="qsub priceui" style="margin:8px 0 0;font-size:.76rem">Last 5 sold and live listings are pulled from the market, the same as cards. Your value uses your chosen price mode ('+(priceMode()==="sold"?"last sold":"live listings")+', change it in Settings).</p>'+
           '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
-          '<div class="buyrow">'+bl.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
-          stockAlertRow(p)+
+          '<div class="buyrow">'+bl.links.filter(function(l){ return l.name!=="Official" && l.name.slice(0,4)!=="eBay"; }).map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
         '</div>'+
       '</div>';
     _sealDetailId=p.id;   // let pullSealed update this sheet's price slots in place
@@ -5267,8 +5274,8 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[]};
-    if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=true;                       // stock alerts default on
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[]};
+    if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=false;                      // stock alerts default off; turns on when a product is followed
     if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];           // nothing watched until picked
     var nativePush=nativePushIface();
     var ng=$("notifGroup"); if(ng) ng.style.display=nativePush?"flex":"none";
