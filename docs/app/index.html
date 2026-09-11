@@ -1783,6 +1783,10 @@
           <div class="setinfo"><div class="stitle">New set added to SphereDex</div><div class="sdesc">Get notified when new cards become available to collect in the app.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
         </div>
+        <div class="setrow">
+          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock in the UK. Turn alerts on for a product from its page.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
+        </div>
       </div>
 
       <div class="setcat">Backup &amp; restore</div>
@@ -2245,10 +2249,34 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true,stock:true,stockWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
+  // Stock alerts (native push only): which sealed products this device wants a restock alert for. This
+  // rides the existing setPrefs bridge — the native host forwards the whole notif JSON (incl. stockWatch)
+  // to /api/push/register, so no native change is needed. Web has no push, so these are gated on a
+  // native push bridge being present. stockWatch stays device-local (not in ACCT_SETTING_KEYS) because
+  // alerts are tied to this device's push token.
+  function nativePushIface(){ return (window.AndroidPush&&typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
+    :((window.IOSPush&&typeof window.IOSPush.setPrefs==="function")?window.IOSPush:null); }
+  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ np.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
+  function stockAlertOn(id){ var n=SETTINGS.notif; return !!(n&&Array.isArray(n.stockWatch)&&n.stockWatch.indexOf(id)>=0); }
+  function toggleStockAlert(id){
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[]};
+    if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];
+    var w=SETTINGS.notif.stockWatch, i=w.indexOf(id);
+    if(i>=0){ w.splice(i,1); } else { w.push(id); SETTINGS.notif.stock=true; }   // opting into a product enables the master
+    saveSettings(); syncPushPrefs();
+    return i<0;   // true = now on
+  }
+  // A full-width "Alert me when in stock" button for the sealed detail sheet (native push only).
+  function stockAlertRow(p){
+    if(!nativePushIface()) return "";
+    var on=stockAlertOn(p.id), st=on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"";
+    return '<div style="margin-top:9px"><button class="buybtn" id="sdStockAlert" type="button" style="width:100%;justify-content:center;font-weight:650;'+st+'">'+
+      (on?'Stock alerts on for this':'Alert me when in stock')+'</button></div>';
+  }
   // Account-level settings that sync to the signed-in account (piggybacked on the state blob under
   // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme,
   // view, notifications stay local). _currency and _edition live outside SETTINGS so carry them too.
@@ -3637,10 +3665,12 @@
           '<div class="meditor">'+
             '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
+            stockAlertRow(p)+
             '<p class="qsub" style="margin-top:10px">Not released yet, so there is no market price. It will track once it launches.</p>'+
           '</div>'+
         '</div>';
       var c0=$("mClose"); if(c0) c0.onclick=function(){ dismissOverlay(); };
+      var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when this is in stock.":"Stock alert removed."); };
       var w0=scrim.classList.contains("open"); scrim.classList.add("open"); if(!w0) openOverlay(closeModal);
       return;
     }
@@ -3668,6 +3698,7 @@
           '<p class="qsub priceui" style="margin:8px 0 0;font-size:.76rem">Last 5 sold and live listings are pulled from the market, the same as cards. Your value uses your chosen price mode ('+(priceMode()==="sold"?"last sold":"live listings")+', change it in Settings).</p>'+
           '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
           '<div class="buyrow">'+bl.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
+          stockAlertRow(p)+
         '</div>'+
       '</div>';
     _sealDetailId=p.id;   // let pullSealed update this sheet's price slots in place
@@ -3680,6 +3711,7 @@
     });
     paintSealPanels(p,s,pr);
     var sp=$("sdPull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
+    var saB=$("sdStockAlert"); if(saB) saB.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when this is in stock.":"Stock alert removed."); };
     if(apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000)) pullSealed(p, s, null);   // auto-load fresh prices on open (fills the spinner slots)
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); if(!_wasOpen) openOverlay(closeModal);
   }
@@ -5233,12 +5265,13 @@
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true};
-    var nativePush=(window.AndroidPush && typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
-      :((window.IOSPush && typeof window.IOSPush.setPrefs==="function")?window.IOSPush:null);
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[]};
+    if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=true;                       // stock alerts default on
+    if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];           // nothing watched until picked
+    var nativePush=nativePushIface();
     var ng=$("notifGroup"); if(ng) ng.style.display=nativePush?"flex":"none";
-    function syncNotif(){ if(nativePush){ try{ nativePush.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
-    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"]].forEach(function(p){
+    function syncNotif(){ syncPushPrefs(); }
+    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"]].forEach(function(p){
       var el=$(p[0]); if(!el) return;
       el.checked=SETTINGS.notif[p[1]]!==false;
       el.onchange=function(){ SETTINGS.notif[p[1]]=el.checked; saveSettings(); syncNotif(); };
