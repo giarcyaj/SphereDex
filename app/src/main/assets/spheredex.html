@@ -2267,7 +2267,8 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   // alerts are tied to this device's push token.
   function nativePushIface(){ return (window.AndroidPush&&typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
     :((window.IOSPush&&typeof window.IOSPush.setPrefs==="function")?window.IOSPush:null); }
-  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ np.setPrefs(JSON.stringify(SETTINGS.notif)); }catch(e){} } }
+  // Include the market region so the backend only sends a device stock alerts for its own market's shops.
+  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ np.setPrefs(JSON.stringify(Object.assign({},SETTINGS.notif,{region:SETTINGS.ebayRegion||"co.uk"}))); }catch(e){} } }
   function stockAlertOn(id){ var n=SETTINGS.notif; return !!(n&&Array.isArray(n.stockWatch)&&n.stockWatch.indexOf(id)>=0); }
   function toggleStockAlert(id){
     if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[]};
@@ -2277,14 +2278,20 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     saveSettings(); syncPushPrefs();
     return i<0;   // true = now on
   }
-  // Sealed product ids the stock-alert checker actually tracks at UK retail (mirror of STOCK_PRODUCTS
-  // in spheredex-backend/src/stock.ts). The "Stock alerts" button only shows for these, so we never
-  // offer an alert that can't fire (promos, or products not yet listed at a tracked shop).
-  var STOCK_TRACKED=["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02"];
+  // Sealed product ids the stock-alert checker tracks, per market (mirror of STOCK_SOURCES coverage in
+  // spheredex-backend/src/stock.ts). The "Stock alerts" button only shows for a product the user's
+  // market can actually poll, so we never offer an alert that can't fire. Markets with no Shopify JSON
+  // supplier (ca, fr, it, es) are absent, so the button is hidden there.
+  var STOCK_TRACKED={
+    "co.uk":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02"],
+    "com":["box-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02"],
+    "com.au":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02"],
+    "de":["td-rb","td-gp"]
+  };
   // A "Stock alerts on/off" button (bell) for the sealed detail sheet, sized to sit beside Refresh
-  // prices in a flex row. Native push only, and only for products the checker tracks.
+  // prices in a flex row. Native push only, and only for products the user's market can poll.
   function stockAlertBtn(p){
-    if(!nativePushIface() || STOCK_TRACKED.indexOf(p.id)<0) return "";
+    if(!nativePushIface() || (STOCK_TRACKED[SETTINGS.ebayRegion||"co.uk"]||[]).indexOf(p.id)<0) return "";
     var on=stockAlertOn(p.id), st="flex:1 1 auto;justify-content:center;"+(on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
     return '<button class="btn sec sdalert" id="sdStockAlert" type="button" style="'+st+'">'+icon('bell')+' Stock alerts '+(on?'on':'off')+'</button>';
   }
@@ -3632,19 +3639,18 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     "de":[["Play-Maniac","https://www.play-maniac.de/collections/palworld-official-card-game"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
     "es":[["Turol Games","https://www.turolgames.com/en/741-palworld"]]
   };
-  // Deep links to the exact product page, per SEALED id, for the shops that expose stable product URLs
-  // (the two Shopify stockists we also poll for stock). Other shops (Amazon, Magic Madhouse, Chaos
-  // Cards) have no per-product mapping, so they fall back to their search / category page. Keep these
-  // handles in step with STOCK_TRACKED / the backend STOCK_PRODUCTS when products change.
-  var TCV="https://thecardvault.co.uk/products/", TC="https://totalcards.net/products/";
+  // Deep links to the exact product page, per SEALED id, keyed by shop name, for the shops that expose
+  // stable product URLs (every Shopify stockist we also poll for stock, across UK/US/AU/DE). Shops with
+  // no per-product URL (Amazon, TCGplayer, Magic Madhouse, Chaos Cards) fall back to their search /
+  // category page. Keep these handles + STOCK_TRACKED + the backend STOCK_SOURCES in step.
   var SEAL_SHOP_URLS={
-    "box-ebp01":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-booster-box-12x-packs","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-booster-box-12-packs"},
-    "pack-ebp01":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-booster-pack","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-booster-pack"},
-    "td-rb":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-red-and-blue-trial-deck","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-trial-deck-red-blue"},
-    "td-gp":{"The Card Vault":TCV+"palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck","Total Cards":TC+"palworld-official-card-game-dawn-of-palpagos-trial-deck-green-purple"},
-    "ss-vol1":{"The Card Vault":TCV+"palworld-official-card-game-sleeve-card-set-vol-1","Total Cards":TC+"palworld-official-card-game-sleeve-card-set-vol-1"},
-    "box-bp02":{"The Card Vault":TCV+"palworld-official-card-game-legends-awaken-booster-box-12x-packs","Total Cards":TC+"palworld-official-card-game-legends-awaken-booster-box-12-packs"},
-    "pack-bp02":{"The Card Vault":TCV+"palworld-official-card-game-legends-awaken-booster-pack","Total Cards":TC+"palworld-official-card-game-legends-awaken-booster-pack"}
+    "box-ebp01":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-booster-box-12x-packs","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-booster-box-12-packs","Universe TCG":"https://www.universetcg.com/products/palworld-bp01-dawn-of-palpagos-booster-box","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-bp01-dawn-of-palpagos-booster-box","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-bp01-dawn-of-palpagos-booster-box","GB Toys":"https://gbtoys.com.au/products/palworld-card-game-bp01-dawn-of-palpagos-booster-box"},
+    "pack-ebp01":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-booster-pack","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-booster-pack","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-bp01-dawn-of-palpagos-booster-pack"},
+    "td-rb":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-red-and-blue-trial-deck","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-trial-deck-red-blue","Universe TCG":"https://www.universetcg.com/products/palworld-trial-deck-td01","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-td01-dawn-of-palpagos-trial-deck-redblue","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-td01-dawn-of-palpagos-red-blue-trial-deck","Play-Maniac":"https://www.play-maniac.de/products/palworld-official-card-game-dawn-of-palpagos-red-blue-trial-deck-td01-englisch"},
+    "td-gp":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-trial-deck-green-purple","Universe TCG":"https://www.universetcg.com/products/palworld-trial-deck-td02","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-td02-dawn-of-palpagos-trial-deck-greenpurple","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-td02-dawn-of-palpagos-green-purple-trial-deck","Play-Maniac":"https://www.play-maniac.de/products/palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck-td02-englisch"},
+    "ss-vol1":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-sleeve-card-set-vol-1","Total Cards":"https://totalcards.net/products/palworld-official-card-game-sleeve-card-set-vol-1","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-sleeve-card-set-vol-1-english","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-ss01-sleeve-card-set-vol1"},
+    "box-bp02":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-legends-awaken-booster-box-12x-packs","Total Cards":"https://totalcards.net/products/palworld-official-card-game-legends-awaken-booster-box-12-packs","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-bp02-legends-awaken-booster-box-12-packs-english","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-bp02-legends-awaken-booster-box","GB Toys":"https://gbtoys.com.au/products/palworld-card-game-bp02-legends-awaken-booster-box"},
+    "pack-bp02":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-legends-awaken-booster-pack","Total Cards":"https://totalcards.net/products/palworld-official-card-game-legends-awaken-booster-pack","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-bp02-legends-awaken-booster-pack-english","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-bp02-legends-awaken-booster-pack"}
   };
   function sealBuyLinks(p){
     var reg=SETTINGS.ebayRegion||"co.uk", ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
@@ -5291,7 +5297,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
-    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); fetchServerPrices(true); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
