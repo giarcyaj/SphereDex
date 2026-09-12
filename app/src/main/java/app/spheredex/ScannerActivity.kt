@@ -215,8 +215,10 @@ class ScannerActivity : ComponentActivity() {
             if (mode != value) {
                 mode = value
                 reticle.fullCard = (mode != "code")
-                hint.text = hintText()
-                overlay.hide()
+                // Qualify: inside this TextView's apply/lambda, bare `hint`/`overlay` would resolve to
+                // View.getHint()/getOverlay(), not our Activity fields.
+                this@ScannerActivity.hint.text = hintText()
+                this@ScannerActivity.overlay.hide()
                 lastFullMatch = 0L
                 refreshToggle()
             }
