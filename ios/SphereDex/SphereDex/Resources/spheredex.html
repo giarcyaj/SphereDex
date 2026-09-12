@@ -5236,7 +5236,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     if(Date.now()-scanSession.ts > 60000){ scanSession.count=0; scanSession.value=0; }
     var ssEl=$("scanSess"); if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
     var hintEl=$("scanHint"); if(hintEl) hintEl.hidden=!lowConf;
-    if(lowConf){ var _wb=$("scanWrong"), _vs=$("scanVariants"); if(_wb && _vs && !_wb.hidden) _vs.hidden=false; }
+    // If this card has variants, open the picker so the user can choose the exact printing: name/number
+    // OCR resolves the card but not RR vs OSR vs SSP. The "not sure" hint above stays gated on lowConf.
+    var _wb=$("scanWrong"), _vs=$("scanVariants"); if(_wb && _vs && !_wb.hidden) _vs.hidden=false;
     // "Add cards to" default sticks; fall back to the active collection.
     var cs=$("scanColSel"); cs.innerHTML="";
     var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;})) ? SETTINGS.defaultAddCol : activeCol().id;
