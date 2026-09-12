@@ -22,11 +22,13 @@ const val HASH_WIDTH = 8
 const val HASH_HEIGHT = 8
 const val HASH_BITS = HASH_WIDTH * HASH_HEIGHT               // 64
 
-/** Best Hamming distance (0..HASH_BITS) above which [CardImageMatcher.match] returns null. Lower = stricter. */
-const val REJECT_DISTANCE = 12
+/** Best Hamming distance (0..HASH_BITS) above which [CardImageMatcher.match] returns null. Lower = stricter.
+ *  A phone photo (lighting, perspective, glare) lands further from the clean render than a screenshot would,
+ *  so this is looser than a pixel-exact match. On-device tuning knob. */
+const val REJECT_DISTANCE = 16
 
 /** Hamming distance mapped to 0f confidence; distance 0 maps to 1f, linear in between (then clamped). */
-const val CONFIDENCE_ZERO_DISTANCE = 28f
+const val CONFIDENCE_ZERO_DISTANCE = 32f
 
 /** Smallest image edge (px) kept when down-sampling a reference decode: plenty to feed the tiny grid. */
 private const val DECODE_MIN_EDGE = 32
@@ -57,6 +59,20 @@ object CardImageMatcher {
     var isReady: Boolean = false
         private set
 
+    /** Number of reference cards indexed (0 until ready). For the on-camera diagnostic readout. */
+    @Volatile
+    var count: Int = 0
+        private set
+
+    /** Nearest reference key + Hamming distance from the LAST [match] call, even when it was rejected.
+     *  Purely diagnostic (surfaced on the scanner during tuning); not synchronized. */
+    @Volatile
+    var lastBestKey: String? = null
+        private set
+    @Volatile
+    var lastBestDistance: Int = -1
+        private set
+
     // Built once on a background thread, then only read; published via the @Volatile reference.
     @Volatile
     private var hashes: Map<String, Long>? = null
@@ -79,6 +95,7 @@ object CardImageMatcher {
                 }
                 if (map != null) {
                     hashes = map
+                    count = map.size
                     isReady = true
                 } else {
                     started.set(false)                                  // asset unreadable: allow a later retry
@@ -92,9 +109,11 @@ object CardImageMatcher {
     /**
      * Matches an upright crop of the card region. CPU-only and quick (one hash + a table scan);
      * the caller is expected to invoke it off the UI thread. Returns (cardNumber, confidence 0f..1f)
-     * for the nearest reference within [REJECT_DISTANCE], or null.
+     * for the nearest reference within [maxDistance], or null. [lastBestKey]/[lastBestDistance] are
+     * always updated with the nearest reference (even when rejected) for the diagnostic readout.
+     * Pass [maxDistance] = Int.MAX_VALUE to force-accept the nearest match (used by tap-to-scan).
      */
-    fun match(bitmap: Bitmap): Pair<String, Float>? {
+    fun match(bitmap: Bitmap, maxDistance: Int = REJECT_DISTANCE): Pair<String, Float>? {
         val map = hashes ?: return null
         val q = perceptualHash(bitmap) ?: return null
         var bestKey: String? = null
@@ -104,7 +123,9 @@ object CardImageMatcher {
             if (d < bestDist) { bestDist = d; bestKey = key }
         }
         val key = bestKey ?: return null
-        if (bestDist > REJECT_DISTANCE) return null
+        lastBestKey = key
+        lastBestDistance = bestDist
+        if (bestDist > maxDistance) return null
         val confidence = (1f - bestDist / CONFIDENCE_ZERO_DISTANCE).coerceIn(0f, 1f)
         return key to confidence
     }

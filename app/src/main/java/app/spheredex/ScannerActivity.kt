@@ -11,6 +11,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -28,6 +29,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -101,9 +103,11 @@ class ScannerActivity : ComponentActivity() {
     private lateinit var hint: TextView
     private lateinit var overlay: TranslationOverlay
     private lateinit var flashView: View
+    private lateinit var backBtn: TextView
     private var toggleBar: LinearLayout? = null
     private var codeBtn: TextView? = null
     private var fullBtn: TextView? = null
+    private var debugText: TextView? = null   // on-camera diagnostic readout (full mode); remove before store release
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -117,8 +121,8 @@ class ScannerActivity : ComponentActivity() {
     // ~0.57 (reject boundary) to 1.0, so these differ from the iOS feature-print thresholds. Tuning
     // knobs: verify on-device, then adjust. OCR is the always-reliable fallback in both modes.
     private companion object {
-        const val FULL_AUTOACCEPT_CONFIDENCE = 0.78f
-        const val FULL_OVERLAY_CONFIDENCE = 0.55f
+        const val FULL_AUTOACCEPT_CONFIDENCE = 0.72f   // ~<=9 Hamming on the 32-distance scale
+        const val FULL_OVERLAY_CONFIDENCE = 0.50f      // any accepted match (>= reject boundary) shows the AR label
         const val FULL_MATCH_INTERVAL_MS = 250L
     }
 
@@ -144,6 +148,37 @@ class ScannerActivity : ComponentActivity() {
         }
         root.addView(hint, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
 
+        // Back button (top-left): closes the scanner and returns to the app. It is clickable, so it
+        // consumes its own taps and never triggers the full-screen tap-to-scan.
+        backBtn = TextView(this).apply {
+            text = "‹"                       // ‹ left chevron
+            setTextColor(Color.WHITE)
+            textSize = 30f
+            gravity = Gravity.CENTER
+            isClickable = true
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x66000000) }
+            setOnClickListener { finish() }
+        }
+        root.addView(backBtn, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.START).apply {
+            leftMargin = dp(12); topMargin = dp(12)
+        })
+
+        // On-camera diagnostic readout (full mode only): shows whether the card index loaded and the
+        // nearest match distance live, so scan behaviour can be tuned from a device test. Remove before
+        // the store release.
+        debugText = TextView(this).apply {
+            setTextColor(0xCCFFFFFF.toInt())
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+            background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(0x66000000) }
+            text = "Scanner: starting…"
+            visibility = if (mode == "code") View.GONE else View.VISIBLE
+        }
+        root.addView(debugText, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            bottomMargin = dp(72)
+        })
+
         if (showToggle) addModeToggle()
 
         // White flash on capture, on top of everything; never intercepts touches.
@@ -163,6 +198,11 @@ class ScannerActivity : ComponentActivity() {
                 androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             )
             hint.setPadding(dp(20), bars.top + dp(16), dp(20), dp(10))
+            (backBtn.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                lp.topMargin = bars.top + dp(8)
+                lp.leftMargin = bars.left + dp(12)
+                backBtn.layoutParams = lp
+            }
             toggleBar?.let { bar ->
                 (bar.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
                     lp.bottomMargin = bars.bottom + dp(20)
@@ -215,10 +255,11 @@ class ScannerActivity : ComponentActivity() {
             if (mode != value) {
                 mode = value
                 reticle.fullCard = (mode != "code")
-                // Qualify: inside this TextView's apply/lambda, bare `hint`/`overlay` would resolve to
-                // View.getHint()/getOverlay(), not our Activity fields.
+                // Qualify: inside this TextView's apply/lambda, bare `hint`/`overlay`/`debugText` would
+                // resolve to View.getHint()/getOverlay()/..., not our Activity fields.
                 this@ScannerActivity.hint.text = hintText()
                 this@ScannerActivity.overlay.hide()
+                this@ScannerActivity.debugText?.visibility = if (mode == "code") View.GONE else View.VISIBLE
                 lastFullMatch = 0L
                 refreshToggle()
             }
@@ -278,18 +319,40 @@ class ScannerActivity : ComponentActivity() {
                 }
             }
             provider.unbindAll()
-            provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            // Bind preview + analysis in a group sharing the preview's ViewPort, so each analysis frame's
+            // cropRect matches what the user sees (same FOV/crop). Without this the analyzer gets a wider
+            // FOV than the preview, so the card fills the on-screen reticle but is small-with-background in
+            // the buffer, and whole-frame hashing never matches the tight reference images. Falls back to a
+            // plain bind if the preview is not laid out yet (viewPort null).
+            val viewPort = previewView.viewPort
+            if (viewPort != null) {
+                val group = UseCaseGroup.Builder()
+                    .addUseCase(preview).addUseCase(analysis).setViewPort(viewPort).build()
+                provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, group)
+            } else {
+                provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            }
         }, ContextCompat.getMainExecutor(this))
     }
 
-    /** ImageProxy (YUV) -> upright ARGB bitmap, de-rotated by the frame's rotationDegrees. Null on failure. */
+    /** ImageProxy (YUV) -> upright ARGB bitmap: crop to the ViewPort cropRect (the preview-visible region),
+     *  then de-rotate by the frame's rotationDegrees. Null on failure. */
     private fun ImageProxy.toUprightBitmap(): Bitmap? = try {
-        val bmp = toBitmap()
+        val full = toBitmap()
+        val r: Rect = cropRect   // defaults to the full buffer when no ViewPort is applied
+        val base = if (r.width() in 1..full.width && r.height() in 1..full.height &&
+                       (r.width() < full.width || r.height() < full.height)) {
+            val left = r.left.coerceIn(0, full.width - 1)
+            val top = r.top.coerceIn(0, full.height - 1)
+            val w = r.width().coerceIn(1, full.width - left)
+            val h = r.height().coerceIn(1, full.height - top)
+            Bitmap.createBitmap(full, left, top, w, h).also { if (it !== full) full.recycle() }
+        } else full
         val rot = imageInfo.rotationDegrees
-        if (rot == 0) bmp
+        if (rot == 0) base
         else {
             val m = Matrix().apply { postRotate(rot.toFloat()) }
-            Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true).also { if (it !== bmp) bmp.recycle() }
+            Bitmap.createBitmap(base, 0, 0, base.width, base.height, m, true).also { if (it !== base) base.recycle() }
         }
     } catch (_: Throwable) { null }
 
@@ -304,6 +367,8 @@ class ScannerActivity : ComponentActivity() {
      *  image match that drives the AR overlay and auto-accepts a confident card (or, on a tap, accepts
      *  the best current match, flagged low-confidence when weak). */
     private fun processFull(upright: Bitmap, forced: Boolean) {
+        updateDebug()   // reflect matcher state on the readout each analysed frame
+
         val ocrNumber = ocrResolve(upright)
         if (ocrNumber != null) { identify(upright, ocrNumber, false); return }
         if (handled || processing) { upright.recycle(); return }
@@ -313,22 +378,58 @@ class ScannerActivity : ComponentActivity() {
         if (!due || !CardImageMatcher.isReady) { upright.recycle(); return }
         lastFullMatch = now
 
-        val match = CardImageMatcher.match(upright)
+        // Hash only the card region (centre of the frame, card aspect), not the whole frame, so the query
+        // matches the tight reference images. A tap (forced) accepts the nearest reference at any distance;
+        // otherwise only within REJECT_DISTANCE.
+        val cardCrop = centerCardCrop(upright)
+        val match = if (cardCrop != null)
+            CardImageMatcher.match(cardCrop, if (forced) Int.MAX_VALUE else REJECT_DISTANCE) else null
+        cardCrop?.recycle()
+        updateDebug()   // now reflects the nearest key + distance from this frame
+
         val card = match?.let { store.resolve(it.first) }
-        if (match == null || card == null) {
+        if (card == null) {
             runOnUiThread { overlay.hide() }
             upright.recycle()
             return
         }
         val confidence = match.second
-        if (confidence >= FULL_OVERLAY_CONFIDENCE) {
+        if (!forced && confidence >= FULL_OVERLAY_CONFIDENCE) {
             runOnUiThread { if (!handled) overlay.show(card.name, card.number, null, currentReticle()) }
         }
         when {
             confidence >= FULL_AUTOACCEPT_CONFIDENCE -> identify(upright, card.number, false)
-            forced -> identify(upright, card.number, true)   // tap accepted a weak match
+            forced -> identify(upright, card.number, true)   // tap accepted the nearest (may be weak)
             else -> upright.recycle()
         }
+    }
+
+    /** Centre crop of the (already ViewPort-cropped) upright frame to roughly the reticle: card aspect,
+     *  ~86% of the frame width. Keeps mostly card and drops surrounding background so the perceptual hash
+     *  lines up with the tight reference art. Always a new bitmap (never the input); null on failure. */
+    private fun centerCardCrop(src: Bitmap): Bitmap? = try {
+        val aspect = 400f / 559f                        // reference card width / height
+        var cw = src.width * 0.86f
+        var ch = cw / aspect
+        if (ch > src.height * 0.96f) { ch = src.height * 0.96f; cw = ch * aspect }
+        val w = cw.toInt().coerceIn(1, src.width - 1)   // strictly < width, so createBitmap returns a new bitmap
+        val h = ch.toInt().coerceIn(1, src.height)
+        val left = ((src.width - w) / 2).coerceIn(0, src.width - w)
+        val top = ((src.height - h) / 2).coerceIn(0, src.height - h)
+        Bitmap.createBitmap(src, left, top, w, h)
+    } catch (_: Throwable) { null }
+
+    /** Refresh the on-camera diagnostic readout from the matcher's live state (full mode only). */
+    private fun updateDebug() {
+        val dt = debugText ?: return
+        val txt = if (!CardImageMatcher.isReady) {
+            "Scanner: indexing cards…"
+        } else {
+            val key = CardImageMatcher.lastBestKey ?: "?"
+            val d = CardImageMatcher.lastBestDistance
+            "Index ${CardImageMatcher.count} · nearest $key @ ${if (d < 0) "…" else d.toString()}"
+        }
+        runOnUiThread { dt.text = txt }
     }
 
     /** OCR one upright frame and resolve the first card number found; null if none. Runs on exec. */
