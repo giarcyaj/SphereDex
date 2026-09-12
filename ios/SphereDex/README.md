@@ -66,7 +66,13 @@ Set the Info.plist under Build Settings > Packaging, and add the camera usage st
 refresh it here too:
 
 ```
-cp ../../android/app/src/main/assets/spheredex.html SphereDex/Resources/spheredex.html
+cp ../../app/src/main/assets/spheredex.html SphereDex/Resources/spheredex.html
+```
+
+On Windows (PowerShell), run this from `android\` instead:
+
+```
+Copy-Item app\src\main\assets\spheredex.html ios\SphereDex\SphereDex\Resources\spheredex.html -Force
 ```
 
 (Both `spheredex.html` files are generated the same way from the canonical `paldeck.html`.)

@@ -44,10 +44,18 @@ class MainActivity : ComponentActivity() {
 
     private val scanLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            val card = res.data?.getStringExtra("card")
-            if (res.resultCode == RESULT_OK && !card.isNullOrEmpty()) {
-                val safe = card.replace("\\", "").replace("'", "")
-                web.evaluateJavascript("window.SDScanAdd && window.SDScanAdd('$safe')", null)
+            val number = res.data?.getStringExtra("number")
+            if (res.resultCode == RESULT_OK && !number.isNullOrEmpty()) {
+                // Deliver the rich scan outcome to the web app's add dialog:
+                // SDScanAdd(number, edition, graded{grader,grade,cert}|null, lowConfidence).
+                val safe = number.replace("\\", "").replace("'", "")
+                val edition = res.data?.getIntExtra("edition", 1) ?: 1
+                val graded = res.data?.getStringExtra("graded")     // JSON object string, or null for a raw card
+                val lowConf = res.data?.getBooleanExtra("lowConf", false) ?: false
+                val gradedArg = if (graded.isNullOrEmpty()) "null" else graded   // valid JS object literal
+                web.evaluateJavascript(
+                    "window.SDScanAdd && window.SDScanAdd('$safe', $edition, $gradedArg, $lowConf)", null
+                )
             }
         }
 
@@ -170,6 +178,11 @@ class MainActivity : ComponentActivity() {
             }
         })
 
+        // Warm up on-device full-card recognition: first launch extracts the bundled card images from
+        // the HTML asset and builds their perceptual-hash table in the background (cached thereafter),
+        // so "Full card" mode is ready to match by the time the user opens the scanner.
+        CardImageMatcher.prepare(this)
+
         // Push notifications. All inert until app/google-services.json is added: the channel/permission
         // are harmless without it, and fetchAndRegister no-ops while Firebase has no default app.
         Push.ensureChannel(this)
@@ -210,8 +223,13 @@ class MainActivity : ComponentActivity() {
         web.evaluateJavascript("window.SDOpenPush && window.SDOpenPush('$safe')", null)
     }
 
-    private fun launchScanner(collection: String) {
-        scanLauncher.launch(Intent(this, ScannerActivity::class.java).putExtra("collection", collection))
+    private fun launchScanner(collection: String, mode: String, showToggle: Boolean) {
+        scanLauncher.launch(
+            Intent(this, ScannerActivity::class.java)
+                .putExtra("collection", collection)
+                .putExtra("mode", mode)
+                .putExtra("toggle", showToggle)
+        )
     }
 
     // Reward key -> launcher activity-alias. "default"/"pal" share the blue classic icon.
@@ -267,11 +285,26 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun scan() {
             runOnUiThread {
-                // Read which collection a scan will go to, then open the camera.
-                web.evaluateJavascript("(window.SDActiveCollection && window.SDActiveCollection()) || ''") { raw ->
-                    val name = raw?.trim()?.removeSurrounding("\"")?.replace("\\\"", "\"")
-                        ?.takeIf { it.isNotEmpty() && it != "null" } ?: ""
-                    runOnUiThread { launchScanner(name) }
+                // Read the scan prefs (default recognizer mode + whether to show the on-camera toggle),
+                // then which collection a scan targets, then open the camera. Sensible defaults if either
+                // bridge value is missing. evaluateJavascript returns a JSON-encoded string, so a JS string
+                // arrives wrapped in quotes with inner quotes escaped: unwrap before parsing.
+                web.evaluateJavascript("(window.SDScanPrefs && window.SDScanPrefs()) || ''") { rawPrefs ->
+                    var mode = "full"
+                    var showToggle = true
+                    try {
+                        val json = rawPrefs?.trim()?.removeSurrounding("\"")?.replace("\\\"", "\"")
+                        if (!json.isNullOrEmpty() && json != "null") {
+                            val obj = org.json.JSONObject(json)
+                            mode = if (obj.optString("mode", "full") == "code") "code" else "full"
+                            showToggle = obj.optBoolean("toggle", true)
+                        }
+                    } catch (_: Exception) {}
+                    web.evaluateJavascript("(window.SDActiveCollection && window.SDActiveCollection()) || ''") { raw ->
+                        val name = raw?.trim()?.removeSurrounding("\"")?.replace("\\\"", "\"")
+                            ?.takeIf { it.isNotEmpty() && it != "null" } ?: ""
+                        runOnUiThread { launchScanner(name, mode, showToggle) }
+                    }
                 }
             }
         }

@@ -68,6 +68,8 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$camerax")
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Reads the numeric cert barcode off a graded slab (SlabReader). On-device, bundled model.
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // Card art
     implementation("io.coil-kt:coil-compose:2.6.0")
