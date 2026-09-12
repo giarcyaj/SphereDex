@@ -17,8 +17,10 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -96,6 +98,19 @@ class ScannerActivity : ComponentActivity() {
     @Volatile private var mode = "full"             // "full" | "code"; may change on the UI thread mid-scan
     private val forceCapture = AtomicBoolean(false) // set on tap; the next frame is a deliberate capture
     private var lastFullMatch = 0L                  // throttle full-mode live image matching (exec thread only)
+
+    // Diagnostics for the on-camera readout (tuning aid; remove with debugText before store release).
+    private val tapCount = AtomicInteger(0)         // taps the detector actually received
+    @Volatile private var vpApplied = false          // whether the ViewPort crop is active (analysis == preview FOV)
+    @Volatile private var lastCropDims = "?"         // WxH of the card crop last hashed
+
+    // Robust tap detection: a full-screen OnClickListener on a camera preview is unreliable, so feed a
+    // GestureDetector from dispatchTouchEvent (which sees every touch before any child consumes it).
+    private val tapDetector by lazy {
+        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(e: MotionEvent): Boolean { onScreenTap(e); return false }
+        })
+    }
 
     private lateinit var root: FrameLayout
     private lateinit var previewView: PreviewView
@@ -185,9 +200,8 @@ class ScannerActivity : ComponentActivity() {
         flashView = View(this).apply { setBackgroundColor(Color.WHITE); alpha = 0f; isClickable = false }
         root.addView(flashView, FrameLayout.LayoutParams(-1, -1))
 
-        // Tap anywhere (outside the mode toggle, which consumes its own taps) forces a capture.
-        root.isClickable = true
-        root.setOnClickListener { screenTapped() }
+        // Tap-to-scan is handled in dispatchTouchEvent (below) via a GestureDetector, which is reliable
+        // over the camera preview where a plain OnClickListener is not.
 
         // Draw the camera edge-to-edge, then keep the hint clear of the status bar / camera cutout and
         // the mode toggle clear of the navigation bar by padding for the real insets.
@@ -283,8 +297,30 @@ class ScannerActivity : ComponentActivity() {
 
     // MARK: - Tap to scan
 
+    /** Every touch passes here before any child view; feed the tap detector, then dispatch normally so
+     *  the back button and mode toggle still work. */
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        try { tapDetector.onTouchEvent(ev) } catch (_: Throwable) {}
+        return super.dispatchTouchEvent(ev)
+    }
+
+    /** A single tap: ignore taps on the back button / mode toggle (they handle themselves), else capture. */
+    private fun onScreenTap(e: MotionEvent) {
+        if (isInside(backBtn, e) || isInside(toggleBar, e)) return
+        screenTapped()
+    }
+
+    private fun isInside(v: View?, e: MotionEvent): Boolean {
+        if (v == null || v.visibility != View.VISIBLE) return false
+        val r = Rect()
+        v.getGlobalVisibleRect(r)
+        return r.contains(e.rawX.toInt(), e.rawY.toInt())
+    }
+
     private fun screenTapped() {
         if (handled || processing) return
+        tapCount.incrementAndGet()
+        updateDebug()
         root.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         flash()
         forceCapture.set(true)   // the next frame is treated as a deliberate capture
@@ -329,8 +365,10 @@ class ScannerActivity : ComponentActivity() {
                 val group = UseCaseGroup.Builder()
                     .addUseCase(preview).addUseCase(analysis).setViewPort(viewPort).build()
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, group)
+                vpApplied = true
             } else {
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                vpApplied = false
             }
         }, ContextCompat.getMainExecutor(this))
     }
@@ -382,6 +420,7 @@ class ScannerActivity : ComponentActivity() {
         // matches the tight reference images. A tap (forced) accepts the nearest reference at any distance;
         // otherwise only within REJECT_DISTANCE.
         val cardCrop = centerCardCrop(upright)
+        lastCropDims = if (cardCrop != null) "${cardCrop.width}x${cardCrop.height}" else "?"
         val match = if (cardCrop != null)
             CardImageMatcher.match(cardCrop, if (forced) Int.MAX_VALUE else REJECT_DISTANCE) else null
         cardCrop?.recycle()
@@ -422,14 +461,15 @@ class ScannerActivity : ComponentActivity() {
     /** Refresh the on-camera diagnostic readout from the matcher's live state (full mode only). */
     private fun updateDebug() {
         val dt = debugText ?: return
-        val txt = if (!CardImageMatcher.isReady) {
+        val line1 = if (!CardImageMatcher.isReady) {
             "Scanner: indexing cards…"
         } else {
             val key = CardImageMatcher.lastBestKey ?: "?"
             val d = CardImageMatcher.lastBestDistance
-            "Index ${CardImageMatcher.count} · nearest $key @ ${if (d < 0) "…" else d.toString()}"
+            "Index ${CardImageMatcher.count} · near $key @ ${if (d < 0) "…" else d.toString()}"
         }
-        runOnUiThread { dt.text = txt }
+        val line2 = "taps ${tapCount.get()} · vp ${if (vpApplied) "Y" else "N"} · q $lastCropDims"
+        runOnUiThread { dt.text = "$line1\n$line2" }
     }
 
     /** OCR one upright frame and resolve the first card number found; null if none. Runs on exec. */
