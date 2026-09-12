@@ -24,7 +24,7 @@ def read(p):
         return f.read()
 
 def write(p, s):
-    with open(p, "w", encoding="utf-8") as f:
+    with open(p, "w", encoding="utf-8", newline="\n") as f:
         f.write(s)
 
 def split_canonical(P):
@@ -47,7 +47,7 @@ def build(Pnew, PREFIX, FONT, CARDIMG, SUFFIX):
 
 # P_old = last committed canonical (matches the built docs); P_new = current working canonical.
 P_old = subprocess.run(["git", "-C", REPO, "show", "HEAD:src/paldeck.html"],
-                       capture_output=True, text=True, check=True).stdout
+                       capture_output=True, text=True, encoding="utf-8", check=True).stdout
 P_new = read(os.path.join(REPO, "src/paldeck.html"))
 
 for name, rel in [("WEB", "docs/app/index.html"), ("ANDROID", "app/src/main/assets/spheredex.html")]:
