@@ -359,6 +359,13 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
                     return
                 }
             }
+            // Full mode: the printed card NAME is large and clear even when the number is not, so match
+            // the recognised text against card names (far more reliable than image feature-prints).
+            if self.mode == "full",
+               let card = self.resolver.resolveByName(lines.joined(separator: " ")) {
+                self.identify(card, lowConfidence: false, buffer: pixelBuffer)
+                return
+            }
         }
         // .accurate reliably reads the small printed card number that .fast misses.
         request.recognitionLevel = .accurate

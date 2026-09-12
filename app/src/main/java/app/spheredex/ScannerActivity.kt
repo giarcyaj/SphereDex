@@ -100,12 +100,6 @@ class ScannerActivity : ComponentActivity() {
     private val forceCapture = AtomicBoolean(false) // set on tap; the next frame is a deliberate capture
     private var lastFullMatch = 0L                  // throttle full-mode live image matching (exec thread only)
 
-    // Diagnostics for the on-camera readout (tuning aid; remove with debugText before store release).
-    private val tapCount = AtomicInteger(0)         // taps the detector actually received
-    @Volatile private var vpApplied = false          // whether the ViewPort crop is active (analysis == preview FOV)
-    @Volatile private var lastCropDims = "?"         // WxH of the card crop last hashed
-    @Volatile private var lastOcrInfo = "—"          // what the OCR/name pass last resolved to, or "—"
-
     // Robust tap detection: a full-screen OnClickListener on a camera preview is unreliable, so feed a
     // GestureDetector from dispatchTouchEvent (which sees every touch before any child consumes it).
     private val tapDetector by lazy {
@@ -124,7 +118,6 @@ class ScannerActivity : ComponentActivity() {
     private var toggleBar: LinearLayout? = null
     private var codeBtn: TextView? = null
     private var fullBtn: TextView? = null
-    private var debugText: TextView? = null   // on-camera diagnostic readout (full mode); remove before store release
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -178,22 +171,6 @@ class ScannerActivity : ComponentActivity() {
         }
         root.addView(backBtn, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(12); topMargin = dp(12)
-        })
-
-        // On-camera diagnostic readout (full mode only): shows whether the card index loaded and the
-        // nearest match distance live, so scan behaviour can be tuned from a device test. Remove before
-        // the store release.
-        debugText = TextView(this).apply {
-            setTextColor(0xCCFFFFFF.toInt())
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setPadding(dp(10), dp(4), dp(10), dp(4))
-            background = GradientDrawable().apply { cornerRadius = dp(8).toFloat(); setColor(0x66000000) }
-            text = "Scanner: starting…"
-            visibility = if (mode == "code") View.GONE else View.VISIBLE
-        }
-        root.addView(debugText, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-            bottomMargin = dp(72)
         })
 
         if (showToggle) addModeToggle()
@@ -271,11 +248,10 @@ class ScannerActivity : ComponentActivity() {
             if (mode != value) {
                 mode = value
                 reticle.fullCard = (mode != "code")
-                // Qualify: inside this TextView's apply/lambda, bare `hint`/`overlay`/`debugText` would
-                // resolve to View.getHint()/getOverlay()/..., not our Activity fields.
+                // Qualify: inside this TextView's apply/lambda, bare `hint`/`overlay` would resolve to
+                // View.getHint()/getOverlay(), not our Activity fields.
                 this@ScannerActivity.hint.text = hintText()
                 this@ScannerActivity.overlay.hide()
-                this@ScannerActivity.debugText?.visibility = if (mode == "code") View.GONE else View.VISIBLE
                 lastFullMatch = 0L
                 refreshToggle()
             }
@@ -321,8 +297,6 @@ class ScannerActivity : ComponentActivity() {
 
     private fun screenTapped() {
         if (handled || processing) return
-        tapCount.incrementAndGet()
-        updateDebug()
         root.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         flash()
         forceCapture.set(true)   // the next frame is treated as a deliberate capture
@@ -367,10 +341,8 @@ class ScannerActivity : ComponentActivity() {
                 val group = UseCaseGroup.Builder()
                     .addUseCase(preview).addUseCase(analysis).setViewPort(viewPort).build()
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, group)
-                vpApplied = true
             } else {
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
-                vpApplied = false
             }
         }, ContextCompat.getMainExecutor(this))
     }
@@ -410,16 +382,13 @@ class ScannerActivity : ComponentActivity() {
      *  3) perceptual-hash fallback for cards whose text is not legible (glare, a slab) - weak on real
      *     photos, so it only auto-accepts a strong match; a tap force-accepts the nearest. */
     private fun processFull(upright: Bitmap, forced: Boolean) {
-        updateDebug()
-
         val text = runOcr(upright)
         if (text != null) {
             val number = numberFrom(text)
-            if (number != null) { lastOcrInfo = number; identify(upright, number, false); return }
+            if (number != null) { identify(upright, number, false); return }
             val nameCard = store.resolveByName(text.text)
-            if (nameCard != null) { lastOcrInfo = nameCard.number; identify(upright, nameCard.number, false); return }
+            if (nameCard != null) { identify(upright, nameCard.number, false); return }
         }
-        lastOcrInfo = "—"
         if (handled || processing) { upright.recycle(); return }
 
         val now = SystemClock.elapsedRealtime()
@@ -430,11 +399,9 @@ class ScannerActivity : ComponentActivity() {
         // Hash only the card region (centre of the frame, card aspect) so the query matches the tight
         // reference art. A tap (forced) accepts the nearest reference at any distance; else within REJECT.
         val cardCrop = centerCardCrop(upright)
-        lastCropDims = if (cardCrop != null) "${cardCrop.width}x${cardCrop.height}" else "?"
         val match = if (cardCrop != null)
             CardImageMatcher.match(cardCrop, if (forced) Int.MAX_VALUE else REJECT_DISTANCE) else null
         cardCrop?.recycle()
-        updateDebug()
 
         val card = match?.let { store.resolve(it.first) }
         if (card == null) {
@@ -467,16 +434,6 @@ class ScannerActivity : ComponentActivity() {
         val top = ((src.height - h) / 2).coerceIn(0, src.height - h)
         Bitmap.createBitmap(src, left, top, w, h)
     } catch (_: Throwable) { null }
-
-    /** Refresh the on-camera diagnostic readout from the matcher's live state (full mode only). */
-    private fun updateDebug() {
-        val dt = debugText ?: return
-        val dh = if (!CardImageMatcher.isReady) "…"
-                 else "${CardImageMatcher.lastBestKey ?: "?"}@${if (CardImageMatcher.lastBestDistance < 0) "…" else CardImageMatcher.lastBestDistance.toString()}"
-        val line1 = "ocr $lastOcrInfo · dh $dh"
-        val line2 = "taps ${tapCount.get()} · vp ${if (vpApplied) "Y" else "N"} · q $lastCropDims"
-        runOnUiThread { dt.text = "$line1\n$line2" }
-    }
 
     /** Run ML Kit OCR once on an upright frame; null on failure. Blocking is fine on the single exec thread. */
     private fun runOcr(bmp: Bitmap): Text? = try {
