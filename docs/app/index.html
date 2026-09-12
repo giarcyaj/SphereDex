@@ -1084,6 +1084,11 @@
   .scannum{ font-family:var(--font-mono); font-size:.78rem; color:var(--ink-faint); }
   .scanfield{ margin-bottom:13px; }
   .scanlab{ font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); font-weight:700; margin-bottom:6px; }
+  .scanprice{ margin:8px 0 20px; text-align:center; }
+  .scanprice .sealprices{ justify-content:center; font-size:1.12rem; gap:8px 28px; color:var(--ink); font-weight:600; }
+  .scanprice .sealprices .spdot{ width:11px; height:11px; }
+  .scansess{ text-align:center; font-size:.78rem; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border:1px solid var(--line-strong); border-radius:999px; padding:5px 14px; margin:0 auto 12px; width:fit-content; }
+  .scanhint{ text-align:center; font-size:.82rem; font-weight:600; color:var(--gold-ink); background:color-mix(in srgb,var(--gold) 13%,var(--surface-2)); border:1px solid color-mix(in srgb,var(--gold) 38%,var(--line-strong)); border-radius:11px; padding:8px 12px; margin:0 0 12px; }
   .segrow{ display:flex; gap:8px; }
   .segrow .seg{ flex:1; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:11px;
     padding:10px; font-family:inherit; font-weight:650; font-size:.9rem; cursor:pointer; transition:border-color .14s, background .14s, color .14s; }
@@ -1092,6 +1097,10 @@
     padding:10px 12px; color:var(--ink); font-family:inherit; font-size:.95rem; box-sizing:border-box; }
   .scanbox select:focus{ outline:none; border-color:var(--accent); }
   .scangrade{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  #scanCertField{ grid-column:1 / -1; }
+  #scanCert{ width:100%; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:11px; padding:10px 12px; color:var(--ink); font-family:inherit; font-size:.95rem; box-sizing:border-box; }
+  #scanCert:focus{ outline:none; border-color:var(--accent); }
+  #scanCert::placeholder{ color:var(--ink-faint); }
   .scanbox .askbtns{ margin-top:4px; }
   /* reward celebration + confetti */
   .celebscrim{ position:fixed; inset:0; z-index:240; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(4,7,12,.62); }
@@ -1684,6 +1693,23 @@
     <h2 class="sech">Settings</h2>
     <div class="setwrap">
 
+      <div class="setcat">Scanner</div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Default scan mode</div><div class="sdesc">Code only reads the card number. Scan full card matches the whole card, so it works even when the number is hard to read.</div></div>
+        <select class="sortsel" id="setScanMode">
+          <option value="full">Scan full card</option>
+          <option value="code">Code only</option>
+        </select>
+      </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Show the mode toggle on camera</div><div class="sdesc">Show the Code only / Scan full card switch on the camera overlay.</div></div>
+        <label class="switch"><input type="checkbox" id="setScanToggle"><span class="track"></span></label>
+      </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Keep scanning</div><div class="sdesc">After you add or cancel a card, return to the camera to scan the next one.</div></div>
+        <label class="switch"><input type="checkbox" id="setScanLoop"><span class="track"></span></label>
+      </div>
+
       <div class="setcat">Defaults</div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Add cards to</div><div class="sdesc">When you tap “Collect” or a card’s binder button, add to this collection, or always ask which one.</div></div>
@@ -1922,6 +1948,7 @@
 
 <div class="scanscrim" id="scanScrim" hidden>
   <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="scanName">
+    <div class="scansess" id="scanSess" hidden></div>
     <div class="scanhead">
       <img id="scanImg" alt="" role="button" tabindex="0" title="Tap to enlarge" aria-label="Enlarge scanned card image" />
       <div class="scanmeta">
@@ -1930,6 +1957,8 @@
         <div class="scannum" id="scanNum"></div>
       </div>
     </div>
+    <div class="scanprice" id="scanPrice" hidden></div>
+    <div class="scanhint" id="scanHint" hidden>Not sure this is the exact card. Check it below.</div>
     <button type="button" class="scanwrong" id="scanWrong" hidden>Not the right card? Pick the variant</button>
     <div class="scanvariants" id="scanVariants" hidden></div>
     <div class="scanfield">
@@ -1943,6 +1972,13 @@
       <div class="scanfield">
         <div class="scanlab">Collection</div>
         <select id="scanColSel"></select>
+      </div>
+      <div class="scanfield" id="scanEditionRow" hidden>
+        <div class="scanlab">Edition</div>
+        <div class="segrow" id="scanEdition">
+          <button type="button" class="seg" data-edition="1">1st</button>
+          <button type="button" class="seg" data-edition="2">2nd</button>
+        </div>
       </div>
       <div class="scanfield" id="scanTypeRow">
         <div class="scanlab">Type</div>
@@ -1959,6 +1995,10 @@
         <div class="scanfield">
           <div class="scanlab">Grade</div>
           <select id="scanGradeSel"></select>
+        </div>
+        <div class="scanfield" id="scanCertField">
+          <div class="scanlab">Cert number</div>
+          <input id="scanCert" type="text" inputmode="numeric" autocomplete="off" placeholder="Optional">
         </div>
       </div>
     </div>
@@ -2254,7 +2294,7 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
@@ -5132,7 +5172,8 @@
   }
   // ---- Rich scan confirmation: card image → Wishlist/Collection → Raw/Graded → which collection.
   var scanScrim=$("scanScrim");
-  var scanState={card:null,dest:"collection",type:"raw"};
+  var scanState={card:null,dest:"collection",type:"raw",edition:"1"};
+  var scanSession={count:0,value:0,ts:0};  // running tally across a continuous-scan burst (Collectr-inspired); auto-resets after 60s idle
   function paintSeg(rowId,attr,val){
     var row=$(rowId); if(!row) return;
     Array.prototype.forEach.call(row.querySelectorAll(".seg"), function(b){
@@ -5142,16 +5183,37 @@
   function paintScan(){
     paintSeg("scanDest","data-dest",scanState.dest);
     paintSeg("scanType","data-type",scanState.type);
+    paintSeg("scanEdition","data-edition",scanState.edition);
     var isColl=scanState.dest==="collection";
     $("scanCollOpts").hidden=!isColl;
+    $("scanEditionRow").hidden=!(isColl && canEdition(scanState.card));
     $("scanGradeWrap").hidden=!(isColl && scanState.type==="graded");
+  }
+  // The 2nd Edition reprint only covers the Dawn of Palpagos sets, so the edition choice only shows for those.
+  var EDITION_SETS={EBP01:1,ETD01:1,ETD02:1};
+  function canEdition(card){ return !!(card && EDITION_SETS[card.set]); }
+  // Quick price glance in the scan popup. Convention (matches the rest of the app): blue = last sold, green = live listings.
+  function scanPriceRow(card){
+    var el=$("scanPrice"); if(!el) return;
+    if(!card || SETTINGS.mode==="collector"){ el.hidden=true; el.innerHTML=""; return; }
+    var sold=unitOf(card.id,"sold"), live=unitOf(card.id,"live");
+    el.hidden=false;
+    el.innerHTML='<div class="sealprices">'
+      +'<span class="spx"><i class="spdot spsold"></i>Sold '+((+sold>0)?money(sold):"—")+'</span>'
+      +'<span class="spx"><i class="spdot splive"></i>Live '+((+live>0)?money(live):"—")+'</span>'
+      +'</div>';
   }
   function scanSetCard(card){
     scanState.card=card;
     $("scanImg").src=imgSrc(card);
     $("scanName").textContent=card.name;
     $("scanNum").textContent=card.id;
+    scanPriceRow(card);
     var vs=$("scanVariants"); if(vs){ Array.prototype.forEach.call(vs.children,function(b){ b.classList.toggle("on", b.getAttribute("data-id")===card.id); }); }
+    // Fill the precise avg-5 sold + live once (needs network); refresh the row only if this card is still shown.
+    if(apiBase() && SETTINGS.mode!=="collector" && typeof pullCardMarket==="function"){
+      try{ pullCardMarket(card, SETTINGS.ebayRegion||"co.uk", true).then(function(){ if(scanState.card && scanState.card.id===card.id) scanPriceRow(scanState.card); }).catch(function(){}); }catch(e){}
+    }
   }
   // OCR often misreads full-art (SR/OSR/SSP) cards, so let the user pick the right printing of the same number.
   function scanBuildVariants(card){
@@ -5162,18 +5224,26 @@
     vs.innerHTML=variants.map(function(c){ return '<button type="button" class="scanvar'+(c.id===card.id?' on':'')+'" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><span class="vn">'+esc(c.id)+'</span><span class="vr">'+esc(c.rare)+'</span></button>'; }).join("");
     Array.prototype.forEach.call(vs.querySelectorAll(".scanvar"), function(b){ b.onclick=function(){ var c=byNumberIdx[(b.getAttribute("data-id")||"").toUpperCase()]; if(c){ scanSetCard(c); vs.hidden=true; } }; });
   }
-  function openScanModal(card){
+  function openScanModal(card, edition, graded, lowConf){
     if(!scanScrim) return;
-    scanState.dest="collection"; scanState.type="raw";
+    scanState.dest="collection"; scanState.type=(graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
+    scanState.edition=(String(edition)==="2")?"2":"1";
     scanSetCard(card);
     scanBuildVariants(card);
+    // Running-session tally (auto-resets after 60s idle) + low-confidence prompt (TCGplayer-inspired: don't silently guess).
+    if(Date.now()-scanSession.ts > 60000){ scanSession.count=0; scanSession.value=0; }
+    var ssEl=$("scanSess"); if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
+    var hintEl=$("scanHint"); if(hintEl) hintEl.hidden=!lowConf;
+    if(lowConf){ var _wb=$("scanWrong"), _vs=$("scanVariants"); if(_wb && _vs && !_wb.hidden) _vs.hidden=false; }
     // "Add cards to" default sticks; fall back to the active collection.
     var cs=$("scanColSel"); cs.innerHTML="";
     var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;})) ? SETTINGS.defaultAddCol : activeCol().id;
     STATE.cols.forEach(function(col){ var op=document.createElement("option"); op.value=col.id; op.textContent=col.name; if(col.id===def)op.selected=true; cs.appendChild(op); });
-    // "Default grading company" default sticks.
-    $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join("");
-    $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(x==="10"?' selected':'')+'>'+x+'</option>';}).join("");
+    // "Default grading company" default sticks; a scanned slab pre-fills the detected company / grade / cert.
+    var gGr=(graded&&graded.grader)||SETTINGS.defaultGrader||"PSA", gGd=(graded&&graded.grade)?String(graded.grade):"10";
+    $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+(gGr===x?' selected':'')+'>'+x+'</option>';}).join("");
+    $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(String(x)===gGd?' selected':'')+'>'+x+'</option>';}).join("");
+    var certEl=$("scanCert"); if(certEl) certEl.value=(graded&&graded.cert)?String(graded.cert):"";
     paintScan();
     var _scWas=!scanScrim.hidden;
     scanScrim.hidden=false;
@@ -5186,11 +5256,14 @@
     if(!apiBase() || SETTINGS.mode==="collector" || typeof pullCardMarket!=="function") return;
     try{ pullCardMarket(card, SETTINGS.ebayRegion||"co.uk").then(function(v){ if(v!=null){ save(); render(); } }).catch(function(){}); }catch(e){}
   }
+  // Continuous scanning: after Add/Cancel, reopen the native camera so the user can scan the next card.
+  function scanContinue(){ try{ if(SETTINGS.scanLoop!==false && window.AndroidScan && typeof window.AndroidScan.scan==="function") setTimeout(function(){ window.AndroidScan.scan(); },120); }catch(e){} }
   (function(){
     if(!scanScrim) return;
     $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); });
     $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); });
-    $("scanCancel").onclick=dismissOverlay;
+    $("scanEdition").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.edition=b.getAttribute("data-edition"); paintScan(); });
+    $("scanCancel").onclick=function(){ dismissOverlay(); scanContinue(); };
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
     var si=$("scanImg"); if(si){ si.onclick=function(){ if(scanState.card) openLightbox(scanState.card); }; si.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(scanState.card) openLightbox(scanState.card); } }; }
     scanScrim.addEventListener("click", function(e){ if(e.target===scanScrim) dismissOverlay(); });
@@ -5202,38 +5275,45 @@
         toast(card.name+" → Wishlist");
       } else {
         var colId=$("scanColSel").value;
+        var ed=canEdition(card)?scanState.edition:null;
         if(scanState.type==="graded"){
           var col=STATE.cols.filter(function(x){return x.id===colId;})[0];
           if(col){
             var e=col.own[card.id]; if(!e){ e=col.own[card.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
             if(!e.graded) e.graded=[];
-            var gr=$("scanGraderSel").value, gd=$("scanGradeSel").value;
-            e.graded.push({grader:gr, grade:gd, value:0});
+            var gr=$("scanGraderSel").value, gd=$("scanGradeSel").value, cert=($("scanCert").value||"").trim();
+            var gobj={grader:gr, grade:gd, value:0}; if(ed) gobj.edition=ed; if(cert) gobj.cert=cert;
+            e.graded.push(gobj);
             save(); render();
-            toast(card.name+" · "+gr+" "+gd+" → "+colName(colId));
+            toast(card.name+" · "+gr+" "+gd+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
           }
         } else {
           addToCollection(colId, card.id);
-          toast(card.name+" → "+colName(colId));
+          if(ed){ var col2=STATE.cols.filter(function(x){return x.id===colId;})[0]; if(col2 && col2.own[card.id]){ col2.own[card.id].edition=ed; save(); } }
+          toast(card.name+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
         }
         scanBgPrice(card);
+        scanSession.count++; scanSession.value += unitOf(card.id); scanSession.ts=Date.now();
       }
-      dismissOverlay();
+      dismissOverlay(); scanContinue();
     };
   })();
   // Bridge for the native Android camera scanner: open the confirmation modal for a scanned card.
-  window.SDScanAdd = function(id){
+  window.SDScanAdd = function(id, edition, graded, lowConf){
     try{
       if(!id) return false;
+      if(typeof graded==="string"){ try{ graded=JSON.parse(graded); }catch(e){ graded=null; } }
       var card = CARDS.filter(function(c){ return c.id===id; })[0]
               || CARDS.filter(function(c){ return c.base===id; })[0];
       if(!card) return false;
-      openScanModal(card);
+      openScanModal(card, edition, graded, !!lowConf);
       return true;
     }catch(e){ return false; }
   };
   // Native camera reads this to show which collection a scan will go to.
   window.SDActiveCollection = function(){ try{ return activeCol().name || ""; }catch(e){ return ""; } };
+  // Native camera reads the scan preferences: default mode ("full" | "code"), whether to show the on-camera toggle, and the continuous-scan loop.
+  window.SDScanPrefs = function(){ try{ return JSON.stringify({mode:(SETTINGS.scanMode==="code"?"code":"full"), toggle:SETTINGS.scanToggle!==false, loop:SETTINGS.scanLoop!==false}); }catch(e){ return '{"mode":"full","toggle":true,"loop":true}'; } };
   // Bridge for a tapped push notification (Android + iOS): route the notification's url. An external
   // link (e.g. a news article) opens in the system browser; a bare page name switches pages.
   window.SDOpenPush = function(url){
@@ -5298,6 +5378,10 @@
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
+    // Scanner prefs (the native camera reads these via SDScanPrefs): default recognizer mode, on-camera toggle visibility, continuous-scan loop.
+    var sm=$("setScanMode"); if(sm){ sm.value=(SETTINGS.scanMode==="code")?"code":"full"; sm.onchange=function(){ SETTINGS.scanMode=(sm.value==="code")?"code":"full"; saveSettings(); }; }
+    var st=$("setScanToggle"); if(st){ st.checked=SETTINGS.scanToggle!==false; st.onchange=function(){ SETTINGS.scanToggle=st.checked; saveSettings(); }; }
+    var sl=$("setScanLoop"); if(sl){ sl.checked=SETTINGS.scanLoop!==false; sl.onchange=function(){ SETTINGS.scanLoop=sl.checked; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
     if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[]};
     if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=false;                      // stock alerts default off; turns on when a product is followed
