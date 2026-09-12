@@ -81,6 +81,47 @@ class BinderStore(private val context: Context) {
             .maxByOrNull { it.key.length }
             ?.value
     }
+    // ---- name matching (full-card scan) ----
+    // The printed card NAME is large and clear even when the collector number is too small to OCR, so
+    // matching the recognised text against card names is far more reliable than perceptual image hashing.
+
+    private fun nameTokens(name: String): List<String> =
+        name.uppercase().split(Regex("[^A-Z0-9]+")).filter { it.length >= 4 }
+
+    // Distinctive name tokens -> one representative card per base printing (variants share a name; the
+    // scan popup's variant picker then narrows to the exact printing).
+    private val nameIndex: List<Pair<List<String>, Card>> by lazy {
+        val seen = HashSet<String>()
+        cards.mapNotNull { c ->
+            if (!seen.add(c.base)) return@mapNotNull null
+            val toks = nameTokens(c.name)
+            if (toks.isEmpty()) null else toks to c
+        }
+    }
+
+    /** Best card whose printed name overlaps [ocrText]; null when the match is weak (avoids false hits). */
+    fun resolveByName(ocrText: String): Card? {
+        if (ocrText.isBlank()) return null
+        val hay = ocrText.uppercase().replace(Regex("[^A-Z0-9]+"), " ")
+        var best: Card? = null
+        var bestHits = 0
+        var bestScore = 0.0
+        for ((toks, card) in nameIndex) {
+            val hits = toks.count { hay.contains(it) }
+            if (hits == 0) continue
+            val score = hits.toDouble() / toks.size
+            if (hits > bestHits || (hits == bestHits && score > bestScore)) {
+                bestHits = hits; bestScore = score; best = card
+            }
+        }
+        val bestToks = best?.let { nameTokens(it.name).size } ?: 0
+        return when {
+            bestHits >= 2 && bestScore >= 0.5 -> best   // two or more distinctive words, half the name
+            bestHits >= 1 && bestToks == 1 -> best       // a single-word name matched in full
+            else -> null
+        }
+    }
+
     fun entry(number: String): OwnEntry = own[number] ?: OwnEntry()
 
     fun setEntry(number: String, e: OwnEntry) {

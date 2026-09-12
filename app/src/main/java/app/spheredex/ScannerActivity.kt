@@ -37,6 +37,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import org.json.JSONObject
@@ -103,6 +104,7 @@ class ScannerActivity : ComponentActivity() {
     private val tapCount = AtomicInteger(0)         // taps the detector actually received
     @Volatile private var vpApplied = false          // whether the ViewPort crop is active (analysis == preview FOV)
     @Volatile private var lastCropDims = "?"         // WxH of the card crop last hashed
+    @Volatile private var lastOcrInfo = "—"          // what the OCR/name pass last resolved to, or "—"
 
     // Robust tap detection: a full-screen OnClickListener on a camera preview is unreliable, so feed a
     // GestureDetector from dispatchTouchEvent (which sees every touch before any child consumes it).
@@ -397,18 +399,27 @@ class ScannerActivity : ComponentActivity() {
     /** Code mode: OCR the printed number, resolve, finalise. Blocking OCR is fine on the single exec
      *  thread (KEEP_ONLY_LATEST just drops the frames we skip). */
     private fun processCode(upright: Bitmap, forced: Boolean) {
-        val number = ocrResolve(upright)
+        val number = runOcr(upright)?.let { numberFrom(it) }
         if (number != null) identify(upright, number, false) else upright.recycle()
     }
 
-    /** Full mode: OCR first (fast + reliable when the number is legible), then a throttled whole-card
-     *  image match that drives the AR overlay and auto-accepts a confident card (or, on a tap, accepts
-     *  the best current match, flagged low-confidence when weak). */
+    /** Full mode recognition order (most reliable first):
+     *  1) OCR the printed card NUMBER (exact),
+     *  2) OCR the printed card NAME and match the catalogue (the name is large + clear on a raw card, so
+     *     this is far more reliable than image hashing; the popup's variant picker narrows the printing),
+     *  3) perceptual-hash fallback for cards whose text is not legible (glare, a slab) - weak on real
+     *     photos, so it only auto-accepts a strong match; a tap force-accepts the nearest. */
     private fun processFull(upright: Bitmap, forced: Boolean) {
-        updateDebug()   // reflect matcher state on the readout each analysed frame
+        updateDebug()
 
-        val ocrNumber = ocrResolve(upright)
-        if (ocrNumber != null) { identify(upright, ocrNumber, false); return }
+        val text = runOcr(upright)
+        if (text != null) {
+            val number = numberFrom(text)
+            if (number != null) { lastOcrInfo = number; identify(upright, number, false); return }
+            val nameCard = store.resolveByName(text.text)
+            if (nameCard != null) { lastOcrInfo = nameCard.number; identify(upright, nameCard.number, false); return }
+        }
+        lastOcrInfo = "—"
         if (handled || processing) { upright.recycle(); return }
 
         val now = SystemClock.elapsedRealtime()
@@ -416,15 +427,14 @@ class ScannerActivity : ComponentActivity() {
         if (!due || !CardImageMatcher.isReady) { upright.recycle(); return }
         lastFullMatch = now
 
-        // Hash only the card region (centre of the frame, card aspect), not the whole frame, so the query
-        // matches the tight reference images. A tap (forced) accepts the nearest reference at any distance;
-        // otherwise only within REJECT_DISTANCE.
+        // Hash only the card region (centre of the frame, card aspect) so the query matches the tight
+        // reference art. A tap (forced) accepts the nearest reference at any distance; else within REJECT.
         val cardCrop = centerCardCrop(upright)
         lastCropDims = if (cardCrop != null) "${cardCrop.width}x${cardCrop.height}" else "?"
         val match = if (cardCrop != null)
             CardImageMatcher.match(cardCrop, if (forced) Int.MAX_VALUE else REJECT_DISTANCE) else null
         cardCrop?.recycle()
-        updateDebug()   // now reflects the nearest key + distance from this frame
+        updateDebug()
 
         val card = match?.let { store.resolve(it.first) }
         if (card == null) {
@@ -461,28 +471,27 @@ class ScannerActivity : ComponentActivity() {
     /** Refresh the on-camera diagnostic readout from the matcher's live state (full mode only). */
     private fun updateDebug() {
         val dt = debugText ?: return
-        val line1 = if (!CardImageMatcher.isReady) {
-            "Scanner: indexing cards…"
-        } else {
-            val key = CardImageMatcher.lastBestKey ?: "?"
-            val d = CardImageMatcher.lastBestDistance
-            "Index ${CardImageMatcher.count} · near $key @ ${if (d < 0) "…" else d.toString()}"
-        }
+        val dh = if (!CardImageMatcher.isReady) "…"
+                 else "${CardImageMatcher.lastBestKey ?: "?"}@${if (CardImageMatcher.lastBestDistance < 0) "…" else CardImageMatcher.lastBestDistance.toString()}"
+        val line1 = "ocr $lastOcrInfo · dh $dh"
         val line2 = "taps ${tapCount.get()} · vp ${if (vpApplied) "Y" else "N"} · q $lastCropDims"
         runOnUiThread { dt.text = "$line1\n$line2" }
     }
 
-    /** OCR one upright frame and resolve the first card number found; null if none. Runs on exec. */
-    private fun ocrResolve(bmp: Bitmap): String? = try {
-        val result = Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)))
-        var found: String? = null
-        for (block in result.textBlocks) {
+    /** Run ML Kit OCR once on an upright frame; null on failure. Blocking is fine on the single exec thread. */
+    private fun runOcr(bmp: Bitmap): Text? = try {
+        Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)))
+    } catch (_: Throwable) { null }
+
+    /** First printed card number in the OCR result that resolves to a catalogue card, else null. */
+    private fun numberFrom(text: Text): String? {
+        for (block in text.textBlocks) {
             val num = extractCardNumber(block.text) ?: continue
             val card = store.resolve(num) ?: continue
-            found = card.number; break
+            return card.number
         }
-        found
-    } catch (_: Throwable) { null }
+        return null
+    }
 
     /** A card number was identified. Read the 2nd-edition "II" mark and any graded-slab label from the
      *  same upright frame (in parallel), then return the whole outcome. Fires at most once. */
