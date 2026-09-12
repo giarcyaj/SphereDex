@@ -68,6 +68,10 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         if let url = URL(string: Self.appURL) {
             webView.load(URLRequest(url: url))
         }
+
+        // Warm up on-device full-card recognition: first launch extracts the bundled card images and
+        // computes their Vision feature prints in the background, so "Full card" mode is ready to match.
+        CardImageMatcher.shared.prepare()
     }
 
     // MARK: - Native bridges (scan + push prefs)
@@ -79,14 +83,41 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             return
         }
         guard message.name == "sdscan" else { return }
-        let scanner = ScannerViewController(resolver: resolver) { [weak self] number in
-            guard let self, let number else { return }
-            // Hand the recognised card back to the web app, which shows its rich add dialog.
-            let safe = number.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "'", with: "")
-            self.webView.evaluateJavaScript("window.SDScanAdd && window.SDScanAdd('\(safe)')", completionHandler: nil)
+        // Read the scan prefs the web Settings exposes (default mode + whether to show the on-camera
+        // toggle), then present the camera. Falls back to sensible defaults if the bridge isn't there.
+        webView.evaluateJavaScript("window.SDScanPrefs ? window.SDScanPrefs() : ''") { [weak self] result, _ in
+            guard let self = self else { return }
+            var mode = "full"
+            var showToggle = true
+            if let json = result as? String, let data = json.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let m = obj["mode"] as? String { mode = m }
+                if let t = obj["toggle"] as? Bool { showToggle = t }
+            }
+            let scanner = ScannerViewController(resolver: self.resolver, mode: mode, showToggle: showToggle) { [weak self] outcome in
+                guard let self = self, let outcome = outcome else { return }
+                self.deliverScan(outcome)
+            }
+            scanner.modalPresentationStyle = .fullScreen
+            self.present(scanner, animated: true)
         }
-        scanner.modalPresentationStyle = .fullScreen
-        present(scanner, animated: true)
+    }
+
+    /// Hand a scan result to the web app's rich add dialog:
+    /// SDScanAdd(number, edition, graded{grader,grade,cert}|null, lowConfidence).
+    private func deliverScan(_ outcome: ScanOutcome) {
+        let num = outcome.number.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "'", with: "")
+        var gradedJS = "null"
+        if let slab = outcome.slab {
+            let dict: [String: String] = ["grader": slab.grader, "grade": slab.grade, "cert": slab.cert ?? ""]
+            if let data = try? JSONSerialization.data(withJSONObject: dict),
+               let str = String(data: data, encoding: .utf8) {
+                gradedJS = str
+            }
+        }
+        let lowConf = outcome.lowConfidence ? "true" : "false"
+        let js = "window.SDScanAdd && window.SDScanAdd('\(num)', \(outcome.edition), \(gradedJS), \(lowConf))"
+        webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
     // The bundled page finished loading: release any deep link queued from a cold-start notification tap.

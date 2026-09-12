@@ -7,6 +7,8 @@ final class CardResolver {
 
     /// normalized (letters+digits only, uppercased) -> canonical card number
     private var byNormalized: [String: String] = [:]
+    /// canonical card number -> display name (for the live AR overlay)
+    private var nameByNumber: [String: String] = [:]
 
     init() {
         guard let url = Bundle.main.url(forResource: "paldeck_cards", withExtension: "json"),
@@ -18,9 +20,13 @@ final class CardResolver {
         for card in cards {
             if let number = card["number"] as? String {
                 byNormalized[normalize(number)] = number
+                nameByNumber[number] = card["name"] as? String
             }
         }
     }
+
+    /// Display name for a canonical card number (English), for the AR translation overlay.
+    func name(for number: String) -> String? { nameByNumber[number] }
 
     private func normalize(_ s: String) -> String {
         String(s.uppercased().filter { $0.isLetter || $0.isNumber })

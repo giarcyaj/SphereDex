@@ -20,8 +20,8 @@ android {
         minSdk = 24
         targetSdk = 36
         // CI sets VERSION_CODE from the build number so each upload is unique; local builds fall back to 4.
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 9
-        versionName = "1.6"
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 10
+        versionName = "1.7"
     }
     signingConfigs {
         create("release") {

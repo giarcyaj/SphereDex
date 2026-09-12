@@ -22,8 +22,8 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         # Version source of truth for Xcode Cloud (ci_post_clone.sh regenerates the project from this).
         # Keep in step with android/src/paldeck.html APP_VERSION and app/build.gradle.kts on each release.
-        MARKETING_VERSION: "1.6"
-        CURRENT_PROJECT_VERSION: "9"
+        MARKETING_VERSION: "1.7"
+        CURRENT_PROJECT_VERSION: "10"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
