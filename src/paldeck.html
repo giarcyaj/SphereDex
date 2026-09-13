@@ -794,6 +794,8 @@
   .pcchg.up { color:var(--el-Grass); } .pcchg.down { color:var(--el-Fire); } .pcchg.flat { color:var(--ink-faint); }
   .pcchart { width:100%; height:150px; display:block; }
   .pcchartwrap { position:relative; cursor:crosshair; touch-action:pan-y; }
+  /* Loading circle shown over the portfolio graph while last-sold prices are being pulled. */
+  .pcgraphspin { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border-radius:inherit; background:color-mix(in srgb,var(--surface) 55%,transparent); z-index:5; pointer-events:none; }
   .pcmark { position:absolute; width:11px; height:11px; border-radius:50%; background:var(--up); border:2px solid var(--surface); transform:translate(-50%,-50%); pointer-events:none; box-shadow:0 0 0 4px color-mix(in srgb,var(--up) 30%,transparent); }
   .pctip { position:absolute; top:-4px; transform:translate(-50%,-100%); background:var(--ink); color:var(--bg); padding:6px 10px; border-radius:10px; white-space:nowrap; pointer-events:none; display:flex; flex-direction:column; gap:1px; box-shadow:0 10px 24px -10px rgba(0,0,0,.55); z-index:6; }
   .pctip b { font-family:var(--font-mono); font-size:.92rem; }
@@ -2102,7 +2104,7 @@
   var LS_KEY = "palvault-v1";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 1.2.
-  var APP_VERSION = "1.7";
+  var APP_VERSION = "1.8";
   var STATE = loadState();
   function loadState(){
     var s=null; try { s=JSON.parse(localStorage.getItem(LS_KEY)); } catch(e){}
@@ -2184,10 +2186,12 @@
       if(e){ if(+e.sold>0) return +e.sold; if(+e.mkt>0) return +e.mkt; }
       var pbs=PRICEBOOK_SOLD[id]; if(pbs!=null) return +pbs;
     } else {
-      // Live mode: your precise live figure (rarely set per-card), then the DAILY live book (owned or not),
-      // and only as a last resort the sold-derived headline — never let e.mkt (sold) masquerade as live.
-      if(e && +e.list>0) return +e.list;
+      // Live mode: the DAILY live book FIRST (the server refreshes it every night, so it never goes stale),
+      // then a precise per-card live figure only if the book has nothing for this card, and the sold-derived
+      // headline as a last resort — never let e.mkt (sold) masquerade as live. Book-first is what stops an
+      // owned card freezing on an old per-card e.list while the daily book moves underneath it.
       var pbl=PRICEBOOK[id]; if(pbl!=null) return +pbl;
+      if(e && +e.list>0) return +e.list;
       if(e && +e.mkt>0) return +e.mkt;
     }
     return 0; }
@@ -3883,17 +3887,33 @@
   // so this is the only manual trigger the user needs: it updates the last-sold book and drops a blue mark
   // on the graph for today. Uses the FREE-quota-aware backend endpoint (SoldComps), so it's a deliberate tap.
   var soldRefreshing=false;
-  function refreshLastSold(){
-    if(soldRefreshing){ toast("Already refreshing…"); return; }
-    if(!apiBase()){ toast("Prices are unavailable right now"); return; }
+  // Repaint the portfolio card + (if open) its detail page, so the graph loading circle shows/clears.
+  function paintGraph(){
+    if(typeof renderHome==="function") renderHome();
+    var pg=document.getElementById("page-portfolio");
+    if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+  }
+  // Pull fresh last-sold comps for the owned cards. Manual (button): refreshes everything the user owns.
+  // Auto ({auto:true}, on app open): silent, runs at most once per 12h per device, and asks the server to
+  // skip cards it (or another user, or the nightly cron) refreshed in the last 24h - so the graph stays
+  // current without re-spending on cards that are already fresh. Live listings stay on the cached book.
+  function refreshLastSold(opts){
+    opts=opts||{};
+    if(soldRefreshing){ if(!opts.auto) toast("Already refreshing…"); return; }
+    if(!apiBase()){ if(!opts.auto) toast("Prices are unavailable right now"); return; }
+    if(opts.auto && SETTINGS.mode==="collector") return;                           // prices hidden -> nothing to show
+    if(opts.auto && (Date.now()-(SETTINGS.lastSoldAuto||0)) < 12*3600*1000) return; // already pulled recently on this device
     var col=activeCol(), ids=[];
     CARDS.forEach(function(c){ var e=col.own[c.id]; if(e && (e.qty>0 || (e.graded&&e.graded.length))) ids.push(c.id); });
-    if(!ids.length){ toast("Add some cards to your collection first"); return; }
+    if(!ids.length){ if(!opts.auto) toast("Add some cards to your collection first"); return; }
+    if(opts.auto){ SETTINGS.lastSoldAuto=Date.now(); saveSettings(); }
     var region=SETTINGS.ebayRegion||"co.uk";
     soldRefreshing=true;
     Array.prototype.forEach.call(document.querySelectorAll(".soldrefresh"), function(b){ b.classList.add("spin"); b.disabled=true; });
-    api("/api/refresh-sold","POST",{ids:ids, region:region}).then(function(r){
-      if(!r.ok){ toast((r.body&&r.body.error)?r.body.error:"Couldn't refresh last sold"); return; }
+    paintGraph();   // show the loading circle on the graph while the pull is in flight
+    var body={ids:ids, region:region}; if(opts.auto) body.staleH=24;   // auto: server skips cards fresh within 24h
+    api("/api/refresh-sold","POST",body).then(function(r){
+      if(!r.ok){ if(!opts.auto) toast((r.body&&r.body.error)?r.body.error:"Couldn't refresh last sold"); return; }
       var sold=r.body.sold||{}, n=0;
       // The bulk sold endpoint has no edition dimension (it returns English/market comps), so in JP
       // edition only refresh the English fallback book, never overwrite a card's JP flat sold price.
@@ -3901,20 +3921,17 @@
       if(r.body.soldRefreshedAt){ var t=Date.parse(r.body.soldRefreshedAt); if(t) SOLD_ASOF=t; }
       try{ localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       save();   // persist the refreshed sold prices onto the (captured) collection either way
-      // Only stamp the blue mark + repaint if we're still on the collection we refreshed — a mid-flight
-      // collection switch must not brand a different collection with a mark it never earned.
+      // Only stamp the blue mark if we're still on the collection we refreshed — a mid-flight collection
+      // switch must not brand a different collection with a mark it never earned.
       if(activeCol()===col){
         stampSoldMark();   // blue mark on today's point for THIS collection (saves)
         try{ if(SOLD_ASOF) localStorage.setItem("palvault-sold-mark-asof", String(SOLD_ASOF)); }catch(_){}
-        if(typeof renderHome==="function") renderHome();   // repaint the portfolio card + its chart now
-        var pg=document.getElementById("page-portfolio");
-        if(pg && pg.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
-        render();
       }
-      toast(n? ("Last sold updated · "+n+" card"+(n>1?"s":"")) : "No sold prices found yet");
-    }).catch(function(){ toast("Last sold refresh failed"); }).then(function(){
+      if(!opts.auto) toast(n? ("Last sold updated · "+n+" card"+(n>1?"s":"")) : "No sold prices found yet");
+    }).catch(function(){ if(!opts.auto) toast("Last sold refresh failed"); }).then(function(){
       soldRefreshing=false;
       Array.prototype.forEach.call(document.querySelectorAll(".soldrefresh"), function(b){ b.classList.remove("spin"); b.disabled=false; });
+      render(); paintGraph();   // clear the loading circle + repaint grids/graph with the fresh sold values
     });
   }
   // Reusable "are you sure?" dialog, rendered into the shared #mMain overlay.
@@ -3963,12 +3980,13 @@
       '</div>'+
       '<div class="pcchartwrap" id="pcWrap">'+ chartSVG(series, {dual:true})+
         '<div class="pcmark" id="pcMark" hidden></div><div class="pctip" id="pcTip" hidden></div>'+
+        (soldRefreshing?'<div class="pcgraphspin" aria-hidden="true">'+SPIN+'</div>':'')+
       '</div>'+
       '<div class="pclegend priceui" aria-hidden="true"><span class="lg lglive">Live listings</span>'+(hasSold?'<span class="lg lgsold">Last sold</span>':'')+'</div>'+
       '<div class="pcfoot"><span class="pcrefsub" id="lastRefreshLbl"></span>'+
         '<span class="pcbtns">'+
           '<button class="pcrefbtn" id="portHistBtn" type="button">'+icon('chart')+' Portfolio history</button>'+
-          (apiBase()?'<button class="pcrefbtn soldrefresh priceui" id="refreshSoldBtn" type="button">'+icon('refresh')+' Refresh last sold</button>':'')+
+          (apiBase()?'<button class="pcrefbtn soldrefresh priceui'+(soldRefreshing?' spin':'')+'" id="refreshSoldBtn" type="button"'+(soldRefreshing?' disabled':'')+'>'+icon('refresh')+' Refresh last sold</button>':'')+
         '</span></div>'+
       (series.length<2?'<div class="pcnote">Your total is saved each day, so the line grows as the days pass.</div>':'<div class="pcnote">Tap the chart for the full history and a day by day breakdown.</div>');
     wireChart(series, {dual:true}, function(){ showPage("portfolio"); });
@@ -4017,7 +4035,8 @@
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(pts[0].d)+'</span></div></div>'+
       '<div class="pcchartwrap pcbig'+(isSold?' pcsold':'')+'" id="pdWrap">'+ chartSVG(pts, {single:true, color:(isSold?"var(--azure)":"var(--up)"), gradId:"pdg"})+
-        '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div></div>'+
+        '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div>'+
+        (soldRefreshing?'<div class="pcgraphspin" aria-hidden="true">'+SPIN+'</div>':'')+'</div>'+
       '<div class="pclegend priceui" aria-hidden="true">'+(isSold?'<span class="lg lgsold">Last sold</span>':'<span class="lg lglive">Live listings</span>')+'</div>'+
       '<div class="pdstats"><div class="hs"><span class="n">'+money(hi)+'</span><span class="l">High</span></div>'+
         '<div class="hs"><span class="n">'+money(lo)+'</span><span class="l">Low</span></div>'+
@@ -5715,8 +5734,10 @@
   if(ftg){ paintFade(); ftg.onclick=function(){ SETTINGS.noFade=!SETTINGS.noFade; saveSettings(); paintFade(); render(); var nf=$("setNoFade"); if(nf) nf.checked=!!SETTINGS.noFade; }; }
   // Store links are placeholders until the apps are published.
   maybeOnboard();
-  // On open, refresh owned-card prices (staleness-gated + capped) so the total + graph stay current.
-  function autoRefreshPrices(){ refreshCollectionPrices({auto:true}); }
+  // On open: live listings come from the cached price book (loaded above, no per-card pull), and we pull
+  // fresh last-sold for owned cards so the collection + graph are up to date - shown by the graph's
+  // loading circle. Staleness-gated + server-shared, so it can't run away with the sold-comp quota.
+  function autoRefreshPrices(){ refreshLastSold({auto:true}); }
   if(AUTH.token && apiBase()){ pullState().then(function(){ setTimeout(autoRefreshPrices, 500); }); }
   else { setTimeout(autoRefreshPrices, 900); }
 })();
