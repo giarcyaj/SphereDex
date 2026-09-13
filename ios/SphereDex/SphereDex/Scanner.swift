@@ -5,7 +5,7 @@ import QuartzCore
 
 // Card numbers: E + set-code letters + optional set digits + optional hyphen + 3 digits + optional rarity letters.
 // e.g. EBP01-001, EBP01001, EBP01-001OSR, ETD01-001TSR, EPR-001.
-private let cardNumberRegex = try! NSRegularExpression(pattern: "E[A-Z]{1,5}\\d{0,2}-?\\d{3}[A-Z]{0,3}")
+private let cardNumberRegex = try! NSRegularExpression(pattern: "E[A-Z]{1,4}\\d{0,2}-?\\d{3}[A-Z]{0,3}")
 
 func extractCardNumber(from text: String) -> String? {
     let t = text.uppercased().replacingOccurrences(of: " ", with: "")
@@ -19,17 +19,19 @@ func extractCardNumber(from text: String) -> String? {
 struct ScanOutcome {
     let number: String        // canonical card number
     let edition: Int          // 1 (default) or 2 (the "II" reprint)
-    let slab: SlabInfo?       // graded-slab label (grader/grade/cert), or nil for a raw card
+    let slab: SlabInfo?       // graded-slab label (grader/grade/cert + label lines), or nil for a raw card
     let lowConfidence: Bool   // weak match -> the popup opens its variant picker to confirm
 }
 
 /// Full-screen live camera scanner with two modes:
 ///   "code" - Vision OCR of the printed card number (original, always reliable).
-///   "full" - on-device whole-card image recognition (CardImageMatcher) with a live English AR
-///            overlay; OCR runs alongside as a fast, reliable tie-breaker.
-/// Once a card is identified it also reads the 2nd-edition "II" mark and any graded-slab label, then
-/// returns the whole ScanOutcome so the web app shows its rich confirmation. Tap anywhere to force a
-/// scan of the current frame; after Add/Cancel the web app reopens the camera (the continuous loop).
+///   "full" - label-first slab detection, then OCR of the printed number / name, then on-device
+///            whole-card image recognition (CardImageMatcher) with a live English AR overlay.
+/// In full mode each frame is first probed for a graded slab (barcode/QR or a grading company in the
+/// label band); a slab is identified from its LABEL's own lines and its grader/grade/cert carried through
+/// to whichever step identifies the card. Once a card is identified it also reads the 2nd-edition "II"
+/// mark, then returns the whole ScanOutcome so the web app shows its rich confirmation. Tap anywhere to
+/// force a scan of the current frame; after Add/Cancel the web app reopens the camera (the continuous loop).
 final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, UIGestureRecognizerDelegate {
 
     private let resolver: CardResolver
@@ -43,9 +45,9 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
     private var previewLayer: AVCaptureVideoPreviewLayer?
 
     private var finished = false
-    private var processing = false          // finalising a candidate (edition/slab); blocks new work
+    private var processing = false          // finalising a candidate (edition); blocks new work
     private var forceCapture = false        // set on tap (camera queue); next frame is a deliberate capture
-    private var lastFullMatch: TimeInterval = 0   // throttle full-mode live image matching
+    private var lastFullMatch: TimeInterval = 0   // throttle full-mode live image matching (camera queue only)
 
     // Overlay pieces
     private let reticle = UIView()
@@ -226,6 +228,10 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
         updateHint()
         layoutReticle()
         overlay.hide()
+        // Throttle state lives on the camera queue; reset it there so the new mode starts fresh.
+        queue.async {
+            self.lastFullMatch = 0
+        }
     }
 
     private func refreshToggle() {
@@ -309,18 +315,38 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
         else { runFull(pixelBuffer, forced: tapped) }
     }
 
-    /// OCR path: read the printed number, resolve, and finalise.
+    /// OCR path: read the printed number, resolve, and finalise. The slab probe runs on the same frame
+    /// only once a number resolves (same as Android), so a slabbed card scanned by its code still
+    /// reports its grade without paying for the probe on every frame.
     private func runOCR(_ pixelBuffer: CVPixelBuffer, forced: Bool) {
-        let request = makeOCRRequest(pixelBuffer)
-        try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right).perform([request])
+        guard let card = recogniseText(pixelBuffer, byName: false) else { return }
+        identify(card, lowConfidence: false, buffer: pixelBuffer, slab: probeSlab(pixelBuffer))
     }
 
-    /// Full-card path: OCR every frame (fast, reliable when the number is legible), plus a throttled
-    /// image match that drives the live English overlay and auto-accepts a confident card (or, on a tap,
-    /// accepts the best current match, flagged low-confidence when weak).
+    /// Full mode recognition order (most reliable first):
+    ///  0) SLAB: if the frame shows a graded slab (a barcode/QR, or a grading company in the label band), read
+    ///     the card's number/name off the LABEL - printed, high contrast, and it names the card - rather than
+    ///     off the card through the plastic, which is what used to defeat graded cards. The slab (company,
+    ///     grade, cert) is carried through to whichever step identifies the card,
+    ///  1) OCR the printed card NUMBER (exact),
+    ///  2) OCR the printed card NAME and match the catalogue (the name is large + clear on a raw card, so
+    ///     this is far more reliable than image matching; the popup's variant picker narrows the printing),
+    ///  3) throttled image match for cards whose text is not legible (glare, a slab) - it drives the live
+    ///     English overlay and only auto-accepts a confident card; a tap accepts the best current match,
+    ///     flagged low-confidence when weak.
     private func runFull(_ pixelBuffer: CVPixelBuffer, forced: Bool) {
-        let ocr = makeOCRRequest(pixelBuffer)
-        try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right).perform([ocr])
+        let slab = probeSlab(pixelBuffer)
+        if let slab = slab {
+            if let card = numberFromLines(slab.labelLines) ?? resolver.resolveByName(slab.labelLines) {
+                identify(card, lowConfidence: false, buffer: pixelBuffer, slab: slab)
+                return
+            }
+        }
+
+        if let card = recogniseText(pixelBuffer, byName: true) {
+            identify(card, lowConfidence: false, buffer: pixelBuffer, slab: slab)
+            return
+        }
         if finished || processing { return }
 
         let now = CACurrentMediaTime()
@@ -341,55 +367,64 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
                 }
             }
             if confidence >= Self.autoAcceptConfidence {
-                self.identify(card, lowConfidence: false, buffer: pixelBuffer)
+                self.identify(card, lowConfidence: false, buffer: pixelBuffer, slab: slab)
             } else if forced {
-                self.identify(card, lowConfidence: true, buffer: pixelBuffer)   // tap accepted a weak match
+                self.identify(card, lowConfidence: true, buffer: pixelBuffer, slab: slab)   // tap accepted a weak match
             }
         }
     }
 
-    private func makeOCRRequest(_ pixelBuffer: CVPixelBuffer) -> VNRecognizeTextRequest {
-        let request = VNRecognizeTextRequest { [weak self] req, _ in
-            guard let self = self, !self.finished, !self.processing else { return }
-            let lines = (req.results as? [VNRecognizedTextObservation] ?? [])
+    /// Slab probe (barcode/QR + label band OCR) on THIS frame. Never cached across frames: identify is
+    /// one shot, so a stale result would either let a slab finish as raw (stale nil) or hand the previous
+    /// slab's cert to a different card (stale positive). Camera queue only; the Vision perform inside
+    /// SlabReader.probe is synchronous on this queue, never on main.
+    private func probeSlab(_ pixelBuffer: CVPixelBuffer) -> SlabInfo? {
+        SlabReader.probe(pixelBuffer, orientation: .right)
+    }
+
+    /// First card number in a list of OCR lines (the slab label) that resolves to a catalogue card.
+    private func numberFromLines(_ lines: [String]) -> String? {
+        for line in lines {
+            guard let raw = extractCardNumber(from: line), let card = resolver.resolve(raw) else { continue }
+            return card
+        }
+        return nil
+    }
+
+    /// One .accurate OCR pass over this frame, synchronous on the camera queue (Vision invokes the
+    /// completion before perform returns): the first printed card NUMBER that resolves, else, when
+    /// `byName` (full mode), the printed card NAME matched against the catalogue. The name is large and
+    /// clear even when the number is not, so it is far more reliable than image feature-prints. Nil when
+    /// neither reads, or when a result has already been returned.
+    private func recogniseText(_ pixelBuffer: CVPixelBuffer, byName: Bool) -> String? {
+        var lines: [String] = []
+        let request = VNRecognizeTextRequest { req, _ in
+            lines = (req.results as? [VNRecognizedTextObservation] ?? [])
                 .compactMap { $0.topCandidates(1).first?.string }
-            for line in lines {
-                if let raw = extractCardNumber(from: line), let card = self.resolver.resolve(raw) {
-                    self.identify(card, lowConfidence: false, buffer: pixelBuffer)
-                    return
-                }
-            }
-            // Full mode: the printed card NAME is large and clear even when the number is not, so match
-            // the recognised text against card names (far more reliable than image feature-prints).
-            if self.mode == "full",
-               let card = self.resolver.resolveByName(lines) {
-                self.identify(card, lowConfidence: false, buffer: pixelBuffer)
-                return
-            }
         }
         // .accurate reliably reads the small printed card number that .fast misses.
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false          // card codes are not words
         request.minimumTextHeight = 0.015               // the number is small in-frame
         request.recognitionLanguages = ["en-US"]
-        return request
+        try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right).perform([request])
+        if finished || processing { return nil }
+        for line in lines {
+            if let raw = extractCardNumber(from: line), let card = resolver.resolve(raw) { return card }
+        }
+        if byName, let card = resolver.resolveByName(lines) { return card }
+        return nil
     }
 
-    /// A card number was identified. Read the 2nd-edition "II" mark and any graded-slab label from the
-    /// same frame, then return the whole outcome. Guarded so it only ever fires once.
-    private func identify(_ number: String, lowConfidence: Bool, buffer: CVPixelBuffer) {
+    /// A card number was identified. Read the 2nd-edition "II" mark from the frame and attach the slab
+    /// (if any) that the caller already probed on this frame, then return the whole outcome. Guarded so
+    /// it only ever fires once.
+    private func identify(_ number: String, lowConfidence: Bool, buffer: CVPixelBuffer, slab: SlabInfo? = nil) {
         if finished || processing { return }
         processing = true
         DispatchQueue.main.async { self.overlay.hide() }
 
-        let group = DispatchGroup()
-        var edition = 1
-        var slab: SlabInfo?
-        group.enter()
-        EditionDetector.detect(buffer, orientation: .right) { e in edition = e; group.leave() }
-        group.enter()
-        SlabReader.read(buffer, orientation: .right) { s in slab = s; group.leave() }
-        group.notify(queue: .main) { [weak self] in
+        EditionDetector.detect(buffer, orientation: .right) { [weak self] edition in   // called exactly once
             self?.finish(ScanOutcome(number: number, edition: edition, slab: slab, lowConfidence: lowConfidence))
         }
     }

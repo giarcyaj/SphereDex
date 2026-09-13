@@ -43,7 +43,6 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import org.json.JSONObject
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 
 // Card numbers: E + short set-code letters + optional set digits + "-" + 3 digits + optional rarity letters.
 private val CARD_NUMBER = Regex("E[A-Z]{1,4}\\d{0,2}-?\\d{3}[A-Z]{0,3}")
@@ -369,25 +368,35 @@ class ScannerActivity : ComponentActivity() {
     } catch (_: Throwable) { null }
 
     /** Code mode: OCR the printed number, resolve, finalise. Blocking OCR is fine on the single exec
-     *  thread (KEEP_ONLY_LATEST just drops the frames we skip). */
+     *  thread (KEEP_ONLY_LATEST just drops the frames we skip). The slab probe runs on the same frame
+     *  once a number is found, so a slabbed card scanned by its code still reports its grade. */
     private fun processCode(upright: Bitmap, forced: Boolean) {
         val number = runOcr(upright)?.let { numberFrom(it) }
-        if (number != null) identify(upright, number, false) else upright.recycle()
+        if (number != null) identify(upright, number, false, SlabReader.probe(upright)) else upright.recycle()
     }
 
     /** Full mode recognition order (most reliable first):
+     *  0) SLAB: if the frame shows a graded slab (a barcode/QR, or a grading company in the label band), read
+     *     the card's number/name off the LABEL - printed, high contrast, and it names the card - rather than
+     *     off the card through the plastic, which is what used to defeat graded cards. The slab (company,
+     *     grade, cert) is carried through to whichever step identifies the card,
      *  1) OCR the printed card NUMBER (exact),
      *  2) OCR the printed card NAME and match the catalogue (the name is large + clear on a raw card, so
      *     this is far more reliable than image hashing; the popup's variant picker narrows the printing),
      *  3) perceptual-hash fallback for cards whose text is not legible (glare, a slab) - weak on real
      *     photos, so it only auto-accepts a strong match; a tap force-accepts the nearest. */
     private fun processFull(upright: Bitmap, forced: Boolean) {
+        val slab = probeSlab(upright)
+        if (slab != null) {
+            val labelNum = numberFromLines(slab.labelLines) ?: store.resolveByName(slab.labelLines)?.number
+            if (labelNum != null) { identify(upright, labelNum, false, slab); return }
+        }
         val text = runOcr(upright)
         if (text != null) {
             val number = numberFrom(text)
-            if (number != null) { identify(upright, number, false); return }
+            if (number != null) { identify(upright, number, false, slab); return }
             val nameCard = store.resolveByName(ocrLines(text))
-            if (nameCard != null) { identify(upright, nameCard.number, false); return }
+            if (nameCard != null) { identify(upright, nameCard.number, false, slab); return }
         }
         if (handled || processing) { upright.recycle(); return }
 
@@ -414,10 +423,25 @@ class ScannerActivity : ComponentActivity() {
             runOnUiThread { if (!handled) overlay.show(card.name, card.number, null, currentReticle()) }
         }
         when {
-            confidence >= FULL_AUTOACCEPT_CONFIDENCE -> identify(upright, card.number, false)
-            forced -> identify(upright, card.number, true)   // tap accepted the nearest (may be weak)
+            confidence >= FULL_AUTOACCEPT_CONFIDENCE -> identify(upright, card.number, false, slab)
+            forced -> identify(upright, card.number, true, slab)   // tap accepted the nearest (may be weak)
             else -> upright.recycle()
         }
+    }
+
+    /** Slab probe (barcode/QR + label band OCR) on THIS frame. Never cached across frames: identify is
+     *  one shot, so a stale result would either let a slab finish as raw (stale null) or hand the
+     *  previous slab's cert to a different card (stale positive). Exec thread only. */
+    private fun probeSlab(upright: Bitmap): SlabInfo? = SlabReader.probe(upright)
+
+    /** First card number in a list of OCR lines (the slab label) that resolves to a catalogue card. */
+    private fun numberFromLines(lines: List<String>): String? {
+        for (line in lines) {
+            val num = extractCardNumber(line) ?: continue
+            val card = store.resolve(num) ?: continue
+            return card.number
+        }
+        return null
     }
 
     /** Centre crop of the (already ViewPort-cropped) upright frame to roughly the reticle: card aspect,
@@ -457,24 +481,17 @@ class ScannerActivity : ComponentActivity() {
         return null
     }
 
-    /** A card number was identified. Read the 2nd-edition "II" mark and any graded-slab label from the
-     *  same upright frame (in parallel), then return the whole outcome. Fires at most once. */
-    private fun identify(bmp: Bitmap, number: String, lowConf: Boolean) {
+    /** A card number was identified. Read the 2nd-edition "II" mark from the frame and attach the slab
+     *  (if any) the caller probed on this frame (full mode probes up front, code mode once a number
+     *  resolves), then return the whole outcome. Fires at most once. */
+    private fun identify(bmp: Bitmap, number: String, lowConf: Boolean, slab: SlabInfo? = null) {
         if (handled || processing) { if (!bmp.isRecycled) bmp.recycle(); return }
         processing = true
         runOnUiThread { overlay.hide() }
-
-        var edition = 1
-        var slab: SlabInfo? = null
-        val pending = AtomicInteger(2)   // edition + slab; both callbacks land on the main thread
-        val done = {
-            if (pending.decrementAndGet() == 0) {
-                if (!bmp.isRecycled) bmp.recycle()
-                returnOutcome(number, edition, slab, lowConf)
-            }
+        EditionDetector.detect(bmp) { e ->      // callback lands on the main thread
+            if (!bmp.isRecycled) bmp.recycle()
+            returnOutcome(number, e, slab, lowConf)
         }
-        EditionDetector.detect(bmp) { e -> edition = e; done() }
-        SlabReader.read(bmp) { s -> slab = s; done() }
     }
 
     private fun returnOutcome(number: String, edition: Int, slab: SlabInfo?, lowConf: Boolean) {
