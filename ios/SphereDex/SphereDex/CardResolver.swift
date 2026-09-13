@@ -40,19 +40,32 @@ final class CardResolver {
     /// Display name for a canonical card number (English), for the AR translation overlay.
     func name(for number: String) -> String? { nameByNumber[number] }
 
-    /// Best card whose printed name overlaps [ocrText]; nil when the match is weak. The printed card
-    /// NAME is large and clear even when the collector number is too small to OCR, so this is far more
-    /// reliable than image feature-prints. Mirrors Android BinderStore.resolveByName.
-    func resolveByName(_ ocrText: String) -> String? {
-        if ocrText.isEmpty { return nil }
-        let haystack = String(ocrText.uppercased().map { ($0.isLetter || $0.isNumber) ? $0 : " " })
+    /// Best card whose printed NAME overlaps one recognised line (or two adjacent lines, for a name that
+    /// wraps); nil when the match is weak. Matching per line, not across the whole frame, keeps a card's
+    /// ability or flavour text from clustering another card's name tokens into a false match. The printed
+    /// name is large and clear even when the collector number is too small to OCR, so this beats image
+    /// feature-prints. Mirrors Android BinderStore.resolveByName.
+    func resolveByName(_ lines: [String]) -> String? {
+        if lines.isEmpty { return nil }
+        // Candidate haystacks: each line, plus each adjacent pair (a long name may wrap to a second line).
+        var candidates: [String] = []
+        candidates.reserveCapacity(lines.count * 2)
+        for i in lines.indices {
+            candidates.append(normalizeText(lines[i]))
+            if i + 1 < lines.count { candidates.append(normalizeText(lines[i] + " " + lines[i + 1])) }
+        }
         var bestNumber: String?
         var bestHits = 0
         var bestScore = 0.0
         var bestTokCount = 0
         for entry in nameIndex {
+            // Most of this card's tokens found within a SINGLE candidate (line/pair), not scattered.
             var hits = 0
-            for t in entry.tokens where haystack.range(of: t) != nil { hits += 1 }
+            for cand in candidates {
+                var h = 0
+                for t in entry.tokens where cand.range(of: t) != nil { h += 1 }
+                if h > hits { hits = h }
+            }
             if hits == 0 { continue }
             let score = Double(hits) / Double(entry.tokens.count)
             if hits > bestHits || (hits == bestHits && score > bestScore) {
@@ -67,6 +80,10 @@ final class CardResolver {
 
     private func normalize(_ s: String) -> String {
         String(s.uppercased().filter { $0.isLetter || $0.isNumber })
+    }
+
+    private func normalizeText(_ s: String) -> String {
+        String(s.uppercased().map { ($0.isLetter || $0.isNumber) ? $0 : " " })
     }
 
     /// Distinctive name words (uppercased, length >= 4), split on any non-alphanumeric.

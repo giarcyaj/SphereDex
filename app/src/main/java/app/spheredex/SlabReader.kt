@@ -50,12 +50,13 @@ object SlabReader {
         }
     }
 
-    /** Runs on the worker thread. Barcode on the full frame, OCR on the top strip. */
+    /** Runs on the worker thread. Barcode on the full frame, OCR the top strip ONCE, reuse the text. */
     private fun analyze(bitmap: Bitmap): SlabInfo? {
         val cert = readCert(bitmap)
         val label = cropTop(bitmap, 0.25f) ?: bitmap
-        val grader = detectCompany(label) ?: return null   // no company => treat as raw card
-        return SlabInfo(grader, detectGrade(label), cert)
+        val text = ocr(label)
+        val grader = detectCompany(text) ?: return null   // no company => treat as raw card
+        return SlabInfo(grader, detectGrade(text), cert)
     }
 
     /** Longest all-digit barcode raw value (graded slabs encode the numeric cert). */
@@ -77,8 +78,7 @@ object SlabReader {
     } catch (_: Throwable) { "" }
 
     /** First grading company token found (word-boundary, case-insensitive); BECKETT normalises to BGS. */
-    private fun detectCompany(crop: Bitmap): String? {
-        val text = ocr(crop)
+    private fun detectCompany(text: String): String? {
         if (text.isEmpty()) return null
         for (tok in COMPANY_TOKENS) {
             if (Regex("\\b${Regex.escape(tok)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
@@ -89,8 +89,7 @@ object SlabReader {
     }
 
     /** Grade number via the waterfall, normalised ("10","9.5","9"); "" when nothing readable. */
-    private fun detectGrade(crop: Bitmap): String {
-        val text = ocr(crop)
+    private fun detectGrade(text: String): String {
         if (text.isEmpty()) return ""
         for (p in GRADE_PATTERNS) {
             val g = p.find(text)?.groupValues?.getOrNull(1)

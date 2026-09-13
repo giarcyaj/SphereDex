@@ -386,7 +386,7 @@ class ScannerActivity : ComponentActivity() {
         if (text != null) {
             val number = numberFrom(text)
             if (number != null) { identify(upright, number, false); return }
-            val nameCard = store.resolveByName(text.text)
+            val nameCard = store.resolveByName(ocrLines(text))
             if (nameCard != null) { identify(upright, nameCard.number, false); return }
         }
         if (handled || processing) { upright.recycle(); return }
@@ -439,6 +439,13 @@ class ScannerActivity : ComponentActivity() {
     private fun runOcr(bmp: Bitmap): Text? = try {
         Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)))
     } catch (_: Throwable) { null }
+
+    /** Flatten an OCR result to its recognised lines (name matching is done per line, not whole-frame). */
+    private fun ocrLines(text: Text): List<String> {
+        val out = ArrayList<String>()
+        for (block in text.textBlocks) for (line in block.lines) out.add(line.text)
+        return out
+    }
 
     /** First printed card number in the OCR result that resolves to a catalogue card, else null. */
     private fun numberFrom(text: Text): String? {

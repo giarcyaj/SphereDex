@@ -99,28 +99,45 @@ class BinderStore(private val context: Context) {
         }
     }
 
-    /** Best card whose printed name overlaps [ocrText]; null when the match is weak (avoids false hits). */
-    fun resolveByName(ocrText: String): Card? {
-        if (ocrText.isBlank()) return null
-        val hay = ocrText.uppercase().replace(Regex("[^A-Z0-9]+"), " ")
+    /** Best card whose printed NAME overlaps one recognised line (or two adjacent lines, for a name that
+     *  wraps); null when the match is weak. Matching per line, not across the whole frame, keeps a card's
+     *  ability or flavour text from clustering another card's name tokens into a false match. Mirrors iOS
+     *  CardResolver.resolveByName. */
+    fun resolveByName(lines: List<String>): Card? {
+        if (lines.isEmpty()) return null
+        // Candidate haystacks: each line, plus each adjacent pair (a long name may wrap to a second line).
+        val candidates = ArrayList<String>(lines.size * 2)
+        for (i in lines.indices) {
+            candidates.add(normalizeText(lines[i]))
+            if (i + 1 < lines.size) candidates.add(normalizeText(lines[i] + " " + lines[i + 1]))
+        }
         var best: Card? = null
         var bestHits = 0
         var bestScore = 0.0
+        var bestTok = 0
         for ((toks, card) in nameIndex) {
-            val hits = toks.count { hay.contains(it) }
+            // Most of this card's tokens found within a SINGLE candidate (line/pair), not scattered.
+            var hits = 0
+            for (cand in candidates) {
+                var h = 0
+                for (t in toks) if (cand.contains(t)) h++
+                if (h > hits) hits = h
+            }
             if (hits == 0) continue
             val score = hits.toDouble() / toks.size
             if (hits > bestHits || (hits == bestHits && score > bestScore)) {
-                bestHits = hits; bestScore = score; best = card
+                bestHits = hits; bestScore = score; best = card; bestTok = toks.size
             }
         }
-        val bestToks = best?.let { nameTokens(it.name).size } ?: 0
+        if (best == null) return null
         return when {
             bestHits >= 2 && bestScore >= 0.5 -> best   // two or more distinctive words, half the name
-            bestHits >= 1 && bestToks == 1 -> best       // a single-word name matched in full
+            bestHits >= 1 && bestTok == 1 -> best        // a single-word name matched in full
             else -> null
         }
     }
+
+    private fun normalizeText(s: String) = s.uppercase().replace(Regex("[^A-Z0-9]+"), " ")
 
     fun entry(number: String): OwnEntry = own[number] ?: OwnEntry()
 
