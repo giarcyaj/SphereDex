@@ -3,17 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SphereDex - Palworld TCG collection tracker</title>
+<title>SphereDex, Palworld TCG collection tracker</title>
+<link rel="canonical" href="https://spheredex.app/">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="description" content="Track every Palworld TCG card, see real market values and daily movers, manage sealed and graded, and complete your set. Free, works offline, saves in your browser.">
-<meta property="og:title" content="SphereDex - Palworld TCG collection tracker">
-<meta property="og:description" content="Every card, real market prices, and the movers that matter, in one clean binder. Free and offline-first.">
+<meta name="description" content="Track every Palworld TCG card, see real market values and daily movers, manage sealed and graded, and complete your set. Free, works offline, saves on your device with optional free cloud sync.">
+<meta property="og:title" content="SphereDex, Palworld TCG collection tracker">
+<meta property="og:description" content="Every card, real market prices, and the movers that matter, in one clean binder. Free and works offline.">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="SphereDex">
+<meta property="og:url" content="https://spheredex.app/">
+<meta property="og:image" content="https://spheredex.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SphereDex, the free Palworld TCG collection tracker for web, iPhone and Android">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://spheredex.app/og.png">
 <meta name="theme-color" content="#08151f">
+<script>(function(r){if('IntersectionObserver' in window&&matchMedia('screen and (prefers-reduced-motion: no-preference)').matches){r.classList.add('rv');setTimeout(function(){if(!window.sdMotion)r.classList.remove('rv')},3000)}})(document.documentElement)</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -96,6 +106,9 @@
   .navstore svg{width:22px;height:22px;flex:none}
   .navstore.apple svg{width:25px;height:25px}  /* Apple glyph is visually smaller in its box; nudge it up to match Play */
   @media(max-width:760px){ .navlinks a:not(.btn):not(.navstore){display:none} .nav .wrap{gap:10px} .navlinks{gap:12px} }
+  /* phones: the hero already has the full store buttons, so drop the nav icons to keep the row inside the screen */
+  @media(max-width:430px){ .navstores{display:none} .nav .wrap{gap:8px} }
+  @media(max-width:359px){ .nav .brand{font-size:1.15rem;gap:8px} .nav .brand .sph{width:28px;height:28px} .navlinks .btn{padding:8px 12px;font-size:.88rem} }
 
   /* ---- hero ---- */
   .hero{padding:66px 0 30px;position:relative;overflow:hidden}
@@ -146,8 +159,9 @@
   @media(max-width:900px){ .cols-3{grid-template-columns:1fr 1fr} }
   @media(max-width:620px){ .cols-3{grid-template-columns:1fr} }
   .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;
-    box-shadow:inset 0 1px 0 var(--edge);transition:.16s}
-  .card:hover{border-color:var(--line-strong);transform:translateY(-2px)}
+    box-shadow:inset 0 1px 0 var(--edge);transition:transform .16s,border-color .16s}
+  .card:hover{border-color:var(--line-strong)}
+  @media(hover:hover){.card:hover{transform:translateY(-2px)}}
   .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
     color:var(--accent-ink);background:linear-gradient(160deg,rgba(18,227,245,.16),rgba(18,227,245,.04));border:1px solid var(--line-strong)}
   .card.g .ic{color:var(--gold-ink);background:linear-gradient(160deg,rgba(255,176,32,.18),rgba(255,176,32,.04));border-color:rgba(255,176,32,.32)}
@@ -185,7 +199,37 @@
   .foot .wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
   .foot a{color:var(--ink-soft)}
   .disc{max-width:60ch;line-height:1.5}
-  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;transition:none!important}}
+  /* ---- landing motion: one shot, gated by html.rv (set in <head>), off for reduced motion ---- */
+  @keyframes sd-rise{from{opacity:0;translate:0 14px}}
+  @keyframes sd-row{from{opacity:0;translate:-8px 0}}
+  @keyframes sd-fill{from{transform:scaleX(0)}}
+  @keyframes sd-wobble{15%{transform:rotate(-12deg)}35%{transform:rotate(9deg)}55%{transform:rotate(-5deg)}75%{transform:rotate(2deg)}}
+  @keyframes sd-lock{from{opacity:0;transform:scale(1.15)}60%{opacity:.9;transform:none}to{opacity:0;transform:none}}
+  @keyframes sd-ring{from{opacity:.6;transform:none}to{opacity:0;transform:scale(1.06,1.22)}}
+  @media screen and (prefers-reduced-motion:no-preference){
+    html.rv{--ease:cubic-bezier(.16,1,.3,1)}
+    html.rv .phone:not(.in) .panel,html.rv .lead:not(.in),html.rv #features .card:not(.in),html.rv .demo:not(.in){opacity:0}
+    html.rv .phone.in .panel{animation:sd-rise .6s var(--ease) backwards}
+    html.rv .phone.in .panel+.panel{animation-delay:.12s}
+    html.rv .phone.in .xp>i{transform-origin:0 50%;animation:sd-fill 1s cubic-bezier(.33,1,.68,1) .35s backwards}
+    html.rv .phone.in .mvr{animation:sd-row .5s var(--ease) .5s backwards}
+    html.rv .phone.in .mvr+.mvr{animation-delay:.58s}
+    html.rv .lead.in,html.rv #features .card.in,html.rv .demo.in{animation:sd-rise .6s var(--ease) var(--d,0s) backwards}
+    html.rv #features .card.in:first-child .sph{transform-origin:50% 50%;animation:sd-wobble .9s ease-in-out .7s}
+    html.rv .demo.in .soldrow,html.rv .demo.in .qt{animation:sd-row .5s var(--ease) .3s backwards}
+    html.rv .demo.in .soldrow:nth-child(2),html.rv .demo.in .qt:nth-child(2){animation-delay:.36s}
+    html.rv .demo.in .soldrow:nth-child(3),html.rv .demo.in .qt:nth-child(3){animation-delay:.42s}
+    html.rv .demo.in .qt:nth-child(4){animation-delay:.48s}
+    html.rv .pt.on,html.rv .final .storebtn{position:relative}
+    html.rv .pt.on::after,html.rv .final .storebtn::after{content:"";position:absolute;pointer-events:none;opacity:0;border:1.5px solid var(--accent)}
+    html.rv .pt.on::after{inset:-4px;border-radius:16px}
+    html.rv .final .storebtn::after{inset:-2px;border-radius:15px}
+    html.rv .demo.in .pt.on::after{animation:sd-lock .8s var(--ease) .5s}
+    html.rv .final .cta.in .storebtn::after{animation:sd-ring .8s var(--ease) .15s}
+    html.rv .final .cta.in .storebtn:nth-child(2)::after{animation-delay:.25s}
+    html.rv .final .cta.in .storebtn:nth-child(3)::after{animation-delay:.35s}
+  }
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -248,8 +292,8 @@
       <div class="big">38%</div>
       <div class="faint" style="font-size:.62rem;letter-spacing:.08em;text-transform:uppercase">of all cards · every set</div>
       <div class="tiles">
-        <div class="tile"><div class="n">97 / 255</div><div class="k">Cards</div></div>
-        <div class="tile"><div class="n">1 / 4</div><div class="k">Sets</div></div>
+        <div class="tile"><div class="n">104 / 275</div><div class="k">Cards</div></div>
+        <div class="tile"><div class="n">0 / 1</div><div class="k">Sets</div></div>
         <div class="tile"><div class="n">&pound;412</div><div class="k">Binder value</div></div>
         <div class="tile"><div class="n">&pound;96</div><div class="k">Sealed value</div></div>
       </div>
@@ -257,7 +301,7 @@
     </div>
     <div class="panel">
       <div class="lab">Biggest movers</div>
-      <div class="mvr"><img class="art" src="app/img/EBP01-049.jpg" alt="Lyleen - Blessing of the Goddess" loading="lazy"><span style="display:block"><span class="nm" style="display:block">Lyleen - Blessing</span><span class="sub">EBP01-049 &middot; &pound;16.50</span></span><span class="pct up">&#9650; 32%</span></div>
+      <div class="mvr"><img class="art" src="app/img/EBP01-049.jpg" alt="Lyleen, Blessing of the Goddess" loading="lazy"><span style="display:block"><span class="nm" style="display:block">Lyleen, Blessing</span><span class="sub">EBP01-049 &middot; &pound;16.50</span></span><span class="pct up">&#9650; 32%</span></div>
       <div class="mvr"><img class="art" src="app/img/EBP01-027OSR.jpg" alt="Jormuntide alternate art" loading="lazy"><span style="display:block"><span class="nm" style="display:block">Jormuntide OSR</span><span class="sub">EBP01-027 &middot; &pound;20.50</span></span><span class="pct down">&#9660; 36%</span></div>
     </div>
   </div></div>
@@ -275,8 +319,8 @@
       <h3>Every card, every set</h3>
       <p>Every card across the Dawn of Palpagos booster, both trial decks, and the event promos, with new sets added as they release. Browse by set with real set art, track base cards and their variants, and watch your completion climb.</p></div>
     <div class="card"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-star"/></svg></div>
-      <h3>Wishlist, graded &amp; more</h3>
-      <p>Keep a wishlist, mark favourites, log graded slabs (PSA, BGS, CGC and more), add notes, and run multiple collections. Import a CSV to get started in seconds.</p></div>
+      <h3>Scan, wishlist &amp; graded</h3>
+      <p>In the iPhone and Android apps, point your camera at a card and SphereDex recognises it, so adding cards takes seconds. Keep a wishlist, mark favourites, log graded slabs (PSA, BGS, CGC and more), add notes, run multiple collections, or import a CSV.</p></div>
     <div class="card g"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-rank"/></svg></div>
       <h3>Power up your spheres</h3>
       <p>Completion is a game. Fill sets, chase parallels, and climb the sphere ranks as your binder grows toward 100 percent.</p></div>
@@ -288,7 +332,7 @@
       <p>The day's biggest risers and fallers across your collection or the whole set, so you always know what is heating up and what is cooling off.</p></div>
     <div class="card g"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-box"/></svg></div>
       <h3>Sealed products</h3>
-      <p>Track booster boxes, packs, and trial decks, follow pre-orders for upcoming sets, and jump straight to buy links from eBay, Amazon, and trusted regional stockists.</p></div>
+      <p>Track booster boxes, packs, and trial decks, follow preorders for upcoming sets, and jump straight to buy links from eBay, Amazon, and trusted regional stockists.</p></div>
   </div>
 </div></section>
 
@@ -297,11 +341,11 @@
     <div>
       <span class="eyebrow">Prices you can trust</span>
       <h2>Know what it is worth, before you buy or trade.</h2>
-      <p class="muted" style="margin-top:12px;font-size:1.08rem">Open any card for the real numbers: the average of its last five sold prices, the recent sales behind that figure with links to each listing, and the current live asks. Prices refresh every day, in the market you choose. And they are completely optional: switch prices off any time for a clean collection with no numbers.</p>
+      <p class="muted" style="margin-top:12px;font-size:1.08rem">Open any card for the real numbers: the average of its last five sold prices, the recent sales behind that figure with links to each listing, and the current live asks, in the market you choose. Live prices refresh every day, and sold prices refresh when you open the app or tap refresh. And they are completely optional: switch prices off any time for a clean collection with no numbers.</p>
       <div class="chips">
         <span class="chip">&pound; GBP</span><span class="chip">$ USD</span><span class="chip">&euro; EUR</span>
         <span class="chip">&yen; JPY</span><span class="chip">CA$</span><span class="chip">A$</span>
-        <span class="chip">Variant-accurate</span><span class="chip">Sold + live listings</span><span class="chip">Value over time</span>
+        <span class="chip">Exact variants</span><span class="chip">Sold + live listings</span><span class="chip">Value over time</span>
       </div>
     </div>
     <div class="demo">
@@ -332,9 +376,9 @@
       </div>
     </div>
     <div style="order:1">
-      <span class="eyebrow">Local-first</span>
+      <span class="eyebrow">On your device</span>
       <h2>Your collection, in your pocket.</h2>
-      <p class="muted" style="margin-top:12px;font-size:1.08rem">SphereDex saves everything on your device, so it is fast and works with no signal. No sign-up to get started, and no ads. Want a backup across devices? Turn on optional cloud sync, or export your collection to a file any time.</p>
+      <p class="muted" style="margin-top:12px;font-size:1.08rem">SphereDex saves everything on your device, so it is fast and works with no signal. No account needed to get started, and no ads. Want a backup across devices? Turn on optional cloud sync, or export your collection to a file any time.</p>
       <div class="cta"><a class="btn primary" href="app/">Try it in your browser</a></div>
     </div>
   </div>
@@ -354,9 +398,42 @@
 
 <footer class="foot"><div class="wrap">
   <a class="brand" href="#top" style="font-size:1.1rem" aria-label="SphereDex, back to top"><svg class="sph" aria-hidden="true" style="width:26px;height:26px"><use href="#sph"/></svg>SphereDex</a>
-  <p class="disc">SphereDex is a free, fan-made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. Not affiliated with or endorsed by Pocketpair or Bushiroad. Everything saves in your browser.</p>
-  <span><a href="app/">Open the app</a> &middot; <a href="https://apps.apple.com/app/spheredex/id6804377686">App Store</a> &middot; <a href="https://play.google.com/store/apps/details?id=app.spheredex">Google Play</a> &middot; <a href="privacy.html">Privacy</a></span>
+  <p class="disc">SphereDex is a free, fan made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. Not affiliated with or endorsed by Pocketpair or Bushiroad. Your collection saves on your device, with optional free cloud sync.</p>
+  <span><a href="app/">Open the app</a> &middot; <a href="https://apps.apple.com/app/spheredex/id6804377686">App Store</a> &middot; <a href="https://play.google.com/store/apps/details?id=app.spheredex">Google Play</a> &middot; <a href="roadmap.html">Roadmap</a> &middot; <a href="roadmap.html#contact">Contact</a> &middot; <a href="privacy.html">Privacy</a></span>
 </div></footer>
 
+<script>
+(function(){
+  var r=document.documentElement;
+  if(!r.classList.contains('rv'))return;
+  window.sdMotion=1;
+  function count(el){
+    var txt=el&&el.textContent,end=parseInt(txt,10),suf,t0;
+    if(!end)return;
+    suf=txt.replace(/^\d+/,'');
+    el.textContent='0'+suf;
+    requestAnimationFrame(function step(now){
+      var p=Math.min(1,Math.max(0,(now-(t0=t0||now)-350)/1000));
+      el.textContent=p<1?Math.round(end*(1-Math.pow(1-p,3)))+suf:txt;
+      if(p<1)requestAnimationFrame(step);
+    });
+  }
+  try{
+    var ph=document.querySelector('.hero .phone'),cta=document.querySelector('.final .cta');
+    var io=new IntersectionObserver(function(es){
+      es.filter(function(e){return e.isIntersecting&&e.intersectionRatio>=(e.target===cta?.9:e.target===ph?.3:0)})
+        .sort(function(a,b){return a.boundingClientRect.top-b.boundingClientRect.top||a.boundingClientRect.left-b.boundingClientRect.left})
+        .forEach(function(e,i){
+          var t=e.target;
+          t.style.setProperty('--d',Math.min(i,3)*70+'ms');
+          t.classList.add('in');
+          io.unobserve(t);
+          if(t===ph)count(t.querySelector('.big'));
+        });
+    },{rootMargin:'0px 0px -8% 0px',threshold:[0,.3,.9]});
+    document.querySelectorAll('.hero .phone,.lead,#features .card,.demo,.final .cta').forEach(function(el){io.observe(el)});
+  }catch(err){r.classList.remove('rv')}
+})();
+</script>
 </body>
 </html>
