@@ -1072,6 +1072,12 @@
   .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; }
   .askbtns .ok{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .askbtns .ok.danger{ background:var(--el-Fire); border-color:var(--el-Fire); }
+  /* File import / export chooser (Settings, Backup & restore): two big option buttons */
+  .fiopts{ display:flex; flex-direction:column; gap:10px; margin:12px 0 16px; }
+  .fiopt{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%; box-sizing:border-box; text-align:left; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; padding:14px 16px; border-radius:13px; cursor:pointer; }
+  .fiopt b{ font-weight:700; font-size:1rem; }
+  .fiopt span{ color:var(--ink-soft); font-size:.84rem; line-height:1.35; }
+  .fiopt:hover, .fiopt:focus-visible{ border-color:var(--accent); outline:none; }
 
   /* Rich scan confirmation (native camera → choose destination) */
   .scanscrim{ position:fixed; inset:0; z-index:215; display:flex; align-items:center; justify-content:center; padding:20px;
@@ -1327,6 +1333,8 @@
   .no-flexgap header.mast{gap:0}.no-flexgap header.mast>*+*{margin-top:14px}
   .no-flexgap .cbrow{gap:0}.no-flexgap .cbrow>*+*{margin-top:5px}
   .no-flexgap .graded{gap:0}.no-flexgap .graded>*+*{margin-top:8px}
+  .no-flexgap .fiopts{gap:0}.no-flexgap .fiopts>*+*{margin-top:10px}
+  .no-flexgap .fiopt{gap:0}.no-flexgap .fiopt>*+*{margin-top:3px}
   .no-flexgap .controls{gap:0}.no-flexgap .controls>*+*{margin-top:11px}
   .no-flexgap .grid.binder{gap:0}.no-flexgap .grid.binder>*+*{margin-top:24px}
   .no-flexgap .cbody{gap:0}.no-flexgap .cbody>*+*{margin-top:5px}
@@ -1824,7 +1832,7 @@
 
       <div class="setcat">Backup &amp; restore</div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection to a JSON file, import a backup, or import a spreadsheet (CSV) of card numbers and quantities as a new collection.</div></div>
+        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection as a spreadsheet (CSV) or a backup (JSON), and import either one as a new collection.</div></div>
         <div style="display:flex;gap:9px;flex:0 0 auto;flex-wrap:wrap"><button class="btn sec" id="setExport">⭱ Export</button><button class="btn sec" id="setImport">⭳ Import</button></div>
       </div>
     </div>
@@ -1912,6 +1920,18 @@
     <p id="deckIOHint"></p>
     <textarea id="deckIOText" spellcheck="false" autocomplete="off"></textarea>
     <div class="askbtns"><button type="button" id="deckIOCancel">Cancel</button><button type="button" id="deckIOAlt"></button><button type="button" class="ok" id="deckIOAction"></button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="fileIOScrim" hidden>
+  <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="fileIOTitle">
+    <h3 id="fileIOTitle"></h3>
+    <p id="fileIOHint" hidden></p>
+    <div class="fiopts">
+      <button type="button" class="fiopt" id="fileIOOpt1"><b id="fileIOOpt1L"></b><span id="fileIOOpt1S"></span></button>
+      <button type="button" class="fiopt" id="fileIOOpt2"><b id="fileIOOpt2L"></b><span id="fileIOOpt2S"></span></button>
+    </div>
+    <div class="askbtns"><button type="button" id="fileIOCancel">Cancel</button></div>
   </div>
 </div>
 
@@ -2156,6 +2176,9 @@
   function o(id){ var s=own[id]; if(!s){ s=own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     if(s.mkt==null) s.mkt=0; if(s.last==null) s.last=0; if(s.avg==null) s.avg=0; if(!s.graded) s.graded=[]; return s; }
   function has(s){ return s.qty>0 || (s.graded && s.graded.length>0); }
+  // Shallow copy of a graded slab that keeps every field (cert, edition, anything added later),
+  // so editors that rebuild the slab list never silently drop what the scanner saved.
+  function cloneSlab(g){ var x={}, k; if(g && typeof g==="object"){ for(k in g){ if(Object.prototype.hasOwnProperty.call(g,k)) x[k]=g[k]; } } return x; }
   // Owned in ANY collection, drives the colour/fade of a card, regardless of which collection is active.
   function hasAny(id){ for(var i=0;i<STATE.cols.length;i++){ var e=STATE.cols[i].own[id]; if(e && (e.qty>0 || (e.graded && e.graded.length>0))) return true; } return false; }
   // eBay "sold listings" search for a card, on the region set in Settings.
@@ -2724,7 +2747,7 @@
       (c.els.length?'<dt>Element</dt><dd>'+c.els.join(" / ")+'</dd>':'')+
       (c.apt.length?'<dt>Work</dt><dd>'+c.apt.join(", ")+'</dd>':'')+
       '</dl>';
-    var gwork = (s.graded||[]).map(function(g){ return {grader:g.grader,grade:g.grade,value:g.value}; });
+    var gwork = (s.graded||[]).filter(function(g){ return g && typeof g==="object"; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=g.value; return x; });
     $("mMain").innerHTML =
       '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
       '<div class="martflo"><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span></div>'+
@@ -2828,7 +2851,7 @@
       s.mkt=parseFloat($("fMkt").value)||0;
       s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; });
       s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
-      s.graded=gwork.filter(function(g){ return g; }).map(function(g){ return {grader:g.grader,grade:g.grade,value:+g.value||0}; });
+      s.graded=gwork.filter(function(g){ return g; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=+g.value||0; return x; });   // keeps cert / edition
       save(); render(); buildColSel();
     }
     paintBubbles();
@@ -3118,55 +3141,253 @@
   })();
 
   // ---- Import / export (lives in Settings → Backup & restore) ----
-  function doExport(){
-    var col=activeCol();
-    var blob=new Blob([JSON.stringify({app:"SphereDex",name:col.name,own:col.own,sealed:col.sealed||{}},null,2)],{type:"application/json"});
-    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-    a.download=((col.name||"collection").replace(/[^a-z0-9]+/gi,"-").toLowerCase())+".json"; a.click(); URL.revokeObjectURL(a.href);
-    toast("Exported “"+col.name+"”");
+  // Saving a text file. A blob <a download> does nothing inside a WebView, so the native shells expose a
+  // bridge: Android opens the system "Save as" picker, iOS the share sheet; both answer via SDFileDone.
+  // The web shares the file on touch devices that can share files, else downloads it.
+  // onSaved(how) fires only on success ("native", "share" or "download") so callers can toast.
+  var _sdFileCb=null;
+  window.SDFileDone=function(ok){ if(ok!==true) return; var cb=_sdFileCb; _sdFileCb=null; if(cb){ try{ cb("native"); }catch(e){} } };
+  function fileSlug(name, fallback){ var s=String(name||"").replace(/[^a-z0-9]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase(); return s||fallback||"file"; }
+  function downloadTextBlob(blob, name, onSaved){
+    var url; try{ url=URL.createObjectURL(blob); }catch(e){ toast("Saving files is not supported here"); return; }
+    var a=document.createElement("a"); a.href=url; a.download=name; a.style.display="none";
+    document.body.appendChild(a);
+    try{ a.click(); }catch(e){}
+    if(a.parentNode) a.parentNode.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 1500);
+    if(onSaved){ try{ onSaved("download"); }catch(e){} }
   }
-  function doImport(){
-    var inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
-    inp.onchange=function(){ var f=inp.files[0]; if(!f)return; var rd=new FileReader();
-      rd.onload=function(){ try{ var d=JSON.parse(rd.result); var map=(d&&d.own)?d.own:d; if(!map||typeof map!=="object")throw 0;
-        var nm=(d&&d.name)?d.name+" (imported)":"Imported collection";
-        var id="c"+Date.now(); STATE.cols.push({id:id,name:nm,own:map,sealed:(d&&d.sealed)||{}}); switchCol(id); toast("Imported “"+nm+"”");
-      }catch(e){ toast("That file couldn't be read"); } };
-      rd.readAsText(f); };
+  function saveTextFile(name, mime, text, onSaved){
+    name=String(name||"file.txt"); mime=String(mime||"text/plain"); text=(text==null)?"":String(text);
+    var nat=(window.AndroidFiles && typeof window.AndroidFiles.save==="function") ? window.AndroidFiles
+      : ((window.IOSFile && typeof window.IOSFile.save==="function") ? window.IOSFile : null);
+    if(nat){
+      var prev=_sdFileCb, r;
+      _sdFileCb=onSaved||null;                       // a new save replaces any pending callback
+      try{ r=nat.save(name, mime, text); }catch(e){ r=null; }
+      // Android answers false when its picker is already open; iOS only answers false if its handler is missing.
+      if(r===false && nat===window.AndroidFiles){ _sdFileCb=prev; toast("An export is already open, finish that one first"); return; }
+      if(r!==null && r!==false) return;               // native owns it now; SDFileDone(true) reports success
+      _sdFileCb=prev;                                 // the bridge failed: fall through to the web path
+    }
+    var blob; try{ blob=new Blob([text],{type:mime}); }catch(e){ toast("Saving files is not supported here"); return; }
+    var coarse=false; try{ coarse=!!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }catch(e){}
+    if(coarse && navigator.canShare && navigator.share && typeof File==="function"){
+      var file=null, can=false;
+      try{ file=new File([blob], name, {type:mime}); can=!!navigator.canShare({files:[file]}); }catch(e){ can=false; }
+      if(can){
+        var p=null; try{ p=navigator.share({files:[file], title:name}); }catch(e){ p=null; }   // must run inside the click
+        if(p && typeof p.then==="function"){
+          p.then(function(){ if(onSaved){ try{ onSaved("share"); }catch(e){} } },
+                 function(err){ if(err && err.name==="AbortError") return; downloadTextBlob(blob, name, onSaved); });
+          return;
+        }
+      }
+    }
+    downloadTextBlob(blob, name, onSaved);
+  }
+  // Pick a text file and read it. The input sits in the document while the picker is open (some WebViews
+  // and old iOS ignore clicks on detached inputs) and is removed once a file is chosen.
+  function pickTextFile(accept, onText){
+    var old=document.getElementById("sdFilePick"); if(old && old.parentNode) old.parentNode.removeChild(old);
+    var inp=document.createElement("input"); inp.type="file"; inp.id="sdFilePick"; if(accept) inp.accept=accept;
+    inp.setAttribute("aria-hidden","true"); inp.tabIndex=-1;
+    inp.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;";
+    inp.onchange=function(){
+      var f=inp.files && inp.files[0];
+      if(inp.parentNode) inp.parentNode.removeChild(inp);
+      if(!f) return;
+      var rd=new FileReader();
+      rd.onload=function(){ onText(String(rd.result==null?"":rd.result), f); };
+      rd.onerror=function(){ toast("That file couldn't be read"); };
+      try{ rd.readAsText(f); }catch(e){ toast("That file couldn't be read"); }
+    };
+    document.body.appendChild(inp);
     inp.click();
   }
-  // Turn a spreadsheet dump into an owned map. Tolerant: one card per line, columns split on
-  // comma / semicolon / tab / whitespace. Any token that is a known card number is the id;
-  // a bare number (or "x2") is the quantity. Header rows and unknown lines are skipped.
+  function doExport(){
+    var col=activeCol(), nm=col.name;
+    var text=JSON.stringify({app:"SphereDex",name:col.name,own:col.own,sealed:col.sealed||{}},null,2);
+    saveTextFile(fileSlug(col.name,"collection")+".json", "application/json", text, function(){ toast("Exported “"+nm+"”"); });
+  }
+  function doExportCsv(){
+    var col=activeCol(), nm=col.name, text;
+    try{ text=collectionCsv(col); }catch(e){ toast("Couldn't build the spreadsheet"); return; }
+    saveTextFile(csvFileName(col), "text/csv", text, function(){ toast("Exported “"+nm+"”"); });
+  }
+  function doImport(){
+    pickTextFile("application/json,.json,text/plain", function(text){
+      try{ var d=JSON.parse(String(text).replace(/^\uFEFF/,"")); var map=(d&&d.own)?d.own:d; if(!map||typeof map!=="object")throw 0;
+        var nm=(d&&d.name)?d.name+" (imported)":"Imported collection";
+        var id="c"+Date.now(); STATE.cols.push({id:id,name:nm,own:map,sealed:(d&&d.sealed)||{}}); switchCol(id); toast("Imported “"+nm+"”");
+      }catch(e){ toast("That file couldn't be read"); }
+    });
+  }
+  // Settings chooser: pick CSV or JSON for export / import. Each option closes the modal and starts the
+  // save or file picker in the same click, because share sheets and file pickers need that user gesture.
+  function openFileIO(mode){
+    var sc=$("fileIOScrim"); if(!sc) return;
+    var b1=$("fileIOOpt1"), b2=$("fileIOOpt2"), cancel=$("fileIOCancel"), hint=$("fileIOHint");
+    var close=function(){ sc.hidden=true; b1.onclick=b2.onclick=cancel.onclick=sc.onclick=null; };
+    var setOpt=function(btn, n, label, sub, run){ $("fileIOOpt"+n+"L").textContent=label; $("fileIOOpt"+n+"S").textContent=sub; btn.onclick=function(){ close(); run(); }; };
+    if(mode==="export"){
+      $("fileIOTitle").textContent="Export “"+(activeCol().name||"Collection")+"”";
+      hint.textContent=""; hint.hidden=true;
+      setOpt(b1, 1, "Spreadsheet (CSV)", "Opens in Numbers, Excel and Google Sheets", doExportCsv);
+      setOpt(b2, 2, "Backup (JSON)", "Restore it into SphereDex on any device", doExport);
+    } else {
+      $("fileIOTitle").textContent="Import a collection";
+      hint.textContent="It is added as a new collection"; hint.hidden=false;
+      setOpt(b1, 1, "Backup (JSON)", "A file exported from SphereDex", doImport);
+      setOpt(b2, 2, "Spreadsheet (CSV)", "Card numbers and quantities, or a SphereDex CSV", doImportCsv);
+    }
+    cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    sc.hidden=false;
+    setTimeout(function(){ try{ b1.focus(); }catch(e){} }, 30);
+  }
+  // ---- Spreadsheet (CSV) export: one row per raw holding, graded slab and sealed product ----
+  var CSV_HEADER=["Number","Quantity","Name","Type","Set","Rarity","Condition","Edition","Grader","Grade","Cert","Unit value","Total value","Currency","Notes"];
+  var CSV_NUMCOL={1:1,11:1,12:1};   // Quantity, Unit value, Total value: numeric cells, never formula guarded
+  var CARD_CONDS=["Near Mint","Lightly Played","Moderately Played","Heavily Played","Damaged"];
+  // Plain "." decimal rounded to the currency's decimals; zero or missing is an empty cell.
+  function csvNum(n){ n=+n; if(!isFinite(n) || !n) return "";
+    var d=(CUR && CUR.dec!=null)?(+CUR.dec||0):2, p=Math.pow(10,d), r=Math.round(+(n*p).toFixed(6))/p;
+    return r ? r.toFixed(d) : ""; }
+  // One RFC 4180 cell. Text a spreadsheet would run as a formula (= + - @ tab CR) gets a leading apostrophe.
+  function csvCell(value, isNumber){ var s=(value==null)?"":String(value);
+    if(!isNumber && /^[=+\-@\t\r]/.test(s)) s="'"+s;
+    if(/[",\r\n]/.test(s)) s='"'+s.replace(/"/g,'""')+'"';
+    return s; }
+  function csvEdition(e){ e=(e==null)?"":String(e); return e==="1"?"1st":(e==="2"?"2nd":""); }
+  function csvFileName(col){ col=col||activeCol(); return fileSlug(col&&col.name,"collection")+"-"+todayKey()+".csv"; }
+  // Pure read of one collection (no o(), no sealItem): nothing is created or changed by exporting.
+  function collectionCsv(col){
+    col=col||activeCol();
+    var map=(col&&col.own)||{}, seal=(col&&col.sealed)||{}, mode=priceMode(), code=(CUR&&CUR.code)||"";
+    var rows=[CSV_HEADER], inCat={}, prevOwn=own, swapped=(map!==own);
+    var cardRows=function(id, c){
+      var e=map[id]; if(!e || typeof e!=="object") return;
+      var nm=c?(c.name||""):"", setNm=(c && SETS[c.set])?SETS[c.set].name:"", rare=c?(RARE_NAME[c.rare]||c.rare||""):"";
+      var q=Math.floor(+e.qty||0);
+      if(q>0){ var u=unitOf(id, mode), us=csvNum(u), ts=csvNum(q*u);
+        rows.push([id, String(q), nm, "Card", setNm, rare, e.cond||"", csvEdition(e.edition), "", "", "", us, ts, (us||ts)?code:"", e.notes||""]); }
+      (Array.isArray(e.graded)?e.graded:[]).forEach(function(g){ if(!g || typeof g!=="object") return; var v=csvNum(g.value);
+        rows.push([id, "1", nm, "Graded", setNm, rare, "", csvEdition(g.edition), g.grader||"", (g.grade==null?"":g.grade), (g.cert==null?"":g.cert), v, v, v?code:"", ""]); });
+    };
+    if(swapped) own=map;   // unitOf reads the global active map; point it at this collection for the read only
+    try{
+      CARDS.forEach(function(c){ inCat[c.id]=1; cardRows(c.id, c); });
+      Object.keys(map).forEach(function(id){ if(!inCat[id]) cardRows(id, null); });   // ids not in the catalogue
+    } finally { if(swapped) own=prevOwn; }
+    SEALED.forEach(function(p){
+      var s=seal[p.id]; if(!s || typeof s!=="object") return;
+      var q=Math.floor(+s.qty||0); if(!(q>0)) return;
+      var title=p.set||p.name||"", typ=(p.set&&p.name)?p.name:"";
+      var u=0; try{ u=sealUnit(JSON.parse(JSON.stringify(s)), mode); }catch(e){ u=0; }   // on a copy: sealPrice fills defaults in place
+      var us=csvNum(u), ts=p.pre?"":csvNum(q*u);   // preorders carry no total, so the column sums to the portfolio value
+      rows.push([p.id, String(q), title+(typ?" "+typ:""), p.pre?"Preorder":"Sealed", "", "", "", "", "", "", "", us, ts, (us||ts)?code:"", ""]);
+    });
+    return "\uFEFF"+rows.map(function(r){ return r.map(function(v,i){ return csvCell(v, !!CSV_NUMCOL[i]); }).join(","); }).join("\r\n")+"\r\n";
+  }
+  // ---- CSV import ----
+  // RFC 4180 rows: quoted fields, doubled quotes, separators and line breaks inside quotes, CRLF or LF, BOM.
+  function parseCsvRows(text, sep){
+    text=(text==null)?"":String(text); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    sep=sep||",";
+    var rows=[], row=[], field="", inQ=false, i, n=text.length, ch;
+    for(i=0; i<n; i++){
+      ch=text.charAt(i);
+      if(inQ){
+        if(ch==='"'){ if(text.charAt(i+1)==='"'){ field+='"'; i++; } else inQ=false; }
+        else field+=ch;
+      }
+      else if(ch==='"' && field===""){ inQ=true; }
+      else if(ch===sep){ row.push(field); field=""; }
+      else if(ch==="\r" || ch==="\n"){ if(ch==="\r" && text.charAt(i+1)==="\n") i++; row.push(field); rows.push(row); row=[]; field=""; }
+      else field+=ch;
+    }
+    if(field!=="" || row.length){ row.push(field); rows.push(row); }
+    return rows;
+  }
+  // Undo the export's formula guard: a leading apostrophe followed by = + - @ tab or CR.
+  function csvUnguard(s){ s=(s==null)?"":String(s); return /^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s; }
+  // Turn a CSV into {own, sealed}. A SphereDex CSV (header row with Number and Quantity) is read by column
+  // name in any order: Card rows add copies, Graded rows add slabs, Sealed / Preorder rows add sealed
+  // products. Anything else uses the tolerant reader: one card per line, columns split on comma /
+  // semicolon / tab; a known card number is the id and a bare number (or "x2") the quantity.
   function parseCsvCollection(text){
-    var own={}, added=0, skipped=0;
-    (text||"").split(/\r?\n/).forEach(function(line){
+    text=(text==null)?"":String(text); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    var own={}, sealed={}, added=0, skipped=0, cards=0, slabs=0, sealedItems=0;
+    var lines=text.split(/\r\n|\n|\r/), firstLine="", li, ri;
+    for(li=0; li<lines.length; li++){ if(lines[li].trim()){ firstLine=lines[li]; break; } }
+    // Excel in some locales saves with ";" (or tabs) instead of commas; follow the header line.
+    var sep=(firstLine.indexOf(",")<0 && firstLine.indexOf(";")>=0) ? ";" : ((firstLine.indexOf(",")<0 && firstLine.indexOf("\t")>=0) ? "\t" : ",");
+    var rows=parseCsvRows(text, sep), hi=-1, colIx={};
+    for(ri=0; ri<rows.length; ri++){ if(rows[ri].join("").trim()){ hi=ri; break; } }
+    if(hi>=0) rows[hi].forEach(function(h, idx){ var k=String(h||"").trim().toLowerCase(); if(k && colIx[k]==null) colIx[k]=idx; });
+    if(hi>=0 && colIx.number!=null && colIx.quantity!=null){
+      var cell=function(r, k, keepSpace){ var ix=colIx[k]; if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
+      var condOf={}; CARD_CONDS.forEach(function(c){ condOf[c.toLowerCase()]=c; });
+      var sealIds={}; SEALED.forEach(function(p){ sealIds[p.id.toLowerCase()]=p.id; });
+      var edOf=function(v){ v=String(v||"").toLowerCase(); return (v==="1st"||v==="1")?"1":((v==="2nd"||v==="2")?"2":""); };
+      var numOf=function(v){ v=String(v||"").replace(/\s+/g,""); if(/^-?\d+,\d+$/.test(v)) v=v.replace(",","."); return parseFloat(v); };
+      for(ri=hi+1; ri<rows.length; ri++){
+        var row=rows[ri]; if(!row.join("").trim()) continue;
+        var num=cell(row,"number").replace(/^#/,""), type=cell(row,"type").toLowerCase()||"card";
+        // Blank means 1; "2", "x2" or "2x" as the tolerant reader; 0 (or anything else) on a Card / Sealed row adds nothing.
+        var qs=cell(row,"quantity"), mq=qs.match(/^x?\s*(\d+)\s*x?$/i), q=mq?parseInt(mq[1],10):(qs===""?1:NaN);
+        if(type!=="graded" && !(q>0)){ skipped++; continue; }
+        if(type==="sealed" || type==="preorder"){
+          var sid=sealIds[num.toLowerCase()]; if(!sid){ skipped++; continue; }
+          if(!sealed[sid]){ sealed[sid]={qty:0,rrp:0,mkt:0,last:0,avg:0}; added++; }
+          sealed[sid].qty+=q; sealedItems+=q; continue;
+        }
+        var card=byNumberIdx[num.toUpperCase()]; if(!card){ skipped++; continue; }
+        var e=own[card.id]; if(!e){ e=own[card.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; }
+        if(type==="graded"){
+          var gr=cell(row,"grade"); if(/^\d+,\d+$/.test(gr)) gr=gr.replace(",",".");   // decimal comma half grades ("9,5")
+          var slab={grader:cell(row,"grader")||SETTINGS.defaultGrader||"PSA", grade:gr, value:numOf(cell(row,"unit value"))||0};
+          var cert=cell(row,"cert"), sed=edOf(cell(row,"edition"));
+          if(cert) slab.cert=cert;
+          if(sed) slab.edition=sed;
+          e.graded.push(slab); slabs++;
+        } else {
+          e.qty+=q; cards+=q;
+          var cd=condOf[cell(row,"condition").toLowerCase()]; if(cd) e.cond=cd;
+          var nt=cell(row,"notes",true); if(nt.trim()) e.notes=nt;
+          var ed=edOf(cell(row,"edition")); if(ed) e.edition=ed;
+        }
+      }
+      return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:slabs, sealedItems:sealedItems };
+    }
+    lines.forEach(function(line){
       line=line.trim(); if(!line) return;
       var toks=line.split(/[,;\t]+/), id=null, qty=null;
       toks.forEach(function(t){
-        t=(t||"").trim(); if(!t) return;
+        t=(t||"").trim().replace(/^"+|"+$/g,"").trim(); if(!t) return;
         var up=t.toUpperCase().replace(/^#/,"");
-        if(!id && byNumberIdx[up]){ id=up; return; }
+        if(!id && byNumberIdx[up]){ id=byNumberIdx[up].id; return; }
         var mq=t.match(/^x?\s*(\d+)$/i); if(qty==null && mq){ qty=parseInt(mq[1],10); }
       });
-      if(id){ if(!(qty>0)) qty=1; if(own[id]){ own[id].qty+=qty; } else { own[id]={qty:qty,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; } }
+      if(id){ if(!(qty>0)) qty=1; if(own[id]){ own[id].qty+=qty; } else { own[id]={qty:qty,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; } cards+=qty; }
       else skipped++;
     });
-    return { own:own, added:added, skipped:skipped };
+    return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:0, sealedItems:0 };
   }
   function doImportCsv(){
-    var inp=document.createElement("input"); inp.type="file"; inp.accept=".csv,.txt,text/csv,text/plain";
-    inp.onchange=function(){ var f=inp.files[0]; if(!f) return; var rd=new FileReader();
-      rd.onload=function(){ try{
-        var res=parseCsvCollection(rd.result);
-        if(!res.added){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
-        var base=(f.name||"Imported").replace(/\.[^.]+$/,"");
-        var nm=base+" (CSV)";
-        var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:{} }); switchCol(id);
-        toast("Imported "+res.added+" card"+(res.added>1?"s":"")+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
-      }catch(e){ toast("That file couldn't be read"); } };
-      rd.readAsText(f); };
-    inp.click();
+    pickTextFile(".csv,.txt,text/csv,text/plain", function(text, f){ try{
+      var res=parseCsvCollection(text);
+      if(!res.added){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
+      var base=((f&&f.name)||"Imported").replace(/\.[^.]+$/,"");
+      var nm=base+" (CSV)";
+      var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:res.sealed||{} }); switchCol(id);
+      var parts=[];
+      if(res.cards) parts.push(res.cards+" card"+(res.cards>1?"s":""));
+      if(res.slabs) parts.push(res.slabs+" slab"+(res.slabs>1?"s":""));
+      if(res.sealedItems) parts.push(res.sealedItems+" sealed item"+(res.sealedItems>1?"s":""));
+      var what=parts.length>1 ? (parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1]) : (parts[0]||"a collection");
+      toast("Imported "+what+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
+    }catch(e){ toast("That file couldn't be read"); } });
   }
   function applyTheme(){
     var t=SETTINGS.theme||"system";
@@ -4209,18 +4430,14 @@
     return true;
   }
   function downloadDeckText(d, text){
-    var blob=new Blob([text||deckToText(d)],{type:"text/plain"});
-    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-    a.download=((d.name||"deck").replace(/[^a-z0-9]+/gi,"-").toLowerCase())+".txt"; a.click(); URL.revokeObjectURL(a.href);
-    toast("Exported “"+d.name+"”");
+    var nm=d.name;
+    saveTextFile(fileSlug(d.name,"deck")+".txt", "text/plain", text||deckToText(d), function(){ toast("Exported “"+nm+"”"); });
   }
   function doDeckImport(){
-    var inp=document.createElement("input"); inp.type="file"; inp.accept=".txt,.csv,text/plain,text/csv";
-    inp.onchange=function(){ var f=inp.files[0]; if(!f) return; var rd=new FileReader();
-      rd.onload=function(){ try{ createDeckFromParse((f.name||"Deck").replace(/\.[^.]+$/,""), parseDeckList(rd.result)); }
-        catch(e){ toast("That file couldn't be read"); } };
-      rd.readAsText(f); };
-    inp.click();
+    pickTextFile(".txt,.csv,text/plain,text/csv", function(text, f){
+      try{ createDeckFromParse(((f&&f.name)||"Deck").replace(/\.[^.]+$/,""), parseDeckList(text)); }
+      catch(e){ toast("That file couldn't be read"); }
+    });
   }
   // Paste-box modal: decklists move around as text (the sim copies/pastes them), so offer both.
   function copyDeckText(t){
@@ -4331,7 +4548,7 @@
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["askScrim","deckIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     return closed;
   }
@@ -4496,7 +4713,8 @@
     var email=(($("ctEmail")||{}).value||"").trim();
     var btn=$("ctSend"), done=busyBtn(btn, "Sending…");
     ctStatus("Sending…", false);
-    fetch(base+"/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:ctTopic,message:msg,from:email})})
+    fetch(base+"/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:ctTopic,message:msg,from:email,version:APP_VERSION,
+      platform: window.IS_IOS ? "ios" : ((window.AndroidScan && typeof window.AndroidScan.scan==="function") ? "android" : "web")})})
       .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok,body:j}; }); })
       .then(function(r){
         done();
@@ -5354,7 +5572,7 @@
     var Q_INFO={
       scan:"Point the camera at a card's number (like <code>EBP01-001</code>) and it is added instantly. Best for adding cards one at a time from your hand.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
-      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. It lands as a new collection named after the file."
+      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too. It lands as a new collection named after the file."
     };
     var cur=null, panel=$("qInfoPanel");
     Array.prototype.forEach.call(document.querySelectorAll(".qinfobtn"), function(b){
@@ -5421,9 +5639,8 @@
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); paintLogin(); };
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
     var ts=$("setTextSize"); if(ts){ ts.value=String(+SETTINGS.textScale||1); ts.onchange=function(){ SETTINGS.textScale=+ts.value||1; saveSettings(); applyTextScale(); }; }
-    var ex=$("setExport"); if(ex) ex.onclick=doExport;
-    var im=$("setImport"); if(im) im.onclick=doImport;
-    var imc=$("setImportCsv"); if(imc) imc.onclick=doImportCsv;
+    var ex=$("setExport"); if(ex) ex.onclick=function(){ openFileIO("export"); };
+    var im=$("setImport"); if(im) im.onclick=function(){ openFileIO("import"); };
     buildQuickMenuSettings();
   })();
 
