@@ -639,7 +639,7 @@
   .sealprices { display:flex; flex-wrap:wrap; gap:6px 14px; margin:2px 0 2px; font-size:.78rem; color:var(--ink-soft); }
   .sealprices .spx { display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; }
   .sealprices .spdot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
-  .sealprices .spsold { background:var(--azure); } .sealprices .splive { background:var(--up); }
+  .sealprices .spsold { background:var(--azure); } .sealprices .splive { background:var(--up); } .sealprices .spgraded { background:var(--gold); }
   .priceg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .priceg .pf { display:flex; flex-direction:column; gap:3px; }
   .priceg .pf label { font-size:.58rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -2205,7 +2205,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   // Unit market price for a card in the ACTIVE mode. LIVE: precise e.list -> the daily live book (owned or
   // not) -> the sold-derived headline as a last resort. SOLD: precise e.sold -> the sold headline -> the
   // weekly sold book. So live never shows a sold figure while a live book value exists, and vice-versa.
-  function unitOf(id, mode){ var e=own[id], sold=((mode||priceMode())==="sold");
+  // unitOfEntry reads a given owned entry (may be missing), so the scanner can price a card against the collection it is adding to.
+  function unitOf(id, mode){ return unitOfEntry(id, mode, own[id]); }
+  function unitOfEntry(id, mode, e){ var sold=((mode||priceMode())==="sold");
     if(sold){
       // Sold mode: your precise last-sold, then the sold-preferred owned headline, then the weekly bulk sold book.
       if(e){ if(+e.sold>0) return +e.sold; if(+e.mkt>0) return +e.mkt; }
@@ -4043,8 +4045,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   //     (sold -> listings -> US), 1-2 calls, so a stale binder refreshes fast.
   //   both=true (the manual "Refresh prices"): fetch sold AND listings so the binder-value
   //     toggle has both numbers.
-  function pullCardMarket(c, region, both){
-    var e=o(c.id);
+  //   entry (optional): write into this object instead of the active collection's entry (the scanner's scratch prices).
+  function pullCardMarket(c, region, both, entry){
+    var e=entry||o(c.id);
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
     function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
     function applyList(b){ var v=+b.market||0; e.list=v; return v; }
@@ -5403,10 +5406,12 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     });
     chooser.classList.add("open");
   }
-  function addToCollection(colId, cardId){
+  // prep (optional) runs on the entry before the single save + render (the scanner sets edition + prices there).
+  function addToCollection(colId, cardId, prep){
     var col=STATE.cols.filter(function(x){return x.id===colId;})[0]; if(!col) return;
     var e=col.own[cardId]; if(!e){ e=col.own[cardId]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     e.qty=Math.max(1,(e.qty||0)+1);
+    if(prep) prep(e);
     save(); render();
   }
   // ---- Rich scan confirmation: card image → Wishlist/Collection → Raw/Graded → which collection.
@@ -5432,27 +5437,105 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   var EDITION_SETS={EBP01:1,ETD01:1,ETD02:1};
   function canEdition(card){ return !!(card && EDITION_SETS[card.set]); }
   // Quick price glance in the scan popup. Convention (matches the rest of the app): blue = last sold, green = live listings.
+  // Sold + Live are priced against the collection picked in the popup (plus the popup's fresh pull), so they show
+  // what the add will be worth; a third chip shows the graded price for the chosen company + grade.
   function scanPriceRow(card){
     var el=$("scanPrice"); if(!el) return;
     if(!card || SETTINGS.mode==="collector"){ el.hidden=true; el.innerHTML=""; return; }
-    var sold=unitOf(card.id,"sold"), live=unitOf(card.id,"live");
+    var pe=scanPriced(card, scanTargetEntry(card)), sold=unitOfEntry(card.id,"sold",pe), live=unitOfEntry(card.id,"live",pe), chip="";
+    if(scanState.dest==="collection" && scanState.type==="graded"){
+      var gr=($("scanGraderSel")||{}).value||"", gd=($("scanGradeSel")||{}).value||"", gp=ensureGradedPrice(card, gr, gd), gl='<span class="spx"><i class="spdot spgraded"></i>'+esc(gr+" "+gd)+' ';
+      if(gp && !gp.done){
+        chip=gl+SPIN+'</span>';
+        if(!gp.ui){ gp.ui=true; gp.p.then(function(){ if(scanState.card && scanState.card.id===card.id) scanPriceRow(scanState.card); }); }
+      } else if(gp && gp.val>0) chip=gl+money(gp.val)+'</span>';
+    }
     el.hidden=false;
     el.innerHTML='<div class="sealprices">'
       +'<span class="spx"><i class="spdot spsold"></i>Sold '+((+sold>0)?money(sold):"—")+'</span>'
       +'<span class="spx"><i class="spdot splive"></i>Live '+((+live>0)?money(live):"—")+'</span>'
-      +'</div>';
+      +chip+'</div>';
+  }
+  // ---- Scan price session: sold + live are pulled ONCE per card into a scratch object (never into STATE),
+  // reused for 10 minutes, and copied into each collection entry the scan adds the card to.
+  var SCAN_PX={}, SCAN_PX_TTL=10*60*1000, SCAN_PX_KEYS=["sold","list","last","avg","mkt"];
+  function scanColById(id){ return STATE.cols.filter(function(x){return x.id===id;})[0]||null; }
+  function scanTargetEntry(card){ var cs=$("scanColSel"), col=(cs && cs.value)?scanColById(cs.value):null; return (card && col && col.own)?(col.own[card.id]||null):null; }
+  // A copy of the entry (may be missing) with the scratch prices laid over it, for pricing before anything is written.
+  function scanPriced(card, e){ var x={}, k, rec=SCAN_PX[card.id];
+    if(e){ for(k in e){ if(Object.prototype.hasOwnProperty.call(e,k)) x[k]=e[k]; } }
+    if(rec) SCAN_PX_KEYS.forEach(function(f){ if(+rec.px[f]>0) x[f]=+rec.px[f]; });
+    return x; }
+  function scanCopyPx(px, e){ var n=0; if(!px || !e) return false;
+    SCAN_PX_KEYS.forEach(function(f){ if(+px[f]>0){ e[f]=+px[f]; n++; } });
+    if(n) e.pAt=Date.now(); return n>0; }
+  // Repaint the Home / Portfolio headline when one of them is on screen (render() only refreshes the Cards page).
+  function scanRefreshPages(){
+    var ph=$("page-home"); if(ph && ph.classList.contains("active") && typeof renderHome==="function") renderHome();
+    var pp=$("page-portfolio"); if(pp && pp.classList.contains("active") && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+  }
+  function scanPull(card){
+    if(!card || !apiBase() || SETTINGS.mode==="collector" || typeof pullCardMarket!=="function") return null;
+    var reg=SETTINGS.ebayRegion||"co.uk", ctx=reg+"|"+SEAL_ED, now=Date.now(), rec=SCAN_PX[card.id];
+    if(rec && rec.ctx===ctx && (now-rec.at)<SCAN_PX_TTL) return rec;
+    rec=SCAN_PX[card.id]={at:now, ctx:ctx, done:false, px:{}, waits:[]};
+    var p=null; try{ p=pullCardMarket(card, reg, true, rec.px); }catch(e){}
+    Promise.resolve(p).catch(function(){}).then(function(){
+      rec.done=true;
+      if(scanState.card && scanState.card.id===card.id) scanPriceRow(scanState.card);
+      var n=0; rec.waits.splice(0).forEach(function(cid){ var col=scanColById(cid), te=col && col.own && col.own[card.id]; if(te && scanCopyPx(rec.px, te)) n++; });
+      if(n){ save(); render(); scanRefreshPages(); }
+    });
+    return rec;
+  }
+  // Copy the finished pull into an entry the scan just added to, or queue it for when the pull lands.
+  function scanLinkPrices(rec, colId, e){ if(!rec || !e) return; if(rec.done) scanCopyPx(rec.px, e); else if(rec.waits.indexOf(colId)===-1) rec.waits.push(colId); }
+  // Graded sold price per card + company + grade, one request per key for the session (same URL as the card sheet, so it shares the backend cache).
+  var SCAN_GP={};
+  function ensureGradedPrice(card, grader, grade){
+    if(!card || !grader || !grade || grade==="Auth" || !apiBase() || SETTINGS.mode==="collector") return null;
+    var reg=SETTINGS.ebayRegion||"co.uk", key=card.id+"|"+grader+"|"+grade+"|"+reg+"|"+SEAL_ED, rec=SCAN_GP[key];
+    if(rec && !(rec.failed && Date.now()-rec.at>60000)) return rec;   // a failed request may retry a minute after it failed
+    rec=SCAN_GP[key]={at:Date.now(), done:false, failed:false, val:0};
+    var url="/api/sales?name="+encodeURIComponent(card.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(card.id))+"&region="+encodeURIComponent(reg)+"&source=soldcomps&grade="+encodeURIComponent(grader+" "+grade);
+    var p; try{ p=api(url,"GET"); }catch(e){ p=Promise.reject(e); }
+    rec.p=p.then(function(r){ var b=(r&&r.body)||{}, v=+(b.avg!=null?b.avg:b.market)||0;
+      if(r && r.ok) rec.val=(v>0)?v:0; else rec.failed=true;
+    }).catch(function(){ rec.failed=true; }).then(function(){ rec.done=true; if(rec.failed) rec.at=Date.now(); return rec.val; });
+    return rec;
+  }
+  function scanGuideOf(e, gd){ return (e && e.gradeGuide && +e.gradeGuide[gd]>0)?+e.gradeGuide[gd]:0; }
+  // Slab value at Add: the graded price if it is in, else the saved grade guide (default company only), else the raw price as a floor.
+  function scanSlabValue(card, e, gr, gd){
+    var gp=ensureGradedPrice(card, gr, gd);
+    if(gp && gp.done && gp.val>0) return {value:gp.val};
+    if(gr===(SETTINGS.defaultGrader||"PSA")){
+      var g=scanGuideOf(e, gd);
+      if(!(g>0)) STATE.cols.some(function(col){ g=scanGuideOf(col.own && col.own[card.id], gd); return g>0; });
+      if(g>0) return {value:g};
+    }
+    var raw=unitOfEntry(card.id, null, scanPriced(card, e));
+    return (raw>0)?{value:raw, est:"raw"}:{value:0};
+  }
+  // When the graded price lands, fill the slab it was added for, unless the user changed its value meanwhile.
+  function scanWatchSlab(gp, colId, cardId, tok, ph){
+    gp.p.then(function(v){
+      var col=scanColById(colId), e=col && col.own && col.own[cardId], g=null;
+      ((e && e.graded)||[]).forEach(function(x){ if(x && x.gpTok===tok) g=x; });
+      if(!g) return;
+      delete g.gpTok;
+      if(+v>0 && +g.value===+ph){ g.value=+v; delete g.est; save(); render(); scanRefreshPages(); }
+      else save();
+    });
   }
   function scanSetCard(card){
     scanState.card=card;
     $("scanImg").src=imgSrc(card);
     $("scanName").textContent=card.name;
     $("scanNum").textContent=card.id;
+    scanPull(card);   // fill the precise avg 5 sold + live once (reused if already pulled); the row refreshes when it lands
     scanPriceRow(card);
     var vs=$("scanVariants"); if(vs){ Array.prototype.forEach.call(vs.children,function(b){ b.classList.toggle("on", b.getAttribute("data-id")===card.id); }); }
-    // Fill the precise avg-5 sold + live once (needs network); refresh the row only if this card is still shown.
-    if(apiBase() && SETTINGS.mode!=="collector" && typeof pullCardMarket==="function"){
-      try{ pullCardMarket(card, SETTINGS.ebayRegion||"co.uk", true).then(function(){ if(scanState.card && scanState.card.id===card.id) scanPriceRow(scanState.card); }).catch(function(){}); }catch(e){}
-    }
   }
   // OCR often misreads full-art (SR/OSR/SSP) cards, so let the user pick the right printing of the same number.
   function scanBuildVariants(card){
@@ -5467,6 +5550,15 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     if(!scanScrim) return;
     scanState.dest="collection"; scanState.type=(graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
     scanState.edition=(String(edition)==="2")?"2":"1";
+    // "Add cards to" default sticks; fall back to the active collection. Filled before the card so the price row reads the right target.
+    var cs=$("scanColSel"); cs.innerHTML="";
+    var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;})) ? SETTINGS.defaultAddCol : activeCol().id;
+    STATE.cols.forEach(function(col){ var op=document.createElement("option"); op.value=col.id; op.textContent=col.name; if(col.id===def)op.selected=true; cs.appendChild(op); });
+    // "Default grading company" default sticks; a scanned slab pre-fills the detected company / grade / cert.
+    var gGr=(graded&&graded.grader)||SETTINGS.defaultGrader||"PSA", gGd=(graded&&graded.grade)?String(graded.grade):"10";
+    $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+(gGr===x?' selected':'')+'>'+x+'</option>';}).join("");
+    $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(String(x)===gGd?' selected':'')+'>'+x+'</option>';}).join("");
+    var certEl=$("scanCert"); if(certEl) certEl.value=(graded&&graded.cert)?String(graded.cert):"";
     scanSetCard(card);
     scanBuildVariants(card);
     // Running-session tally (auto-resets after 60s idle) + low-confidence prompt (TCGplayer-inspired: don't silently guess).
@@ -5476,33 +5568,20 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     // If this card has variants, open the picker so the user can choose the exact printing: name/number
     // OCR resolves the card but not RR vs OSR vs SSP. The "not sure" hint above stays gated on lowConf.
     var _wb=$("scanWrong"), _vs=$("scanVariants"); if(_wb && _vs && !_wb.hidden) _vs.hidden=false;
-    // "Add cards to" default sticks; fall back to the active collection.
-    var cs=$("scanColSel"); cs.innerHTML="";
-    var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;})) ? SETTINGS.defaultAddCol : activeCol().id;
-    STATE.cols.forEach(function(col){ var op=document.createElement("option"); op.value=col.id; op.textContent=col.name; if(col.id===def)op.selected=true; cs.appendChild(op); });
-    // "Default grading company" default sticks; a scanned slab pre-fills the detected company / grade / cert.
-    var gGr=(graded&&graded.grader)||SETTINGS.defaultGrader||"PSA", gGd=(graded&&graded.grade)?String(graded.grade):"10";
-    $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+(gGr===x?' selected':'')+'>'+x+'</option>';}).join("");
-    $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(String(x)===gGd?' selected':'')+'>'+x+'</option>';}).join("");
-    var certEl=$("scanCert"); if(certEl) certEl.value=(graded&&graded.cert)?String(graded.cert):"";
     paintScan();
     var _scWas=!scanScrim.hidden;
     scanScrim.hidden=false;
     if(!_scWas) openOverlay(closeScanModal);
   }
   function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; }
-  // After a scan-add, refresh just that card's price in the background so scanning many cards
-  // does not need a manual "refresh all" afterwards.
-  function scanBgPrice(card){
-    if(!apiBase() || SETTINGS.mode==="collector" || typeof pullCardMarket!=="function") return;
-    try{ pullCardMarket(card, SETTINGS.ebayRegion||"co.uk").then(function(v){ if(v!=null){ save(); render(); } }).catch(function(){}); }catch(e){}
-  }
   // Continuous scanning: after Add/Cancel, reopen the native camera so the user can scan the next card.
   function scanContinue(){ try{ if(SETTINGS.scanLoop!==false && window.AndroidScan && typeof window.AndroidScan.scan==="function") setTimeout(function(){ window.AndroidScan.scan(); },120); }catch(e){} }
   (function(){
     if(!scanScrim) return;
-    $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); });
-    $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); });
+    $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); scanPriceRow(scanState.card); });
+    $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); scanPriceRow(scanState.card); });
+    // Target collection / company / grade change what the add is worth: reprice the row (starts the graded pull when needed).
+    ["scanColSel","scanGraderSel","scanGradeSel"].forEach(function(id){ var s=$(id); if(s) s.addEventListener("change", function(){ scanPriceRow(scanState.card); }); });
     $("scanEdition").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.edition=b.getAttribute("data-edition"); paintScan(); });
     $("scanCancel").onclick=function(){ dismissOverlay(); scanContinue(); };
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
@@ -5517,24 +5596,30 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
       } else {
         var colId=$("scanColSel").value;
         var ed=canEdition(card)?scanState.edition:null;
+        var rec=SCAN_PX[card.id]||null, added=0;   // the popup's price pull (never a second pull on Add)
         if(scanState.type==="graded"){
-          var col=STATE.cols.filter(function(x){return x.id===colId;})[0];
+          var col=scanColById(colId);
           if(col){
             var e=col.own[card.id]; if(!e){ e=col.own[card.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
             if(!e.graded) e.graded=[];
             var gr=$("scanGraderSel").value, gd=$("scanGradeSel").value, cert=($("scanCert").value||"").trim();
-            var gobj={grader:gr, grade:gd, value:0}; if(ed) gobj.edition=ed; if(cert) gobj.cert=cert;
-            e.graded.push(gobj);
+            // Value the slab now so the portfolio counts it at once; a graded price still loading fills it in when it lands.
+            var sv=scanSlabValue(card, e, gr, gd), gp=ensureGradedPrice(card, gr, gd);
+            var gobj={grader:gr, grade:gd, value:sv.value}; if(sv.est) gobj.est=sv.est; if(ed) gobj.edition=ed; if(cert) gobj.cert=cert;
+            if(gp && !gp.done){ gobj.gpTok="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); scanWatchSlab(gp, colId, card.id, gobj.gpTok, gobj.value); }
+            scanLinkPrices(rec, colId, e);
+            e.graded.push(gobj); added=gobj.value;
             save(); render();
             toast(card.name+" · "+gr+" "+gd+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
           }
         } else {
-          addToCollection(colId, card.id);
-          if(ed){ var col2=STATE.cols.filter(function(x){return x.id===colId;})[0]; if(col2 && col2.own[card.id]){ col2.own[card.id].edition=ed; save(); } }
+          var te=null;
+          addToCollection(colId, card.id, function(x){ te=x; if(ed) x.edition=ed; scanLinkPrices(rec, colId, x); });
+          if(te) added=unitOfEntry(card.id, null, te);
           toast(card.name+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
         }
-        scanBgPrice(card);
-        scanSession.count++; scanSession.value += unitOf(card.id); scanSession.ts=Date.now();
+        scanRefreshPages();
+        scanSession.count++; scanSession.value += (+added||0); scanSession.ts=Date.now();
       }
       dismissOverlay(); scanContinue();
     };
