@@ -1107,6 +1107,17 @@
   .scanprice .sealprices .spdot{ width:11px; height:11px; }
   .scansess{ text-align:center; font-size:.78rem; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border:1px solid var(--line-strong); border-radius:999px; padding:5px 14px; margin:0 auto 12px; width:fit-content; }
   .scanhint{ text-align:center; font-size:.82rem; font-weight:600; color:var(--gold-ink); background:color-mix(in srgb,var(--gold) 13%,var(--surface-2)); border:1px solid color-mix(in srgb,var(--gold) 38%,var(--line-strong)); border-radius:11px; padding:8px 12px; margin:0 0 12px; }
+  /* Scan popup duplicate check: gold when the target collection already holds this printing, accent when it is new. Plain token colours here; the color-mix tints live in the @supports block below
+     (a var() inside color-mix is accepted at parse time, so a same-rule plain fallback would be discarded, not used, on WebViews without color-mix). */
+  .scanowned{ margin-top:6px; }
+  .scanowned .sopill{ display:inline-block; font-size:.74rem; font-weight:700; line-height:1.35; border-radius:11px; padding:3px 10px; word-break:break-word; color:var(--ink); background:var(--surface-2); border:1px solid var(--line-strong); }
+  .scanowned .sodup{ color:var(--gold-deep); border-color:var(--gold); }
+  .scanowned .sonew{ color:var(--accent-ink); }
+  @supports (color: color-mix(in srgb, red, blue)){
+    .scanowned .sodup{ color:color-mix(in srgb,var(--gold) 55%,var(--ink)); background:color-mix(in srgb,var(--gold) 14%,var(--surface-2)); border-color:color-mix(in srgb,var(--gold) 45%,var(--line-strong)); }
+    .scanowned .sonew{ background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); }
+  }
+  .scanowned .soother{ font-size:.72rem; font-weight:600; color:var(--ink-soft); margin-top:4px; word-break:break-word; }
   .segrow{ display:flex; gap:8px; }
   .segrow .seg{ flex:1; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:11px;
     padding:10px; font-family:inherit; font-weight:650; font-size:.9rem; cursor:pointer; transition:border-color .14s, background .14s, color .14s; }
@@ -1145,6 +1156,8 @@
   .scanvar .vn{ font-weight:600; font-size:.86rem; }
   .scanvar .vr{ margin-left:auto; font-family:var(--font-mono); font-size:.78rem; color:var(--ink-soft); }
   .scanvar.on{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+  .scanvar .vo{ flex:none; font-family:var(--font-mono); font-size:.7rem; font-weight:700; line-height:1.3; padding:1px 6px; border-radius:999px; color:var(--gold-deep); background:var(--surface); border:1px solid var(--gold); }
+  @supports (color: color-mix(in srgb, red, blue)){ .scanvar .vo{ color:color-mix(in srgb,var(--gold) 55%,var(--ink)); background:color-mix(in srgb,var(--gold) 14%,var(--surface-2)); border-color:color-mix(in srgb,var(--gold) 45%,var(--line-strong)); } }
 
   /* Detail modal: wishlist/collection toggles + sections + graded guide */
   .detactions{ display:flex; gap:10px; margin:14px 0 4px; }
@@ -1997,6 +2010,7 @@
         <div class="scaneyebrow">Scanned card</div>
         <h3 id="scanName"></h3>
         <div class="scannum" id="scanNum"></div>
+        <div class="scanowned" id="scanOwned" hidden><div class="sopill sonew" id="scanOwnedMain"></div><div class="soother" id="scanOwnedOther" hidden></div></div>
       </div>
     </div>
     <div class="scanprice" id="scanPrice" hidden></div>
@@ -5583,6 +5597,36 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     scanPull(card);   // fill the precise avg 5 sold + live once (reused if already pulled); the row refreshes when it lands
     scanPriceRow(card);
     var vs=$("scanVariants"); if(vs){ Array.prototype.forEach.call(vs.children,function(b){ b.classList.toggle("on", b.getAttribute("data-id")===card.id); }); }
+    scanOwnedRow(card);
+  }
+  // Duplicate check: how many of this exact printing the target collection (and the others) already hold. Reads STATE live on every paint.
+  function scanOwnCount(col, id){ var e=col && col.own && col.own[id]; return (e?((+e.qty>0?+e.qty:0)+(e.graded?e.graded.length:0)):0); }
+  function scanOwnGraded(col, id){ var e=col && col.own && col.own[id]; return (e && e.graded)?e.graded.length:0; }
+  function scanTargetCol(){ var cs=$("scanColSel"); return ((cs && cs.value)?scanColById(cs.value):null) || activeCol() || null; }
+  function scanOwnedRow(card){
+    var box=$("scanOwned"), m=$("scanOwnedMain"), o=$("scanOwnedOther"), col=scanTargetCol();
+    if(!box || !m || !o) return;
+    if(!card || !col){ box.hidden=true; return; }
+    var tot=scanOwnCount(col, card.id), gc=scanOwnGraded(col, card.id), nm=col.name||"";
+    var txt=(tot>0)?("You have "+tot+" in "+nm+((gc>0 && SETTINGS.mode!=="collector")?" · "+gc+" graded":"")):("New to "+nm);
+    if(isWished(card.id)) txt+=" · On your wishlist";
+    m.textContent=txt;   // textContent, so collection names can never inject markup
+    m.className="sopill "+(tot>0?"sodup":"sonew");
+    var other=0, cols=0, oname="";
+    STATE.cols.forEach(function(c){ if(!c || c.id===col.id) return; var t=scanOwnCount(c, card.id); if(t>0){ other+=t; cols++; oname=c.name||""; } });
+    o.textContent=(other>0)?("Also "+other+" in "+(cols===1?oname:"other collections")):"";
+    o.hidden=!(other>0);
+    box.hidden=false;
+    scanPaintVariantOwned(col);
+  }
+  // Tiny "×N" badge on each printing in the variant picker, counted in the target collection.
+  function scanPaintVariantOwned(col){
+    var vs=$("scanVariants"); if(!vs) return;
+    Array.prototype.forEach.call(vs.querySelectorAll(".scanvar"), function(b){
+      var vo=b.querySelector(".vo"); if(!vo) return;
+      var t=col?scanOwnCount(col, b.getAttribute("data-id")||""):0;
+      vo.textContent=(t>0)?"×"+t:""; vo.title=(t>0)?(t+" in "+(col.name||"")):""; vo.hidden=!(t>0);
+    });
   }
   // OCR often misreads full-art (SR/OSR/SSP) cards, so let the user pick the right printing of the same number.
   function scanBuildVariants(card){
@@ -5590,8 +5634,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     var variants=CARDS.filter(function(c){ return c.base===card.base; });
     if(variants.length<=1){ wb.hidden=true; vs.hidden=true; vs.innerHTML=""; return; }
     wb.hidden=false; vs.hidden=true;
-    vs.innerHTML=variants.map(function(c){ return '<button type="button" class="scanvar'+(c.id===card.id?' on':'')+'" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><span class="vn">'+esc(c.id)+'</span><span class="vr">'+esc(c.rare)+'</span></button>'; }).join("");
+    vs.innerHTML=variants.map(function(c){ return '<button type="button" class="scanvar'+(c.id===card.id?' on':'')+'" data-id="'+esc(c.id)+'"><img src="'+imgSrc(c)+'" alt=""><span class="vn">'+esc(c.id)+'</span><span class="vo" hidden></span><span class="vr">'+esc(c.rare)+'</span></button>'; }).join("");
     Array.prototype.forEach.call(vs.querySelectorAll(".scanvar"), function(b){ b.onclick=function(){ var c=byNumberIdx[(b.getAttribute("data-id")||"").toUpperCase()]; if(c){ scanSetCard(c); vs.hidden=true; } }; });
+    scanPaintVariantOwned(scanTargetCol());
   }
   function openScanModal(card, edition, graded, lowConf){
     if(!scanScrim) return;
@@ -5625,11 +5670,11 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   function scanContinue(){ try{ if(SETTINGS.scanLoop!==false && window.AndroidScan && typeof window.AndroidScan.scan==="function") setTimeout(function(){ window.AndroidScan.scan(); },120); }catch(e){} }
   (function(){
     if(!scanScrim) return;
-    $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); scanPriceRow(scanState.card); });
+    $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); scanPriceRow(scanState.card); scanOwnedRow(scanState.card); });
     $("scanType").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.type=b.getAttribute("data-type"); paintScan(); scanPriceRow(scanState.card); });
     // Target collection / company / grade change what the add is worth: reprice the row (starts the graded pull when needed).
     // A company or grade change waits about half a second for the selects to settle, so flicking through them costs one request, not one each.
-    var scs=$("scanColSel"); if(scs) scs.addEventListener("change", function(){ scanPriceRow(scanState.card); });
+    var scs=$("scanColSel"); if(scs) scs.addEventListener("change", function(){ scanPriceRow(scanState.card); scanOwnedRow(scanState.card); });
     ["scanGraderSel","scanGradeSel"].forEach(function(id){ var s=$(id); if(s) s.addEventListener("change", function(){
       clearTimeout(scanGpTimer); scanGpTimer=setTimeout(function(){ scanGpTimer=null; scanPriceRow(scanState.card); }, 500);
       scanPriceRow(scanState.card, true); }); });
