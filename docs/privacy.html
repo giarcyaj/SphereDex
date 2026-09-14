@@ -3,8 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SphereDex - Privacy Policy</title>
-<meta name="description" content="How SphereDex handles your data: local-first, no ads, no trackers. Nothing leaves your device unless you choose to sign in or contact us.">
+<title>SphereDex Privacy Policy</title>
+<meta name="description" content="How SphereDex handles your data. Your collection saves on your device, with no ads, analytics or trackers. Here is exactly what reaches our server, and why.">
+<link rel="canonical" href="https://spheredex.app/privacy">
+<meta property="og:title" content="SphereDex Privacy Policy">
+<meta property="og:description" content="How SphereDex handles your data. Your collection saves on your device, with no ads, analytics or trackers. Here is exactly what reaches our server, and why.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SphereDex">
+<meta property="og:url" content="https://spheredex.app/privacy">
+<meta property="og:image" content="https://spheredex.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SphereDex, the free Palworld TCG collection tracker for web, iPhone and Android">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://spheredex.app/og.png">
 <meta name="theme-color" content="#08151f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +38,7 @@
   a{color:var(--accent-ink)}
   .wrap{max-width:760px;margin:0 auto;padding:0 22px}
   .top{border-bottom:1px solid var(--line);padding:22px 0}
-  .brand{display:flex;align-items:center;gap:11px;font-family:var(--font-brand);font-weight:800;font-size:1.3rem}
+  .brand{display:inline-flex;align-items:center;gap:11px;font-family:var(--font-brand);font-weight:800;font-size:1.3rem;color:var(--ink);text-decoration:none}
   .brand svg{width:32px;height:32px}
   main{padding:40px 0 70px}
   h1{font-family:var(--font-disp);font-weight:700;font-size:clamp(2rem,5vw,2.8rem);line-height:1.06;margin:0 0 6px}
@@ -43,48 +55,70 @@
 </style>
 </head>
 <body>
-<div class="top"><div class="wrap"><span class="brand">
+<div class="top"><div class="wrap"><a class="brand" href="index.html">
   <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="url(#g)" stroke-width="3"/><circle cx="24" cy="24" r="16.5" fill="#0b1a23"/><path d="M30 17c-3-2.4-9-2.6-11 .3-2 2.9 1 5 5 6.1 4 1.1 7 3.2 5 6.1-2 2.9-8 2.7-11 .3" fill="none" stroke="url(#g)" stroke-width="3.2" stroke-linecap="round"/><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5fe6f4"/><stop offset="1" stop-color="#ffb020"/></linearGradient></svg>
-  SphereDex</span></div></div>
+  SphereDex</a></div></div>
 
 <main><div class="wrap">
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: 22 August 2026</p>
+  <p class="updated">Last updated: 14 September 2026</p>
 
   <div class="tldr">
     <h2>The short version</h2>
-    <p>SphereDex is built privacy-first. Your collection is saved <strong>on your own device</strong>. We do not use ads, analytics, or trackers, and we never sell your data. Nothing leaves your device unless you choose to create an account, use cloud sync, or contact us.</p>
+    <p>SphereDex is built with privacy first. Your collection is saved <strong>on your own device</strong>. We do not use ads, analytics, or trackers, and we never sell your data. Only a little reaches our server: card names, numbers and grades with your chosen market when the app looks up prices; a notification token from the iPhone and Android apps; and anything you choose to send us, such as an account for cloud sync or a message. None of it is used to track you.</p>
   </div>
 
   <h2>What is stored on your device</h2>
-  <p>By default, everything SphereDex knows about you stays on your device (in your browser or app storage): the cards you own, wishlist and favourites, graded slabs, notes, sealed products, settings, and the market prices you have looked up. You can export this to a file, or clear it at any time by clearing the app or browser data.</p>
+  <p>Your collection lives on your device (in your browser or app storage): the cards you own, wishlist and favourites, graded slabs, notes, decks, sealed products, settings, and the market prices you have looked up. You can export this to a file, or clear it at any time by clearing the app or browser data.</p>
 
   <h2>Optional account and cloud sync</h2>
   <p>If you choose to create an account to sync your collection across devices, we store on our server:</p>
   <ul>
-    <li>Your <strong>email address</strong> and a securely hashed password, used only to sign you in.</li>
-    <li>Your <strong>collection data</strong> (the same information listed above), so it can sync between your devices.</li>
+    <li>Your <strong>email address</strong> and a securely hashed password. Your email is used to sign you in and, if you forget your password, to send you a one time reset code through our email provider (Resend).</li>
+    <li>Your <strong>collection data</strong> (the same information listed above) and a few account settings, such as your market, currency, grading company and text size, so they sync between your devices.</li>
   </ul>
-  <p>This is entirely optional. If you never sign in, none of this is collected. You can ask us to delete your account and its data at any time using the contact details below.</p>
+  <p>This is entirely optional. If you never sign in, none of this is collected. You can delete your account and its synced data at any time from the <strong>Account</strong> page in the app using <strong>Delete account</strong>, or by contacting us using the details below.</p>
+
+  <h2>Notifications</h2>
+  <p>The iPhone and Android apps can send you notifications about new sets, news, release dates and stock alerts. To make this work, the app registers a <strong>push token</strong> for your device with our server. The Android app does this when it opens, and the iPhone app does it once you allow notifications. Along with the token we store:</p>
+  <ul>
+    <li>Your platform (iPhone or Android) and when the app last checked in.</li>
+    <li>Your notification choices, including the sealed products you follow for stock alerts.</li>
+    <li>Your chosen market, so alerts match your region.</li>
+  </ul>
+  <p>The token is not linked to your account or email address. Notifications are delivered through Google Firebase Cloud Messaging (Android) and Apple Push Notification service (iPhone). The web app does not register a push token.</p>
 
   <h2>Contact form</h2>
-  <p>If you send feedback through the app, we receive the <strong>name, email address, and message</strong> you provide, so we can read it and reply. It is delivered to us by email through our email provider (Resend) and is used only to respond to you.</p>
+  <p>If you send feedback through the app or the form on our roadmap page, we receive the <strong>topic, your message, and your email address</strong> if you choose to add one so we can reply. Messages sent from the app also include the app version and platform (web, iPhone or Android) so we can look into problems. It is delivered to us by email through our email provider (Resend) and is used only to respond to you.</p>
 
   <h2>Camera</h2>
-  <p>On supported apps, SphereDex can use your camera to scan a card number and add it to your collection. This happens <strong>entirely on your device</strong> using the device's built-in text recognition. Camera images are never uploaded, stored, or shared.</p>
+  <p>In the iPhone and Android apps, SphereDex can use your camera to recognise a card, or the grading label on a slab, and add it to your collection. This happens <strong>entirely on your device</strong>. Camera images are never uploaded, stored, or shared.</p>
 
   <h2>Prices and card data</h2>
-  <p>To show market values, the app asks our server for prices using only a card identifier and your chosen currency or region. No personal information is sent. Prices are sourced from public marketplace data via <a href="https://palworldprices.com">Palworld Prices</a> and eBay listings. Buy links open the retailer's own website, where that retailer's privacy policy applies.</p>
+  <p>To show market values, the app asks our server for prices using card names and numbers (plus the grade, for graded slabs) and the market you chose. When the app opens it may also send the numbers of the cards you own, so their last sold prices can be refreshed. Price lookups are not linked to your account. Our server then asks eBay and our price providers (SoldComps, OpenWeb Ninja and <a href="https://palworldprices.com">Palworld Prices</a>) for prices, without sending anything that identifies you. Buy links open the retailer's own website, where that retailer's privacy policy applies.</p>
+
+  <h2>Service providers</h2>
+  <p>We use a small number of companies to run SphereDex. Each one only gets what it needs for its job:</p>
+  <ul>
+    <li><strong>Cloudflare</strong> runs our server and database (accounts, synced collections and notification tokens) and keeps short term request logs.</li>
+    <li><strong>GitHub Pages</strong> hosts this website and the web app.</li>
+    <li><strong>Resend</strong> sends password reset codes and delivers contact form messages to us.</li>
+    <li><strong>Google Firebase Cloud Messaging</strong> and <strong>Apple Push Notification service</strong> deliver notifications to Android and iPhone.</li>
+    <li><strong>eBay, SoldComps, OpenWeb Ninja and Palworld Prices</strong> supply price data. They receive card searches from our server, never your personal details.</li>
+    <li><strong>Google ML Kit</strong> recognises cards on your device in the Android app. The library sends Google anonymous performance and usage metrics, never camera images.</li>
+    <li><strong>The official Palworld card game website</strong> supplies the artwork for any card whose image is not yet built into the app, so your device loads that image from their site.</li>
+    <li><strong>Google Fonts</strong> supplies the fonts on this website's pages, so your browser fetches them from Google. The app itself does not use Google Fonts.</li>
+  </ul>
 
   <h2>What we do not do</h2>
   <ul>
     <li>No advertising and no ad networks.</li>
-    <li>No analytics or usage tracking, and no tracking across other apps or websites.</li>
+    <li>No analytics or usage tracking, and no tracking across other apps or websites. The download and install counts we see come from the standard reports Apple and Google give every developer, not from the app.</li>
     <li>No selling or sharing of your data with third parties for their own use.</li>
   </ul>
 
   <h2>Data retention and deletion</h2>
-  <p>Data on your device stays until you remove it (clear the app or browser storage, or export then delete). If you created an account, contact us to delete your account and all associated data from our server.</p>
+  <p>Data on your device stays until you remove it (clear the app or browser storage, or export then delete). If you created an account, you can delete it and all of its synced data from our server at any time with <strong>Delete account</strong> on the Account page, or by contacting us. We keep a notification token until Google or Apple tell us it is no longer valid, which we only learn when we next send that device a notification. A device that is not being sent notifications, for example one with every notification turned off, may stay stored until then. Contact us if you want yours removed.</p>
 
   <h2>Children</h2>
   <p>SphereDex is not directed at children under 13 and does not knowingly collect their personal information.</p>
@@ -95,7 +129,7 @@
   <h2>Contact</h2>
   <p>Questions, or want your account data deleted? Use the <strong>feedback option inside the app</strong>, or email us at <a href="mailto:craigjayedit@gmail.com">craigjayedit@gmail.com</a>.</p>
 
-  <p style="margin-top:28px;color:var(--ink-faint);font-size:.9rem">SphereDex is a free, fan-made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. SphereDex is not affiliated with or endorsed by Pocketpair or Bushiroad.</p>
+  <p style="margin-top:28px;color:var(--ink-faint);font-size:.9rem">SphereDex is a free, fan made tracker for the Palworld Trading Card Game. Card data and artwork are &copy; Pocketpair / Bushiroad. SphereDex is not affiliated with or endorsed by Pocketpair or Bushiroad.</p>
 </div></main>
 
 <footer class="foot"><div class="wrap"><a href="index.html">Back to SphereDex</a> &middot; <a href="app/">Open the app</a></div></footer>
