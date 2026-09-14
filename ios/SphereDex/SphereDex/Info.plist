@@ -25,7 +25,7 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSCameraUsageDescription</key>
-    <string>SphereDex uses the camera to scan card numbers and add them to your collection.</string>
+    <string>SphereDex uses the camera to recognise a card or a grading label and add it to your collection. Recognition happens on your device and images are never uploaded.</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
     <key>UIStatusBarStyle</key>
