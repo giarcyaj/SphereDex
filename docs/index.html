@@ -24,9 +24,9 @@
 <meta name="twitter:image" content="https://spheredex.app/og.png">
 <meta name="theme-color" content="#08151f">
 <script>(function(r){if('IntersectionObserver' in window&&matchMedia('screen and (prefers-reduced-motion: no-preference)').matches){r.classList.add('rv');setTimeout(function(){if(!window.sdMotion)r.classList.remove('rv')},3000)}})(document.documentElement)</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/chakra-petch-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/baloo2-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   /* ---- Palworld HUD identity, matched to the app (dark, committed) ---- */
   :root{
@@ -90,7 +90,7 @@
   .storebtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .storebtn svg{width:26px;height:26px;flex:none}
   .storebtn.apple svg{width:30px;height:30px}  /* Apple glyph reads smaller in its box; size it up to match Play */
-  .storebtn .t{display:flex;flex-direction:column;line-height:1.12;text-align:left;font-family:var(--font-disp)}
+  .storebtn .t{display:flex;flex-direction:column;line-height:1.12;text-align:left;font-family:var(--font-disp);font-weight:500}
   .storebtn .t .s{font-size:.62rem;letter-spacing:.03em;color:var(--ink-faint);font-weight:600}
   .storebtn .t .b{font-size:1rem;font-weight:700;white-space:nowrap}
   .storebtn:hover .t .s{color:var(--ink-soft)}
@@ -181,7 +181,7 @@
   .pt .k{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--font-disp);font-weight:600}
   .pt .v{font-family:var(--font-disp);font-weight:700;font-size:1.3rem;margin-top:5px}
   @media(max-width:620px){ .pt .v{font-size:1.05rem} }
-  .soldrow{display:flex;justify-content:space-between;font-family:var(--font-disp);font-size:.92rem;
+  .soldrow{display:flex;justify-content:space-between;font-family:var(--font-disp);font-weight:500;font-size:.92rem;
     padding:7px 2px;border-bottom:1px dashed var(--line)}
   .soldrow a{color:var(--accent-ink)}
   .qtiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}

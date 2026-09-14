@@ -1,0 +1,6 @@
+/* Self hosted fonts for the SphereDex website pages.
+   Decoded from the faces already bundled in app/index.html (no network fetch). */
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:500;font-display:swap;src:url(chakra-petch-500.woff2) format('woff2')}
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:600;font-display:swap;src:url(chakra-petch-600.woff2) format('woff2')}
+@font-face{font-family:'Chakra Petch';font-style:normal;font-weight:700;font-display:swap;src:url(chakra-petch-700.woff2) format('woff2')}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url(baloo2-800.woff2) format('woff2')}

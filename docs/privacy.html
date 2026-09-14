@@ -18,9 +18,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://spheredex.app/og.png">
 <meta name="theme-color" content="#08151f">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/chakra-petch-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/baloo2-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root{
     --bg:#08151f; --surface:#12242f; --ink:#eef6fa; --ink-soft:#a8bcc8; --ink-faint:#7c95a3;
@@ -107,7 +107,6 @@
     <li><strong>eBay, SoldComps, OpenWeb Ninja and Palworld Prices</strong> supply price data. They receive card searches from our server, never your personal details.</li>
     <li><strong>Google ML Kit</strong> recognises cards on your device in the Android app. The library sends Google anonymous performance and usage metrics, never camera images.</li>
     <li><strong>The official Palworld card game website</strong> supplies the artwork for any card whose image is not yet built into the app, so your device loads that image from their site.</li>
-    <li><strong>Google Fonts</strong> supplies the fonts on this website's pages, so your browser fetches them from Google. The app itself does not use Google Fonts.</li>
   </ul>
 
   <h2>What we do not do</h2>
@@ -117,7 +116,16 @@
     <li>No selling or sharing of your data with third parties for their own use.</li>
   </ul>
 
-  <h2>Data retention and deletion</h2>
+  <h2 id="delete-account">Delete your SphereDex account</h2>
+  <p>You can delete your SphereDex account and the data synced to it at any time.</p>
+  <ul>
+    <li><strong>In the app:</strong> open the <strong>Account</strong> page, tap <strong>Delete account</strong>, then tap <strong>Yes, delete</strong>. This happens straight away.</li>
+    <li><strong>Without the app:</strong> email <a href="mailto:craigjayedit@gmail.com?subject=Delete%20my%20SphereDex%20account">craigjayedit@gmail.com</a> from the address on your account and ask us to delete your SphereDex account. We will delete it and reply to confirm.</li>
+    <li><strong>What is deleted:</strong> your email address, your hashed password, any password reset code, and your synced collections and account settings.</li>
+    <li><strong>What is kept:</strong> nothing linked to your account. Your notification token is not linked to your account, so mention it in the same email if you also want it removed. Cards saved on your device stay until you clear the app or its data.</li>
+  </ul>
+
+  <h2 id="retention">Data retention and deletion</h2>
   <p>Data on your device stays until you remove it (clear the app or browser storage, or export then delete). If you created an account, you can delete it and all of its synced data from our server at any time with <strong>Delete account</strong> on the Account page, or by contacting us. We keep a notification token until Google or Apple tell us it is no longer valid, which we only learn when we next send that device a notification. A device that is not being sent notifications, for example one with every notification turned off, may stay stored until then. Contact us if you want yours removed.</p>
 
   <h2>Children</h2>
