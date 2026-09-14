@@ -28,6 +28,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The action's default packages are "tools platform-tools", but the obsolete "tools" package is no
+          # longer in the SDK repository used by current cmdline-tools, so sdkmanager exits 1 (run #53).
+          packages: 'platform-tools'
 
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
