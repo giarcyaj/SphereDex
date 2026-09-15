@@ -246,6 +246,8 @@
   .rgem { position:absolute; top:7px; right:8px; z-index:3; font-family:var(--font-mono); font-size:.62rem; font-weight:800;
     letter-spacing:.03em; color:#fff; background:var(--_rc); padding:3px 7px; border-radius:20px;
     box-shadow:0 2px 6px rgba(0,0,0,.35), 0 0 0 1.5px rgba(255,255,255,.35) inset; }
+  /* Settings > Show card number and rarity: off hides both badges on grid tiles (the card sheet is unaffected). */
+  .noov .card .art .num, .noov .card .art .rgem { display:none; }
   .rgem.holo { background:conic-gradient(from 0deg, #ff5f6d, #ffc371, #47e0a0, #4f9dff, #b06ff0, #ff5f6d); color:#1a1a1a; }
   /* Only SSP gets the moving foil sheen (the "shine"); OSR keeps its rainbow gem but sits still. */
   .card:has(.rgem.shine) .art::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen; opacity:0;
@@ -289,6 +291,8 @@
   .ownbtn:hover { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent-ink); }
   .card:not(.locked) .ownbtn { color:var(--accent-ink); }
   .cardfoot > .ownbtn:not(:first-child) { border-left:1.5px solid var(--line); }
+  /* Recently added filter or sort: the tick on each card from the latest adding session fills blue. */
+  .card.recent .ownbtn, .card.recent .ownbtn:hover { background:var(--azure); color:#fff; }
   .wishbtn { flex:1; border:none; background:transparent; padding:8px; font-size:.78rem;
     font-weight:700; color:var(--ink-soft); display:inline-flex; align-items:center; justify-content:center; gap:5px; transition:.13s; }
   .wishbtn:hover { background:color-mix(in srgb, var(--r-RR) 16%, transparent); color:var(--r-RR); }
@@ -1582,6 +1586,7 @@
         <option value="value">Sort · Value</option>
         <option value="cost">Sort · Cost (energy)</option>
         <option value="owned">Sort · Owned first</option>
+        <option value="recent">Sort · Recently added</option>
       </select>
       <button class="tbtn ghost sortdir" id="sortDirBtn" type="button" aria-label="Reverse sort order" title="Reverse sort order"></button>
     </div>
@@ -1830,6 +1835,10 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Don’t fade uncollected cards</div><div class="sdesc">Show every card in full colour, whether or not you own it, no dimming for missing cards.</div></div>
         <label class="switch"><input type="checkbox" id="setNoFade"><span class="track"></span></label>
+      </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Show card number and rarity</div><div class="sdesc">Show the card number and rarity badges on top of the art in the card grid. Turn this off for a cleaner view of the art. Remembered on this device.</div></div>
+        <label class="switch"><input type="checkbox" id="setOverlays"><span class="track"></span></label>
       </div>
       <div class="setrow qmrow">
         <div class="setinfo"><div class="stitle">Customise order of dropdown menu</div><div class="sdesc">The extra pages live in the ☰ menu at the top of the app. Drag the handle (or use the arrows) to set the order they appear in.</div></div>
@@ -2192,7 +2201,27 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   // Collection-page "modes": normal, wishlist, favourites, graded, collected. Only one at a time; all share the same controls.
   function colMode(){ return collectedMode?"collected":(wishMode?"wish":(favMode?"fav":(gradedMode?"graded":"col"))); }
   function clearModes(){ wishMode=false; favMode=false; gradedMode=false; collectedMode=false; }
-  function save(){ try { snapshot(); localStorage.setItem(LS_KEY, JSON.stringify(STATE)); if(typeof pushCloud==="function") pushCloud(); } catch(e){} }
+  function save(){ try { try{ stampAdds(); }catch(_){} snapshot(); localStorage.setItem(LS_KEY, JSON.stringify(STATE)); if(typeof pushCloud==="function") pushCloud(); } catch(e){} }
+  // Recently added: each card entry keeps addAt, the time its count (raw copies plus graded slabs) last went up.
+  // save() compares every entry with the count it had at the previous save, so every way of adding a card (tile
+  // buttons, the card sheet, quick add, the scanner, imports) is stamped in this one place. An entry that arrives
+  // already carrying its own addAt keeps it. After a drop the old count is remembered for 30 minutes, so undoing
+  // a mistaken minus, or swapping a slab in the card sheet (remove, then add), is not a new add. A collection with
+  // no baseline (a CSV import, or an old backup) stamps its cards as just added; a duplicate, a backup that carries
+  // add times, and cloud data are seeded with baseCol() / addBaseline() instead, so they keep their own times.
+  var ADD_BASE={}, ADD_UNDO=30*60*1000;
+  function entCount(e){ return e ? ((+e.qty||0)+((e.graded&&e.graded.length)||0)) : 0; }
+  function baseCol(col){ var m=ADD_BASE[col.id]={}, map=col.own||{};
+    Object.keys(map).forEach(function(id){ var e=map[id]; if(e){ var n=entCount(e); m[id]={n:n, hi:n, dt:0, at:e.addAt}; } }); }
+  function addBaseline(){ ADD_BASE={}; STATE.cols.forEach(baseCol); }
+  function stampAdds(){ var now=Date.now(), next={};
+    STATE.cols.forEach(function(col){ var base=ADD_BASE[col.id], m=next[col.id]={}, map=col.own||{};
+      Object.keys(map).forEach(function(id){ var e=map[id]; if(!e) return; var n=entCount(e), b=base&&base[id];
+        var held=!!(b && b.hi>b.n && now-b.dt<ADD_UNDO), top=b?(held?b.hi:b.n):0;   // count to beat: the pre drop count while a drop is fresh
+        if(n>0 && (base ? (n>top && e.addAt===(b?b.at:undefined)) : !e.addAt)) e.addAt=now;
+        m[id] = (b && n<top) ? {n:n, hi:top, dt:(held?b.dt:now), at:e.addAt} : {n:n, hi:n, dt:0, at:e.addAt}; }); });
+    ADD_BASE=next; }
+  addBaseline();
   // Count what's in the active collection right now (for the price-history tooltip).
   function collCounts(){ var cc=0, gg=0, sl=0;
     CARDS.forEach(function(card){ var s=own[card.id]; if(s){ cc+=(+s.qty||0); gg+=(s.graded?s.graded.length:0); } });
@@ -2219,6 +2248,21 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   function o(id){ var s=own[id]; if(!s){ s=own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     if(s.mkt==null) s.mkt=0; if(s.last==null) s.last=0; if(s.avg==null) s.avg=0; if(!s.graded) s.graded=[]; return s; }
   function has(s){ return s.qty>0 || (s.graded && s.graded.length>0); }
+  // The latest adding session in the active collection: the newest add, then each earlier add made within
+  // 30 minutes of the one after it. Drives the Recently added filter and the blue ticks.
+  var RECENT_GAP=30*60*1000, RECENT={};
+  function addedAt(id){ var e=own[id]; return (e && e.addAt && has(e)) ? +e.addAt : 0; }
+  function recentIds(){ var list=[], set={}, i;
+    Object.keys(own).forEach(function(id){ var t=addedAt(id); if(t) list.push([id, t]); });
+    list.sort(function(a,b){ return b[1]-a[1]; });
+    for(i=0;i<list.length;i++){ if(i && list[i-1][1]-list[i][1]>RECENT_GAP) break; set[list[i][0]]=true; }
+    return set; }
+  // The Show chip applies on the cards grid and Collected only; Wishlist, Favourites and Graded ignore Show chips.
+  function recentFilterOn(){ var m=colMode(); return filters.view==="recent" && (m==="col" || m==="collected"); }
+  function recentOn(){ return filters.sort==="recent" || recentFilterOn(); }
+  // Count line for the Recently added filter, from the ids on screen (render() and patchCard() both use it).
+  function recentCountLine(ids){ var t=Math.max.apply(null, ids.map(function(id){ return addedAt(id); }));
+    $("countLine").textContent = ids.length + (ids.length===1?" card":" cards") + " from your latest adding session, " + relTime(t); }
   // Shallow copy of a graded slab that keeps every field (cert, edition, anything added later),
   // so editors that rebuild the slab list never silently drop what the scanner saved.
   function cloneSlab(g){ var x={}, k; if(g && typeof g==="object"){ for(k in g){ if(Object.prototype.hasOwnProperty.call(g,k)) x[k]=g[k]; } } return x; }
@@ -2367,7 +2411,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
@@ -2464,7 +2508,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
       b.onclick = function(){ filters.rares[r]=!filters.rares[r]; b.setAttribute("aria-pressed",filters.rares[r]?"true":"false"); render(); };
       $("rareChips").appendChild(b);
     });
-    [["all","All"],["owned","Owned"],["missing","Missing"],["wish","Wishlist"]].forEach(function(v){
+    [["all","All"],["owned","Owned"],["missing","Missing"],["wish","Wishlist"],["recent","Recently added"]].forEach(function(v){
       var b = chip(v[1], "", "var(--accent)", v[0]==="all"); b.classList.add("solid");
       b.onclick = function(){
         filters.view=v[0];
@@ -2481,6 +2525,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     var q = filters.q.trim().toLowerCase();
     var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), rares=keysOn(filters.rares), sets=keysOn(filters.sets);
     var mode=colMode();
+    RECENT=recentIds();
     var out = CARDS.filter(function(c){
       if (wishMode && !isWished(c.id)) return false;
       if (favMode && !isFav(c.id)) return false;
@@ -2496,11 +2541,14 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
       if (mode==="col" && filters.view==="owned" && !has(s)) return false;
       if (mode==="col" && filters.view==="missing" && has(s)) return false;
       if (mode==="col" && filters.view==="wish" && !isWished(c.id)) return false;
+      if (recentFilterOn() && !RECENT[c.id]) return false;   // only cards from the latest adding session
       return true;
     });
     var s = filters.sort;
     out.sort(function(a,b){
-      var pr=(a.set==="PR2026"?1:0)-(b.set==="PR2026"?1:0); if(pr) return pr;   // promos always sink to the bottom, whatever the sort
+      var pr=(a.set==="PR2026"?1:0)-(b.set==="PR2026"?1:0);
+      if (s==="recent") return (addedAt(b.id)-addedAt(a.id)) || pr || a.setIdx-b.setIdx || a.seq-b.seq;   // newest add first, so a promo you just added stays with its session
+      if(pr) return pr;   // in every other sort, promos sink to the bottom
       if (s==="name") return a.name.localeCompare(b.name) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="rarity") return (RARE_ORDER[b.rare]-RARE_ORDER[a.rare]) || a.setIdx-b.setIdx || a.seq-b.seq;
       if (s==="value") return (mktOf(b.id)-mktOf(a.id)) || a.setIdx-b.setIdx || a.seq-b.seq;
@@ -2518,7 +2566,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     grid.className = "grid";
     if (!cards.length){
       var e=document.createElement("div"); e.className="empty";
-      e.innerHTML="<b>No cards match those filters</b>Clear a color, type, or rarity to widen the search.";
+      e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
+        ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
+        : "<b>No cards match those filters</b>Clear a color, type, or rarity to widen the search.";
       grid.appendChild(e);
     } else if (viewMode==="binder9" || viewMode==="binder12"){
       grid.classList.add("binder");
@@ -2543,6 +2593,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     if(m==="wish") $("countLine").textContent = cards.length + " on your wishlist · est. " + money(cards.reduce(function(a,c){ return a+(+o(c.id).mkt||0); },0));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
+    else if(recentFilterOn() && cards.length) recentCountLine(cards.map(function(c){ return c.id; }));
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
@@ -2585,7 +2636,8 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     var s=o(c.id), owned=has(s);
     var colored = SETTINGS.noFade || hasAny(c.id);   // full colour if owned in ANY collection (or fading is off)
     var el=document.createElement("div");
-    el.className="card"+(colored?"":" locked");
+    var hl = owned && recentOn() && RECENT[c.id];   // tick fills blue for the latest adding session
+    el.className="card"+(colored?"":" locked")+(hl?" recent":"");
     el.setAttribute("data-cid", c.id);
     el.style.setProperty("--_col", colVar(c.color));
     var elTags = c.els.map(function(e){ return '<span class="elgem" style="--c:'+elVar(e)+'" title="'+e+'"><i></i><svg viewBox="0 0 24 24"><use href="#g-'+e.toLowerCase()+'"/></svg></span>'; }).join("");
@@ -2614,7 +2666,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
         (owned
           ? (s.qty>0?'<div class="qty"><button class="minus" aria-label="Remove one">–</button><span>'+s.qty+'</span><button class="plus" aria-label="Add one">+</button></div>':'')
           : '<button class="wishbtn'+(wished?' on':'')+'" aria-label="'+(wished?'Remove from wishlist':'Add to wishlist')+'" title="'+(wished?'Remove from wishlist':'Add to wishlist')+'">'+icon(wished?'starf':'star')+'</button>')+
-        '<button class="ownbtn" aria-label="'+(owned?'Collected, edit':'Add to collection')+'" title="'+(owned?'Collected, edit':'Add to collection')+'">'+(owned?icon('check'):icon('plus'))+'</button>'+
+        '<button class="ownbtn" aria-label="'+(hl?'Added in your latest session, edit':(owned?'Collected, edit':'Add to collection'))+'" title="'+(hl?'Added in your latest session, edit':(owned?'Collected, edit':'Add to collection'))+'">'+(owned?icon('check'):icon('plus'))+'</button>'+
       '</div>';
     var wb=el.querySelector(".wishbtn");
     if (wb) wb.addEventListener("click", function(ev){ ev.stopPropagation(); toggleWish(c.id); save(); render(); buildColSel(); });
@@ -2631,10 +2683,19 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   function patchCard(c){
     // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
     if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
+    // With the Recently added filter or sort on, redraw the grid when the card leaves the filtered list, or when
+    // other cards join or leave the latest session (a new session began, a removal split it, or removing the only
+    // card of the latest session made the one before it the latest). Otherwise patch in place like every other
+    // sort, so the card does not jump away from under the tap.
+    if(recentOn()){ var before=RECENT; RECENT=recentIds();
+      var moved=function(a, b){ return Object.keys(a).some(function(id){ return id!==c.id && !b[id]; }); };
+      if((recentFilterOn() && !RECENT[c.id]) || moved(before, RECENT) || moved(RECENT, before)){ render(); return; }
+    }
     var old=grid.querySelector('.card[data-cid="'+c.id+'"]');
     if(!old){ render(); return; }
     old.replaceWith(cardEl(c));
     stats();   // keep the Collection dashboard (completion, sets, binder value) in sync
+    if(recentFilterOn()) recentCountLine(Array.prototype.map.call(grid.querySelectorAll(".card[data-cid]"), function(el){ return el.getAttribute("data-cid"); }));
   }
 
   // ---- Stats ----
@@ -3271,7 +3332,9 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     pickTextFile("application/json,.json,text/plain", function(text){
       try{ var d=JSON.parse(String(text).replace(/^\uFEFF/,"")); var map=(d&&d.own)?d.own:d; if(!map||typeof map!=="object")throw 0;
         var nm=(d&&d.name)?d.name+" (imported)":"Imported collection";
-        var id="c"+Date.now(); STATE.cols.push({id:id,name:nm,own:map,sealed:(d&&d.sealed)||{}}); switchCol(id); toast("Imported “"+nm+"”");
+        var id="c"+Date.now(), nc={id:id,name:nm,own:map,sealed:(d&&d.sealed)||{}}; STATE.cols.push(nc);
+        if(Object.keys(map).some(function(k){ return map[k] && map[k].addAt; })) baseCol(nc);   // a backup with add times keeps them
+        switchCol(id); toast("Imported “"+nm+"”");
       }catch(e){ toast("That file couldn't be read"); }
     });
   }
@@ -4977,7 +5040,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
       if(ch.textContent===r) ch.setAttribute("aria-pressed","true");
     });
-    var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist"};
+    var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist",recent:"Recently added"};
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
       ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
     });
@@ -5154,7 +5217,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
     Array.prototype.forEach.call($("setChips").querySelectorAll(".chip"), function(ch){
       if(ch.title===SETS[k].name) ch.setAttribute("aria-pressed","true");
     });
-    var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist"};
+    var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist",recent:"Recently added"};
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
       ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
     });
@@ -5440,7 +5503,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
         var act=b.getAttribute("data-act"); menu.hidden=true; var col=activeCol();
         if(act==="new"){ openAsk({title:"New collection", value:"Collection "+(STATE.cols.length+1), okText:"Create", onOk:function(n){ var id="c"+Date.now(); STATE.cols.push({id:id,name:n,own:{}}); switchCol(id); toast("Collection “"+n+"” created"); }}); }
         else if(act==="rename"){ openAsk({title:"Rename collection", value:col.name, okText:"Rename", onOk:function(r){ col.name=r; save(); buildColSel(); render(); }}); }
-        else if(act==="dupe"){ var id2="c"+Date.now(); STATE.cols.push({id:id2,name:col.name+" copy",own:JSON.parse(JSON.stringify(col.own))}); switchCol(id2); }
+        else if(act==="dupe"){ var id2="c"+Date.now(), dup={id:id2,name:col.name+" copy",own:JSON.parse(JSON.stringify(col.own))}; STATE.cols.push(dup); baseCol(dup); switchCol(id2); }   // the copy keeps its add times
         else if(act==="delete"){ if(STATE.cols.length<2){ toast("Keep at least one collection"); return; } openAsk({title:"Delete this collection?", message:"“"+col.name+"” and its contents will be removed from this device. This can’t be undone.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.cols=STATE.cols.filter(function(x){return x.id!==col.id;}); switchCol(STATE.cols[0].id); toast("Collection deleted"); }}); }
       };
     });
@@ -5789,12 +5852,14 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
 
   // ---- Settings + Account ----
   function applySettings(){
+    document.documentElement.classList.toggle("noov", !!SETTINGS.hideOverlays);
     var cp=document.querySelector(".colorpanel"); if(cp) cp.classList.toggle("hide", !SETTINGS.showColorCompletion);
   }
   (function(){
     var sv=$("setViewSel"); sv.value=viewMode;
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; lsSet("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
+    var ov=$("setOverlays"); if(ov){ ov.checked=!SETTINGS.hideOverlays; ov.onchange=function(){ SETTINGS.hideOverlays=!ov.checked; saveSettings(); applySettings(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); fetchServerPrices(true); }; }
@@ -5878,7 +5943,7 @@ window.CARD_IMG={"DECK_DEMO":"data:image/webp;base64,UklGRjByAABXRUJQVlA4WAoAAAA
   }
   function adoptRemote(blob, rev){
     var acct=(blob&&blob._acct)||null; if(blob&&blob._acct){ try{ delete blob._acct; }catch(e){} }
-    STATE=blob; AUTH.serverRev=rev; saveAuth();
+    STATE=blob; AUTH.serverRev=rev; saveAuth(); addBaseline();   // cloud data keeps its own add times
     try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }catch(e){}
     if(acct && typeof applyAccountSettings==="function") applyAccountSettings(acct);
     own=activeCol().own; buildColSel(); applySettings(); render(); renderQuick();
