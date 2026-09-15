@@ -3,7 +3,7 @@ package app.spheredex
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.Base64
+import androidx.core.content.pm.PackageInfoCompat
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -34,23 +34,23 @@ const val CONFIDENCE_ZERO_DISTANCE = 32f
 private const val DECODE_MIN_EDGE = 32
 
 /** Bumped whenever the hash algorithm or cache layout changes, to invalidate stale cache files. */
-private const val FORMAT_VERSION = 1
+private const val FORMAT_VERSION = 2
 
-private const val HTML_ASSET = "spheredex.html"
+/** Asset folder of bundled card art (assets/img/EBP01-001.jpg), mirrored from docs/app/img by tools/rebuild.py. */
+private const val IMG_DIR = "img"
 private const val CACHE_FILE = "card_phash.cache"
 
-/** Matches `"<card>":"data:image/(jpeg|png|webp);base64,<b64>"` inside window.CARD_IMG. */
-private val ENTRY = Regex(
-    "\"([A-Z0-9-]{3,40})\"\\s*:\\s*\"data:image/(?:jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)\""
-)
+/** Image file extensions BitmapFactory decodes; anything else in [IMG_DIR] is ignored. */
+private val IMG_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
 
-/** Keeps only keys shaped like a real card number (e.g. EBP01-001, EBP01-001OSR, EPR-001, ESOUL-000). */
+/** Keeps only file base names shaped like a real card number (e.g. EBP01-001, EBP01-001OSR, EPR-001, ESOUL-000),
+ *  so the box, banner and logo art in the same folder is skipped. */
 private val KEY_SHAPE = Regex("^[A-Z0-9]{1,10}-[0-9]{3}[A-Z0-9]{0,8}$")
 
 /**
  * On-device full-card recognition by perceptual hash (dHash) of the bundled card art. No ML Kit,
- * no third-party deps: builds a `cardNumber -> 64-bit hash` table from the inline base64 images in
- * assets/spheredex.html once, caches it in filesDir, then matches a query crop by Hamming distance.
+ * no third-party deps: builds a `cardNumber -> 64-bit hash` table from the card image files in
+ * assets/img once, caches it in filesDir, then matches a query crop by Hamming distance.
  */
 object CardImageMatcher {
 
@@ -87,11 +87,12 @@ object CardImageMatcher {
         executor.execute {
             try {
                 val file = File(app.filesDir, CACHE_FILE)
-                val htmlSize = htmlAssetSize(app)                       // part of the cache key
-                var map = if (htmlSize >= 0) loadCache(file, htmlSize) else null
+                val names = cardImageNames(app)                         // card art files in assets/img
+                val signature = artSignature(app, names.size)           // part of the cache key
+                var map = if (signature != null) loadCache(file, signature) else null
                 if (map == null) {
-                    map = build(app)
-                    if (map != null) persist(file, htmlSize, map)
+                    map = build(app, names)
+                    if (map != null && signature != null) persist(file, signature, map)
                 }
                 if (map != null) {
                     hashes = map
@@ -132,28 +133,46 @@ object CardImageMatcher {
 
     // ---- build / cache ----
 
-    /** Reads the HTML asset, extracts every inline card image and hashes it. Null if unreadable/empty. */
-    private fun build(context: Context): Map<String, Long>? {
-        val html = try {
-            context.assets.open(HTML_ASSET).bufferedReader().use { it.readText() }   // ~16MB text
-        } catch (_: Throwable) {
-            return null
-        }
-        val out = HashMap<String, Long>(320)
-        for (m in ENTRY.findAll(html)) {
-            val key = m.groupValues[1]
-            if (!KEY_SHAPE.matches(key)) continue
-            val bytes = try { Base64.decode(m.groupValues[2], Base64.DEFAULT) } catch (_: Throwable) { continue }
-            val bmp = decodeSampled(bytes) ?: continue
+    /** Decodes and hashes each card image asset, one small sampled bitmap at a time. Null if none could be read. */
+    private fun build(context: Context, names: List<String>): Map<String, Long>? {
+        val out = HashMap<String, Long>(names.size * 2)
+        for (name in names) {
+            val bmp = decodeSampled(context, "$IMG_DIR/$name") ?: continue
             val hash = perceptualHash(bmp)
             bmp.recycle()
-            if (hash != null) out[key] = hash
+            if (hash != null) out[name.substringBeforeLast('.')] = hash
         }
         return if (out.isEmpty()) null else out
     }
 
-    /** Loads the cached table if the header (format, html size, bit count) still matches; else null. */
-    private fun loadCache(file: File, htmlSize: Long): Map<String, Long>? {
+    /** Sorted file names in assets/img whose base name is card-number shaped. Empty if the folder is missing. */
+    private fun cardImageNames(context: Context): List<String> {
+        val all = try { context.assets.list(IMG_DIR) } catch (_: Throwable) { null }
+        if (all == null) return emptyList()
+        return all.filter { name ->
+            val dot = name.lastIndexOf('.')
+            dot > 0 && name.substring(dot + 1).lowercase() in IMG_EXTENSIONS &&
+                KEY_SHAPE.matches(name.substring(0, dot))
+        }.sorted()
+    }
+
+    /**
+     * Cheap cache key that changes whenever the bundled art can have changed, without opening any image:
+     * a release bumps versionCode, any install or update (even a same-version dev build) moves
+     * lastUpdateTime, and the image count catches a changed folder. Null if the package info is unavailable.
+     */
+    private fun artSignature(context: Context, imageCount: Int): String? {
+        return try {
+            @Suppress("DEPRECATION")
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            "v" + PackageInfoCompat.getLongVersionCode(info) + "-u" + info.lastUpdateTime + "-n" + imageCount
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /** Loads the cached table if the header (format, art signature, bit count) still matches; else null. */
+    private fun loadCache(file: File, signature: String): Map<String, Long>? {
         if (!file.exists()) return null
         return try {
             val lines = file.readLines()
@@ -161,7 +180,7 @@ object CardImageMatcher {
             val h = lines[0].split('\t')
             if (h.size < 4 || h[0] != "SDPHASH") return null
             if (h[1].toInt() != FORMAT_VERSION) return null
-            if (h[2].toLong() != htmlSize) return null
+            if (h[2] != signature) return null
             if (h[3].toInt() != HASH_BITS) return null
             val map = HashMap<String, Long>(lines.size)
             for (i in 1 until lines.size) {
@@ -175,11 +194,11 @@ object CardImageMatcher {
     }
 
     /** Writes the table with a self-describing header. Best-effort: failure just means a rebuild next launch. */
-    private fun persist(file: File, htmlSize: Long, map: Map<String, Long>) {
+    private fun persist(file: File, signature: String, map: Map<String, Long>) {
         try {
             val sb = StringBuilder(map.size * 24 + 64)
             sb.append("SDPHASH\t").append(FORMAT_VERSION).append('\t')
-                .append(htmlSize).append('\t').append(HASH_BITS).append('\t').append(map.size).append('\n')
+                .append(signature).append('\t').append(HASH_BITS).append('\t').append(map.size).append('\n')
             for ((k, v) in map) sb.append(k).append('\t').append(v).append('\n')
             file.writeText(sb.toString())
         } catch (_: Throwable) {
@@ -224,16 +243,18 @@ object CardImageMatcher {
         return (r * 77 + g * 151 + b * 28) ushr 8
     }
 
-    /** Decodes card bytes down-sampled to a small edge (cheaper, lower memory) for hashing. */
-    private fun decodeSampled(bytes: ByteArray): Bitmap? {
+    /** Decodes a card image asset down-sampled to a small edge (cheaper, lower memory) for hashing: a
+     *  bounds-only pass reads the header, then a fresh stream decodes at the chosen sample size. */
+    private fun decodeSampled(context: Context, path: String): Bitmap? {
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            context.assets.open(path).use { BitmapFactory.decodeStream(it, null, bounds) }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
             val opts = BitmapFactory.Options().apply {
                 inSampleSize = sampleFor(bounds.outWidth, bounds.outHeight)
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+            context.assets.open(path).use { BitmapFactory.decodeStream(it, null, opts) }
         } catch (_: Throwable) {
             null
         }
@@ -246,23 +267,5 @@ object CardImageMatcher {
         var s = 1
         while (minDim / (s * 2) >= DECODE_MIN_EDGE) s *= 2
         return s
-    }
-
-    /** Uncompressed size of the HTML asset (part of the cache key). -1 if it cannot be read. */
-    private fun htmlAssetSize(context: Context): Long {
-        return try {
-            context.assets.open(HTML_ASSET).use { input ->
-                var total = 0L
-                val buf = ByteArray(64 * 1024)
-                while (true) {
-                    val n = input.read(buf)
-                    if (n < 0) break
-                    total += n
-                }
-                total
-            }
-        } catch (_: Throwable) {
-            -1L
-        }
     }
 }

@@ -218,8 +218,8 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        // Warm up on-device full-card recognition: first launch extracts the bundled card images from
-        // the HTML asset and builds their perceptual-hash table in the background (cached thereafter),
+        // Warm up on-device full-card recognition: first launch after an install or update reads the bundled
+        // card images in assets/img and builds their perceptual-hash table in the background (cached thereafter),
         // so "Full card" mode is ready to match by the time the user opens the scanner.
         CardImageMatcher.prepare(this)
 

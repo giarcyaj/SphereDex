@@ -9,10 +9,11 @@ import CoreVideo
 /// Complements the OCR scanner: OCR reads the printed card number, this recognises the whole card
 /// from its artwork (frame + illustration) even when the tiny number is blurred or glare-hidden.
 ///
-/// First launch builds a reference feature print for every card image bundled inline in
-/// `spheredex.html` (`window.CARD_IMG={ "EBP01-001":"data:image/jpeg;base64,..." , ... }`),
-/// archives them to Application Support, and reuses that cache on later launches. Building takes
-/// ~10-30s and runs entirely on a background queue; matching a live frame is fast.
+/// First launch builds a reference feature print for every card image file in the app bundle's
+/// `img` folder (a folder reference of `Resources/img`, e.g. `img/EBP01-001.jpg`, the same files the
+/// web app's `window.CARD_IMG` points at), archives them to Application Support, and reuses that cache
+/// on later launches. Building takes ~10-30s and runs entirely on a background queue; matching a live
+/// frame is fast.
 ///
 /// Everything here is best-effort: any failure returns nil / a default rather than crashing.
 final class CardImageMatcher {
@@ -42,14 +43,19 @@ final class CardImageMatcher {
     private static let cropAndScaleOption: VNImageCropAndScaleOption = .centerCrop
 
     /// Bump to invalidate every cached archive after changing how prints are built.
-    private static let formatVersion = 2
+    private static let formatVersion = 3
 
-    // Card-number-shaped keys only (E + set letters/digits + optional hyphen + 3 digits + optional
-    // rarity letters), so we capture CARD_IMG entries and skip any other data URIs in the page.
-    // Groups: 1 = card number, 2 = image subtype, 3 = base64 payload. The base64 class is a simple
-    // one-or-more with no ambiguity, so there is no catastrophic backtracking on the ~16MB input.
-    private static let entryRegex = try! NSRegularExpression(
-        pattern: "\"(E[A-Z0-9]{1,8}-?[0-9]{3}[A-Z]{0,4})\":\"data:image/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)\"")
+    /// Bundle folder (folder reference, copied as-is by project.yml) holding the card art files.
+    private static let imgFolder = "img"
+
+    /// Image file extensions ImageIO decodes here (iOS 15 decodes WebP natively); anything else is ignored.
+    private static let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "webp"]
+
+    // Card-number-shaped file names only (E + set letters/digits + optional hyphen + 3 digits + optional
+    // rarity letters), matched against the name without its extension, so box, banner and logo art in
+    // the same folder is skipped.
+    private static let keyRegex = try! NSRegularExpression(
+        pattern: "^E[A-Z0-9]{1,8}-?[0-9]{3}[A-Z]{0,4}$")
 
     // MARK: - State (guarded by `lock`)
 
@@ -179,50 +185,42 @@ final class CardImageMatcher {
         return CGRect(x: x, y: y, width: cw, height: ch)
     }
 
-    // MARK: - Reference build (from the bundled HTML)
+    // MARK: - Reference build (from the bundled img folder)
 
-    /// Parse every CARD_IMG data-URI out of the bundled HTML and compute a feature print for each.
-    /// Returns nil only if the HTML can't be read at all.
+    /// Decode every card image file in the bundle's img folder and compute a feature print for each.
+    /// Returns nil only if the folder can't be listed at all.
     private func buildReferences() -> [String: VNFeaturePrintObservation]? {
-        guard let url = Self.htmlURL(),
-              let html = try? String(contentsOf: url, encoding: .utf8) else {
-            print("CardImageMatcher: could not read spheredex.html")
+        guard let files = Self.cardImageFiles() else {
+            print("CardImageMatcher: could not list the bundled img folder")
             return nil
         }
 
         var result: [String: VNFeaturePrintObservation] = [:]
-        let full = NSRange(html.startIndex..., in: html)
-        Self.entryRegex.enumerateMatches(in: html, options: [], range: full) { m, _, _ in
-            // Per-entry pool: base64 strings + decoded Data + CGImages are large; free them promptly.
+        for file in files {
+            // Per-image pool: decoded CGImages and Vision buffers are large; free them promptly.
             autoreleasepool {
-                guard let m = m,
-                      let numberRange = Range(m.range(at: 1), in: html),
-                      let b64Range = Range(m.range(at: 3), in: html) else { return }
-                let number = String(html[numberRange])
-                let base64 = String(html[b64Range])
-                guard result[number] == nil,
-                      let cgImage = Self.decodeImage(base64: base64) else { return }
+                guard result[file.number] == nil,
+                      let cgImage = Self.decodeImage(at: file.url) else { return }
                 let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
                 if let fp = self.featurePrint(handler, roi: nil) {
-                    result[number] = fp
+                    result[file.number] = fp
                 }
             }
         }
-        print("CardImageMatcher: computed \(result.count) reference prints from HTML")
+        print("CardImageMatcher: computed \(result.count) reference prints from \(files.count) img files")
         return result
     }
 
-    /// Decode a base64 image payload (jpeg / png / webp) to a CGImage via ImageIO. iOS 15 decodes
-    /// WebP natively, so one path handles every bundled format. Returns nil on any decode failure.
-    private static func decodeImage(base64: String) -> CGImage? {
-        guard let data = Data(base64Encoded: base64),
-              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+    /// Decode an image file (jpeg / png / webp) to a CGImage via ImageIO straight from disk. iOS 15
+    /// decodes WebP natively, so one path handles every bundled format. Returns nil on any decode failure.
+    private static func decodeImage(at url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
     // MARK: - Disk cache (Application Support)
 
-    /// A miss (nil) means "rebuild": missing file, unreadable, or a stale key (HTML changed, feature-
+    /// A miss (nil) means "rebuild": missing file, unreadable, or a stale key (card art changed, feature-
     /// print revision changed, or format bumped). The key is encoded in the filename, so a change just
     /// produces a different filename and the old archives are pruned.
     private func loadCache() -> [String: VNFeaturePrintObservation]? {
@@ -258,8 +256,26 @@ final class CardImageMatcher {
 
     // MARK: - Paths / cache key
 
-    private static func htmlURL() -> URL? {
-        Bundle.main.url(forResource: "spheredex", withExtension: "html")
+    /// The bundle's img folder (nil if the folder reference is missing from the build).
+    private static func imgFolderURL() -> URL? {
+        Bundle.main.url(forResource: imgFolder, withExtension: nil)
+    }
+
+    /// Card-number-shaped image files in the img folder, sorted by card number, each with its file size
+    /// (prefetched while listing). Nil if the folder can't be listed.
+    private static func cardImageFiles() -> [(number: String, url: URL, size: Int)]? {
+        guard let dir = imgFolderURL(),
+              let urls = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else { return nil }
+        var out: [(number: String, url: URL, size: Int)] = []
+        for url in urls where imageExtensions.contains(url.pathExtension.lowercased()) {
+            let number = url.deletingPathExtension().lastPathComponent
+            let range = NSRange(number.startIndex..., in: number)
+            guard keyRegex.firstMatch(in: number, options: [], range: range) != nil else { continue }
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            out.append((number: number, url: url, size: size))
+        }
+        return out.sorted { $0.number < $1.number }
     }
 
     private static func cacheDirectory() -> URL? {
@@ -271,16 +287,15 @@ final class CardImageMatcher {
     }
 
     /// Cache filename encodes what would invalidate it: format version, the live feature-print
-    /// revision (so an OS bump that changes the default rebuilds), and the HTML size (so a card/art
-    /// update rebuilds). Distances are only comparable within one revision, so this keeps them aligned.
+    /// revision (so an OS bump that changes the default rebuilds), and the card image count plus their
+    /// total byte size (so a card/art update rebuilds, without reading any image). Distances are only
+    /// comparable within one revision, so this keeps them aligned.
     private static func cacheURL() -> URL? {
         guard let dir = cacheDirectory() else { return nil }
         let revision = VNGenerateImageFeaturePrintRequest().revision
-        var htmlSize = 0
-        if let url = htmlURL(), let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-            htmlSize = size ?? 0
-        }
-        let name = "cardprints-v\(formatVersion)-r\(revision)-s\(htmlSize).archive"
+        let files = cardImageFiles() ?? []
+        let totalBytes = files.reduce(0) { $0 + $1.size }
+        let name = "cardprints-v\(formatVersion)-r\(revision)-n\(files.count)-s\(totalBytes).archive"
         return dir.appendingPathComponent(name)
     }
 

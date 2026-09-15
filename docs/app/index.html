@@ -1092,6 +1092,31 @@
   .fiopt b{ font-weight:700; font-size:1rem; }
   .fiopt span{ color:var(--ink-soft); font-size:.84rem; line-height:1.35; }
   .fiopt:hover, .fiopt:focus-visible{ border-color:var(--accent); outline:none; }
+  /* Price alerts (native push only): the card sheet's alert dialog + the Settings list. Grid gaps and plain
+     margins only (no flex gap), so old WebViews need no .no-flexgap fallback. */
+  #paScrim{ padding-bottom:calc(20px + var(--kb, 0px)); }
+  .askbox.pabox{ max-height:calc(100vh - 40px - var(--kb, 0px)); overflow-y:auto; overscroll-behavior:contain; }
+  .askbtns button:disabled{ opacity:.45; cursor:not-allowed; }
+  .pakinds{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 14px; }
+  .pakind{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font-family:inherit; font-weight:650; font-size:.84rem; line-height:1.25; padding:10px 8px; border-radius:11px; cursor:pointer; text-align:center; -webkit-tap-highlight-color:transparent; }
+  .pakind.on{ border-color:var(--accent); color:var(--ink); background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); }
+  .palab{ display:block; font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin:0 0 5px; }
+  .askbox input:disabled{ opacity:.5; }
+  .askbox .pahint{ font-size:.84rem; margin:-8px 0 14px; min-height:1.2em; }
+  .askbox .pahint.bad{ color:var(--el-Fire); }
+  .paexist{ border-top:1.5px solid var(--line); padding-top:12px; margin:0 0 14px; }
+  .palist{ display:grid; gap:8px; }
+  .parow{ display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--line); border-radius:11px; padding:8px 8px 8px 12px; }
+  .parow .patxt{ flex:1; min-width:0; }
+  .parow .patxt b{ display:block; font-size:.88rem; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .parow .patxt span{ display:block; font-size:.8rem; color:var(--ink-soft); }
+  .parow.tap{ cursor:pointer; }
+  .parow.tap:hover, .parow.tap:focus-visible{ border-color:var(--accent); outline:none; }
+  .pax{ flex:none; margin-left:10px; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; border:none; background:color-mix(in srgb,var(--el-Fire) 16%,transparent); color:var(--el-Fire); font-size:.95rem; line-height:1; cursor:pointer; }
+  .pax:hover{ background:var(--el-Fire); color:#fff; }
+  #priceAlertList{ margin-top:-6px; }
+  #priceAlertList .parow{ background:var(--surface); }
+  .paempty{ font-size:.84rem; color:var(--ink-faint); padding:2px 4px; }
 
   /* Rich scan confirmation (native camera → choose destination) */
   .scanscrim{ position:fixed; inset:0; z-index:215; display:flex; align-items:center; justify-content:center; padding:20px;
@@ -1864,6 +1889,11 @@
           <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers the UK, US and Australia, plus the two trial decks in Germany. Turn alerts on for a product from its page.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
         </div>
+        <div class="setrow">
+          <div class="setinfo"><div class="stitle">Price alerts</div><div class="sdesc">Get notified when a card's price crosses a level you set. Prices are checked once a day, after the nightly update. Add an alert from a card's page, and tap one below to open its card.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifPrice"><span class="track"></span></label>
+        </div>
+        <div class="palist" id="priceAlertList"></div>
       </div>
 
       <div class="setcat">Backup &amp; restore</div>
@@ -1978,6 +2008,24 @@
   </div>
 </div>
 
+<div class="askscrim" id="paScrim" hidden>
+  <div class="askbox pabox" role="dialog" aria-modal="true" aria-labelledby="paTitle">
+    <h3 id="paTitle">Price alert</h3>
+    <p id="paNow"></p>
+    <div class="pakinds" id="paKinds" role="radiogroup" aria-label="Alert type">
+      <button type="button" class="pakind" data-k="above" role="radio">Rises above a price</button>
+      <button type="button" class="pakind" data-k="below" role="radio">Falls below a price</button>
+      <button type="button" class="pakind" data-k="up" role="radio">Up by a percent</button>
+      <button type="button" class="pakind" data-k="down" role="radio">Down by a percent</button>
+    </div>
+    <label class="palab" for="paVal" id="paValLab">Price</label>
+    <input id="paVal" type="number" inputmode="decimal" min="0" step="any" autocomplete="off" />
+    <p class="pahint" id="paHint" aria-live="polite"></p>
+    <div class="paexist" id="paExist" hidden><div class="palab">Alerts on this card</div><div class="palist" id="paList"></div></div>
+    <div class="askbtns"><button type="button" id="paCancel">Cancel</button><button type="button" class="ok" id="paSave">Save alert</button></div>
+  </div>
+</div>
+
 <div class="scrim" id="scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
     <div class="mmain" id="mMain"></div>
@@ -2075,7 +2123,7 @@
   </div>
 </div>
 
-<script>window.CARD_IMG={"DECK_DEMO":"img/DECK_DEMO.webp","LOGO_BP02":"img/LOGO_BP02.webp","BOX_BANNER_SS01":"img/BOX_BANNER_SS01.webp","BOX_BANNER_BP02":"img/BOX_BANNER_BP02.webp","BOX_BANNER_TD03":"img/BOX_BANNER_TD03.webp","PACK_PRV1":"img/PACK_PRV1.webp","EBP01-001":"img/EBP01-001.jpg","EBP01-001OSR":"img/EBP01-001OSR.jpg","EBP01-001SSP":"img/EBP01-001SSP.jpg","EBP01-002":"img/EBP01-002.jpg","EBP01-002OSR":"img/EBP01-002OSR.jpg","EBP01-002SP":"img/EBP01-002SP.jpg","EBP01-003":"img/EBP01-003.jpg","EBP01-003SR":"img/EBP01-003SR.jpg","EBP01-004":"img/EBP01-004.jpg","EBP01-004SR":"img/EBP01-004SR.jpg","EBP01-005":"img/EBP01-005.jpg","EBP01-005SR":"img/EBP01-005SR.jpg","EBP01-006":"img/EBP01-006.jpg","EBP01-006SR":"img/EBP01-006SR.jpg","EBP01-007":"img/EBP01-007.jpg","EBP01-007SR":"img/EBP01-007SR.jpg","EBP01-008":"img/EBP01-008.jpg","EBP01-009":"img/EBP01-009.jpg","EBP01-010":"img/EBP01-010.jpg","EBP01-011":"img/EBP01-011.jpg","EBP01-012":"img/EBP01-012.jpg","EBP01-013":"img/EBP01-013.jpg","EBP01-014":"img/EBP01-014.jpg","EBP01-015":"img/EBP01-015.jpg","EBP01-015SP":"img/EBP01-015SP.jpg","EBP01-016":"img/EBP01-016.jpg","EBP01-017":"img/EBP01-017.jpg","EBP01-018":"img/EBP01-018.jpg","EBP01-019":"img/EBP01-019.jpg","EBP01-019SR":"img/EBP01-019SR.jpg","EBP01-020":"img/EBP01-020.jpg","EBP01-020SR":"img/EBP01-020SR.jpg","EBP01-021":"img/EBP01-021.jpg","EBP01-022":"img/EBP01-022.jpg","EBP01-023":"img/EBP01-023.jpg","EBP01-023OSR":"img/EBP01-023OSR.jpg","EBP01-023SP":"img/EBP01-023SP.jpg","EBP01-024":"img/EBP01-024.jpg","EBP01-025":"img/EBP01-025.jpg","EBP01-025OSR":"img/EBP01-025OSR.jpg","EBP01-025SSP":"img/EBP01-025SSP.jpg","EBP01-026":"img/EBP01-026.jpg","EBP01-026OSR":"img/EBP01-026OSR.jpg","EBP01-026SP":"img/EBP01-026SP.jpg","EBP01-027":"img/EBP01-027.jpg","EBP01-027OSR":"img/EBP01-027OSR.jpg","EBP01-027SP":"img/EBP01-027SP.jpg","EBP01-028":"img/EBP01-028.jpg","EBP01-028SR":"img/EBP01-028SR.jpg","EBP01-029":"img/EBP01-029.jpg","EBP01-029SR":"img/EBP01-029SR.jpg","EBP01-030":"img/EBP01-030.jpg","EBP01-030SR":"img/EBP01-030SR.jpg","EBP01-031":"img/EBP01-031.jpg","EBP01-031SR":"img/EBP01-031SR.jpg","EBP01-032":"img/EBP01-032.jpg","EBP01-033":"img/EBP01-033.jpg","EBP01-034":"img/EBP01-034.jpg","EBP01-035":"img/EBP01-035.jpg","EBP01-036":"img/EBP01-036.jpg","EBP01-037":"img/EBP01-037.jpg","EBP01-038":"img/EBP01-038.jpg","EBP01-039":"img/EBP01-039.jpg","EBP01-039SR":"img/EBP01-039SR.jpg","EBP01-040":"img/EBP01-040.jpg","EBP01-041":"img/EBP01-041.jpg","EBP01-042":"img/EBP01-042.jpg","EBP01-043":"img/EBP01-043.jpg","EBP01-044":"img/EBP01-044.jpg","EBP01-044SR":"img/EBP01-044SR.jpg","EBP01-045":"img/EBP01-045.jpg","EBP01-046":"img/EBP01-046.jpg","EBP01-046OSR":"img/EBP01-046OSR.jpg","EBP01-046SP":"img/EBP01-046SP.jpg","EBP01-047":"img/EBP01-047.jpg","EBP01-047SR":"img/EBP01-047SR.jpg","EBP01-048":"img/EBP01-048.jpg","EBP01-049":"img/EBP01-049.jpg","EBP01-049OSR":"img/EBP01-049OSR.jpg","EBP01-049SSP":"img/EBP01-049SSP.jpg","EBP01-050":"img/EBP01-050.jpg","EBP01-050OSR":"img/EBP01-050OSR.jpg","EBP01-050SP":"img/EBP01-050SP.jpg","EBP01-051":"img/EBP01-051.jpg","EBP01-051OSR":"img/EBP01-051OSR.jpg","EBP01-051SP":"img/EBP01-051SP.jpg","EBP01-052":"img/EBP01-052.jpg","EBP01-052SR":"img/EBP01-052SR.jpg","EBP01-053":"img/EBP01-053.jpg","EBP01-053SR":"img/EBP01-053SR.jpg","EBP01-054":"img/EBP01-054.jpg","EBP01-054SR":"img/EBP01-054SR.jpg","EBP01-055":"img/EBP01-055.jpg","EBP01-055SR":"img/EBP01-055SR.jpg","EBP01-056":"img/EBP01-056.jpg","EBP01-056SR":"img/EBP01-056SR.jpg","EBP01-057":"img/EBP01-057.jpg","EBP01-058":"img/EBP01-058.jpg","EBP01-059":"img/EBP01-059.jpg","EBP01-060":"img/EBP01-060.jpg","EBP01-061":"img/EBP01-061.jpg","EBP01-062":"img/EBP01-062.jpg","EBP01-063":"img/EBP01-063.jpg","EBP01-063SR":"img/EBP01-063SR.jpg","EBP01-064":"img/EBP01-064.jpg","EBP01-064SR":"img/EBP01-064SR.jpg","EBP01-065":"img/EBP01-065.jpg","EBP01-066":"img/EBP01-066.jpg","EBP01-067":"img/EBP01-067.jpg","EBP01-068":"img/EBP01-068.jpg","EBP01-069":"img/EBP01-069.jpg","EBP01-070":"img/EBP01-070.jpg","EBP01-070OSR":"img/EBP01-070OSR.jpg","EBP01-070SP":"img/EBP01-070SP.jpg","EBP01-071":"img/EBP01-071.jpg","EBP01-072":"img/EBP01-072.jpg","EBP01-073":"img/EBP01-073.jpg","EBP01-073OSR":"img/EBP01-073OSR.jpg","EBP01-073SSP":"img/EBP01-073SSP.jpg","EBP01-074":"img/EBP01-074.jpg","EBP01-074OSR":"img/EBP01-074OSR.jpg","EBP01-074SP":"img/EBP01-074SP.jpg","EBP01-075":"img/EBP01-075.jpg","EBP01-075OSR":"img/EBP01-075OSR.jpg","EBP01-075SP":"img/EBP01-075SP.jpg","EBP01-076":"img/EBP01-076.jpg","EBP01-076SR":"img/EBP01-076SR.jpg","EBP01-077":"img/EBP01-077.jpg","EBP01-077SR":"img/EBP01-077SR.jpg","EBP01-078":"img/EBP01-078.jpg","EBP01-078SR":"img/EBP01-078SR.jpg","EBP01-079":"img/EBP01-079.jpg","EBP01-079SR":"img/EBP01-079SR.jpg","EBP01-080":"img/EBP01-080.jpg","EBP01-080SR":"img/EBP01-080SR.jpg","EBP01-081":"img/EBP01-081.jpg","EBP01-081SR":"img/EBP01-081SR.jpg","EBP01-082":"img/EBP01-082.jpg","EBP01-083":"img/EBP01-083.jpg","EBP01-084":"img/EBP01-084.jpg","EBP01-085":"img/EBP01-085.jpg","EBP01-086":"img/EBP01-086.jpg","EBP01-087":"img/EBP01-087.jpg","EBP01-088":"img/EBP01-088.jpg","EBP01-088SR":"img/EBP01-088SR.jpg","EBP01-089":"img/EBP01-089.jpg","EBP01-090":"img/EBP01-090.jpg","EBP01-091":"img/EBP01-091.jpg","EBP01-092":"img/EBP01-092.jpg","EBP01-093":"img/EBP01-093.jpg","EBP01-093SR":"img/EBP01-093SR.jpg","EBP01-094":"img/EBP01-094.jpg","EBP01-095":"img/EBP01-095.jpg","EBP01-095OSR":"img/EBP01-095OSR.jpg","EBP01-095SP":"img/EBP01-095SP.jpg","EBP01-096":"img/EBP01-096.jpg","EBP01-097":"img/EBP01-097.jpg","EBP01-098":"img/EBP01-098.jpg","EBP01-099":"img/EBP01-099.jpg","EBP01-100":"img/EBP01-100.jpg","EBP01-100SR":"img/EBP01-100SR.jpg","EPR-001":"img/EPR-001.jpg","ESOUL-000":"img/ESOUL-000.jpg","ESOUL-001":"img/ESOUL-001.jpg","ESOUL-002":"img/ESOUL-002.jpg","ESOUL-003":"img/ESOUL-003.jpg","ETD01-001":"img/ETD01-001.jpg","ETD01-001TSP":"img/ETD01-001TSP.jpg","ETD01-001TSR":"img/ETD01-001TSR.jpg","ETD01-002":"img/ETD01-002.jpg","ETD01-003":"img/ETD01-003.jpg","ETD01-004":"img/ETD01-004.jpg","ETD01-005":"img/ETD01-005.jpg","ETD01-005TSR":"img/ETD01-005TSR.jpg","ETD01-006":"img/ETD01-006.jpg","ETD01-007":"img/ETD01-007.jpg","ETD01-007TSR":"img/ETD01-007TSR.jpg","ETD01-008":"img/ETD01-008.jpg","ETD01-008TSR":"img/ETD01-008TSR.jpg","ETD01-009":"img/ETD01-009.jpg","ETD01-010":"img/ETD01-010.jpg","ETD01-011":"img/ETD01-011.jpg","ETD01-011TSR":"img/ETD01-011TSR.jpg","ETD01-012":"img/ETD01-012.jpg","ETD01-012TSP":"img/ETD01-012TSP.jpg","ETD01-012TSR":"img/ETD01-012TSR.jpg","ETD01-013":"img/ETD01-013.jpg","ETD01-014":"img/ETD01-014.jpg","ETD01-014TSR":"img/ETD01-014TSR.jpg","ETD01-015":"img/ETD01-015.jpg","ETD01-016":"img/ETD01-016.jpg","ETD01-017":"img/ETD01-017.jpg","ETD01-017TSR":"img/ETD01-017TSR.jpg","ETD01-018":"img/ETD01-018.jpg","ETD01-018TSR":"img/ETD01-018TSR.jpg","ETD01-019":"img/ETD01-019.jpg","ETD01-020":"img/ETD01-020.jpg","ETD01-021":"img/ETD01-021.jpg","ETD01-022":"img/ETD01-022.jpg","ETD01-022TSR":"img/ETD01-022TSR.jpg","ETD01-023":"img/ETD01-023.jpg","ETD01-023TSR":"img/ETD01-023TSR.jpg","ETD01-024":"img/ETD01-024.jpg","ETD01-024TSR":"img/ETD01-024TSR.jpg","ETD02-001":"img/ETD02-001.jpg","ETD02-001TSP":"img/ETD02-001TSP.jpg","ETD02-001TSR":"img/ETD02-001TSR.jpg","ETD02-002":"img/ETD02-002.jpg","ETD02-003":"img/ETD02-003.jpg","ETD02-003TSR":"img/ETD02-003TSR.jpg","ETD02-004":"img/ETD02-004.jpg","ETD02-005":"img/ETD02-005.jpg","ETD02-006":"img/ETD02-006.jpg","ETD02-006TSR":"img/ETD02-006TSR.jpg","ETD02-007":"img/ETD02-007.jpg","ETD02-007TSR":"img/ETD02-007TSR.jpg","ETD02-008":"img/ETD02-008.jpg","ETD02-008TSR":"img/ETD02-008TSR.jpg","ETD02-009":"img/ETD02-009.jpg","ETD02-010":"img/ETD02-010.jpg","ETD02-011":"img/ETD02-011.jpg","ETD02-012":"img/ETD02-012.jpg","ETD02-012TSP":"img/ETD02-012TSP.jpg","ETD02-012TSR":"img/ETD02-012TSR.jpg","ETD02-013":"img/ETD02-013.jpg","ETD02-014":"img/ETD02-014.jpg","ETD02-014TSR":"img/ETD02-014TSR.jpg","ETD02-015":"img/ETD02-015.jpg","ETD02-016":"img/ETD02-016.jpg","ETD02-016TSR":"img/ETD02-016TSR.jpg","ETD02-017":"img/ETD02-017.jpg","ETD02-018":"img/ETD02-018.jpg","ETD02-018TSR":"img/ETD02-018TSR.jpg","ETD02-019":"img/ETD02-019.jpg","ETD02-020":"img/ETD02-020.jpg","ETD02-021":"img/ETD02-021.jpg","ETD02-021TSR":"img/ETD02-021TSR.jpg","ETD02-022":"img/ETD02-022.jpg","ETD02-023":"img/ETD02-023.jpg","ETD02-023TSR":"img/ETD02-023TSR.jpg","ETD02-024":"img/ETD02-024.jpg","ETD02-024TSR":"img/ETD02-024TSR.jpg","BOX_SS01":"img/BOX_SS01.webp","BOX_EBP01":"img/BOX_EBP01.webp","BOX_BANNER_ETD02":"img/BOX_BANNER_ETD02.jpg","BOX_BANNER_ETD01":"img/BOX_BANNER_ETD01.jpg","BOX_BANNER_EBP01":"img/BOX_BANNER_EBP01.jpg","PACK_EBP01":"img/PACK_EBP01.webp","BOX_ETD01":"img/BOX_ETD01.webp","BOX_ETD02":"img/BOX_ETD02.webp","EPR-002":"img/EPR-002.jpg","EPR-003":"img/EPR-003.jpg","EPR-004":"img/EPR-004.jpg","EPR-005":"img/EPR-005.jpg","EPR-006":"img/EPR-006.jpg","EPR-007":"img/EPR-007.jpg","EPR-008":"img/EPR-008.jpg","EPR-009":"img/EPR-009.jpg","ESOUL-004":"img/ESOUL-004.jpg","ESOUL-005":"img/ESOUL-005.jpg","ESOUL-006":"img/ESOUL-006.jpg","ESOUL-007":"img/ESOUL-007.jpg","ESOUL-008":"img/ESOUL-008.jpg","EPR-002S":"img/EPR-002S.jpg","EPR-003S":"img/EPR-003S.jpg","EPR-004S":"img/EPR-004S.jpg","EPR-005S":"img/EPR-005S.jpg","EPR-006S":"img/EPR-006S.jpg","EPR-007S":"img/EPR-007S.jpg","EPR-008S":"img/EPR-008S.jpg","EPR-009S":"img/EPR-009S.jpg","EPR-012":"img/EPR-012.jpg","EPR-013":"img/EPR-013.jpg","EPR-014":"img/EPR-014.jpg","EPR-015":"img/EPR-015.jpg","EPR-016":"img/EPR-016.jpg","EPR-017":"img/EPR-017.jpg","EPR-018":"img/EPR-018.jpg","EPR-019":"img/EPR-019.jpg","EPR-020":"img/EPR-020.jpg","ESOUL-014":"img/ESOUL-014.jpg","ESOUL-015":"img/ESOUL-015.jpg","ESOUL-016":"img/ESOUL-016.jpg"};</script>
+<script>window.CARD_IMG={"DECK_DEMO":"img/DECK_DEMO.webp","LOGO_BP02":"img/LOGO_BP02.webp","BOX_BANNER_SS01":"img/BOX_BANNER_SS01.webp","BOX_BANNER_BP02":"img/BOX_BANNER_BP02.webp","BOX_BANNER_TD03":"img/BOX_BANNER_TD03.webp","PACK_PRV1":"img/PACK_PRV1.webp","EBP01-001":"img/EBP01-001.jpg","EBP01-001OSR":"img/EBP01-001OSR.jpg","EBP01-001SSP":"img/EBP01-001SSP.jpg","EBP01-002":"img/EBP01-002.jpg","EBP01-002OSR":"img/EBP01-002OSR.jpg","EBP01-002SP":"img/EBP01-002SP.jpg","EBP01-003":"img/EBP01-003.jpg","EBP01-003SR":"img/EBP01-003SR.jpg","EBP01-004":"img/EBP01-004.jpg","EBP01-004SR":"img/EBP01-004SR.jpg","EBP01-005":"img/EBP01-005.jpg","EBP01-005SR":"img/EBP01-005SR.jpg","EBP01-006":"img/EBP01-006.jpg","EBP01-006SR":"img/EBP01-006SR.jpg","EBP01-007":"img/EBP01-007.jpg","EBP01-007SR":"img/EBP01-007SR.jpg","EBP01-008":"img/EBP01-008.jpg","EBP01-009":"img/EBP01-009.jpg","EBP01-010":"img/EBP01-010.jpg","EBP01-011":"img/EBP01-011.jpg","EBP01-012":"img/EBP01-012.jpg","EBP01-013":"img/EBP01-013.jpg","EBP01-014":"img/EBP01-014.jpg","EBP01-015":"img/EBP01-015.jpg","EBP01-015SP":"img/EBP01-015SP.jpg","EBP01-016":"img/EBP01-016.jpg","EBP01-017":"img/EBP01-017.jpg","EBP01-018":"img/EBP01-018.jpg","EBP01-019":"img/EBP01-019.jpg","EBP01-019SR":"img/EBP01-019SR.jpg","EBP01-020":"img/EBP01-020.jpg","EBP01-020SR":"img/EBP01-020SR.jpg","EBP01-021":"img/EBP01-021.jpg","EBP01-022":"img/EBP01-022.jpg","EBP01-023":"img/EBP01-023.jpg","EBP01-023OSR":"img/EBP01-023OSR.jpg","EBP01-023SP":"img/EBP01-023SP.jpg","EBP01-024":"img/EBP01-024.jpg","EBP01-025":"img/EBP01-025.jpg","EBP01-025OSR":"img/EBP01-025OSR.jpg","EBP01-025SSP":"img/EBP01-025SSP.jpg","EBP01-026":"img/EBP01-026.jpg","EBP01-026OSR":"img/EBP01-026OSR.jpg","EBP01-026SP":"img/EBP01-026SP.jpg","EBP01-027":"img/EBP01-027.jpg","EBP01-027OSR":"img/EBP01-027OSR.jpg","EBP01-027SP":"img/EBP01-027SP.jpg","EBP01-028":"img/EBP01-028.jpg","EBP01-028SR":"img/EBP01-028SR.jpg","EBP01-029":"img/EBP01-029.jpg","EBP01-029SR":"img/EBP01-029SR.jpg","EBP01-030":"img/EBP01-030.jpg","EBP01-030SR":"img/EBP01-030SR.jpg","EBP01-031":"img/EBP01-031.jpg","EBP01-031SR":"img/EBP01-031SR.jpg","EBP01-032":"img/EBP01-032.jpg","EBP01-033":"img/EBP01-033.jpg","EBP01-034":"img/EBP01-034.jpg","EBP01-035":"img/EBP01-035.jpg","EBP01-036":"img/EBP01-036.jpg","EBP01-037":"img/EBP01-037.jpg","EBP01-038":"img/EBP01-038.jpg","EBP01-039":"img/EBP01-039.jpg","EBP01-039SR":"img/EBP01-039SR.jpg","EBP01-040":"img/EBP01-040.jpg","EBP01-041":"img/EBP01-041.jpg","EBP01-042":"img/EBP01-042.jpg","EBP01-043":"img/EBP01-043.jpg","EBP01-044":"img/EBP01-044.jpg","EBP01-044SR":"img/EBP01-044SR.jpg","EBP01-045":"img/EBP01-045.jpg","EBP01-046":"img/EBP01-046.jpg","EBP01-046OSR":"img/EBP01-046OSR.jpg","EBP01-046SP":"img/EBP01-046SP.jpg","EBP01-047":"img/EBP01-047.jpg","EBP01-047SR":"img/EBP01-047SR.jpg","EBP01-048":"img/EBP01-048.jpg","EBP01-049":"img/EBP01-049.jpg","EBP01-049OSR":"img/EBP01-049OSR.jpg","EBP01-049SSP":"img/EBP01-049SSP.jpg","EBP01-050":"img/EBP01-050.jpg","EBP01-050OSR":"img/EBP01-050OSR.jpg","EBP01-050SP":"img/EBP01-050SP.jpg","EBP01-051":"img/EBP01-051.jpg","EBP01-051OSR":"img/EBP01-051OSR.jpg","EBP01-051SP":"img/EBP01-051SP.jpg","EBP01-052":"img/EBP01-052.jpg","EBP01-052SR":"img/EBP01-052SR.jpg","EBP01-053":"img/EBP01-053.jpg","EBP01-053SR":"img/EBP01-053SR.jpg","EBP01-054":"img/EBP01-054.jpg","EBP01-054SR":"img/EBP01-054SR.jpg","EBP01-055":"img/EBP01-055.jpg","EBP01-055SR":"img/EBP01-055SR.jpg","EBP01-056":"img/EBP01-056.jpg","EBP01-056SR":"img/EBP01-056SR.jpg","EBP01-057":"img/EBP01-057.jpg","EBP01-058":"img/EBP01-058.jpg","EBP01-059":"img/EBP01-059.jpg","EBP01-060":"img/EBP01-060.jpg","EBP01-061":"img/EBP01-061.jpg","EBP01-062":"img/EBP01-062.jpg","EBP01-063":"img/EBP01-063.jpg","EBP01-063SR":"img/EBP01-063SR.jpg","EBP01-064":"img/EBP01-064.jpg","EBP01-064SR":"img/EBP01-064SR.jpg","EBP01-065":"img/EBP01-065.jpg","EBP01-066":"img/EBP01-066.jpg","EBP01-067":"img/EBP01-067.jpg","EBP01-068":"img/EBP01-068.jpg","EBP01-069":"img/EBP01-069.jpg","EBP01-070":"img/EBP01-070.jpg","EBP01-070OSR":"img/EBP01-070OSR.jpg","EBP01-070SP":"img/EBP01-070SP.jpg","EBP01-071":"img/EBP01-071.jpg","EBP01-072":"img/EBP01-072.jpg","EBP01-073":"img/EBP01-073.jpg","EBP01-073OSR":"img/EBP01-073OSR.jpg","EBP01-073SSP":"img/EBP01-073SSP.jpg","EBP01-074":"img/EBP01-074.jpg","EBP01-074OSR":"img/EBP01-074OSR.jpg","EBP01-074SP":"img/EBP01-074SP.jpg","EBP01-075":"img/EBP01-075.jpg","EBP01-075OSR":"img/EBP01-075OSR.jpg","EBP01-075SP":"img/EBP01-075SP.jpg","EBP01-076":"img/EBP01-076.jpg","EBP01-076SR":"img/EBP01-076SR.jpg","EBP01-077":"img/EBP01-077.jpg","EBP01-077SR":"img/EBP01-077SR.jpg","EBP01-078":"img/EBP01-078.jpg","EBP01-078SR":"img/EBP01-078SR.jpg","EBP01-079":"img/EBP01-079.jpg","EBP01-079SR":"img/EBP01-079SR.jpg","EBP01-080":"img/EBP01-080.jpg","EBP01-080SR":"img/EBP01-080SR.jpg","EBP01-081":"img/EBP01-081.jpg","EBP01-081SR":"img/EBP01-081SR.jpg","EBP01-082":"img/EBP01-082.jpg","EBP01-083":"img/EBP01-083.jpg","EBP01-084":"img/EBP01-084.jpg","EBP01-085":"img/EBP01-085.jpg","EBP01-086":"img/EBP01-086.jpg","EBP01-087":"img/EBP01-087.jpg","EBP01-088":"img/EBP01-088.jpg","EBP01-088SR":"img/EBP01-088SR.jpg","EBP01-089":"img/EBP01-089.jpg","EBP01-090":"img/EBP01-090.jpg","EBP01-091":"img/EBP01-091.jpg","EBP01-092":"img/EBP01-092.jpg","EBP01-093":"img/EBP01-093.jpg","EBP01-093SR":"img/EBP01-093SR.jpg","EBP01-094":"img/EBP01-094.jpg","EBP01-095":"img/EBP01-095.jpg","EBP01-095OSR":"img/EBP01-095OSR.jpg","EBP01-095SP":"img/EBP01-095SP.jpg","EBP01-096":"img/EBP01-096.jpg","EBP01-097":"img/EBP01-097.jpg","EBP01-098":"img/EBP01-098.jpg","EBP01-099":"img/EBP01-099.jpg","EBP01-100":"img/EBP01-100.jpg","EBP01-100SR":"img/EBP01-100SR.jpg","EPR-001":"img/EPR-001.jpg","ESOUL-000":"img/ESOUL-000.jpg","ESOUL-001":"img/ESOUL-001.jpg","ESOUL-002":"img/ESOUL-002.jpg","ESOUL-003":"img/ESOUL-003.jpg","ETD01-001":"img/ETD01-001.jpg","ETD01-001TSP":"img/ETD01-001TSP.jpg","ETD01-001TSR":"img/ETD01-001TSR.jpg","ETD01-002":"img/ETD01-002.jpg","ETD01-003":"img/ETD01-003.jpg","ETD01-004":"img/ETD01-004.jpg","ETD01-005":"img/ETD01-005.jpg","ETD01-005TSR":"img/ETD01-005TSR.jpg","ETD01-006":"img/ETD01-006.jpg","ETD01-007":"img/ETD01-007.jpg","ETD01-007TSR":"img/ETD01-007TSR.jpg","ETD01-008":"img/ETD01-008.jpg","ETD01-008TSR":"img/ETD01-008TSR.jpg","ETD01-009":"img/ETD01-009.jpg","ETD01-010":"img/ETD01-010.jpg","ETD01-011":"img/ETD01-011.jpg","ETD01-011TSR":"img/ETD01-011TSR.jpg","ETD01-012":"img/ETD01-012.jpg","ETD01-012TSP":"img/ETD01-012TSP.jpg","ETD01-012TSR":"img/ETD01-012TSR.jpg","ETD01-013":"img/ETD01-013.jpg","ETD01-014":"img/ETD01-014.jpg","ETD01-014TSR":"img/ETD01-014TSR.jpg","ETD01-015":"img/ETD01-015.jpg","ETD01-016":"img/ETD01-016.jpg","ETD01-017":"img/ETD01-017.jpg","ETD01-017TSR":"img/ETD01-017TSR.jpg","ETD01-018":"img/ETD01-018.jpg","ETD01-018TSR":"img/ETD01-018TSR.jpg","ETD01-019":"img/ETD01-019.jpg","ETD01-020":"img/ETD01-020.jpg","ETD01-021":"img/ETD01-021.jpg","ETD01-022":"img/ETD01-022.jpg","ETD01-022TSR":"img/ETD01-022TSR.jpg","ETD01-023":"img/ETD01-023.jpg","ETD01-023TSR":"img/ETD01-023TSR.jpg","ETD01-024":"img/ETD01-024.jpg","ETD01-024TSR":"img/ETD01-024TSR.jpg","ETD02-001":"img/ETD02-001.jpg","ETD02-001TSP":"img/ETD02-001TSP.jpg","ETD02-001TSR":"img/ETD02-001TSR.jpg","ETD02-002":"img/ETD02-002.jpg","ETD02-003":"img/ETD02-003.jpg","ETD02-003TSR":"img/ETD02-003TSR.jpg","ETD02-004":"img/ETD02-004.jpg","ETD02-005":"img/ETD02-005.jpg","ETD02-006":"img/ETD02-006.jpg","ETD02-006TSR":"img/ETD02-006TSR.jpg","ETD02-007":"img/ETD02-007.jpg","ETD02-007TSR":"img/ETD02-007TSR.jpg","ETD02-008":"img/ETD02-008.jpg","ETD02-008TSR":"img/ETD02-008TSR.jpg","ETD02-009":"img/ETD02-009.jpg","ETD02-010":"img/ETD02-010.jpg","ETD02-011":"img/ETD02-011.jpg","ETD02-012":"img/ETD02-012.jpg","ETD02-012TSP":"img/ETD02-012TSP.jpg","ETD02-012TSR":"img/ETD02-012TSR.jpg","ETD02-013":"img/ETD02-013.jpg","ETD02-014":"img/ETD02-014.jpg","ETD02-014TSR":"img/ETD02-014TSR.jpg","ETD02-015":"img/ETD02-015.jpg","ETD02-016":"img/ETD02-016.jpg","ETD02-016TSR":"img/ETD02-016TSR.jpg","ETD02-017":"img/ETD02-017.jpg","ETD02-018":"img/ETD02-018.jpg","ETD02-018TSR":"img/ETD02-018TSR.jpg","ETD02-019":"img/ETD02-019.jpg","ETD02-020":"img/ETD02-020.jpg","ETD02-021":"img/ETD02-021.jpg","ETD02-021TSR":"img/ETD02-021TSR.jpg","ETD02-022":"img/ETD02-022.jpg","ETD02-023":"img/ETD02-023.jpg","ETD02-023TSR":"img/ETD02-023TSR.jpg","ETD02-024":"img/ETD02-024.jpg","ETD02-024TSR":"img/ETD02-024TSR.jpg","BOX_SS01":"img/BOX_SS01.webp","BOX_EBP01":"img/BOX_EBP01.webp","BOX_BANNER_ETD02":"img/BOX_BANNER_ETD02.jpg","BOX_BANNER_ETD01":"img/BOX_BANNER_ETD01.jpg","BOX_BANNER_EBP01":"img/BOX_BANNER_EBP01.jpg","PACK_EBP01":"img/PACK_EBP01.webp","BOX_ETD01":"img/BOX_ETD01.webp","BOX_ETD02":"img/BOX_ETD02.webp","BOX_BP02":"img/BOX_BP02.jpg","EPR-002":"img/EPR-002.jpg","EPR-003":"img/EPR-003.jpg","EPR-004":"img/EPR-004.jpg","EPR-005":"img/EPR-005.jpg","EPR-006":"img/EPR-006.jpg","EPR-007":"img/EPR-007.jpg","EPR-008":"img/EPR-008.jpg","EPR-009":"img/EPR-009.jpg","ESOUL-004":"img/ESOUL-004.jpg","ESOUL-005":"img/ESOUL-005.jpg","ESOUL-006":"img/ESOUL-006.jpg","ESOUL-007":"img/ESOUL-007.jpg","ESOUL-008":"img/ESOUL-008.jpg","EPR-002S":"img/EPR-002S.jpg","EPR-003S":"img/EPR-003S.jpg","EPR-004S":"img/EPR-004S.jpg","EPR-005S":"img/EPR-005S.jpg","EPR-006S":"img/EPR-006S.jpg","EPR-007S":"img/EPR-007S.jpg","EPR-008S":"img/EPR-008S.jpg","EPR-009S":"img/EPR-009S.jpg","EPR-012":"img/EPR-012.jpg","EPR-013":"img/EPR-013.jpg","EPR-014":"img/EPR-014.jpg","EPR-015":"img/EPR-015.jpg","EPR-016":"img/EPR-016.jpg","EPR-017":"img/EPR-017.jpg","EPR-018":"img/EPR-018.jpg","EPR-019":"img/EPR-019.jpg","EPR-020":"img/EPR-020.jpg","ESOUL-014":"img/ESOUL-014.jpg","ESOUL-015":"img/ESOUL-015.jpg","ESOUL-016":"img/ESOUL-016.jpg"};</script>
 <script>
 /* Flex-gap support probe: old WebViews (Chromium <84 / Safari <14.1) ignore
    `gap` on flex containers, collapsing spacing so pills/badges overlap. If gap
@@ -2421,7 +2469,7 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[]},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
@@ -2436,7 +2484,7 @@
   function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ np.setPrefs(JSON.stringify(Object.assign({},SETTINGS.notif,{region:SETTINGS.ebayRegion||"co.uk"}))); }catch(e){} } }
   function stockAlertOn(id){ var n=SETTINGS.notif; return !!(n&&Array.isArray(n.stockWatch)&&n.stockWatch.indexOf(id)>=0); }
   function toggleStockAlert(id){
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[]};
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[],price:false,priceWatch:[]};
     if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];
     var w=SETTINGS.notif.stockWatch, i=w.indexOf(id);
     if(i>=0){ w.splice(i,1); } else { w.push(id); SETTINGS.notif.stock=true; }   // opting into a product enables the master
@@ -2460,6 +2508,131 @@
     var on=stockAlertOn(p.id), st="flex:1 1 auto;justify-content:center;"+(on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
     return '<button class="btn sec sdalert" id="sdStockAlert" type="button" style="'+st+'">'+icon('bell')+' Stock alerts '+(on?'on':'off')+'</button>';
   }
+  // Price alerts (native push only): per card alerts, device local like stockWatch and carried to the backend
+  // by the same setPrefs bridge (SETTINGS.notif.priceWatch, master switch SETTINGS.notif.price). Each alert is
+  // {id, k, v, b, r, m, c, at}: card id; kind "above" | "below" (v is a price) or "up" | "down" (v is a percent
+  // move from b); b = the card's price when the alert was set; r = eBay region; m = price mode ("live" |
+  // "sold"); c = currency code; at = ms. spheredex-backend/src/alerts.ts checks them once a day, after the
+  // nightly price refresh, against that market's server price in mode m and pushes once per crossing.
+  var PRICE_ALERT_MAX=30, PA_KINDS=["above","below","up","down"], PA_BASIS={live:"live listings", sold:"last sold"};
+  // Validate one saved alert (null when unusable). Mirrors parseAlerts in alerts.ts.
+  function normPriceAlert(a){
+    if(!a || typeof a!=="object") return null;
+    var id=(typeof a.id==="string")?a.id:"", k=a.k, v=+a.v, b=+a.b, r=(typeof a.r==="string")?a.r:"", m=(a.m==="live"||a.m==="sold")?a.m:"";
+    if(!id || PA_KINDS.indexOf(k)<0 || !isFinite(v) || v<=0 || !Object.prototype.hasOwnProperty.call(REGION_CUR, r) || !m) return null;
+    if((k==="up"||k==="down") && !(isFinite(b) && b>0)) return null;   // a percent move needs a starting price
+    if(k==="down" && v>=100) return null;
+    return {id:id, k:k, v:v, b:(isFinite(b)&&b>0)?b:0, r:r, m:m, c:(typeof a.c==="string"&&/^[A-Z]{3}$/.test(a.c))?a.c:REGION_CUR[r], at:+a.at||0};
+  }
+  function priceWatch(){
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]};
+    if(!Array.isArray(SETTINGS.notif.priceWatch)) SETTINGS.notif.priceWatch=[];
+    return SETTINGS.notif.priceWatch;
+  }
+  function priceAlertsFor(id){ return priceWatch().filter(function(a){ return a.id===id; }); }
+  function samePriceAlert(a, x){ return a.id===x.id && a.k===x.k && a.v===x.v && a.r===x.r && a.m===x.m; }
+  // The price an alert is measured against: only the server's nightly book for that mode, the one the backend
+  // checks. A card's own local figure (a typed market value, an unloaded book) is never used, so 0 means no price yet.
+  function alertPriceOf(id, mode){ var bk=(mode==="sold")?PRICEBOOK_SOLD[id]:PRICEBOOK[id]; return (bk!=null && +bk>0) ? +bk : 0; }
+  // money() in a given currency, for an alert set in another market than the current one.
+  function moneyIn(n, code){
+    if(!code || !CUR || code===CUR.code) return money(n);
+    var cc=CURRENCIES.filter(function(x){ return x.code===code; })[0], dec=cc?cc.dec:2;
+    try{ return new Intl.NumberFormat(fmtLocale(),{style:"currency",currency:code,currencyDisplay:"narrowSymbol",minimumFractionDigits:dec,maximumFractionDigits:dec}).format(+n||0); }
+    catch(e){ return (cc?cc.sym:code+" ")+(+n||0).toFixed(dec); }
+  }
+  // The alert's condition in words, e.g. "Rises above £90.00 · live listings" or "Down 10% from £82.00 · last sold".
+  function priceAlertText(a){
+    var t=(a.k==="above")?("Rises above "+moneyIn(a.v,a.c)):(a.k==="below")?("Falls below "+moneyIn(a.v,a.c))
+      :((a.k==="up"?"Up ":"Down ")+fmt(a.v)+"% from "+moneyIn(a.b,a.c));
+    t+=" · "+PA_BASIS[a.m];
+    if(a.r!==(SETTINGS.ebayRegion||"co.uk")) t+=" · ebay."+a.r;   // set in another market
+    return t;
+  }
+  function addPriceAlert(a){
+    priceWatch().push(a); SETTINGS.notif.price=true;   // adding an alert enables the master, like following a product
+    var sw=$("setNotifPrice"); if(sw) sw.checked=true;
+    saveSettings(); syncPushPrefs(); renderPriceAlertList();
+  }
+  function removePriceAlertAt(i){ var w=priceWatch(); if(!(i>=0 && i<w.length)) return; w.splice(i,1); saveSettings(); syncPushPrefs(); renderPriceAlertList(); }
+  // Card sheet button: "Price alert", or accent filled with the count once this card has alerts.
+  function paintPriceAlertBtn(id){
+    var b=$("bubAlert"); if(!b) return; var n=priceAlertsFor(id).length;
+    b.style.cssText="flex:1 1 auto;justify-content:center;"+(n?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
+    b.innerHTML=icon('bell')+' '+(n?(n===1?'Price alert on':n+' price alerts on'):'Price alert');
+  }
+  // Settings > Notifications list: every alert (card, condition, remove); tap a row to open its card.
+  function renderPriceAlertList(){
+    var host=$("priceAlertList"); if(!host) return;
+    var w=priceWatch();
+    if(!w.length){ host.innerHTML='<div class="paempty">No price alerts yet. Open a card and tap Price alert to set one.</div>'; return; }
+    host.innerHTML=w.map(function(a,i){ var c=cardById(a.id);
+      return '<div class="parow tap" role="button" tabindex="0" data-i="'+i+'"><div class="patxt"><b>'+esc(c?c.name:a.id)+'</b><span>'+esc((c?c.rare+' · ':'')+priceAlertText(a))+'</span></div>'+
+        '<button class="pax" type="button" data-i="'+i+'" aria-label="Remove price alert">✕</button></div>'; }).join("");
+    Array.prototype.forEach.call(host.querySelectorAll(".parow"), function(row){
+      var i=parseInt(row.getAttribute("data-i"),10);
+      row.onclick=function(e){ if(e && e.target && e.target.closest && e.target.closest(".pax")) return; var a=priceWatch()[i], c=a&&cardById(a.id); if(c) openDetail(c); };
+      row.onkeydown=function(e){ if(e.target===row && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); row.onclick(e); } };
+    });
+    Array.prototype.forEach.call(host.querySelectorAll(".pax"), function(x){
+      x.onclick=function(){ removePriceAlertAt(parseInt(x.getAttribute("data-i"),10)); toast("Price alert removed"); };
+    });
+  }
+  // The price alert dialog over a card sheet: the current price and its basis, a four way choice, the value
+  // (prefilled 10% either side of the price, or 10 for a percent), and this card's alerts with a remove
+  // control. onChange runs after an alert is added or removed, to repaint the sheet's button.
+  function openPriceAlert(c, onChange){
+    var sc=$("paScrim"); if(!sc) return;
+    var mode=priceMode(), region=SETTINGS.ebayRegion||"co.uk", code=REGION_CUR[region]||(CUR&&CUR.code)||"", basis=PA_BASIS[mode];
+    var cur=Math.round((+alertPriceOf(c.id, mode)||0)*100)/100, kind="above";
+    var inp=$("paVal"), save=$("paSave"), cancel=$("paCancel"), hint=$("paHint"), kinds=$("paKinds").querySelectorAll(".pakind");
+    $("paNow").innerHTML='<b>'+esc(c.name)+'</b><br>'+(cur>0
+      ? 'Now <b>'+esc(moneyIn(cur,code))+'</b> on '+basis+'. Prices are checked once a day, after the nightly update.'
+      : 'No '+basis+' price for this card yet.');
+    function isPct(){ return kind==="up"||kind==="down"; }
+    function defVal(){ if(isPct()) return "10"; return cur>0 ? (Math.round(cur*(kind==="above"?1.1:0.9)*100)/100).toFixed(2) : ""; }
+    // {ok, alert, msg}: msg is the preview when ok, otherwise why Save is off.
+    function check(){
+      if(!(cur>0)) return {msg:"This card has no price yet, so an alert can't be set. Try again after the next price update."};
+      if(priceWatch().length>=PRICE_ALERT_MAX) return {msg:"You have "+PRICE_ALERT_MAX+" price alerts, the most allowed. Remove one to add another."};
+      var v=parseFloat(String(inp.value||"").replace(",","."));
+      if(!isFinite(v) || v<=0) return {msg:isPct()?"Enter a percent.":"Enter a price."};
+      v=Math.round(v*100)/100;
+      if(kind==="above" && v<=cur) return {msg:"Pick a price above the current "+moneyIn(cur,code)+"."};
+      if(kind==="below" && v>=cur) return {msg:"Pick a price below the current "+moneyIn(cur,code)+"."};
+      if(kind==="up" && v>1000) return {msg:"Pick a percent up to 1000."};
+      if(kind==="down" && v>=100) return {msg:"Pick a percent below 100."};
+      var a={id:c.id, k:kind, v:v, b:cur, r:region, m:mode, c:code, at:Date.now()};
+      if(priceWatch().some(function(x){ return samePriceAlert(a,x); })) return {msg:"You already have this alert on this card."};
+      var at=(kind==="up")?cur*(1+v/100):(kind==="down")?cur*(1-v/100):v;
+      return {ok:true, alert:a, msg:(kind==="above"||kind==="up")
+        ? "You'll be notified when the "+basis+" price reaches "+moneyIn(at,code)+" or more."
+        : "You'll be notified when the "+basis+" price drops to "+moneyIn(at,code)+" or less."};
+    }
+    function paint(){
+      Array.prototype.forEach.call(kinds, function(b){ var on=b.getAttribute("data-k")===kind; b.classList.toggle("on",on); b.setAttribute("aria-checked",on?"true":"false"); });
+      $("paValLab").textContent=isPct()?"Percent":("Price"+(code?" ("+code+")":""));
+      inp.disabled=!(cur>0);
+      var r=check(); hint.textContent=r.msg||""; hint.className="pahint"+(r.ok?"":" bad"); save.disabled=!r.ok;
+    }
+    function paintExisting(){
+      var rows=[];
+      priceWatch().forEach(function(a,i){ if(a.id===c.id) rows.push('<div class="parow"><div class="patxt"><span>'+esc(priceAlertText(a))+'</span></div><button class="pax" type="button" data-i="'+i+'" aria-label="Remove price alert">✕</button></div>'); });
+      var list=$("paList"); list.innerHTML=rows.join(""); $("paExist").hidden=!rows.length;
+      Array.prototype.forEach.call(list.querySelectorAll(".pax"), function(x){
+        x.onclick=function(){ removePriceAlertAt(parseInt(x.getAttribute("data-i"),10)); paintExisting(); paint(); if(onChange) onChange(); toast("Price alert removed"); };
+      });
+    }
+    function close(){ sc.hidden=true; save.onclick=cancel.onclick=sc.onclick=inp.oninput=inp.onkeydown=null; Array.prototype.forEach.call(kinds, function(b){ b.onclick=null; }); }
+    Array.prototype.forEach.call(kinds, function(b){ b.onclick=function(){ kind=b.getAttribute("data-k"); inp.value=defVal(); paint(); }; });
+    inp.oninput=paint;
+    inp.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); save.click(); } else if(e.key==="Escape") close(); };
+    save.onclick=function(){ var r=check(); if(!r.ok) return; addPriceAlert(r.alert); close(); if(onChange) onChange(); toast("Price alert set"); };
+    cancel.onclick=close;
+    sc.onclick=function(e){ if(e.target===sc) close(); };
+    inp.value=defVal(); paintExisting(); paint();
+    sc.hidden=false;
+  }
   // Account-level settings that sync to the signed-in account (piggybacked on the state blob under
   // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme,
   // view, notifications stay local). _currency and _edition live outside SETTINGS so carry them too.
@@ -2471,7 +2644,8 @@
     ACCT_SETTING_KEYS.forEach(function(k){ if(a[k]!==undefined) SETTINGS[k]=a[k]; });
     try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){}
     if(a._currency){ lsSet("paldeck-currency", a._currency); var c=CURRENCIES.filter(function(x){return x.code===a._currency;})[0]; if(c) CUR=c; }
-    if(a._edition){ SEAL_ED=(a._edition==="jp")?"jp":"en"; lsSet("palvault-sealed-ed",SEAL_ED); if(typeof reconcileEdition==="function") reconcileEdition(); } }
+    if(a._edition){ SEAL_ED=(a._edition==="jp")?"jp":"en"; lsSet("palvault-sealed-ed",SEAL_ED); if(typeof reconcileEdition==="function") reconcileEdition(); }
+    if(a.ebayRegion!==undefined && typeof renderPriceAlertList==="function") renderPriceAlertList(); }
   var viewMode = lsGet("palvault-view") || SETTINGS.defaultView || "auto";
   var $ = function(id){ return document.getElementById(id); };
   var grid = $("grid");
@@ -2962,6 +3136,9 @@
         '<h3 class="dsec" style="margin:12px 0 0">Graded price guide</h3>'+
         '<div class="gradeguide" id="gradeGuide"></div>'+
       '</div>'+
+      // Price alert (native push only; priceui, so collector mode hides it). Sits after the glance panels so an
+      // open panel stays attached to its bubble.
+      (nativePushIface()?'<div class="sdbtnrow priceui" style="display:flex;margin-top:9px"><button class="btn sec" id="bubAlert" type="button"></button></div>':'')+
       '<input type="hidden" id="fLast"><input type="hidden" id="fAvg">'+
 
       // ---- Notes + save ----
@@ -3184,6 +3361,9 @@
         btn.onclick=function(){ var p=$(pair[1]); if(!p) return; p.hidden=!p.hidden; btn.classList.toggle("open",!p.hidden); if(!p.hidden) p.scrollIntoView({block:"nearest",behavior:"smooth"}); };
       });
     })();
+    // Price alert button: opens the alert dialog, then repaints its count (only if this sheet is still showing).
+    var pab=$("bubAlert");
+    if(pab){ paintPriceAlertBtn(c.id); pab.onclick=function(){ openPriceAlert(c, function(){ if(myGen===detailGen) paintPriceAlertBtn(c.id); }); }; }
     renderSales(); refreshAvg();
 
     $("fSave").onclick = function(){ persist(); dismissOverlay(); toast(c.name+" updated"); };
@@ -3191,7 +3371,7 @@
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
   }
-  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); }
+  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); var ps=$("paScrim"); if(ps) ps.hidden=true; }   // the price alert dialog belongs to the sheet
   // Every sheet shares one .modal, which keeps its old scroll offset: start a newly opened sheet at the top
   // (a re-render of the same sheet, like a qty step or stock alert tap, keeps its place). Call after adding "open".
   var _sheetKey="";
@@ -4709,7 +4889,7 @@
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -4718,6 +4898,9 @@
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && closeTopOverlay()){ e.preventDefault(); e.stopPropagation(); } }, true);
   // Device back / swipe-back: close the top full-screen overlay, else a lightweight popup, else go back a page.
   window.addEventListener("popstate", function(ev){
+    // The price alert dialog sits on the card sheet but owns no history entry: back closes just the dialog
+    // and puts the sheet's entry back, so _ovStack and history stay in step.
+    var ps=$("paScrim"); if(ps && !ps.hidden){ ps.hidden=true; try{ history.pushState({sd:_curPage, ov:_ovStack.length}, ""); }catch(e){} return; }
     if(_ovStack.length){ var fn=_ovStack.pop(); try{ fn(); }catch(e){} return; }
     if(closeTopOverlay()){ try{ history.pushState({sd:_curPage}, ""); }catch(e){} return; }
     showPage((ev.state && ev.state.sd) || "home", true);
@@ -5848,11 +6031,16 @@
   // Native camera reads the scan preferences: default mode ("full" | "code"), whether to show the on-camera toggle, and the continuous-scan loop.
   window.SDScanPrefs = function(){ try{ return JSON.stringify({mode:(SETTINGS.scanMode==="code"?"code":"full"), toggle:SETTINGS.scanToggle!==false, loop:SETTINGS.scanLoop!==false}); }catch(e){ return '{"mode":"full","toggle":true,"loop":true}'; } };
   // Bridge for a tapped push notification (Android + iOS): route the notification's url. An external
-  // link (e.g. a news article) opens in the system browser; a bare page name switches pages.
+  // link (e.g. a news article) opens in the system browser; "card:<ID>" (a price alert) opens that card's
+  // sheet over the current page; a bare page name switches pages.
   window.SDOpenPush = function(url){
     try{
       if(!url) return;
       if(/^https?:\/\//i.test(url)){ window.open(url,"_blank","noopener"); return; }
+      var cm=/^card:(.+)$/.exec(url);
+      // Close anything above the card sheet (a lightbox, the scan sheet) with its own hide function first,
+      // or the card opens hidden underneath. Each one closed leaves an inert history entry, which is fine.
+      if(cm){ var pc=cardById(cm[1]); if(pc){ closeTopOverlay(); while(_ovStack.length && _ovStack[_ovStack.length-1]!==closeModal){ var hf=_ovStack.pop(); try{ hf(); }catch(e){} } openDetail(pc); } return; }
       if(typeof showPage==="function") showPage(url);
     }catch(e){}
   };
@@ -5911,7 +6099,7 @@
     var ov=$("setOverlays"); if(ov){ ov.checked=!SETTINGS.hideOverlays; ov.onchange=function(){ SETTINGS.hideOverlays=!ov.checked; saveSettings(); applySettings(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
-    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); fetchServerPrices(true); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); renderPriceAlertList(); fetchServerPrices(true); }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Scanner prefs (the native camera reads these via SDScanPrefs): default recognizer mode, on-camera toggle visibility, continuous-scan loop.
@@ -5921,17 +6109,21 @@
     var st=$("setScanToggle"); if(st){ st.checked=SETTINGS.scanToggle!==false; st.onchange=function(){ SETTINGS.scanToggle=st.checked; saveSettings(); }; }
     var sl=$("setScanLoop"); if(sl){ sl.checked=SETTINGS.scanLoop!==false; sl.onchange=function(){ SETTINGS.scanLoop=sl.checked; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[]};
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]};
     if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=false;                      // stock alerts default off; turns on when a product is followed
     if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];           // nothing watched until picked
+    SETTINGS.notif.price=(SETTINGS.notif.price===true);                                    // price alerts default off; turns on when an alert is added
+    SETTINGS.notif.priceWatch=(Array.isArray(SETTINGS.notif.priceWatch)?SETTINGS.notif.priceWatch:[])
+      .map(normPriceAlert).filter(function(a){ return a && cardById(a.id); }).slice(0,PRICE_ALERT_MAX);   // drop anything malformed or for a card no longer in the app
     var nativePush=nativePushIface();
     var ng=$("notifGroup"); if(ng) ng.style.display=nativePush?"flex":"none";
     function syncNotif(){ syncPushPrefs(); }
-    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"]].forEach(function(p){
+    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"],["setNotifPrice","price"]].forEach(function(p){
       var el=$(p[0]); if(!el) return;
       el.checked=SETTINGS.notif[p[1]]!==false;
       el.onchange=function(){ SETTINGS.notif[p[1]]=el.checked; saveSettings(); syncNotif(); };
     });
+    renderPriceAlertList();
     syncNotif();  // reflect saved (incl. cloud-synced) prefs into the native layer at startup
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";

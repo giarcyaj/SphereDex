@@ -13,6 +13,14 @@ targets:
       - path: SphereDex
         excludes:
           - "Info.plist"
+          - "Resources/img"
+          - "Resources/img/**"
+      # Card art (tools/rebuild.py mirrors docs/app/img here). A normal group would flatten ~290 files into
+      # the bundle root, but the html asks for relative "img/X.jpg" paths (AppSchemeHandler serves /img/ and
+      # CardImageMatcher lists the folder), so it ships as a folder reference copied whole as "img".
+      - path: SphereDex/Resources/img
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.spheredex

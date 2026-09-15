@@ -250,25 +250,54 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     }
 }
 
-/// Serves the bundled single-file web app under a custom scheme so localStorage persists.
+/// Serves the bundled web app under a custom scheme so localStorage persists. "/" and "/spheredex.html"
+/// get the html; "/img/<file>" gets card art from the bundle's img folder (window.CARD_IMG holds relative
+/// "img/X.jpg" paths, exactly like the web build, so the html no longer inlines ~17MB of base64).
+/// Anything else, including any ".." or deeper path, fails as file-not-found.
 final class AppSchemeHandler: NSObject, WKURLSchemeHandler {
+    private static let imageTypes = ["jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "png": "image/png"]
+
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
-        guard let url = urlSchemeTask.request.url,
-              let htmlURL = Bundle.main.url(forResource: "spheredex", withExtension: "html"),
-              let data = try? Data(contentsOf: htmlURL) else {
-            urlSchemeTask.didFailWithError(URLError(.fileDoesNotExist))
+        guard let url = urlSchemeTask.request.url else { fail(urlSchemeTask); return }
+        let path = url.path   // percent-decoded, so an encoded "%2E%2E" or "%2F" is caught below too
+        if path.contains("..") { fail(urlSchemeTask); return }
+
+        if path == "/" || path == "/spheredex.html" {
+            guard let htmlURL = Bundle.main.url(forResource: "spheredex", withExtension: "html"),
+                  let data = try? Data(contentsOf: htmlURL) else { fail(urlSchemeTask); return }
+            respond(urlSchemeTask, url: url, data: data,
+                    headers: ["Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"])
             return
         }
-        let response = HTTPURLResponse(
-            url: url, statusCode: 200, httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "text/html; charset=utf-8",
-                           "Cache-Control": "no-store"])!
-        urlSchemeTask.didReceive(response)
-        urlSchemeTask.didReceive(data)
-        urlSchemeTask.didFinish()
+
+        // "/img/<file>" splits into ["", "img", "<file>"]: exactly one plain file name, no extra segments.
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count == 3, parts[0].isEmpty, parts[1] == "img", !parts[2].isEmpty,
+              !parts[2].hasPrefix(".") else { fail(urlSchemeTask); return }
+        let name = String(parts[2])
+        guard let type = Self.imageTypes[(name as NSString).pathExtension.lowercased()],
+              let dir = Bundle.main.url(forResource: "img", withExtension: nil),
+              let data = try? Data(contentsOf: dir.appendingPathComponent(name, isDirectory: false)) else {
+            fail(urlSchemeTask); return
+        }
+        // Bundled art only changes with an app update, so let WebKit keep it rather than re-reading per tile.
+        respond(urlSchemeTask, url: url, data: data,
+                headers: ["Content-Type": type, "Cache-Control": "public, max-age=31536000"])
     }
 
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+
+    private func respond(_ task: WKURLSchemeTask, url: URL, data: Data, headers: [String: String]) {
+        guard let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
+                                             headerFields: headers) else { fail(task); return }
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    private func fail(_ task: WKURLSchemeTask) {
+        task.didFailWithError(URLError(.fileDoesNotExist))
+    }
 }
 
 /// Push registration + per-device notification prefs, the iOS counterpart of Android's Push.kt.
