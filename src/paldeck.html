@@ -184,7 +184,7 @@
   input.sortsel:focus { outline:none; border-color:var(--accent); }
   input.sortsel::placeholder { color:var(--ink-faint); }
   .chiprow { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
-  .chiprow .grouplab { font-size:.66rem; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin-right:2px; min-width:52px; }
+  .chiprow .grouplab { font-size:.66rem; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin-right:2px; min-width:6em; }
   .chip { border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink-soft); border-radius:20px;
     padding:5px 11px; font-size:.78rem; font-weight:650; display:inline-flex; align-items:center; gap:6px; transition:.13s; }
   .chip .dot { width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 0 1.5px rgba(0,0,0,.12) inset; }
@@ -1609,6 +1609,7 @@
     <div class="filterpanel" id="filterPanel" hidden>
       <div class="chiprow" id="viewChips"><span class="grouplab">Show</span></div>
       <div class="chiprow" id="setChips"><span class="grouplab">Set</span></div>
+      <div class="chiprow" id="prodChips" hidden><span class="grouplab">Product</span></div>
       <div class="chiprow" id="colorChips"><span class="grouplab">Color</span></div>
       <div class="chiprow" id="elChips"><span class="grouplab">Type</span></div>
       <div class="chiprow" id="kindChips"><span class="grouplab">Card</span></div>
@@ -2113,6 +2114,17 @@
     ["ESOUL-016","Depresso & Grizzbolt","Soul","","PR","","","","","","","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174323/ESOUL-016_1_4C.png","PR2026"]];
   var SETS = { EBP01:{name:"Booster · Dawn of Palpagos", short:"Booster"}, ETD01:{name:"Trial Deck · Red · Blue", short:"Trial R·B"}, ETD02:{name:"Trial Deck · Green · Purple", short:"Trial G·P"}, PR2026:{name:"Promo Cards (2026)", short:"Promo"} };
   var SET_ORDER = ["EBP01","ETD01","ETD02","PR2026"];
+  // Filters > Set: the real sets (plus Promo), each with its products as Product sub filters. Only products that
+  // print their own card codes are listed (a booster pack shares the booster box's codes). Upcoming sets carry
+  // their codes already, so their cards filter as soon as they are added. Keep in step with SETS when staging a set.
+  var FILTER_SETS = [
+    { key:"dop", name:"Dawn of Palpagos", products:[ {code:"EBP01", name:"Booster Box"}, {code:"ETD01", name:"Trial Deck Red · Blue"}, {code:"ETD02", name:"Trial Deck Green · Purple"} ] },
+    { key:"la", name:"Legends Awaken", products:[ {code:"EBP02", name:"Booster Box"} ] },
+    { key:"ea", name:"Eternal Ascent", products:[ {code:"ETD03", name:"Trial Deck Red · Green"}, {code:"ETD04", name:"Trial Deck Blue · Purple"} ] },
+    { key:"promo", name:"Promo", products:[ {code:"PR2026", name:"Promo Cards"} ] }
+  ];
+  function filterSetOf(code){ for(var i=0;i<FILTER_SETS.length;i++){ if(FILTER_SETS[i].products.some(function(p){ return p.code===code; })) return FILTER_SETS[i]; } return null; }
+  function setCodesOf(x){ return x.products.map(function(p){ return p.code; }); }
   var CURRENCIES = [{code:"USD",sym:"$",dec:2},{code:"EUR",sym:"€",dec:2},{code:"GBP",sym:"£",dec:2},{code:"JPY",sym:"¥",dec:0},{code:"CAD",sym:"CA$",dec:2},{code:"AUD",sym:"A$",dec:2}];
   // Each eBay marketplace maps to the currency its prices are quoted in.
   var REGION_CUR = { "co.uk":"GBP", "com":"USD", "de":"EUR", "com.au":"AUD", "ca":"CAD", "fr":"EUR", "it":"EUR", "es":"EUR" };
@@ -2343,7 +2355,7 @@
                       : '<div class="apill nolink">'+inner+'</div>';
   }
   function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
-  var filters = { q:"", sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };
+  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, rares:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
   var sortDir = (parseInt(lsGet("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
   // and a single blended eBay search skews the number. The dropdown swaps which edition's prices show.
@@ -2480,9 +2492,11 @@
     return b;
   }
   function buildChips(){
-    SET_ORDER.forEach(function(k){
-      var b = chip(SETS[k].short, "", "var(--accent)", false); b.classList.add("solid"); b.title = SETS[k].name;
-      b.onclick = function(){ filters.sets[k]=!filters.sets[k]; b.setAttribute("aria-pressed",filters.sets[k]?"true":"false"); render(); };
+    FILTER_SETS.forEach(function(x){
+      var b = chip(esc(x.name), "", "var(--accent)", false); b.classList.add("solid"); b.setAttribute("data-set", x.key);
+      b.onclick = function(){ filters.exps[x.key]=!filters.exps[x.key];
+        if(!filters.exps[x.key]) setCodesOf(x).forEach(function(k){ delete filters.sets[k]; });   // no hidden product picks left behind
+        syncSetChips(); render(); };
       $("setChips").appendChild(b);
     });
     COLORS.forEach(function(c){
@@ -2518,10 +2532,32 @@
   }
 
   function keysOn(obj){ return Object.keys(obj).filter(function(k){return obj[k];}); }
+  // Paint the Set chips from filters.exps and rebuild the Product row for the chosen sets that have more than one product.
+  function syncSetChips(){
+    Array.prototype.forEach.call($("setChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed", filters.exps[ch.getAttribute("data-set")]?"true":"false"); });
+    var row=$("prodChips"); if(!row) return;
+    Array.prototype.forEach.call(row.querySelectorAll(".chip"), function(ch){ row.removeChild(ch); });
+    var any=false;
+    FILTER_SETS.forEach(function(x){
+      if(!filters.exps[x.key] || x.products.length<2) return;
+      x.products.forEach(function(p){ any=true;
+        var b = chip(esc(p.name), "", "var(--accent)", !!filters.sets[p.code]); b.classList.add("solid"); b.title = x.name+" · "+p.name;
+        b.onclick = function(){ filters.sets[p.code]=!filters.sets[p.code]; b.setAttribute("aria-pressed",filters.sets[p.code]?"true":"false"); render(); };
+        row.appendChild(b);
+      });
+    });
+    row.hidden=!any;
+  }
+  // Card set codes the Set filter allows: each chosen set's picked products, or all of its products when none are picked.
+  function setFilterCodes(){ var out=[];
+    FILTER_SETS.forEach(function(x){ if(!filters.exps[x.key]) return;
+      var all=setCodesOf(x), picked=all.filter(function(k){ return filters.sets[k]; });
+      out=out.concat(picked.length?picked:all); });
+    return out; }
 
   function visible(){
     var q = filters.q.trim().toLowerCase();
-    var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), rares=keysOn(filters.rares), sets=keysOn(filters.sets);
+    var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), rares=keysOn(filters.rares), sets=setFilterCodes();
     var mode=colMode();
     RECENT=recentIds();
     var out = CARDS.filter(function(c){
@@ -2558,6 +2594,15 @@
     return out;
   }
 
+  // When every chosen set has no cards in the app yet, say so instead of blaming the filters.
+  function soonMsg(){
+    var chosen=FILTER_SETS.filter(function(x){ return filters.exps[x.key]; }); if(!chosen.length) return "";
+    var codes=setFilterCodes();
+    if(CARDS.some(function(c){ return codes.indexOf(c.set)!==-1; })) return "";
+    var names=chosen.map(function(x){ return x.name; }), one=names.length===1;
+    var bx=one && typeof BROWSE_EXPANSIONS!=="undefined" ? BROWSE_EXPANSIONS.filter(function(b){ return b.name===names[0]; })[0] : null;
+    return "<b>"+esc(names.join(" and "))+(one?" is":" are")+" not out yet</b>"+(one?"Its":"Their")+" cards show up here once "+(one?"it releases":"they release")+(bx&&bx.release?" on "+esc(bx.release):"")+".";
+  }
   function render(){
     var cards = visible();
     grid.innerHTML = "";
@@ -2566,7 +2611,7 @@
       var e=document.createElement("div"); e.className="empty";
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
-        : "<b>No cards match those filters</b>Clear a color, type, or rarity to widen the search.";
+        : (soonMsg() || "<b>No cards match those filters</b>Clear a color, type, or rarity to widen the search.");
       grid.appendChild(e);
     } else if (viewMode==="binder9" || viewMode==="binder12"){
       grid.classList.add("binder");
@@ -5033,8 +5078,9 @@
   }
   function openRarity(r, view){
     view=view||"all";
-    filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.rares[r]=true; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
+    syncSetChips();
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
       if(ch.textContent===r) ch.setAttribute("aria-pressed","true");
     });
@@ -5199,8 +5245,10 @@
   function showCollGrid(show){ var s=$("collSets"), g=$("collGrid"); if(s) s.hidden=!!show; if(g) g.hidden=!show; }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
-    filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
+    syncSetChips();
+    var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
     SETTINGS.noFade=false; saveSettings();
     if(typeof paintFade==="function") paintFade();
     var nf=$("setNoFade"); if(nf) nf.checked=false;
@@ -5209,12 +5257,10 @@
   function openSet(k, view){
     view=view||"all";
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
-    filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view=view;
-    filters.sets[k]=true;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view=view;
+    var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
-    Array.prototype.forEach.call($("setChips").querySelectorAll(".chip"), function(ch){
-      if(ch.title===SETS[k].name) ch.setAttribute("aria-pressed","true");
-    });
+    syncSetChips();
     var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist",recent:"Recently added"};
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
       ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
@@ -5224,11 +5270,15 @@
   // Open several sets at once (a Browse expansion that groups multiple products, e.g. Dawn of Palpagos).
   function openSetGroup(sets, view){
     view=view||"all";
-    filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view=view;
-    sets.forEach(function(k){ filters.sets[k]=true; });
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view=view;
+    FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
+      var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
+      filters.exps[x.key]=true; if(inSet.length<x.products.length) inSet.forEach(function(k){ filters.sets[k]=true; }); });
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
-    Array.prototype.forEach.call($("setChips").querySelectorAll(".chip"), function(ch){
-      if(sets.some(function(k){ return SETS[k] && ch.title===SETS[k].name; })) ch.setAttribute("aria-pressed","true");
+    syncSetChips();
+    var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist",recent:"Recently added"};
+    Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){
+      ch.setAttribute("aria-pressed", ch.textContent===vmap[view] ? "true":"false");
     });
     showPage("collection"); showCollGrid(true); render();
   }
@@ -5836,14 +5886,15 @@
     btn.onclick=function(){ var open=panel.hidden; panel.hidden=!open; btn.setAttribute("aria-expanded", open?"true":"false"); };
     $("doneFilters").onclick=function(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); };
     $("clearFilters").onclick=function(){
-      filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view="all";
+      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.view="all";
       document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
+      syncSetChips();
       var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
       render();
     };
   })();
   function updateFilterCount(){
-    var n=0; ["sets","colors","els","kinds","rares"].forEach(function(k){ n+=Object.keys(filters[k]).filter(function(x){return filters[k][x];}).length; });
+    var n=0; ["exps","sets","colors","els","kinds","rares"].forEach(function(k){ n+=Object.keys(filters[k]).filter(function(x){return filters[k][x];}).length; });
     if(filters.view!=="all") n++;
     var fc=$("filterCount"); if(!fc) return; if(n){ fc.textContent=n; fc.hidden=false; } else { fc.hidden=true; }
   }

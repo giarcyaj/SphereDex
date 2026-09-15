@@ -266,6 +266,7 @@ def main():
         "## Full wiring checklist",
         "1. **RAW2**: append `raw_rows.js` rows (`android/src/paldeck.html`).",
         "2. **SETS** + **SET_ORDER** (~line 1666): add name/short + append the code (drives Browse-by-Set + SET_TOTAL).",
+        "2b. **FILTER_SETS** (next to SET_ORDER): make sure the code sits under its set as a Product (a pack shares its box code, so it gets no entry of its own).",
         "3. **SET_META** (~line 2836): add release/box/logo/art/blurb.",
         "4. **SEALED** (~line 2874) + **SEAL_RRP** (~line 1778): add box/pack/deck products + RRP, and their BOX_/PACK_ images.",
         "5. **Hardcoded help copy** (~lines 1362 & 1368): the '242 printings' / '153 base' / 'How the 242 breaks down' text is NOT auto-computed - update those numbers.",
