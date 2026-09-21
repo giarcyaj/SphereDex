@@ -6661,6 +6661,56 @@
 
   // On the web the Quick Add tab is a search glass; in the native app it stays a camera (real card scanning).
   var IS_NATIVE = !!(window.AndroidScan && typeof window.AndroidScan.scan==="function");
+
+  // ---- Coming back to the app ----------------------------------------------------------------------
+  // Every freshness gate ran once per document load, and the native apps never reload that document: a
+  // phone left in a pocket for a week reopened on week old prices and never asked for more until it was
+  // force closed. The web has the same shape, since a pinned tab is never reloaded either. So: when the
+  // app becomes visible again, and at most once every 15 minutes, refresh the things that go stale and
+  // ask the server whether a newer build exists.
+  var WAKE_AT=Date.now(), WAKE_GAP=15*60*1000, updateAt=0, UPDATE_GAP=60*60*1000;
+  function verNum(v){
+    var p=String(v||"").split(".");
+    return (+p[0]||0)*10000 + (+p[1]||0)*100 + (+p[2]||0);
+  }
+  function offerUpdate(latest){
+    // A toast fades, so a user who was not looking would never hear about it again. Offer it again on a
+    // later wake, at most once an hour, which is a reminder rather than nagging.
+    if(Date.now()-updateAt < UPDATE_GAP) return; updateAt=Date.now();
+    if(IS_NATIVE || window.IS_IOS){ toast("Version "+latest+" is out. Update SphereDex for the newest cards and prices."); return; }
+    // On the web the new build is one reload away, so offer it rather than describing it.
+    var t=$("toast");
+    toast("Version "+latest+" is ready. Tap here to reload.");
+    if(t){ t.style.cursor="pointer"; t.onclick=function(){ try{ location.reload(); }catch(e){} }; }
+  }
+  function checkAppVersion(){
+    if(!apiBase() || (updateAt && Date.now()-updateAt < UPDATE_GAP)) return;
+    fetch(apiBase()+"/api/version",{cache:"no-store"})
+      .then(function(r){ return r.ok? r.json() : null; })
+      .then(function(j){
+        var latest=j && j.app ? String(j.app) : "";
+        if(latest && verNum(latest) > verNum(APP_VERSION)) offerUpdate(latest);
+      }).catch(function(){});
+    // The web also has a service worker holding the shell: let it look for a new one on the same beat.
+    try{
+      if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
+        navigator.serviceWorker.getRegistration().then(function(reg){ if(reg && reg.update) reg.update(); }).catch(function(){});
+      }
+    }catch(e){}
+  }
+  function onWake(){
+    if(document.hidden) return;
+    var now=Date.now();
+    if(now-WAKE_AT < WAKE_GAP) return;
+    WAKE_AT=now;
+    try{ if(typeof fetchServerPrices==="function") fetchServerPrices(true); }catch(e){}
+    try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
+    try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
+    checkAppVersion();
+  }
+  document.addEventListener("visibilitychange", onWake);
+  window.addEventListener("pageshow", function(e){ if(e && e.persisted) onWake(); });   // bfcache restore
+  setTimeout(checkAppVersion, 4000);   // and once shortly after a cold start
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
   // Inside the native app the "get the app" store buttons are pointless (and their fallback
   // toast wrongly says "you're on the web app"), so hide them when running natively.
