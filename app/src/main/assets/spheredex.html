@@ -3363,7 +3363,15 @@
           setMarket((b.avg!=null?b.avg:b.market), basis);
           if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }); renderSales(); }
           refreshAvg();
-          if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
+          // The server already says when an answer is a kept copy rather than a fresh lookup (its daily
+          // lookups are spent, or it served the shared answer). That was arriving and being thrown away, so
+          // a last known price looked exactly like one pulled a second ago. Say which it is.
+          if(b.stale || b.cached){
+            var sa=$("salesAvg");
+            if(sa && (b.avg!=null || b.market!=null)) sa.innerHTML += ' <span style="opacity:.7">· last known price, not a fresh lookup</span>';
+            if(!silent) toast("Showing the last known price. Fresh lookups come back after midnight UTC.");
+          }
+          else if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
         }).catch(function(){ done(); if(!silent && fresh()) toast("Price pull failed"); });
       }
       // Listings → current eBay asks (hint) + fills Card Price only when a higher rung didn't.
@@ -4565,6 +4573,7 @@
   // Auto ({auto:true}, on app open): silent, runs at most once per 12h per device, and asks the server to
   // skip cards it (or another user, or the nightly cron) refreshed in the last 24h - so the graph stays
   // current without re-spending on cards that are already fresh. Live listings stay on the cached book.
+  var soldAutoTried=0;   // in-flight guard for the automatic refresh, so a burst of opens sends one request
   function refreshLastSold(opts){
     opts=opts||{};
     if(soldRefreshing){ if(!opts.auto) toast("Already refreshing…"); return; }
@@ -4574,7 +4583,10 @@
     var col=activeCol(), ids=[];
     CARDS.forEach(function(c){ var e=col.own[c.id]; if(e && (e.qty>0 || (e.graded&&e.graded.length))) ids.push(c.id); });
     if(!ids.length){ if(!opts.auto) toast("Add some cards to your collection first"); return; }
-    if(opts.auto){ SETTINGS.lastSoldAuto=Date.now(); saveSettings(); }
+    // The cooldown is stamped only once the server has answered. Stamping it here, before the request,
+    // meant one open on a train or in a lift spent the whole twelve hour window on a refresh that never
+    // happened. A short guard still stops a burst of opens firing several requests at once.
+    if(opts.auto){ if(soldAutoTried && Date.now()-soldAutoTried < 60000) return; soldAutoTried=Date.now(); }
     var region=SETTINGS.ebayRegion||"co.uk";
     soldRefreshing=true;
     Array.prototype.forEach.call(document.querySelectorAll(".soldrefresh"), function(b){ b.classList.add("spin"); b.disabled=true; });
@@ -4595,6 +4607,7 @@
         stampSoldMark();   // blue mark on today's point for THIS collection (saves)
         if(SOLD_ASOF) lsSet("palvault-sold-mark-asof", String(SOLD_ASOF));
       }
+      if(opts.auto){ SETTINGS.lastSoldAuto=Date.now(); saveSettings(); }   // the window starts when it worked
       if(!opts.auto) toast(n? ("Last sold updated · "+n+" card"+(n>1?"s":"")) : "No sold prices found yet");
     }).catch(function(){ if(!opts.auto) toast("Last sold refresh failed"); }).then(function(){
       soldRefreshing=false;
@@ -5234,10 +5247,16 @@
       if(+PRICEPREV[c.id]>0) based++;
     });
     var ramping = priced>0 && based < priced*0.5;   // day-over-day baseline still filling in
+    // How old the price book actually is. The comparison is between whatever two snapshots this device
+    // holds, so calling it "24h" was only true when the book had been refreshed today: after a few days in
+    // the background it presented a days old comparison as today's market movement.
+    var bookAge = LIVE_ASOF ? (Date.now()-LIVE_ASOF) : 0;
+    var bookOld = bookAge > 36*3600*1000;
     var sub=$("moverSub"); if(sub){
+      var span=bookOld ? ("since prices were last refreshed "+relTime(LIVE_ASOF)) : "24h";
       var base=(moverScope==="all")
-        ? "The biggest 24h risers and fallers across the whole set."
-        : "The biggest 24h risers and fallers in your collection.";
+        ? ("The biggest "+span+" risers and fallers across the whole set.")
+        : ("The biggest "+span+" risers and fallers in your collection.");
       sub.textContent = base + (ramping ? " Still building a day over day baseline, so this fills out over the next day or two." : "");
     }
     var up=moverCard("up", moverScope), down=moverCard("down", moverScope);
