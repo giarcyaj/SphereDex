@@ -3113,6 +3113,7 @@
         '</div>'+
         '<div class="ownline" id="ownLine" hidden></div>'+
         '<input type="hidden" id="fQty" value="'+s.qty+'"><input type="hidden" id="fMkt" value="'+(s.mkt||0)+'"><span id="priceBasis" hidden></span><div id="gradeList" hidden></div>'+
+        '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Fill values from sold</button>'+
       '</div>'+
 
       // ---- At a glance price bubbles ----
@@ -3223,6 +3224,9 @@
 
     function renderGrades(){
       var gl=$("gradeList"); gl.innerHTML="";
+      // Only offer to fill values when there are slabs to fill, and never where prices are hidden.
+      var pgb=$("pullGraded");
+      if(pgb) pgb.hidden = !gwork.length || !apiBase() || SETTINGS.mode==="collector";
       gwork.forEach(function(g,i){
         var row=document.createElement("div"); row.className="graderow";
         row.innerHTML=
@@ -3258,7 +3262,7 @@
     function renderGradeGuide(){
       var host=$("gradeGuide"); if(!host) return;
       var guide=s.gradeGuide||{}; var grader=SETTINGS.defaultGrader||"PSA";
-      host.innerHTML='<div class="ggnote">Average of the last 5 <b>'+esc(grader)+'</b> sold at each grade. Live per grade data fills these once a graded sales feed is connected.</div>'+
+      host.innerHTML='<div class="ggnote">Average of the last 5 <b>'+esc(grader)+'</b> sold at each grade. Each row fills when you pull that grade, from live sold data.</div>'+
         GRADES.map(function(gr){ var v=guide[gr]; return '<div class="ggrow"><span class="ggr">'+esc(grader)+' '+esc(gr)+'</span><span class="ggv'+(v!=null?'':' ggempty')+'">'+(v!=null?money(v):"n/a")+'</span></div>'; }).join("");
     }
     renderGradeGuide();
@@ -3269,15 +3273,19 @@
     }
     var es=$("ebaySearch"); if(es) es.href=ebayUrl(c);
     var esl=$("ebaySearchLive"); if(esl) esl.href=ebayUrl(c, false);
-    // Live prices via the backend. Sold + Listings AUTO-LOAD on open; Graded is a manual tap.
+    // Live prices via the backend. Sold + Listings AUTO-LOAD on open. Graded sold is a SECOND metered
+    // lookup on top of the raw one and most opens never look at it, so it loads on demand: automatically
+    // when you already own a slab of this card (that number feeds your collection total), otherwise the
+    // first time the panel is opened. Collector mode hides every price (.priceui), so it pulls nothing.
+    var onPanelOpen = {};   // panel id -> one shot hook, run the first time that panel is opened
     (function(){
-      if(!apiBase()){ finishLoading(); return; }
+      if(!apiBase() || SETTINGS.mode==="collector"){ finishLoading(); return; }
       var region=SETTINGS.ebayRegion||"co.uk";
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
       function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
       function busy(btn){ return busyBtn(btn); }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
-      if(ps) ps.hidden=false; if(pl) pl.hidden=false; if(pg) pg.hidden=false;
+      if(ps) ps.hidden=false; if(pl) pl.hidden=false;   // the graded fill button is shown by renderGrades
       // Card Price ladder: your-region sold average → your-region listings low → (US sold → US listings, if the setting is on).
       var BASIS_RANK={uslistings:1, ussold:2, listings:3, sold:4}, marketBasis=null;
       var BASIS_LABEL={sold:"average of last 5 sold", listings:"lower end of current listings", ussold:"average of last 5 US sold", uslistings:"lower end of US listings"};
@@ -3325,7 +3333,10 @@
           if(val!=null && val>0){
             if(gl) gl.textContent=money(val);
             if(ph) ph.innerHTML='Average of last '+Math.min(5,rows.length||5)+' '+grd+' 10 sold: <b>'+money(val)+'</b>';
-            if(!s.gradeGuide) s.gradeGuide={}; if(s.gradeGuide["10"]==null){ s.gradeGuide["10"]=val; renderGradeGuide(); }
+            // Keep what this lookup cost: a figure thrown away when the sheet closes is paid for twice.
+            // Only for a card already in the collection, so browsing never creates empty entries.
+            if(!s.gradeGuide) s.gradeGuide={};
+            if(s.gradeGuide["10"]==null){ s.gradeGuide["10"]=val; renderGradeGuide(); if((+s.qty>0)||gwork.length) persist(); }
             var pr=$("psaRows"); if(pr) pr.innerHTML=listPillsHtml(rows.slice(0,5), "sold");
             if(!silent) toast(grd+" 10 sales loaded");
           } else { if(gl && gl.textContent==="…") gl.textContent='n/a'; if(ph) ph.textContent="No "+grd+" 10 sales found yet."; if(!silent) toast(b.note||("No "+grd+" 10 sales yet")); }
@@ -3348,11 +3359,19 @@
               gwork.forEach(function(g){ if(((g.grader||"PSA")+" "+(g.grade||"10"))===gk) g.value=val; });
               filled++;
             }
-          }).catch(function(){}).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum(); toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
+          }).catch(function(){}).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum();
+            if(filled){ persist(); paintBubbles(); paintOwn(); }   // slab values the user asked for: closing with X must not lose them
+            toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
         });
       };
-      // Auto-load on open: your-region sold + listings + PSA 10 sold (reused from the 30 minute price cache, see salesGet; the refresh taps above skip it), then US as a fallback rung if enabled and region came up empty.
-      Promise.all([ doPsa(true, region), doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
+      // Graded sold, charged only when it is actually wanted. Owning a slab of this card counts as wanting it.
+      var psaPulled=false;
+      function psaOnce(){ if(psaPulled) return; psaPulled=true; reload("glPsa", function(){ return doPsa(true, region); }); }
+      onPanelOpen.panelPsa = psaOnce;
+      if(gwork.length) psaOnce();
+      else { var gp0=$("glPsa"); if(gp0) gp0.textContent="Show"; }
+      // Auto-load on open: your-region sold + listings (reused from the 30 minute price cache, see salesGet; the refresh taps above skip it), then US as a fallback rung if enabled and region came up empty.
+      Promise.all([ doSold(true, region, "sold"), doList(true, region, "listings") ]).then(function(){
         if(fresh() && marketBasis==null && SETTINGS.fallbackUS && region!=="com"){
           return Promise.all([ doSold(true, "com", "ussold"), doList(true, "com", "uslistings") ]);
         }
@@ -3362,7 +3381,8 @@
     (function(){
       [["bubSold","panelSold"],["bubList","panelList"],["bubPsa","panelPsa"]].forEach(function(pair){
         var btn=$(pair[0]); if(!btn) return;
-        btn.onclick=function(){ var p=$(pair[1]); if(!p) return; p.hidden=!p.hidden; btn.classList.toggle("open",!p.hidden); if(!p.hidden) p.scrollIntoView({block:"nearest",behavior:"smooth"}); };
+        btn.onclick=function(){ var p=$(pair[1]); if(!p) return; p.hidden=!p.hidden; btn.classList.toggle("open",!p.hidden);
+          if(!p.hidden){ var hook=onPanelOpen[pair[1]]; if(hook){ onPanelOpen[pair[1]]=null; hook(); } p.scrollIntoView({block:"nearest",behavior:"smooth"}); } };
       });
     })();
     // Price alert button: opens the alert dialog, then repaints its count (only if this sheet is still showing).
