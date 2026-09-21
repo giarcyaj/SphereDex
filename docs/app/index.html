@@ -4556,10 +4556,23 @@
   // label reported the single newest write, so one refreshed card made a whole stale market read as current.
   var LIVE_COV=null, SOLD_COV=null;
   function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(!el) return;
-    var sold=(priceMode()==="sold"), asof=sold?SOLD_ASOF:LIVE_ASOF, word=sold?"Last sold":"Live listings";
-    var cov=sold?SOLD_COV:LIVE_COV, n=(cov&&+cov.stale)||0;
+    var sold=(priceMode()==="sold"), cov=sold?SOLD_COV:LIVE_COV, n=(cov&&+cov.stale)||0;
+    if(sold){
+      // The sold table also carries the free converted baseline, which is not a price anything sold for.
+      // Say how much of this market is real, so one topped up card can never speak for the rest.
+      // Only a server that sends the split can be quoted on it. An older backend sends neither the split
+      // nor the two week window, and reading its silence as "none are real" would be a worse lie than the
+      // one being fixed.
+      var split=!!(cov && cov.real!=null), filled=split?(+cov.filled||0):0;
+      if(split && !(+cov.real)){ el.textContent="No last sold prices for this market yet"+(filled?(" · "+filled+" estimated"):""); return; }
+      el.textContent = SOLD_ASOF ? ("Last sold updated "+relTime(SOLD_ASOF)
+          + (n? (" · "+n+" card"+(n===1?"":"s")+(split?" older than 2 weeks":" older than 2 days")):"")
+          + (filled? (" · "+filled+" estimated"):""))
+        : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)) : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh)));
+      return;
+    }
     var behind=n? (" · "+n+" card"+(n===1?"":"s")+" older than 2 days") : "";
-    el.textContent = asof ? (word+" updated "+relTime(asof)+behind)
+    el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind)
                           : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)+behind)
                                        : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh))); }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
@@ -6712,13 +6725,16 @@
       // Only overwrite when the server actually reports a time; an empty table (no timestamp) must NOT wipe the
       // value we loaded from localStorage, or the mode-specific "updated Xd ago" label is lost until a full reload.
       if(r.body.liveRefreshedAt){ var _lt=Date.parse(r.body.liveRefreshedAt); if(_lt) LIVE_ASOF=_lt; }   // server's daily live-listings refresh
-      if(r.body.soldRefreshedAt){ var _st=Date.parse(r.body.soldRefreshedAt); if(_st) SOLD_ASOF=_st; }   // server's weekly last-sold rotation
+      // Sold is the one stamp the server can WITHDRAW: it now reports the last real sold write, so a market
+      // holding nothing but converted estimates reports none, and the label must stop naming a time.
+      if(r.body.soldRefreshedAt){ var _st=Date.parse(r.body.soldRefreshedAt); if(_st) SOLD_ASOF=_st; }
+      else if(r.body.soldCoverage && r.body.soldCoverage.real!=null && !(+r.body.soldCoverage.real)) SOLD_ASOF=0;
       var ra=r.body.refreshedAt ? Date.parse(r.body.refreshedAt) : 0; if(ra) PRICEASOF=ra;   // server's own refresh time (daily 1am cron)
       // How much of this market is actually current, so the label can admit a partly failed night instead
       // of reporting the newest single write as if it covered everything.
       if(r.body.liveCoverage) LIVE_COV=r.body.liveCoverage;
       if(r.body.soldCoverage) SOLD_COV=r.body.soldCoverage;
-      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
+      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); else localStorage.removeItem("palvault-sold-asof"); }catch(_){}
       // Drop a blue "last sold" mark automatically when the server's weekly sold rotation produced newer
       // data than we've already marked (so the graph gets a fresh sold point about weekly without a manual tap).
       if(SOLD_ASOF){ var lastMark=+lsGet("palvault-sold-mark-asof")||0;
