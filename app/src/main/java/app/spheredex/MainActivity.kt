@@ -17,6 +17,7 @@ import android.webkit.JsResult
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -25,6 +26,7 @@ import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 
 /**
@@ -120,6 +122,16 @@ class MainActivity : ComponentActivity() {
                         return true
                     }
                     return false
+                }
+                // The WebView renderer runs in its own process and the system kills it under memory
+                // pressure. Returning false (the default) takes the WHOLE APP down with it, so the app
+                // simply disappears; returning true after reloading brings the page back instead. The
+                // collection is in localStorage, which outlives the renderer, so nothing is lost.
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                    pageLoaded = false
+                    view.loadUrl("file:///android_asset/spheredex.html")
+                    return true
                 }
                 // Re-apply insets once the page's DOM exists (the listener may fire before load).
                 override fun onPageFinished(view: WebView, url: String) {

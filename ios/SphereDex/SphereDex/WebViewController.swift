@@ -225,6 +225,16 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         PushRouter.shared.pageReady()
     }
 
+    // iOS can kill the web content process while the app is in the background (memory pressure), and it does
+    // NOT reload the page when the app comes back: the user returns to a blank app and has to force quit to
+    // fix it. Load it again instead. The collection lives in localStorage, which outlives the process, so
+    // nothing is lost beyond the scroll position.
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        if let url = URL(string: Self.appURL) {
+            webView.load(URLRequest(url: url))
+        }
+    }
+
     // MARK: - Open real web links (eBay, Buy Me a Coffee) and mailto/tel outside the app
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

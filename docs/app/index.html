@@ -6356,8 +6356,11 @@
     var headers={"Content-Type":"application/json"}; if(AUTH.token) headers["Authorization"]="Bearer "+AUTH.token;
     return fetch(base+path,{method:method||"GET",headers:headers,body:body?JSON.stringify(body):undefined})
       .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){
-        // A 401 on a request we sent a token with means the session is no longer valid.
-        if(r.status===401 && hadToken) handleSessionExpired();
+        // Only OUR auth check may end a session, and it says so: code "bad_token". Any other 401 on the
+        // way (a captive portal, a proxy, a WAF, a misrouted request) used to sign the user out just as
+        // thoroughly, quietly turning a synced collection into a device-only one for the rest of that
+        // install. Those now just fail the request, and the next sync tries again.
+        if(r.status===401 && hadToken && j && j.code==="bad_token") handleSessionExpired();
         return {ok:r.ok,status:r.status,body:j};
       }); });
   }
@@ -6517,7 +6520,7 @@
     api("/api/"+kind,"POST",{email:email,password:pw}).then(function(r){
       done();
       if(!r.ok){ acctMsg(r.body.error||"Sign in failed.", true); return; }
-      AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
+      AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; AUTH.expired=false; saveAuth();
       renderAccount(); pullState(); toast("Signed in as "+AUTH.email);
     }).catch(function(){ done(); acctMsg(netErr(), true); });
   }
@@ -6528,7 +6531,9 @@
   // 401s into a single sign-out + toast.
   function handleSessionExpired(){
     if(!AUTH.token) return;
-    AUTH={serverRev:0}; saveAuth();
+    // Keep the address and remember WHY we are signed out, so the Account page can say so and signing
+    // back in is one field. A toast on its own was easy to miss, and missing it cost cloud sync.
+    AUTH={serverRev:0, email:AUTH.email||"", expired:true}; saveAuth();
     if(typeof renderAccount==="function") renderAccount();
     toast("Signed out. Please sign in again to keep syncing.");
   }
@@ -6586,7 +6591,10 @@
       }
       delInitial();
     } else {
-      el.innerHTML='<div class="stitle">Sign in or create an account</div><p class="sdesc" style="margin:8px 0 14px">Saves your collections to your account and syncs across devices.</p>'+
+      // A session the server ended (password reset elsewhere, account deleted, token expired) leaves this
+      // note behind, because the toast that announced it is long gone by the time anyone looks here.
+      var expNote = AUTH.expired ? '<p class="sdesc" style="margin:8px 0 0;color:var(--el-Fire)">Your session ended, so this device has stopped syncing. Sign in again to pick it back up. Nothing has been lost from this device.</p>' : '';
+      el.innerHTML='<div class="stitle">Sign in or create an account</div>'+expNote+'<p class="sdesc" style="margin:8px 0 14px">Saves your collections to your account and syncs across devices.</p>'+
         '<div class="acctform" style="flex-direction:column;align-items:stretch;gap:9px;max-width:340px">'+
           '<input class="sortsel" id="acctEmail" type="email" autocomplete="email" placeholder="you@email.com">'+
           '<div class="pwwrap"><input class="sortsel" id="acctPw" type="password" autocomplete="current-password" placeholder="password (8+ characters)"><button type="button" class="pweye" id="acctPwEye" aria-label="Show password">'+EYE_ON+'</button></div>'+
@@ -6594,6 +6602,7 @@
           '<button type="button" id="acctForgot" style="align-self:flex-start;background:none;border:0;padding:2px 0;margin-top:2px;color:var(--accent-ink);font:inherit;font-size:.82rem;text-decoration:underline;cursor:pointer">Forgot password?</button>'+
           '<div class="sdesc" id="acctMsg"></div>'+
         '</div>';
+      var _ae=$("acctEmail"); if(_ae && AUTH.email) _ae.value=AUTH.email;
       $("acctSignIn").onclick=function(){ doAuth("login", this); }; $("signupBtn").onclick=function(){ doAuth("signup", this); };
       $("acctForgot").onclick=function(){ RESET_EMAIL=(($("acctEmail")||{}).value||"").trim(); renderForgotRequest(); };
       var pe=$("acctPwEye"); if(pe) pe.onclick=function(){ var i=$("acctPw"); var show=i.type==="password"; i.type=show?"text":"password"; this.innerHTML=show?EYE_OFF:EYE_ON; this.setAttribute("aria-label",show?"Hide password":"Show password"); i.focus(); };
@@ -6654,12 +6663,29 @@
       var b=$("fpReset"), done=busyBtn(b,"Resetting…");
       api("/api/reset-password","POST",{email:RESET_EMAIL,code:code,password:pw}).then(function(r){
         if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't reset your password.", true); done(); return; }
-        AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
+        AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; AUTH.expired=false; saveAuth();
         RESET_EMAIL="";
         renderAccount(); pullState(); toast("Password reset. Signed in as "+AUTH.email);
       }).catch(function(){ fpMsg(netErr(), true); done(); });
     };
   }
+  // A silent refresh that failed used to be the end of it: no prices, no message, and nothing tried again
+  // until the next cold start, so one lift, one train tunnel or one captive portal cost a whole day of
+  // freshness. Back off twice, and try again the moment the device says it is back online.
+  var _priceRetry=null, _priceTries=0, _priceFailed=false, PRICE_RETRY_MS=[15000, 60000];
+  function priceFetchFailed(){
+    _priceFailed=true;
+    if(_priceRetry || _priceTries>=PRICE_RETRY_MS.length) return;
+    var wait=PRICE_RETRY_MS[_priceTries++];
+    _priceRetry=setTimeout(function(){ _priceRetry=null; fetchServerPrices(true); }, wait);
+  }
+  function priceFetchOk(){ if(_priceRetry) clearTimeout(_priceRetry); _priceRetry=null; _priceTries=0; _priceFailed=false; }
+  window.addEventListener("online", function(){
+    if(!_priceFailed) return;   // nothing was owed, so nothing to spend a request on
+    if(_priceRetry) clearTimeout(_priceRetry);
+    _priceRetry=null; _priceTries=0;
+    try{ fetchServerPrices(true); }catch(e){}
+  });
   // Pull the server price book (all cards) into PRICEBOOK so "Sort by Value" ranks every card, not
   // just owned ones. We do NOT write these onto owned cards, so the daily bulk (asking-price) data
   // never overwrites the precise sold values you pull per card. Pass silent for background use.
@@ -6668,7 +6694,8 @@
     var ids=CARDS.map(function(c){return c.id;});
     var reg=encodeURIComponent(SETTINGS.ebayRegion||"co.uk");
     return api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
-      if(!r.ok){ if(!silent) toast("Couldn't reach the price server"); return; }
+      if(!r.ok){ if(silent) priceFetchFailed(); else toast("Couldn't reach the price server"); return; }
+      priceFetchOk();
       var base=r.body.prices||{}, liveMap=r.body.live||{}, soldMap=r.body.sold||{}, n=0;
       // The server now returns two books: live listings (daily) and last sold (weekly). Until either
       // table is populated it comes back empty, so fall back to the blended book so value-sort still works.
@@ -6699,7 +6726,26 @@
       if(n){ render(); if(typeof renderSetBrowse==="function") renderSetBrowse(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
       updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
-    }).catch(function(){ if(!silent) toast("Price fetch failed"); });
+    }).catch(function(){ if(silent) priceFetchFailed(); else toast("Price fetch failed"); });
+  }
+  // Is the price book we are holding worth replacing? The old rule assumed the nightly cron had finished by
+  // 01:10 UTC: anyone who opened after that stamped "checked" while still receiving yesterday's prices for a
+  // market the cron had not reached yet, and the gate could then never fire again that day. Ask the server's
+  // own refresh time instead, which fetchServerPrices already stores as LIVE_ASOF.
+  function priceBookStale(){
+    var now=Date.now(), lastAt=+lsGet("palvault-pricebook-at")||0;
+    if(!lastAt) return true;
+    if(now-lastAt > 6*3600*1000) return true;                        // routine, a few times a day
+    // LIVE_ASOF is when the SERVER last refreshed this market, not when we fetched. More than a day old
+    // means our copy predates a nightly run that should have happened, so it is worth asking again, no
+    // more than twice an hour so a stalled night is not hammered.
+    var tried=+lsGet("palvault-pricebook-try")||0;
+    return !!(LIVE_ASOF && now-LIVE_ASOF > 25*3600*1000 && now-tried > 30*60*1000);
+  }
+  function priceBookGate(){
+    if(!apiBase() || !priceBookStale()) return;
+    try{ lsSet("palvault-pricebook-try", String(Date.now())); }catch(_){}
+    fetchServerPrices(true);
   }
   // Palworld Prices weekly movers - cold-start fallback for Biggest Movers (see renderTrending).
   function fetchPwMovers(silent){
@@ -6719,13 +6765,7 @@
     // then refresh in the background on the first open after the server's daily ~1am refresh (12h fallback).
     try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
     if(apiBase()){
-      var lastAt=+lsGet("palvault-pricebook-at")||0;
-      // Pull a fresh book on the first open after the server's daily live refresh (~01:01 UTC) so "today"
-      // always reflects the latest live listings, with a 12h fallback so it still stays reasonably current.
-      var _now=Date.now(), _d=new Date(_now);
-      var _todayRefresh=Date.UTC(_d.getUTCFullYear(), _d.getUTCMonth(), _d.getUTCDate(), 1, 10, 0);
-      var _lastRefresh=(_now>=_todayRefresh)?_todayRefresh:(_todayRefresh-86400000);   // most recent ~1am UTC refresh
-      if(lastAt < _lastRefresh || _now-lastAt > 12*3600*1000) fetchServerPrices(true);
+      priceBookGate();
     }
     // Palworld movers fallback: load cached, refresh at most every ~6h (the feed updates ~daily).
     try{ PWMOVERS=JSON.parse(localStorage.getItem("palvault-pwmovers")||"[]")||[]; }catch(_){ PWMOVERS=[]; }
@@ -6807,7 +6847,7 @@
     var now=Date.now();
     if(now-WAKE_AT < WAKE_GAP) return;
     WAKE_AT=now;
-    try{ if(typeof fetchServerPrices==="function") fetchServerPrices(true); }catch(e){}
+    try{ if(typeof priceBookGate==="function") priceBookGate(); }catch(e){}
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
