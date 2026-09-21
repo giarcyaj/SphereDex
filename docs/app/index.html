@@ -2227,6 +2227,41 @@
   var COLOR_TOTAL = {}; COLORS.forEach(function(c){ COLOR_TOTAL[c]=CARDS.filter(function(x){return x.color===c;}).length; });
   var SET_TOTAL = {}; SET_ORDER.forEach(function(k){ SET_TOTAL[k]=CARDS.filter(function(x){return x.set===k;}).length; });
 
+  // ---- Catalogue delivery ----------------------------------------------------------------------------
+  // The card list above is compiled into this build, so a new set used to need a store update to reach
+  // anyone: on release day a user who had not updated simply did not have the cards, and the Set filter
+  // showed them a chip that matched nothing. The app now asks the server for any catalogue newer than the
+  // one it was built with, and keeps what it gets, so the cards survive going offline and the next launch.
+  // Rows arrive in the same shape as the table above and go through the same builder, so a delivered card
+  // is indistinguishable from a baked one everywhere else in the app.
+  var CATALOGUE_VERSION = 1;              // bump when new cards are baked into a build
+  var CAT_KEY = "palvault-catalogue";
+  function recountCards(){
+    TOTAL = CARDS.length;
+    MASTER_TOTAL = new Set(CARDS.map(function(c){return c.base;})).size;
+    CHASE_TOTAL = CARDS.filter(function(c){return c.special;}).length;
+    COLORS.forEach(function(c){ COLOR_TOTAL[c]=CARDS.filter(function(x){return x.color===c;}).length; });
+    SET_ORDER.forEach(function(k){ SET_TOTAL[k]=CARDS.filter(function(x){return x.set===k;}).length; });
+  }
+  function applyCatalogue(pay){
+    if(!pay || !pay.rows || !pay.rows.length) return 0;
+    if((+pay.version||0) <= CATALOGUE_VERSION) return 0;      // this build already has these cards baked in
+    // Sets and their order first: a card resolves its set position as it is built.
+    if(pay.sets) for(var k in pay.sets){ if(!SETS[k]) SETS[k]=pay.sets[k]; }
+    if(pay.setOrder) pay.setOrder.forEach(function(x){ if(SET_ORDER.indexOf(x)===-1) SET_ORDER.push(x); });
+    if(pay.img){ window.CARD_IMG=window.CARD_IMG||{}; for(var id in pay.img){ if(!window.CARD_IMG[id]) window.CARD_IMG[id]=pay.img[id]; } }
+    var known={}; CARDS.forEach(function(c){ known[c.id]=1; });
+    var added=0;
+    pay.rows.forEach(function(row){
+      if(!row || !row[0] || known[row[0]]) return;
+      try{ CARDS.push(mkCard(row, row[12]||"EBP01")); known[row[0]]=1; added++; }catch(e){}
+    });
+    if(added){ CARDS.sort(function(a,b){ return (a.setIdx-b.setIdx) || (a.seq-b.seq) || (a.id<b.id?-1:1); }); recountCards(); }
+    return added;
+  }
+  function storedCatalogue(){ try{ return JSON.parse(localStorage.getItem(CAT_KEY)||"null"); }catch(e){ return null; } }
+  applyCatalogue(storedCatalogue());     // whatever this device already has, before anything renders
+
   // State
   var LS_KEY = "palvault-v1";
   // Guarded localStorage for the small prefs: a browser that blocks site data throws on every access, which
@@ -6718,6 +6753,24 @@
     toast("Version "+latest+" is ready. Tap here to reload.");
     if(t){ t.style.cursor="pointer"; t.onclick=function(){ try{ location.reload(); }catch(e){} }; }
   }
+  // Ask for a catalogue newer than the one this build carries (or than the one already stored here).
+  function fetchCatalogue(){
+    if(!apiBase()) return;
+    var have=Math.max(CATALOGUE_VERSION, (storedCatalogue()||{}).version||0);
+    fetch(apiBase()+"/api/catalogue?have="+have,{cache:"no-store"})
+      .then(function(r){ return r.ok? r.json() : null; })
+      .then(function(j){
+        if(!j || j.uptodate || !j.rows) return;
+        var n=applyCatalogue(j);
+        if(!n) return;
+        try{ localStorage.setItem(CAT_KEY, JSON.stringify(j)); }catch(e){}
+        try{ render(); }catch(e){}
+        try{ if(typeof renderHome==="function") renderHome(); }catch(e){}
+        try{ if(typeof renderReleases==="function") renderReleases(); }catch(e){}
+        try{ if(typeof fetchServerPrices==="function") fetchServerPrices(true); }catch(e){}   // price the new cards
+        toast(n+" new card"+(n===1?"":"s")+" added to your app");
+      }).catch(function(){});
+  }
   function checkAppVersion(){
     if(!apiBase() || (updateAt && Date.now()-updateAt < UPDATE_GAP)) return;
     fetch(apiBase()+"/api/version",{cache:"no-store"})
@@ -6742,10 +6795,12 @@
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
+    fetchCatalogue();
   }
   document.addEventListener("visibilitychange", onWake);
   window.addEventListener("pageshow", function(e){ if(e && e.persisted) onWake(); });   // bfcache restore
   setTimeout(checkAppVersion, 4000);   // and once shortly after a cold start
+  setTimeout(fetchCatalogue, 2500);    // new cards matter sooner than a version notice
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
   // Inside the native app the "get the app" store buttons are pointless (and their fallback
   // toast wrongly says "you're on the web app"), so hide them when running natively.
