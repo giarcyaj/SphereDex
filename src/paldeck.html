@@ -2306,6 +2306,19 @@
   // a signed in user's adds survived nowhere. The write is now isolated from the push, and a failed write
   // says so once rather than failing silently.
   var storageWarned=false;
+  // Safari evicts a site's data after about seven idle days unless the browser has been asked to keep it,
+  // which for a user who is not signed in means their whole collection can simply vanish, looking exactly
+  // like data corruption. Ask once, after they have something worth keeping: asking with an empty app is
+  // pointless and more likely to be refused. Inert off https, so the native bundles never see it.
+  function askPersist(){
+    try{
+      if(lsGet("palvault-persist")) return;
+      if(location.protocol!=="https:") return;
+      if(!navigator.storage || !navigator.storage.persist) return;
+      lsSet("palvault-persist","asked");
+      navigator.storage.persist().then(function(ok){ try{ lsSet("palvault-persist", ok?"granted":"denied"); }catch(e){} }).catch(function(){});
+    }catch(e){}
+  }
   function save(){
     try{ stampAdds(); }catch(_){}
     try{ snapshot(); }catch(_){}
@@ -2314,6 +2327,7 @@
       if(!storageWarned){ storageWarned=true; try{ toast("This device will not let the app save. Sign in to keep your collection safe."); }catch(_){} }
     }
     try{ if(typeof pushCloud==="function") pushCloud(); }catch(_){}
+    askPersist();   // once, now that there is something worth keeping
   }
   // Recently added: each card entry keeps addAt, the time its count (raw copies plus graded slabs) last went up.
   // save() compares every entry with the count it had at the previous save, so every way of adding a card (tile

@@ -24,7 +24,7 @@ Usage:
   python tools/rebuild.py                    # build from src/paldeck.html
   python tools/rebuild.py --src /tmp/p.html  # build from another canonical (testing); relative to cwd
 """
-import argparse, filecmp, json, os, shutil, subprocess
+import argparse, filecmp, hashlib, io, json, os, re, shutil, subprocess
 
 FM = "/*FONT_INJECT*/"
 CM = "<!--CARD_IMG_INJECT-->"
@@ -126,6 +126,24 @@ for name, rel in APP_IMG:
     total, added, updated, deleted = mirror(os.path.join(REPO, WEB_IMG), os.path.join(REPO, rel))
     print("[%s] %s  <-  %s: %d files (%d added, %d updated, %d deleted)"
           % (name, rel, WEB_IMG, total, added, updated, deleted))
+
+# ---- Stamp the build into the service worker -------------------------------------------------------
+# The shell cache is keyed by this stamp, so every release starts a clean cache and an emergency release is
+# a real kill switch. It used to be one literal name that no release ever touched, which meant nothing ever
+# evicted a stale entry. Card art lives in its own long lived cache, so this does not re-download 14MB.
+SW = "docs/app/sw.js"
+_sw_path = os.path.join(REPO, SW)
+if os.path.exists(_sw_path):
+    _web = io.open(os.path.join(REPO, WEB_HTML), encoding="utf-8").read()
+    _m = re.search(r'var APP_VERSION\s*=\s*"([^"]+)"', _web)
+    _ver = _m.group(1) if _m else "0"
+    _hash = hashlib.sha1(_web.encode("utf-8")).hexdigest()[:8]
+    _stamp = "%s-%s" % (_ver, _hash)
+    _sw = io.open(_sw_path, encoding="utf-8", newline="").read()
+    _new = re.sub(r"const BUILD = '[^']*';", "const BUILD = '%s';" % _stamp, _sw, count=1)
+    if _new != _sw:
+        io.open(_sw_path, "w", encoding="utf-8", newline="").write(_new)
+    print("[WEB] %s  <-  build stamp %s" % (SW, _stamp))
 
 shutil.copyfile(os.path.join(REPO, ANDROID_HTML), os.path.join(REPO, IOS_HTML))
 print("[IOS] %s  <-  copy of %s (%d bytes)"

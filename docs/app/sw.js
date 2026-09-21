@@ -1,52 +1,82 @@
-const CACHE = 'spheredex-app-v3';
-// How long the shell waits for the network before the cached copy answers instead. A phone on a dead but
-// connected network (a lift, a train, hotel wifi, a card shop basement) does not fail fast: the socket
-// stalls and a bare fetch can sit there for the browser's full timeout, showing a white screen the whole
-// time, while a perfectly good copy of the app sits in this cache. The network answer still lands in the
-// cache when it eventually arrives, so the next open is current either way.
+// SphereDex service worker.
+//
+// TWO CACHES, on purpose. The shell (the one big index.html that is the whole app) is keyed by the BUILD,
+// so every release starts a clean cache and an emergency release is a real kill switch. Card art is 14MB
+// across 290 files and does not change between releases, so it lives in a cache that survives deploys and
+// refreshes itself in the background; versioning it with the shell would cost every returning user a 14MB
+// download on every release.
+//
+// tools/rebuild.py stamps BUILD with the app version and a hash of the built page, so this file never has
+// to be bumped by hand, which is what left it on one literal name for the app's whole life.
+const BUILD = '1.10-2873b982';
+const SHELL = 'spheredex-shell-' + BUILD;
+const ASSETS = 'spheredex-assets-v1';
+const SHELL_FILES = ['./', './index.html', './manifest.webmanifest'];
+const ICONS = ['./icon-192.png', './icon-512.png', './icon-512-maskable.png'];
+// Roughly the catalogue plus icons and a margin. Beyond it the oldest entries go, so a browser never
+// carries an unbounded pile of art from sets the owner no longer looks at.
+const MAX_ASSETS = 420;
+// How long the shell waits for the network before the cached copy answers instead. A phone on a connected
+// but dead network does not fail fast: the socket stalls and a bare fetch can sit there for the browser's
+// full timeout, showing a white screen the whole time, while a good copy of the app sits in this cache.
 const SHELL_TIMEOUT_MS = 2500;
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-512-maskable.png'];
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const shell = await caches.open(SHELL);
+    await shell.addAll(SHELL_FILES);
+    try { const assets = await caches.open(ASSETS); await assets.addAll(ICONS); } catch (err) { /* icons are not worth failing over */ }
+    await self.skipWaiting();
+  })());
 });
+
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     // Navigation preload lets the browser start the request while this worker is still booting, which is
     // the other half of the delay on a cold open.
     try { if (self.registration.navigationPreload) await self.registration.navigationPreload.enable(); } catch (err) { /* not supported */ }
-    const ks = await caches.keys();
-    await Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    const keep = new Set([SHELL, ASSETS]);
+    const names = await caches.keys();
+    await Promise.all(names.filter(n => !keep.has(n)).map(n => caches.delete(n)));
     await self.clients.claim();
   })());
 });
+
+// Keep the asset cache bounded. Cache.keys() comes back in insertion order, so the front is the oldest.
+async function trimAssets(cache) {
+  try {
+    const keys = await cache.keys();
+    if (keys.length <= MAX_ASSETS) return;
+    await Promise.all(keys.slice(0, keys.length - MAX_ASSETS).map(k => cache.delete(k)));
+  } catch (err) { /* a full cache is not worth an error */ }
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;        // let backend / cross-origin pass straight through
 
-  // App shell (navigations / HTML docs): NETWORK-FIRST, so a new build reaches returning users right
-  // away without a cache-version bump. Falls back to the cached shell only when the network fails
-  // (offline). The whole app lives in index.html, so this is what actually needs to stay fresh.
+  // App shell (navigations / HTML docs): NETWORK-FIRST so a new build reaches returning users right away,
+  // but only for as long as the network is actually answering.
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
     e.respondWith((async () => {
-      const cache = await caches.open(CACHE);
-      // Whatever we have to fall back on: this exact URL, else the canonical shell. Cache.match ignores the
-      // query string here, so a shared or tagged link (?utm=...) falls back to the app rather than missing.
+      const cache = await caches.open(SHELL);
+      // Whatever we have to fall back on: this exact URL, else the canonical shell. ignoreSearch so a
+      // shared or tagged link (?utm=...) falls back to the app rather than missing.
       const cached = async () => (await cache.match(req, { ignoreSearch: true })) || (await cache.match('./index.html')) || (await cache.match('./'));
       const network = (async () => {
         const preloaded = await e.preloadResponse;
         const res = preloaded || await fetch(req);
         if (res && res.status === 200) {
-          // Keep both keys current: the one that was asked for, and the canonical shell the offline path
-          // falls back to, which otherwise stayed frozen at whatever was cached on install.
+          // Keep both keys current: the one asked for, and the canonical shell the offline path falls back
+          // to, which otherwise stayed frozen at whatever was cached on install.
           cache.put(req, res.clone());
           cache.put('./index.html', res.clone());
         }
         return res;
       })();
-      // Network first, but only for as long as it is actually answering.
       const timed = new Promise(resolve => setTimeout(() => resolve(null), SHELL_TIMEOUT_MS));
       try {
         const res = await Promise.race([network, timed]);
@@ -63,11 +93,15 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static assets (icons, manifest): cache-first with background refresh - fast, and rarely change.
-  e.respondWith(caches.open(CACHE).then(cache =>
-    cache.match(req).then(cached => {
-      const net = fetch(req).then(res => { if (res && res.status === 200) cache.put(req, res.clone()); return res; }).catch(() => cached);
-      return cached || net;                            // instant from cache, refresh in background
-    })
-  ));
+  // Everything else (card art, icons, the manifest): instant from cache, refreshed in the background, so a
+  // re-baked image reaches the user on their next view rather than never.
+  e.respondWith((async () => {
+    const cache = await caches.open(ASSETS);
+    const cached = await cache.match(req);
+    const network = fetch(req).then(res => {
+      if (res && res.status === 200) cache.put(req, res.clone()).then(() => trimAssets(cache)).catch(() => {});
+      return res;
+    }).catch(() => cached);
+    return cached || network;
+  })());
 });
