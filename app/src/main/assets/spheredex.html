@@ -3389,18 +3389,20 @@
       if(pg) pg.onclick=function(){
         var grades=[]; gwork.forEach(function(g){ var k=(g.grader||"PSA")+" "+(g.grade||"10"); if(grades.indexOf(k)===-1) grades.push(k); });
         if(!grades.length){ toast("Add a graded slab first"); return; }
-        var done=busy(pg), finc=0, filled=0;
+        var done=busy(pg), finc=0, filled=0, failed=false;
         grades.forEach(function(gk){
           salesGet(salesUrl("soldcomps",gk), true).then(function(r){ if(!fresh()) return;
-            var b=(r&&r.body)||{}; if(b.market!=null){
+            var b=(r&&r.body)||{}; if(!r||!r.ok) failed=true;
+            if(b.market!=null){
               var val=(b.avg!=null?b.avg:b.market), gnum=gk.split(" ")[1];
               if(!s.gradeGuide) s.gradeGuide={}; s.gradeGuide[gnum]=val;
               gwork.forEach(function(g){ if(((g.grader||"PSA")+" "+(g.grade||"10"))===gk) g.value=val; });
               filled++;
             }
-          }).catch(function(){}).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum();
+          }).catch(function(){ failed=true; }).then(function(){ if(++finc===grades.length && fresh()){ done(); renderGrades(); renderGradeGuide(); updateSum();
             if(filled){ persist(); paintBubbles(); paintOwn(); }   // slab values the user asked for: closing with X must not lose them
-            toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : "No graded sales found yet"); } });
+            // "nothing found" and "could not ask" are different answers and used to read the same.
+            toast(filled? ("Filled "+filled+" grade"+(filled>1?"s":"")) : (failed? netErr() : "No graded sales found yet")); } });
         });
       };
       // Graded sold, charged only when it is actually wanted. Owning a slab of this card counts as wanting it.
@@ -4218,7 +4220,6 @@
   function sealedValue(){ return sealedValueMode(priceMode()); }
   function cardsValueMode(mode){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=(+e.qty||0)*unitOf(c.id,mode); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return a+v; },0); }
   function cardsValue(){ return cardsValueMode(priceMode()); }
-  function priceField(k,label,v){ return '<div class="pf"><label>'+label+' '+CUR.sym+'</label><input data-k="'+k+'" type="number" min="0" step="0.01" value="'+(v||0)+'"></div>'; }
   // Pull a sealed product's market/last/avg via the same ladder as cards: region sold → region
   // listings → (US sold → US listings, if the fallback setting is on). Sequential = quota-light.
   // Fetch a sealed product's last-5-sold AND live-listings prices (both, like a card's dual refresh) into
@@ -4258,7 +4259,8 @@
       // reachable server still counts, so a product with no market genuinely does wait.
       if(!(got||[]).some(function(x){ return x===null; })) pr.pAt=Date.now();
       done(); paintSlots(false); save(); renderSealed(); renderHome();
-      if(btn) toast(((+pr.sold>0)||(+pr.list>0))? ("Prices updated · "+money(sealUnit(s))) : "No market data found");
+      if(btn) toast(((+pr.sold>0)||(+pr.list>0))? ("Prices updated · "+money(sealUnit(s)))
+        : ((got||[]).some(function(x){ return x===null; }) ? netErr() : "No market data found"));
       return pr;
     }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
@@ -4523,31 +4525,6 @@
         } return null;
       });
     }).catch(function(){ return null; });
-  }
-  function refreshCollectionPrices(opts){
-    opts=opts||{};
-    if(priceRefreshing){ if(!opts.auto) toast("Already refreshing…"); return; }
-    if(!apiBase()){ if(!opts.auto) toast("Prices are unavailable right now"); return; }
-    if(opts.auto && SETTINGS.mode==="collector") return;         // prices hidden → nothing to refresh
-    var region=SETTINGS.ebayRegion||"co.uk", now=Date.now(), STALE=18*3600*1000, CAP=60;
-    var col=activeCol(), owned=[];
-    CARDS.forEach(function(c){ var e=col.own[c.id]; if(e && (e.qty>0 || (e.graded&&e.graded.length))){ if(!opts.auto || !e.pAt || (now-e.pAt)>STALE) owned.push(c); } });
-    owned.sort(function(a,b){ return (col.own[a.id].pAt||0)-(col.own[b.id].pAt||0); });   // oldest first
-    owned=owned.slice(0,CAP);
-    if(!owned.length){ if(!opts.auto) toast("Prices are already up to date"); return; }
-    priceRefreshing=true;
-    Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.add("spin"); b.disabled=true; });
-    var idx=0, active=0, updated=0;
-    var dual = !opts.auto;   // the on-open auto refresh grabs one value per card (fast); manual grabs both
-    function run(c){ active++; pullCardMarket(c, region, dual, null, dual).then(function(mkt){ if(mkt!=null){ o(c.id).pAt=Date.now(); updated++; } }).catch(function(){}).then(function(){ active--; if(idx>=owned.length && active===0) finish(); else pump(); }); }
-    function pump(){ while(active<6 && idx<owned.length){ run(owned[idx++]); } }
-    function finish(){
-      priceRefreshing=false;
-      Array.prototype.forEach.call(document.querySelectorAll(".pricerefresh"), function(b){ b.classList.remove("spin"); b.disabled=false; });
-      SETTINGS.lastPriceRefresh=Date.now(); saveSettings(); save(); render();
-      toast(updated? ("Latest prices updated · "+updated+" card"+(updated>1?"s":"")) : "Prices already current");
-    }
-    pump();
   }
   // Manual "last sold" refresh (owned cards, one bulk call). Live listings refresh automatically every day,
   // so this is the only manual trigger the user needs: it updates the last-sold book and drops a blue mark
@@ -5048,26 +5025,6 @@
     var trig=$("navTrigger"); if(trig) trig.classList.toggle("active", NAV_PRIMARY.indexOf(p)===-1);
   }
   // ---- Customisable quick menu: a 2nd nav row of up to four user-chosen shortcuts ----
-  function quickPages(){
-    var out=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){
-      var p=tab.getAttribute("data-page"); if(NAV_PRIMARY.indexOf(p)!==-1 || p==="account") return;   // Account has its own display-name button
-      out.push({ key:p, icon:tab.getAttribute("data-icon"), label:(tab.querySelector(".tablabel")||{}).textContent||p });
-    });
-    return out;
-  }
-  function quickMenuKeys(){ return (SETTINGS.quickMenu||[]).slice(0,4); }
-  function renderQuickRow(){
-    var row=$("navQuick"); if(!row) return; row.innerHTML="";
-    var pages=quickPages();
-    quickMenuKeys().forEach(function(k){
-      if(!k) return; var pg=pages.filter(function(x){return x.key===k;})[0]; if(!pg) return;
-      var b=document.createElement("button"); b.className="navq"; b.type="button"; b.setAttribute("data-page",k);
-      b.innerHTML=icon(pg.icon)+"<span>"+esc(pg.label)+"</span>";
-      b.onclick=function(){ showPage(k); closeNavMenu(); };
-      row.appendChild(b);
-    });
-    updateNavMenu(_curPage);
-  }
   function buildQuickMenuSettings(){
     var host=$("qmSlots"); if(!host) return; host.innerHTML="";
     var pages=dropdownPages();
@@ -6101,12 +6058,16 @@
       clearTimeout(scanGpTimer); scanGpTimer=setTimeout(function(){ scanGpTimer=null; scanPriceRow(scanState.card); }, 500);
       scanPriceRow(scanState.card, true); }); });
     $("scanEdition").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.edition=b.getAttribute("data-edition"); paintScan(); });
-    $("scanCancel").onclick=function(){ dismissOverlay(); scanContinue(); };
+    // dismissOverlay goes through history.back(), so the sheet is still on screen and scanState is still
+    // set until the popstate task runs. A second press in that window used to add the card twice.
+    var scanBusy=false;
+    $("scanCancel").onclick=function(){ if(scanBusy) return; scanBusy=true; dismissOverlay(); scanContinue(); };
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
     var si=$("scanImg"); if(si){ si.onclick=function(){ if(scanState.card) openLightbox(scanState.card); }; si.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(scanState.card) openLightbox(scanState.card); } }; }
     scanScrim.addEventListener("click", function(e){ if(e.target===scanScrim) dismissOverlay(); });
     document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scanScrim.hidden) dismissOverlay(); });
     $("scanConfirm").onclick=function(){
+      if(scanBusy) return; scanBusy=true;
       var card=scanState.card; if(!card){ dismissOverlay(); return; }
       if(scanState.dest==="wishlist"){
         STATE.wishlist[card.id]=true; save(); render();
@@ -6232,7 +6193,21 @@
     var cd=$("setColorDash"); if(cd){ cd.checked=!!SETTINGS.showColorCompletion; cd.onchange=function(){ SETTINGS.showColorCompletion=!!cd.checked; saveSettings(); if(typeof stats==="function") stats(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
-    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); renderPriceAlertList(); fetchServerPrices(true); }; }
+    var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){
+      SETTINGS.ebayRegion=er.value; saveSettings();
+      if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]);
+      // Per card prices FETCHED for the old market are in the old market's money, and the symbol beside
+      // them has just changed, so they are cleared and will refill from the new market. Values the user
+      // typed in (graded slabs) are never touched: those are their data, not ours to rewrite.
+      try{
+        (STATE.cols||[]).forEach(function(col){
+          var m=col.own||{}, k;
+          for(k in m){ var e=m[k]; if(!e) continue; e.sold=0; e.list=0; e.mkt=0; e.last=0; e.avg=0; e.pAt=0; }
+        });
+        save();
+      }catch(e){}
+      syncPushPrefs(); renderPriceAlertList(); fetchServerPrices(true);
+    }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
     var df=$("setDateFmt"); if(df){ df.value=SETTINGS.dateFmt||"rel"; df.onchange=function(){ SETTINGS.dateFmt=(df.value==="abs")?"abs":"rel"; saveSettings(); }; }
     // Scanner prefs (the native camera reads these via SDScanPrefs): default recognizer mode, on-camera toggle visibility, continuous-scan loop.
@@ -6671,7 +6646,7 @@
   // toast wrongly says "you're on the web app"), so hide them when running natively.
   // Inject inline icons into any static [data-icon] element (replaces emoji).
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
-  buildNavMenu(); renderQuickRow(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
+  buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   (function(){ var sb=$("setsBack"); if(sb) sb.onclick=function(){ renderSetBrowse(); showCollGrid(false); window.scrollTo(0,0); }; })();
   (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
