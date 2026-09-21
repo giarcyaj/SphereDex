@@ -3494,7 +3494,10 @@
           if(b.stale || b.cached){
             var sa=$("salesAvg");
             if(sa && (b.avg!=null || b.market!=null)) sa.innerHTML += ' <span style="opacity:.7">· last known price, not a fresh lookup</span>';
-            if(!silent) toast("Showing the last known price. Fresh lookups come back after midnight UTC.");
+            // stale means the day's lookups are spent. cached means somebody else already asked for this
+            // card recently and we are sharing their answer, which is not a reason to tell anyone about
+            // midnight. Both keep the note beside the figure; only one gets the explanation.
+            if(!silent && b.stale) toast("Showing the last known price. Fresh lookups come back after midnight UTC.");
           }
           else if(!silent) toast(sales.length? ("Pulled last "+Math.min(5,sales.length)+" sold") : (b.note||"No sold data yet"));
         }).catch(function(){ done(); if(!silent && fresh()) toast("Price pull failed"); });
@@ -4662,13 +4665,13 @@
       el.textContent = SOLD_ASOF ? ("Last sold updated "+relTime(SOLD_ASOF)
           + (n? (" · "+n+" card"+(n===1?"":"s")+(split?" older than 2 weeks":" older than 2 days")):"")
           + (filled? (" · "+filled+" estimated"):""))
-        : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)) : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh)));
+        : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)) : "Prices not loaded yet");
       return;
     }
     var behind=n? (" · "+n+" card"+(n===1?"":"s")+" older than 2 days") : "";
     el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind)
                           : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)+behind)
-                                       : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh))); }
+                                       : "Prices not loaded yet"); }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
   //   both=false (default, used by the quick on-open refresh): one value via the ladder
@@ -5404,11 +5407,13 @@
     var bookAge = LIVE_ASOF ? (Date.now()-LIVE_ASOF) : 0;
     var bookOld = bookAge > 36*3600*1000;
     var sub=$("moverSub"); if(sub){
-      var span=bookOld ? ("since prices were last refreshed "+relTime(LIVE_ASOF)) : "24h";
+      // The span goes AFTER the sentence, not inside it: spliced into the middle it read "The biggest
+      // since prices were last refreshed 3d ago risers and fallers".
       var base=(moverScope==="all")
-        ? ("The biggest "+span+" risers and fallers across the whole set.")
-        : ("The biggest "+span+" risers and fallers in your collection.");
-      sub.textContent = base + (ramping ? " Still building a day over day baseline, so this fills out over the next day or two." : "");
+        ? "The biggest risers and fallers across the whole set"
+        : "The biggest risers and fallers in your collection";
+      var span=bookOld ? (", measured since prices were last refreshed "+relTime(LIVE_ASOF)+".") : " over the last 24h.";
+      sub.textContent = base + span + (ramping ? " Still building a day over day baseline, so this fills out over the next day or two." : "");
     }
     var up=moverCard("up", moverScope), down=moverCard("down", moverScope);
     el.onclick=null;
@@ -6457,6 +6462,10 @@
   var AUTH = (function(){ try{ return JSON.parse(localStorage.getItem("palvault-auth"))||{}; }catch(e){ return {}; } })();
   if(AUTH.serverRev==null) AUTH.serverRev=0;
   function saveAuth(){ try{ localStorage.setItem("palvault-auth", JSON.stringify(AUTH)); }catch(e){} }
+  // AUTH.dirty is how the merge knows this device has work the cloud has not seen. No install that predates
+  // it has the field, so on the first launch after updating, every one of them looked clean: exactly the
+  // launch where anything added offline since the last sync is most at risk. Assume unpushed work once.
+  if(AUTH.token && AUTH.dirty===undefined){ AUTH.dirty=true; saveAuth(); }
   // Header login button: reflects sign-in state, opens the Account page.
   function paintLogin(){ var b=$("loginBtn"); if(!b) return;
     if(AUTH.token){ b.classList.add("in");
@@ -6973,10 +6982,10 @@
     // later wake, at most once an hour, which is a reminder rather than nagging.
     if(Date.now()-updateAt < UPDATE_GAP) return; updateAt=Date.now();
     if(IS_NATIVE || window.IS_IOS){ toast("Version "+latest+" is out. Update SphereDex for the newest cards and prices."); return; }
-    // On the web the new build is one reload away, so offer it rather than describing it.
-    var t=$("toast");
-    toast("Version "+latest+" is ready. Tap here to reload.");
-    if(t){ t.style.cursor="pointer"; t.onclick=function(){ try{ location.reload(); }catch(e){} }; }
+    // The toast is pointer-events:none, so it cannot be tapped and it is gone in two seconds either way.
+    // Say what to do instead of asking for a tap that can never land. The service worker is network first
+    // for the shell, so the new build arrives on the next natural load regardless.
+    toast("Version "+latest+" is ready. Reload the page to get it.");
   }
   // Ask for a catalogue newer than the one this build carries (or than the one already stored here).
   function fetchCatalogue(){
