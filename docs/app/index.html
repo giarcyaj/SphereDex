@@ -2489,6 +2489,17 @@
     "td-gp":      { JPY:1980, USD:22.99, GBP:18.00, EUR:20.99, AUD:34.99, CAD:30.99 }
   };
   function defaultRRP(id){ var m=SEAL_RRP[id]; return (m && CUR && m[CUR.code]) || 0; }
+  // Identifies this install to the price server, so its daily lookup allowance is per app rather than per
+  // IP address: on mobile networks thousands of phones share one address and so shared one allowance.
+  // Random, stored locally, sent only to our own price endpoint, and tied to nothing else.
+  var INSTALL_ID = (function(){
+    try{
+      var k="palvault-install", v=localStorage.getItem(k);
+      if(!v){ v=Date.now().toString(36)+Math.random().toString(36).slice(2,10); localStorage.setItem(k,v); }
+      return v;
+    }catch(e){ return ""; }
+  })();
+  function devQ(){ return INSTALL_ID ? "&dev="+encodeURIComponent(INSTALL_ID) : ""; }
   var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
@@ -3321,7 +3332,7 @@
       if(!apiBase() || SETTINGS.mode==="collector"){ finishLoading(); return; }
       var region=SETTINGS.ebayRegion||"co.uk";
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
-      function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):""); }
+      function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):"")+devQ(); }
       function busy(btn){ return busyBtn(btn); }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
       if(ps) ps.hidden=false; if(pl) pl.hidden=false;   // the graded fill button is shown by renderGrades
@@ -4233,7 +4244,7 @@
     var region=SETTINGS.ebayRegion||"co.uk", done=busyBtn(btn), pr=sealPrice(s), kw=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
     // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
     var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
-    function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):""); }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):"")+devQ(); }
     function getSold(reg){ return salesGet(url("soldcomps",reg), !!btn).then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; pr.sales=(b.sales||[]).slice(0,5).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}); return true; } return false; }).catch(function(){ return null; }); }
     function getList(reg){ return salesGet(url("ebay-active",reg), !!btn).then(function(r){ var b=(r&&r.body)||{};
       var rows=(b.sales||[]).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;});
@@ -4475,10 +4486,15 @@
   // Prefer the SERVER's own refresh time (its daily 1am price job) so the label reflects how fresh the
   // market data is, not just when this app last topped up owned cards. Fall back to the app's own
   // refresh only until the server reports a time (offline, or an older backend without refreshedAt).
+  // Coverage from the server: how many cards in this market are more than two days old. Without it the
+  // label reported the single newest write, so one refreshed card made a whole stale market read as current.
+  var LIVE_COV=null, SOLD_COV=null;
   function updateRefreshLabel(){ var el=$("lastRefreshLbl"); if(!el) return;
     var sold=(priceMode()==="sold"), asof=sold?SOLD_ASOF:LIVE_ASOF, word=sold?"Last sold":"Live listings";
-    el.textContent = asof ? (word+" updated "+relTime(asof))
-                          : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF))
+    var cov=sold?SOLD_COV:LIVE_COV, n=(cov&&+cov.stale)||0;
+    var behind=n? (" · "+n+" card"+(n===1?"":"s")+" older than 2 days") : "";
+    el.textContent = asof ? (word+" updated "+relTime(asof)+behind)
+                          : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)+behind)
                                        : ("Prices refreshed "+relTime(SETTINGS.lastPriceRefresh))); }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
@@ -4490,7 +4506,7 @@
   //   fresh (optional): a user's refresh tap, which skips the shared 30 minute price cache (see salesGet).
   function pullCardMarket(c, region, both, entry, fresh){
     var e=entry||o(c.id);
-    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source); }
+    function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+devQ(); }
     function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
     function applyList(b){ var v=+b.market||0; e.list=v; return v; }
     function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; return e.mkt; }
@@ -5919,7 +5935,7 @@
     if(rec && (peek || !(rec.failed && Date.now()-rec.at>60000))) return rec;   // a failed request may retry a minute after it failed
     if(peek) return null;
     rec=SCAN_GP[key]={at:Date.now(), done:false, failed:false, val:0};
-    var url="/api/sales?name="+encodeURIComponent(card.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(card.id))+"&region="+encodeURIComponent(reg)+"&source=soldcomps&grade="+encodeURIComponent(grader+" "+grade);
+    var url="/api/sales?name="+encodeURIComponent(card.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(card.id))+"&region="+encodeURIComponent(reg)+"&source=soldcomps&grade="+encodeURIComponent(grader+" "+grade)+devQ();
     var p; try{ p=salesGet(url); }catch(e){ p=Promise.reject(e); }
     rec.p=p.then(function(r){ var b=(r&&r.body)||{}, v=+(b.avg!=null?b.avg:b.market)||0;
       if(!salesFailed(r)) rec.val=(v>0)?v:0; else rec.failed=true;
@@ -6587,6 +6603,10 @@
       if(r.body.liveRefreshedAt){ var _lt=Date.parse(r.body.liveRefreshedAt); if(_lt) LIVE_ASOF=_lt; }   // server's daily live-listings refresh
       if(r.body.soldRefreshedAt){ var _st=Date.parse(r.body.soldRefreshedAt); if(_st) SOLD_ASOF=_st; }   // server's weekly last-sold rotation
       var ra=r.body.refreshedAt ? Date.parse(r.body.refreshedAt) : 0; if(ra) PRICEASOF=ra;   // server's own refresh time (daily 1am cron)
+      // How much of this market is actually current, so the label can admit a partly failed night instead
+      // of reporting the newest single write as if it covered everything.
+      if(r.body.liveCoverage) LIVE_COV=r.body.liveCoverage;
+      if(r.body.soldCoverage) SOLD_COV=r.body.soldCoverage;
       try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       // Drop a blue "last sold" mark automatically when the server's weekly sold rotation produced newer
       // data than we've already marked (so the graph gets a fresh sold point about weekly without a manual tap).
