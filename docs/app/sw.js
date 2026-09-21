@@ -8,7 +8,7 @@
 //
 // tools/rebuild.py stamps BUILD with the app version and a hash of the built page, so this file never has
 // to be bumped by hand, which is what left it on one literal name for the app's whole life.
-const BUILD = '1.10-56aabdc4';
+const BUILD = '1.10-13364f8c';
 const SHELL = 'spheredex-shell-' + BUILD;
 const ASSETS = 'spheredex-assets-v1';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest'];
@@ -68,7 +68,17 @@ self.addEventListener('fetch', e => {
       const cached = async () => (await cache.match(req, { ignoreSearch: true })) || (await cache.match('./index.html')) || (await cache.match('./'));
       const network = (async () => {
         const preloaded = await e.preloadResponse;
-        const res = preloaded || await fetch(req);
+        // Revalidate rather than letting the browser answer this from its own HTTP cache, which on Pages
+        // can be up to ten minutes old on top of the edge age. The ETag makes that a cheap 304, so a user
+        // who taps "tap here to reload" actually lands on the new build. Chromium answers navigations from
+        // the preload above, which uses the HTTP cache, so this is mainly the Safari and Firefox path;
+        // dropping the preload to cover Chromium too would cost more on every cold open. Some engines
+        // refuse an init on a navigation request, so fall back rather than fail the whole load.
+        let res = preloaded;
+        if (!res) {
+          try { res = await fetch(req, { cache: 'no-cache' }); }
+          catch (err) { res = await fetch(req); }
+        }
         if (res && res.status === 200) {
           // Keep both keys current: the one asked for, and the canonical shell the offline path falls back
           // to, which otherwise stayed frozen at whatever was cached on install.

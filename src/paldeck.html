@@ -2567,8 +2567,16 @@
     }catch(e){ return ""; }
   })();
   function devQ(){ return INSTALL_ID ? "&dev="+encodeURIComponent(INSTALL_ID) : ""; }
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:"https://spheredex-backend.craigjayedit.workers.dev",defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
-    try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){} return s; })();
+  // The backend address belongs to the build, not to the device. A saved copy used to win for ever, so if
+  // the Worker ever moved, every existing install would keep calling a dead address and no build could
+  // correct it. One name for it, used everywhere, so a move is a single edit here.
+  var SERVER_URL_DEFAULT = "https://spheredex-backend.craigjayedit.workers.dev";
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",displayName:"",serverUrl:SERVER_URL_DEFAULT,defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
+    try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){}
+    // Only an address someone deliberately set outlives the build's own, and an EMPTY one never counts as
+    // deliberate: that would pin the app on "Prices are unavailable right now" with no way back.
+    if(!s.serverUrlCustom || !s.serverUrl) s.serverUrl=SERVER_URL_DEFAULT;
+    return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
   // Stock alerts (native push only): which sealed products this device wants a restock alert for. This
@@ -5243,7 +5251,7 @@
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
   // Cloud server URL from Settings; set this to your deployed Worker so feedback always reaches you.
-  var CONTACT_ENDPOINT="https://spheredex-backend.craigjayedit.workers.dev";
+  var CONTACT_ENDPOINT=SERVER_URL_DEFAULT;   // one name for the build's backend address, so a move is a single edit
   function contactBase(){ return (CONTACT_ENDPOINT||apiBase()||"").replace(/\/+$/,""); }
   var CT_TOPICS=[{k:"Feature request",i:"star"},{k:"Report a bug",i:"bug"},{k:"Help",i:"life"},{k:"General feedback",i:"mail"}];
   var ctTopic=CT_TOPICS[0].k;
@@ -6425,7 +6433,11 @@
     var base=apiBase(); if(!base) return Promise.reject(new Error("Prices are unavailable right now."));
     var hadToken=!!AUTH.token;
     var headers={"Content-Type":"application/json"}; if(AUTH.token) headers["Authorization"]="Bearer "+AUTH.token;
-    return fetch(base+path,{method:method||"GET",headers:headers,body:body?JSON.stringify(body):undefined})
+    // no-store: the backend labels public answers "public, max-age=60, stale-while-revalidate=300", which is
+    // right for the edge but wrong for a user's explicit Refresh tap, which could otherwise be answered from
+    // the WebView's own cache without ever reaching the worker. Dedupe lives in JS (SALES_CACHE, PRICEBOOK),
+    // where it can be skipped on purpose. Matches the catalogue and version fetches further down.
+    return fetch(base+path,{method:method||"GET",cache:"no-store",headers:headers,body:body?JSON.stringify(body):undefined})
       .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){
         // Only OUR auth check may end a session, and it says so: code "bad_token". Any other 401 on the
         // way (a captive portal, a proxy, a WAF, a misrouted request) used to sign the user out just as
@@ -6838,7 +6850,7 @@
   }
   (function(){
     var su=$("setServerUrl"); if(su){ su.value=SETTINGS.serverUrl||"";
-      su.onchange=function(){ SETTINGS.serverUrl=su.value.trim(); saveSettings(); renderAccount(); }; }
+      su.onchange=function(){ SETTINGS.serverUrl=su.value.trim(); SETTINGS.serverUrlCustom=(!!SETTINGS.serverUrl && SETTINGS.serverUrl!==SERVER_URL_DEFAULT); saveSettings(); renderAccount(); }; }
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ var done=busyBtn(fp,"Refreshing…"); Promise.resolve(fetchServerPrices(false)).then(done,done); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background on the first open after the server's daily ~1am refresh (12h fallback).
@@ -6973,5 +6985,22 @@
   // promise rather than a fulfilled one.
   if(AUTH.token && apiBase()){ pullState().catch(function(){}).then(function(){ setTimeout(autoRefreshPrices, 500); }); }
   else { setTimeout(autoRefreshPrices, 900); }
+})();
+</script>
+<script>
+// Service worker: WEB ONLY, and it lives in the canonical so it can never quietly go missing from the built
+// page. It used to exist only in the wrapper rebuild.py derives from the previous build, where losing it
+// would have cost every web user offline support with nothing here to show it had ever been there. It is
+// inert in the Android asset (file:) and in the iOS bundle (spheredex:) because neither is a secure origin,
+// so one file still ships to all three. tools/rebuild.py strips the wrapper's old copy, so the built page
+// has exactly one registration.
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    if(location.protocol !== "https:" && location.hostname !== "localhost") return;
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }catch(e){}
 })();
 </script>

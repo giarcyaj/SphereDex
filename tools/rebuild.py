@@ -28,6 +28,13 @@ import argparse, filecmp, hashlib, io, json, os, re, shutil, subprocess
 
 FM = "/*FONT_INJECT*/"
 CM = "<!--CARD_IMG_INJECT-->"
+# The web wrapper used to carry the service worker registration, which meant it existed only in the BUILT
+# page: losing it would have cost every web user offline support, with nothing in the canonical to show it
+# had ever been there. The registration lives in src/paldeck.html now (inert under file: and spheredex:),
+# so any copy still sitting in a derived wrapper is dropped here and every built page ends up with exactly
+# one. Stripped for every platform, not just WEB: the wrapper is derived from the LAST COMMITTED canonical,
+# so until this change is committed the old registration is still in the tail the apps inherit too.
+SW_REG_RE = re.compile(r"\s*<script>.*?serviceWorker\.register.*?</script>\s*", re.S)
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))  # the android/ repo root
 
 WEB_HTML = "docs/app/index.html"
@@ -113,6 +120,7 @@ for name, rel in [("WEB", WEB_HTML), ("ANDROID", ANDROID_HTML)]:
     path = os.path.join(REPO, rel)
     D = read(path)
     PREFIX, FONT, CARDIMG, SUFFIX = derive_wrapper(P_old, D)
+    SUFFIX = SW_REG_RE.sub("", SUFFIX)   # the registration comes from the canonical, never from the wrapper
     if name == "WEB":
         web_cardimg = CARDIMG
         check_card_img(CARDIMG)
