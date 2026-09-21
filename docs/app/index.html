@@ -6773,7 +6773,9 @@
   }
   function checkAppVersion(){
     if(!apiBase() || (updateAt && Date.now()-updateAt < UPDATE_GAP)) return;
-    fetch(apiBase()+"/api/version",{cache:"no-store"})
+    // Sending our version lets the server count how many people are on which build, which is how a fix is
+    // known to have reached anyone. It is a version string and nothing else.
+    fetch(apiBase()+"/api/version?v="+encodeURIComponent(APP_VERSION),{cache:"no-store"})
       .then(function(r){ return r.ok? r.json() : null; })
       .then(function(j){
         var latest=j && j.app ? String(j.app) : "";
