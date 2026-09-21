@@ -2422,7 +2422,17 @@
   function unitOfEntry(id, mode, e){ var sold=((mode||priceMode())==="sold");
     if(sold){
       // Sold mode: your precise last-sold, then the sold-preferred owned headline, then the weekly bulk sold book.
-      if(e){ if(+e.sold>0) return +e.sold; if(+e.mkt>0) return +e.mkt; }
+      // A precise figure only outranks the book while it is at least as fresh as the book is. Pulled once and
+      // preferred for good, a card you opened weeks ago kept an old number while the book moved under it every
+      // night. Four guards, so nothing anyone chose is overruled: only a value we PULLED (it carries a stamp),
+      // only when the headline still matches it (a figure typed into the card form always wins), only when the
+      // book actually has this card, and never in Japanese edition, where the bulk book is English and so the
+      // wrong basis entirely.
+      if(e){
+        var aged = (SEAL_ED!=="jp") && SOLD_ASOF && +e.pAt>0 && +e.pAt < SOLD_ASOF
+          && PRICEBOOK_SOLD[id]!=null && (+e.mkt||0)===(+e.sold||0);
+        if(!aged){ if(+e.sold>0) return +e.sold; if(+e.mkt>0) return +e.mkt; }
+      }
       var pbs=PRICEBOOK_SOLD[id]; if(pbs!=null) return +pbs;
     } else {
       // Live mode: the DAILY live book FIRST (the server refreshes it every night, so it never goes stale),
@@ -2447,7 +2457,21 @@
   // active mode, else the bulk book, else headline. `basis` kept for callers but the active mode wins.
   function binderValue(basis){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=(+e.qty||0)*unitOf(c.id); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return a+v; },0); }
 
-  var CUR = CURRENCIES.filter(function(c){ return c.code===(lsGet("paldeck-currency")||"USD"); })[0] || CURRENCIES[0];
+  // The market and the currency were two separate saved values, and the currency defaulted to USD. A new
+  // install picks its market from the device locale (detectRegion), so a first run anywhere outside the US
+  // priced everything in that market's real currency and then labelled it with a dollar sign, until someone
+  // happened to open the currency selector. With nothing saved, the market decides. A saved choice still
+  // wins, so anyone who has picked a currency keeps it. This reads the stored settings directly because
+  // SETTINGS itself is built further down the file.
+  var CUR = (function(){
+    var code = lsGet("paldeck-currency");
+    if(!code){
+      var reg = "";
+      try{ var saved = JSON.parse(localStorage.getItem("palvault-settings")||"{}"); reg = saved && saved.ebayRegion; }catch(e){}
+      code = REGION_CUR[reg || detectRegion()] || "USD";
+    }
+    return CURRENCIES.filter(function(c){ return c.code===code; })[0] || CURRENCIES[0];
+  })();
   // Format locale follows the chosen market region; a saved currency still sets the symbol/decimals.
   function fmtLocale(){ try{ return REGION_LOCALE[SETTINGS.ebayRegion]||"en-GB"; }catch(e){ return "en-GB"; } }
   function money(n){ n=+n||0;
@@ -4588,7 +4612,10 @@
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+devQ(); }
     function applySold(b){ var v=+(b.avg!=null?b.avg:b.market)||0; e.sold=v; if(b.sales&&b.sales.length) e.last=+b.sales[0].p||0; if(b.avg!=null) e.avg=+b.avg||0; return v; }
     function applyList(b){ var v=+b.market||0; e.list=v; return v; }
-    function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; return e.mkt; }
+    // pAt stamps WHEN these per card numbers were pulled. Without it a value pulled once outranked the
+    // nightly book for good, so a card you opened weeks ago kept an old figure while everything around it
+    // moved. Only pulls carry a stamp, so a value typed into the card form is never touched.
+    function finalize(){ if(e.sold!=null&&e.sold>0) e.mkt=e.sold; else if(e.list!=null&&e.list>0) e.mkt=e.list; e.pAt=Date.now(); return e.mkt; }
     if(both){
       return salesGet(url("soldcomps",region), fresh).then(function(r){
         var b=(r&&r.body)||{}, gotSold=(b.market!=null); if(gotSold) applySold(b);
@@ -4659,7 +4686,7 @@
       var sold=r.body.sold||{}, n=0;
       // The bulk sold endpoint has no edition dimension (it returns English/market comps), so in JP
       // edition only refresh the English fallback book, never overwrite a card's JP flat sold price.
-      Object.keys(sold).forEach(function(id){ var row=sold[id]; if(row && row.market!=null){ PRICEBOOK_SOLD[id]=+row.market; if(SEAL_ED!=="jp"){ var e=col.own[id]; if(e) e.sold=+row.market; } n++; } });
+      Object.keys(sold).forEach(function(id){ var row=sold[id]; if(row && row.market!=null){ PRICEBOOK_SOLD[id]=+row.market; if(SEAL_ED!=="jp"){ var e=col.own[id]; if(e){ e.sold=+row.market; e.pAt=Date.now(); } } n++; } });
       if(r.body.soldRefreshedAt){ var t=Date.parse(r.body.soldRefreshedAt); if(t) SOLD_ASOF=t; }
       try{ localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); }catch(_){}
       save();   // persist the refreshed sold prices onto the (captured) collection either way
@@ -6704,9 +6731,14 @@
   // never overwrites the precise sold values you pull per card. Pass silent for background use.
   function fetchServerPrices(silent){
     if(!apiBase()){ if(!silent) toast("Prices are unavailable right now"); return Promise.resolve(); }
-    var ids=CARDS.map(function(c){return c.id;});
     var reg=encodeURIComponent(SETTINGS.ebayRegion||"co.uk");
-    return api("/api/prices?region="+reg+"&ids="+encodeURIComponent(ids.join(",")),"GET").then(function(r){
+    // No id list. This used to send every card id in the query string: 4.5KB of url at 275 cards, and with
+    // Booster 02, the Sleeve and Card Set, both Eternal Ascent decks and the 2nd Edition reprint already
+    // baked in as upcoming, heading for the ceiling proxies and CDNs enforce with a 414 nobody would have
+    // traced. Asking for the whole market is what we wanted anyway, it gives every user in a region the
+    // SAME url so the edge can actually serve it, and it prices cards the catalogue channel adds before
+    // this build knew they existed.
+    return api("/api/prices?region="+reg,"GET").then(function(r){
       if(!r.ok){ if(silent) priceFetchFailed(); else toast("Couldn't reach the price server"); return; }
       priceFetchOk();
       var base=r.body.prices||{}, liveMap=r.body.live||{}, soldMap=r.body.sold||{}, n=0;
