@@ -3223,7 +3223,10 @@
     if(mf) mf.addEventListener("click", function(ev){ if(ev.target.closest(".mclose")) return; openLightbox(c); });
 
     function renderGrades(){
-      var gl=$("gradeList"); gl.innerHTML="";
+      // The container ships with the hidden attribute (and [hidden] is display:none !important), so every
+      // slab row built here was invisible: no way to correct a grader, a grade or a value, and a slab that
+      // came back valued 0 stayed 0 for good. Show it whenever there is a slab to edit.
+      var gl=$("gradeList"); gl.innerHTML=""; gl.hidden=!gwork.length;
       // Only offer to fill values when there are slabs to fill, and never where prices are hidden.
       var pgb=$("pullGraded");
       if(pgb) pgb.hidden = !gwork.length || !apiBase() || SETTINGS.mode==="collector";
@@ -3881,10 +3884,24 @@
   };
   // Set the display currency (and keep the header dropdown in sync). Used by the picker and by region changes.
   function applyCurrency(code){ var c=CURRENCIES.filter(function(x){return x.code===code;})[0]; if(!c) return; CUR=c; lsSet("paldeck-currency",CUR.code); var sel=$("curSel"); if(sel) sel.value=CUR.code; render(); if(typeof renderHome==="function") renderHome(); if(typeof renderSealed==="function") renderSealed(); if(typeof renderAccount==="function") renderAccount(); if(typeof pushCloud==="function") pushCloud(); }
+  // Every price comes from the market you picked (the backend quotes ebay.co.uk in GBP, ebay.de in EUR and
+  // so on) and the app holds no exchange rates, so a display currency chosen independently did not convert
+  // anything, it only swapped the symbol: GBP amounts read as dollars, and as whole yen since JPY has no
+  // decimals. Picking a currency now moves the market to the one that quotes in it, which is the only way
+  // the symbol and the number agree. JPY is not offered because no eBay market quotes this game in it.
+  var CUR_REGION={ USD:"com", GBP:"co.uk", EUR:"de", CAD:"ca", AUD:"com.au" };
   (function(){
     var sel=$("curSel");
-    CURRENCIES.forEach(function(c){ var op=document.createElement("option"); op.value=c.code; op.textContent=c.code+" "+c.sym; if(c.code===CUR.code) op.selected=true; sel.appendChild(op); });
-    sel.onchange=function(){ applyCurrency(sel.value); };
+    sel.title="Currency follows your market";
+    CURRENCIES.forEach(function(c){ if(!CUR_REGION[c.code]) return; var op=document.createElement("option"); op.value=c.code; op.textContent=c.code+" "+c.sym; if(c.code===CUR.code) op.selected=true; sel.appendChild(op); });
+    sel.onchange=function(){
+      var code=sel.value, reg=CUR_REGION[code];
+      if(!reg){ sel.value=CUR.code; return; }
+      if(REGION_CUR[SETTINGS.ebayRegion||"co.uk"]===code){ applyCurrency(code); return; }   // already on a market that quotes it
+      var er=$("setEbayRegion");
+      if(er && typeof er.onchange==="function"){ er.value=reg; er.onchange(); toast("Market set to "+reg+" so prices match "+code); return; }
+      SETTINGS.ebayRegion=reg; saveSettings(); applyCurrency(code);
+    };
   })();
   $("search").addEventListener("input", function(e){ filters.q=e.target.value; render(); });
   $("sortSel").addEventListener("change", function(e){ filters.sort=e.target.value; render(); });
@@ -4899,6 +4916,8 @@
     if (p==="key") renderKey();
     if (p==="contact") renderContact();
     if (p==="portfolio") renderPortfolioDetail();
+    // Rewards was built only inside renderHome(), so sphere progress showed whatever it was at startup.
+    if (p==="rewards"){ if(typeof checkRewards==="function") checkRewards(); if(typeof renderRewards==="function") renderRewards(); if(typeof renderTrophies==="function") renderTrophies(); }
     updateNavMenu(p);
     _curPage = p;
     if(_histReady && !_pop){ try{ history.pushState({sd:p}, ""); }catch(e){} }
@@ -5958,14 +5977,27 @@
   }
   function openScanModal(card, edition, graded, lowConf){
     if(!scanScrim) return;
-    scanState.dest="collection"; scanState.type=(graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
+    // Collector mode hides every graded control, so filing a scan as a slab there leaves the user with a
+    // card they cannot see the count of, cannot value and cannot convert back. Add it as a raw copy.
+    scanState.dest="collection"; scanState.type=(SETTINGS.mode!=="collector" && graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
     scanState.edition=(String(edition)==="2")?"2":"1";
     // "Add cards to" default sticks; fall back to the active collection. Filled before the card so the price row reads the right target.
     var cs=$("scanColSel"); cs.innerHTML="";
     var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){return x.id===SETTINGS.defaultAddCol;})) ? SETTINGS.defaultAddCol : activeCol().id;
     STATE.cols.forEach(function(col){ var op=document.createElement("option"); op.value=col.id; op.textContent=col.name; if(col.id===def)op.selected=true; cs.appendChild(op); });
     // "Default grading company" default sticks; a scanned slab pre-fills the detected company / grade / cert.
-    var gGr=(graded&&graded.grader)||SETTINGS.defaultGrader||"PSA", gGd=(graded&&graded.grade)?String(graded.grade):"10";
+    var gGr=(graded&&graded.grader)||SETTINGS.defaultGrader||"PSA";
+    // A scanned grade that is not one of GRADES (7.5, 6.5, or a misread) leaves every option unselected,
+    // and the browser then shows the FIRST one, which is 10. The slab was then stored and priced as a 10.
+    // Snap down to the nearest listed grade instead, and say so, so nobody files a 7.5 as top grade.
+    var gRaw=(graded&&graded.grade)?String(graded.grade):"", gGd=gRaw||"10", gSnap="";
+    if(gRaw && GRADES.indexOf(gRaw)===-1){
+      var gn=parseFloat(gRaw), best=null;
+      if(isFinite(gn)) GRADES.forEach(function(x){ var v=parseFloat(x); if(isFinite(v) && v<=gn && (best===null || v>parseFloat(best))) best=x; });
+      // A number we could read but cannot match (0.5) snaps to the LOWEST grade, never the highest: a
+      // misread low grade must not become a 10. Only something unreadable falls back to the default.
+      gGd=best||(isFinite(gn)?"1":"10"); gSnap=gRaw;
+    }
     $("scanGraderSel").innerHTML=GRADERS.map(function(x){return '<option'+(gGr===x?' selected':'')+'>'+x+'</option>';}).join("");
     $("scanGradeSel").innerHTML=GRADES.map(function(x){return '<option'+(String(x)===gGd?' selected':'')+'>'+x+'</option>';}).join("");
     var certEl=$("scanCert"); if(certEl) certEl.value=(graded&&graded.cert)?String(graded.cert):"";
@@ -5974,7 +6006,12 @@
     // Running-session tally (auto-resets after 60s idle) + low-confidence prompt (TCGplayer-inspired: don't silently guess).
     if(Date.now()-scanSession.ts > 60000){ scanSession.count=0; scanSession.value=0; }
     var ssEl=$("scanSess"); if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
-    var hintEl=$("scanHint"); if(hintEl) hintEl.hidden=!lowConf;
+    var hintEl=$("scanHint");
+    if(hintEl){
+      // A snapped grade outranks a low confidence card match: that number is about to be stored and priced.
+      if(gSnap){ hintEl.textContent="Grade "+gSnap+" is not on the list, so "+gGd+" is selected. Check it before you add."; hintEl.hidden=false; }
+      else { hintEl.textContent="Not sure this is the exact card. Check it below."; hintEl.hidden=!lowConf; }
+    }
     // If this card has variants, open the picker so the user can choose the exact printing: name/number
     // OCR resolves the card but not RR vs OSR vs SSP. The "not sure" hint above stays gated on lowConf.
     var _wb=$("scanWrong"), _vs=$("scanVariants"); if(_wb && _vs && !_wb.hidden) _vs.hidden=false;
@@ -6206,30 +6243,127 @@
     SALES_CACHE[key]=ent;
     return ent.p;
   }
+  // Does this device hold anything worth protecting? Used before letting a cloud copy replace it.
+  function localHasCards(){
+    try{
+      return (STATE.cols||[]).some(function(col){
+        var m=col.own||{}, s=col.sealed||{}, k;
+        for(k in m){ var e=m[k]; if(e && ((+e.qty>0) || (e.graded&&e.graded.length))) return true; }
+        for(k in s){ if(+s[k]>0) return true; }
+        return false;
+      });
+    }catch(e){ return false; }
+  }
+  // ---- Merging two copies of the same account ---------------------------------------------------------
+  // When a device has unpushed changes AND the cloud has moved on, the two copies have genuinely diverged
+  // and there is no safe way to pick one: taking the server's copy deletes what you added offline, taking
+  // this device's deletes what you added on your phone. So they are unioned. ADDITIONS WIN, because losing
+  // a card someone added is far worse than keeping one they deleted elsewhere; the deleted copy comes back
+  // and can be deleted again. Quantities take the higher side, graded slabs and sealed counts are unioned,
+  // and a collection that exists on only one side is kept whole.
+  function slabSig(g){ return [(g&&g.grader)||"", (g&&g.grade)||"", (g&&g.cert)||"", (g&&g.value)||0].join("|"); }
+  function mergeEntry(a, b){
+    if(!a) return b; if(!b) return a;
+    var out={}, k;
+    for(k in b) out[k]=b[k];
+    for(k in a) out[k]=a[k];                       // this device's own fields win on a tie
+    out.qty=Math.max(+a.qty||0, +b.qty||0);
+    out.wish=!!(a.wish||b.wish); out.fav=!!(a.fav||b.fav);
+    var seen={}, slabs=[];
+    ((a.graded)||[]).concat((b.graded)||[]).forEach(function(g){ var sk=slabSig(g); if(g && !seen[sk]){ seen[sk]=1; slabs.push(g); } });
+    out.graded=slabs;
+    if((b.notes||"").length > (a.notes||"").length) out.notes=b.notes;
+    return out;
+  }
+  function mergeCol(a, b){
+    var out={}, k;
+    for(k in a) out[k]=a[k];
+    out.name=a.name||b.name;
+    var own={}, ao=a.own||{}, bo=b.own||{};
+    for(k in ao) own[k]=ao[k];
+    for(k in bo) own[k]=mergeEntry(ao[k], bo[k]);
+    out.own=own;
+    var seal={}, as=a.sealed||{}, bs=b.sealed||{};
+    for(k in as) seal[k]=as[k];
+    for(k in bs) seal[k]=Math.max(+as[k]||0, +bs[k]||0);
+    out.sealed=seal;
+    return out;
+  }
+  function mergeStates(local, remote){
+    var out={}, k;
+    for(k in local) out[k]=local[k];
+    var cols=[], byId={};
+    (local.cols||[]).forEach(function(c){ if(c && c.id){ byId[c.id]=c; cols.push(c.id); } });
+    var merged=[];
+    cols.forEach(function(id){
+      var r=(remote.cols||[]).filter(function(c){ return c && c.id===id; })[0];
+      merged.push(r? mergeCol(byId[id], r) : byId[id]);
+    });
+    (remote.cols||[]).forEach(function(c){ if(c && c.id && !byId[c.id]) merged.push(c); });   // only on the cloud: keep it
+    out.cols=merged;
+    if(!merged.filter(function(c){ return c.id===out.active; })[0] && merged.length) out.active=merged[0].id;
+    return out;
+  }
   function adoptRemote(blob, rev){
     var acct=(blob&&blob._acct)||null; if(blob&&blob._acct){ try{ delete blob._acct; }catch(e){} }
-    STATE=blob; AUTH.serverRev=rev; saveAuth(); addBaseline();   // cloud data keeps its own add times
+    // Keep the copy being replaced. Whatever else goes wrong in a sync, the previous collection is one
+    // localStorage key away instead of gone.
+    try{ var prev=localStorage.getItem(LS_KEY); if(prev) localStorage.setItem(LS_KEY+"-prepull", prev); }catch(e){}
+    STATE=blob; AUTH.serverRev=rev; AUTH.dirty=false; saveAuth(); addBaseline();   // cloud data keeps its own add times
     try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }catch(e){}
     if(acct && typeof applyAccountSettings==="function") applyAccountSettings(acct);
     own=activeCol().own; buildColSel(); applySettings(); render(); renderQuick();
+    // render() deliberately skips the pages that are built lazily, so after a sync Home (the landing page)
+    // and the other totals kept showing the pre sync numbers until the user navigated away and back.
+    try{ if(typeof renderHome==="function") renderHome(); }catch(e){}
+    try{ if(typeof renderSealed==="function") renderSealed(); }catch(e){}
+    try{ if(typeof renderReleases==="function") renderReleases(); }catch(e){}
+    try{ if(typeof renderDecks==="function") renderDecks(); }catch(e){}
+    try{ if(typeof renderAccount==="function") renderAccount(); }catch(e){}
   }
   function pullState(){
     return api("/api/state","GET").then(function(r){
       if(!r.ok) return;
-      if(r.body.blob && r.body.blob.cols){ adoptRemote(r.body.blob, r.body.rev); toast("Loaded your cloud collection"); }
-      else { AUTH.serverRev=r.body.rev||0; saveAuth(); pushCloud(true); }
+      var remote=r.body.blob, rev=r.body.rev||0;
+      if(remote && remote.cols){
+        // Adopting is only safe when this device has nothing the server has not already accepted. A fresh
+        // sign in (serverRev 0) counts as unsafe too: the collection on this device predates the account.
+        var risky=localHasCards() && (AUTH.dirty || !AUTH.serverRev);
+        if(risky && rev===AUTH.serverRev){ pushCloud(true); return; }   // server still holds OUR copy: send ours up
+        if(risky){
+          var merged=mergeStates(STATE, remote);
+          adoptRemote(merged, rev);
+          AUTH.dirty=true; saveAuth(); pushCloud(true);                 // put the union back on the server
+          toast("Merged your cloud collection with this device");
+          return;
+        }
+        adoptRemote(remote, rev); toast("Loaded your cloud collection");
+      }
+      else { AUTH.serverRev=rev; saveAuth(); pushCloud(true); }
     });
   }
-  var pushTimer=null;
+  var pushTimer=null, pushing=false;
   function pushCloud(now, btn){
     if(!AUTH || !AUTH.token || !apiBase()) return;
+    AUTH.dirty=true; saveAuth();        // cleared only when the server accepts this copy
     function doPush(done){
+      // One push at a time. Two in flight both carry the rev from before either landed, so the second is
+      // answered with a 409 the device caused itself, which used to be resolved by discarding local edits.
+      if(pushing){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ doPush(); }, 800); if(done) done(); return; }
+      pushing=true;
       setSyncStatus("syncing…");
       api("/api/state","PUT",{rev:AUTH.serverRev,blob:(typeof accountSettingsBlob==="function"?Object.assign({},STATE,{_acct:accountSettingsBlob()}):STATE)}).then(function(r){
-        if(r.status===409 && r.body.blob){ adoptRemote(r.body.blob, r.body.rev); toast("Synced newer data from another device"); }
-        else if(r.ok){ AUTH.serverRev=r.body.rev; saveAuth(); setSyncStatus("synced"); }
+        if(r.status===409 && r.body.blob){
+          // The server moved on. Union the two copies rather than letting either side delete the other,
+          // then send the result up so both devices end on the same collection.
+          adoptRemote(mergeStates(STATE, r.body.blob), r.body.rev);
+          AUTH.dirty=true; saveAuth();
+          toast("Merged newer data from another device");
+          pushing=false; pushCloud(true); return;
+        }
+        else if(r.ok){ AUTH.serverRev=r.body.rev; AUTH.dirty=false; saveAuth(); setSyncStatus("synced"); }
         else setSyncStatus("sync error");
-      }).catch(function(){ setSyncStatus("offline"); }).then(done||function(){});
+      }).catch(function(){ setSyncStatus("offline"); }).then(function(){ pushing=false; if(done) done(); });
     }
     clearTimeout(pushTimer);
     // Manual "Sync now" (with a button) runs immediately on its own promise chain, so its spinner is never
