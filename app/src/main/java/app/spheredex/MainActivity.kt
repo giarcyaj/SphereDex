@@ -50,6 +50,12 @@ class MainActivity : ComponentActivity() {
 
     private val scanLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            // The on camera Code / Full card toggle sticks: tell the web app which mode the camera ended
+            // on, so the next card in a continuous run opens in it (SDScanPrefs reads it back).
+            res.data?.getStringExtra("mode")?.let { m ->
+                val safeMode = if (m == "code") "code" else "full"
+                web.evaluateJavascript("window.SDScanMode && window.SDScanMode('$safeMode')", null)
+            }
             val number = res.data?.getStringExtra("number")
             if (res.resultCode == RESULT_OK && !number.isNullOrEmpty()) {
                 // Deliver the rich scan outcome to the web app's add dialog:

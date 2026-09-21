@@ -96,6 +96,7 @@ class ScannerActivity : ComponentActivity() {
     @Volatile private var handled = false          // an outcome has been returned; ignore everything after
     @Volatile private var processing = false        // finalising a candidate (edition/slab); blocks new work
     @Volatile private var mode = "full"             // "full" | "code"; may change on the UI thread mid-scan
+    private var collection = ""                     // which collection a scan lands in, shown under the hint
     private val forceCapture = AtomicBoolean(false) // set on tap; the next frame is a deliberate capture
     private var lastFullMatch = 0L                  // throttle full-mode live image matching (exec thread only)
 
@@ -153,6 +154,9 @@ class ScannerActivity : ComponentActivity() {
 
         mode = if (intent.getStringExtra("mode") == "code") "code" else "full"
         val showToggle = intent.getBooleanExtra("toggle", true)
+        // The app already sends this; nothing used to read it, so nobody scanning a stack could see where
+        // the cards were landing.
+        collection = intent.getStringExtra("collection")?.trim().orEmpty()
 
         root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         previewView = PreviewView(this)
@@ -166,6 +170,7 @@ class ScannerActivity : ComponentActivity() {
 
         hint = TextView(this).apply {
             text = hintText()
+            gravity = Gravity.CENTER_HORIZONTAL          // the hint is two lines now
             setTextColor(Color.WHITE); textSize = 15f; setPadding(dp(20), dp(28), dp(20), dp(10))
         }
         root.addView(hint, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
@@ -225,8 +230,10 @@ class ScannerActivity : ComponentActivity() {
         else permLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    private fun hintText() =
-        if (mode == "code") "Line up the card number in the box" else "Fit the whole card in the frame"
+    private fun hintText(): String {
+        val base = if (mode == "code") "Line up the card number in the box" else "Fit the whole card in the frame"
+        return if (collection.isEmpty()) base else "$base\nAdding to $collection"
+    }
 
     // MARK: - Mode toggle
 
@@ -266,6 +273,9 @@ class ScannerActivity : ComponentActivity() {
                 this@ScannerActivity.overlay.hide()
                 lastFullMatch = 0L
                 refreshToggle()
+                // Carry the choice back even if the user then backs out without scanning; a scan
+                // overwrites this with its own RESULT_OK data in returnOutcome().
+                this@ScannerActivity.setResult(RESULT_CANCELED, Intent().putExtra("mode", mode))
             }
         }
     }
@@ -521,6 +531,7 @@ class ScannerActivity : ComponentActivity() {
             .putExtra("number", number)
             .putExtra("edition", edition)
             .putExtra("lowConf", lowConf)
+            .putExtra("mode", mode)             // so a continuous run reopens in the mode this scan ended on
         if (slab != null) {
             val g = JSONObject().put("grader", slab.grader).put("grade", slab.grade).put("cert", slab.cert ?: "")
             data.putExtra("graded", g.toString())

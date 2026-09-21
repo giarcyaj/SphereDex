@@ -35,9 +35,10 @@ struct ScanOutcome {
 final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, UIGestureRecognizerDelegate {
 
     private let resolver: CardResolver
-    private let onResult: (ScanOutcome?) -> Void
+    private let onResult: (ScanOutcome?, String) -> Void   // outcome (nil when cancelled) + the mode the camera ended on
     private var mode: String
     private let showToggle: Bool
+    private let collection: String          // which collection a scan lands in, shown under the hint
 
     private let session = AVCaptureSession()
     private let output = AVCaptureVideoDataOutput()
@@ -62,11 +63,12 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
     private static let overlayConfidence: Float = 0.35
     private static let fullMatchInterval: TimeInterval = 0.25
 
-    init(resolver: CardResolver, mode: String = "full", showToggle: Bool = true,
-         onResult: @escaping (ScanOutcome?) -> Void) {
+    init(resolver: CardResolver, mode: String = "full", showToggle: Bool = true, collection: String = "",
+         onResult: @escaping (ScanOutcome?, String) -> Void) {
         self.resolver = resolver
         self.mode = (mode == "code") ? "code" : "full"
         self.showToggle = showToggle
+        self.collection = collection
         self.onResult = onResult
         super.init(nibName: nil, bundle: nil)
     }
@@ -256,9 +258,10 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
     }
 
     private func updateHint() {
-        hintLabel.text = mode == "code"
+        let base = mode == "code"
             ? "Line up the card number in the box"
             : "Fit the whole card in the frame"
+        hintLabel.text = collection.isEmpty ? base : base + "\nAdding to " + collection
     }
 
     private func showMessage(_ text: String) {
@@ -299,7 +302,7 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
             if self.finished { return }
             self.finished = true
             if outcome != nil { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-            self.dismiss(animated: true) { self.onResult(outcome) }
+            self.dismiss(animated: true) { self.onResult(outcome, self.mode) }
         }
     }
 

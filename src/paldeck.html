@@ -1551,12 +1551,6 @@
     <div class="spherethemes" id="sphereThemes"></div>
   </section>
 
-  <section class="page" id="page-graded">
-    <h2 class="sech">Graded</h2>
-    <p class="qsub" id="gradedNote"></p>
-    <div class="grid cols-3" id="gradedGrid"></div>
-  </section>
-
   <section class="page" id="page-collection">
 
   <div id="collSets">
@@ -2908,8 +2902,14 @@
     grid.className = "grid";
     if (!cards.length){
       var e=document.createElement("div"); e.className="empty";
+      // Graded is a mode of THIS page, so its "none yet" guidance belongs here. It was written for a
+      // Graded page that could never open, so nobody ever read it. Only when the binder really holds no
+      // slabs, never when a filter or a search has simply hidden them.
+      var noSlabs = gradedMode && !CARDS.some(function(c){ var g=o(c.id); return g.graded && g.graded.length; });
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
+        : noSlabs
+        ? "<b>No graded slabs yet</b>Open a card, tap Collect, switch to Graded, pick the grader and grade, then tap Add."
         : (soonMsg() || "<b>No cards match those filters</b>Clear a color, type, or rarity to widen the search.");
       grid.appendChild(e);
     } else if (viewMode==="binder9" || viewMode==="binder12"){
@@ -4276,6 +4276,24 @@
   // headline that names an upcoming product (its nk keywords) with a release signal, and overrides that
   // product's baked pre-order date. So a date announced/shifted in the news updates Sealed + Releases itself.
   var RELEASE_OVERRIDES = {};   // sealed id -> "MMM D, YYYY" adopted from the newest matching news item
+  // The feed only carries the newest 20 items, so the headline that announced a date drops out of it within
+  // days. Rebuilt from live news alone, a corrected date quietly snapped back to the one baked into this
+  // build, and nothing on screen said it had ever moved. Keep what this device resolved, stamped with the
+  // baked date it was correcting, and drop it the moment a build ships a different baked date for that
+  // product, so a corrected build always beats a remembered news date.
+  var RO_KEY = "palvault-release-dates";
+  function loadReleaseOverrides(){
+    var d=null; try{ d=JSON.parse(lsGet(RO_KEY)||"null"); }catch(e){}
+    if(!d) return;
+    SEALED.forEach(function(p){ if(!p.pre) return; var r=d[p.id];
+      if(r && r.d && r.base===p.date) RELEASE_OVERRIDES[p.id]=r.d; });
+  }
+  function saveReleaseOverrides(){
+    var out={}; SEALED.forEach(function(p){ if(!p.pre) return;
+      if(RELEASE_OVERRIDES[p.id]) out[p.id]={ d:RELEASE_OVERRIDES[p.id], base:p.date }; });
+    try{ lsSet(RO_KEY, JSON.stringify(out)); }catch(e){}
+  }
+  loadReleaseOverrides();
   function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
   var _SHORTM=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
@@ -4309,6 +4327,7 @@
   }
   // Rebuild overrides from a news list and repaint Sealed / Releases if a date actually moved.
   function refreshReleaseDates(items){ if(!buildReleaseOverrides(items)) return;
+    saveReleaseOverrides();   // hold the resolved date after the announcing item drops out of the feed
     try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(_){}
     try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(_){}
   }
@@ -5234,14 +5253,6 @@
     Array.prototype.forEach.call(host.querySelectorAll(".ctopic"), function(b){ b.onclick=function(){ ctTopic=b.getAttribute("data-topic"); renderContact(); }; });
   }
   function ctStatus(msg, bad){ var el=$("ctStatus"); if(!el) return; el.hidden=false; el.textContent=msg; el.className="ctstatus"+(bad?" bad":" ok"); }
-  // ---- Graded page: cards you own graded slabs of (in the active collection) ----
-  function renderGradedPage(){
-    var host=$("gradedGrid"), note=$("gradedNote"); if(!host) return;
-    var owned=CARDS.filter(function(c){ var e=o(c.id); return e.graded && e.graded.length>0; });
-    if(note) note.textContent = owned.length ? (owned.length+(owned.length===1?" card":" cards")+" with graded slabs in “"+activeCol().name+"”.") : "No graded slabs yet. Open a card, tap Collect, switch to Graded, pick the grader and grade, then tap Add.";
-    host.innerHTML="";
-    owned.forEach(function(c){ host.appendChild(cardEl(c)); });
-  }
   function contactSend(){
     var msg=(($("ctMsg")||{}).value||"").trim();
     if(msg.length<2){ ctStatus("Please write a message first.", true); return; }
@@ -5731,12 +5742,21 @@
     }
     paint(_newsCache||NEWS_SEED, !!_newsCache);   // keep the last live list offline; SEED only until the first successful load
     refreshReleaseDates(_newsCache||NEWS_SEED);
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; paint(r.body.items, true); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; saveNewsCache(r.body.items); paint(r.body.items, true); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
   }
 
   // ---- New-announcement bell: a red dot + popup when there's news you haven't seen yet ----
-  var _newsList = NEWS_SEED.slice();
-  var _newsCache = null;   // last successful /api/news, so offline revisits keep live news instead of dropping to SEED
+  // The last successful /api/news, kept ON THIS DEVICE. In memory only it did not survive a restart, so
+  // any cold start where the fetch failed (offline, backend down, a slow first request the user navigated
+  // past) dropped News, the bell and every news derived release date back to the three July 2026 seed
+  // items, and presented them as a curated shortlist rather than as a fallback. A stored feed older than a
+  // fortnight is ignored. Its own key, never SETTINGS: saving settings pushes to the cloud, and a news
+  // feed is not account state.
+  var NEWS_LS = "palvault-news", NEWS_TTL = 14*24*60*60*1000;
+  var _newsCache = (function(){ try{ var d=JSON.parse(lsGet(NEWS_LS)||"null");
+    if(d && d.items && d.items.length && (Date.now()-(+d.at||0))<NEWS_TTL) return d.items; }catch(e){} return null; })();
+  function saveNewsCache(items){ try{ lsSet(NEWS_LS, JSON.stringify({at:Date.now(), items:items.slice(0,20)})); }catch(e){} }
+  var _newsList = (_newsCache||NEWS_SEED).slice();
   // Feed titles/summaries arrive HTML-entity-encoded (e.g. &#038; , &#8230;); decode before we re-escape for display.
   function decodeEntities(s){ var t=document.createElement("textarea"); t.innerHTML=String(s==null?"":s); return t.value; }
   // Per-item dismiss: a stable id + a persisted dismissed-list so the user can clear old notifications.
@@ -5777,7 +5797,8 @@
   }
   function primeNewsBell(){
     updateBell();
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; _newsList=r.body.items; updateBell(); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
+    refreshReleaseDates(_newsList);   // the stored feed's dates apply at startup, not only once News is opened
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; saveNewsCache(r.body.items); _newsList=r.body.items; updateBell(); refreshReleaseDates(r.body.items); } }).catch(function(){}); }
   }
 
   // ---- Quick Add ----
@@ -6250,10 +6271,20 @@
       return true;
     }catch(e){ return false; }
   };
-  // Native camera reads this to show which collection a scan will go to.
-  window.SDActiveCollection = function(){ try{ return activeCol().name || ""; }catch(e){ return ""; } };
+  // Native camera reads this to show which collection a scan will go to. It has to match what the scan
+  // sheet itself preselects: the "Add cards to" setting when it names a real collection, else the active
+  // one. Reading only the active collection would have named the wrong one for anyone who set a default.
+  window.SDActiveCollection = function(){ try{
+    var d=SETTINGS.defaultAddCol, c=(d && d!=="ask") ? STATE.cols.filter(function(x){ return x.id===d; })[0] : null;
+    return ((c||activeCol()||{}).name)||"";
+  }catch(e){ return ""; } };
+  // The Code / Full card toggle on the camera sticks for the rest of the session: the native scanner reports
+  // back the mode it ended on, and the next camera opens in that one instead of snapping back to the
+  // Settings default before every card of a stack. Changing the default in Settings clears it.
+  var scanModeNow="";
+  window.SDScanMode = function(m){ try{ scanModeNow=(m==="code")?"code":"full"; }catch(e){} };
   // Native camera reads the scan preferences: default mode ("full" | "code"), whether to show the on-camera toggle, and the continuous-scan loop.
-  window.SDScanPrefs = function(){ try{ return JSON.stringify({mode:(SETTINGS.scanMode==="code"?"code":"full"), toggle:SETTINGS.scanToggle!==false, loop:SETTINGS.scanLoop!==false}); }catch(e){ return '{"mode":"full","toggle":true,"loop":true}'; } };
+  window.SDScanPrefs = function(){ try{ return JSON.stringify({mode:((scanModeNow||SETTINGS.scanMode)==="code"?"code":"full"), toggle:SETTINGS.scanToggle!==false, loop:SETTINGS.scanLoop!==false}); }catch(e){ return '{"mode":"full","toggle":true,"loop":true}'; } };
   // Bridge for a tapped push notification (Android + iOS): route the notification's url. An external
   // link (e.g. a news article) opens in the system browser; "card:<ID>" (a price alert) opens that card's
   // sheet over the current page; a bare page name switches pages.
@@ -6346,7 +6377,7 @@
     // Scanner prefs (the native camera reads these via SDScanPrefs): default recognizer mode, on-camera toggle visibility, continuous-scan loop.
     // Only the native apps have a camera scanner, so the group stays hidden on the web.
     var ssg=$("scanSetGroup"); if(ssg) ssg.hidden=!(window.AndroidScan && typeof window.AndroidScan.scan==="function");
-    var sm=$("setScanMode"); if(sm){ sm.value=(SETTINGS.scanMode==="code")?"code":"full"; sm.onchange=function(){ SETTINGS.scanMode=(sm.value==="code")?"code":"full"; saveSettings(); }; }
+    var sm=$("setScanMode"); if(sm){ sm.value=(SETTINGS.scanMode==="code")?"code":"full"; sm.onchange=function(){ SETTINGS.scanMode=(sm.value==="code")?"code":"full"; scanModeNow=""; saveSettings(); }; }   // a new default beats the session's own choice
     var st=$("setScanToggle"); if(st){ st.checked=SETTINGS.scanToggle!==false; st.onchange=function(){ SETTINGS.scanToggle=st.checked; saveSettings(); }; }
     var sl=$("setScanLoop"); if(sl){ sl.checked=SETTINGS.scanLoop!==false; sl.onchange=function(){ SETTINGS.scanLoop=sl.checked; saveSettings(); }; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.

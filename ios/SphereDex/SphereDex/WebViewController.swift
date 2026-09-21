@@ -102,12 +102,23 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                 if let m = obj["mode"] as? String { mode = m }
                 if let t = obj["toggle"] as? Bool { showToggle = t }
             }
-            let scanner = ScannerViewController(resolver: self.resolver, mode: mode, showToggle: showToggle) { [weak self] outcome in
-                guard let self = self, let outcome = outcome else { return }
-                self.deliverScan(outcome)
+            // Which collection the scan lands in, so the camera can say so. The page has exposed this all
+            // along for exactly this purpose and nothing ever read it.
+            self.webView.evaluateJavaScript("window.SDActiveCollection ? window.SDActiveCollection() : ''") { [weak self] colResult, _ in
+                guard let self = self else { return }
+                let collection = (colResult as? String) ?? ""
+                let scanner = ScannerViewController(resolver: self.resolver, mode: mode, showToggle: showToggle, collection: collection) { [weak self] outcome, usedMode in
+                    guard let self = self else { return }
+                    // The on camera Code / Full card toggle sticks: tell the web app which mode the camera
+                    // ended on, so the next card in a continuous run opens in it (SDScanPrefs reads it back).
+                    let safeMode = (usedMode == "code") ? "code" : "full"
+                    self.webView.evaluateJavaScript("window.SDScanMode && window.SDScanMode('\(safeMode)')", completionHandler: nil)
+                    guard let outcome = outcome else { return }
+                    self.deliverScan(outcome)
+                }
+                scanner.modalPresentationStyle = .fullScreen
+                self.present(scanner, animated: true)
             }
-            scanner.modalPresentationStyle = .fullScreen
-            self.present(scanner, animated: true)
         }
     }
 
