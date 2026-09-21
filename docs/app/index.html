@@ -1866,6 +1866,10 @@
         <div class="setinfo"><div class="stitle">Show card number and rarity</div><div class="sdesc">Show the card number and rarity badges on top of the art in the card grid. Turn this off for a cleaner view of the art. Remembered on this device.</div></div>
         <label class="switch"><input type="checkbox" id="setOverlays"><span class="track"></span></label>
       </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Show completion by colour</div><div class="sdesc">Add a panel to the Collection dashboard with a progress bar for every colour and a pill for each product. Remembered on this device.</div></div>
+        <label class="switch"><input type="checkbox" id="setColorDash"><span class="track"></span></label>
+      </div>
       <div class="setrow qmrow">
         <div class="setinfo"><div class="stitle">Customise order of dropdown menu</div><div class="sdesc">The extra pages live in the ☰ menu at the top of the app. Drag the handle (or use the arrows) to set the order they appear in.</div></div>
         <div class="qmslots" id="qmSlots"></div>
@@ -1914,7 +1918,7 @@
     <h2 class="sech">Account</h2>
     <div class="setwrap">
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Display name</div><div class="sdesc">Shown on your collection. Saved on this device.</div></div>
+        <div class="setinfo"><div class="stitle">Display name</div><div class="sdesc">Shown on the account button when you are signed in. Saved on this device.</div></div>
         <input class="sortsel" id="acctName" placeholder="Your name" style="min-width:180px" />
       </div>
       <div class="acctcard" id="acctCard"></div>
@@ -2259,7 +2263,23 @@
   // Collection-page "modes": normal, wishlist, favourites, graded, collected. Only one at a time; all share the same controls.
   function colMode(){ return collectedMode?"collected":(wishMode?"wish":(favMode?"fav":(gradedMode?"graded":"col"))); }
   function clearModes(){ wishMode=false; favMode=false; gradedMode=false; collectedMode=false; }
-  function save(){ try { try{ stampAdds(); }catch(_){} snapshot(); localStorage.setItem(LS_KEY, JSON.stringify(STATE)); if(typeof pushCloud==="function") pushCloud(); } catch(e){} }
+  // One house voice line for a dead network, instead of the browser's own wording, which also differs by
+  // platform ("Failed to fetch" on Android, "Load failed" on iOS).
+  function netErr(){ return "Could not reach the server. Check your connection and try again."; }
+  // A blocked or full localStorage (private browsing, blocked site data, quota) used to take the cloud push
+  // down with it, because both sat in one try: the device could not save AND stopped telling the server, so
+  // a signed in user's adds survived nowhere. The write is now isolated from the push, and a failed write
+  // says so once rather than failing silently.
+  var storageWarned=false;
+  function save(){
+    try{ stampAdds(); }catch(_){}
+    try{ snapshot(); }catch(_){}
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
+    catch(e){
+      if(!storageWarned){ storageWarned=true; try{ toast("This device will not let the app save. Sign in to keep your collection safe."); }catch(_){} }
+    }
+    try{ if(typeof pushCloud==="function") pushCloud(); }catch(_){}
+  }
   // Recently added: each card entry keeps addAt, the time its count (raw copies plus graded slabs) last went up.
   // save() compares every entry with the count it had at the previous save, so every way of adding a card (tile
   // buttons, the card sheet, quick add, the scanner, imports) is stamped in this one place. An entry that arrives
@@ -2649,7 +2669,15 @@
     try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){}
     if(a._currency){ lsSet("paldeck-currency", a._currency); var c=CURRENCIES.filter(function(x){return x.code===a._currency;})[0]; if(c) CUR=c; }
     if(a._edition){ SEAL_ED=(a._edition==="jp")?"jp":"en"; lsSet("palvault-sealed-ed",SEAL_ED); if(typeof reconcileEdition==="function") reconcileEdition(); }
-    if(a.ebayRegion!==undefined && typeof renderPriceAlertList==="function") renderPriceAlertList(); }
+    // Settings that arrive from the account have to be APPLIED, not just stored: the value basis, the
+    // prices on/off mode and the push bridge all used to keep running on the previous device's answers, so
+    // the binder headline could contradict the tiles right under it.
+    if(typeof basisOf==="function") valueBasis=basisOf();
+    if(typeof applySettings==="function") applySettings();
+    if(a.ebayRegion!==undefined){
+      if(typeof renderPriceAlertList==="function") renderPriceAlertList();
+      if(typeof syncPushPrefs==="function") syncPushPrefs();   // stock alerts were still polling the old market
+    } }
   var viewMode = lsGet("palvault-view") || SETTINGS.defaultView || "auto";
   var $ = function(id){ return document.getElementById(id); };
   var grid = $("grid");
@@ -3018,8 +3046,11 @@
     var cards=CARDS.filter(function(c){ var s=o(c.id); if(!has(s)) return false; if(!ownShowGraded && (+s.qty||0)===0 && s.graded && s.graded.length) return false; return true; });
     var gc=cards.reduce(function(a,c){ var s=o(c.id); return a+((s.graded&&s.graded.length)||0); },0);
     var sealed = ownShowSealed ? sealedList().filter(function(p){ return (+sealItem(p.id).qty||0)>0; }) : [];
-    var cval=cards.reduce(function(a,c){ return a+cardValue(o(c.id)); },0);
-    var sval=sealed.reduce(function(a,p){ var s=sealItem(p.id); return a+(+s.qty||0)*(+sealPrice(s).mkt||0); },0);
+    // Both totals follow the price mode, like the tiles and the portfolio do. They used to read raw fields
+    // that only the per card refresh fills, so this line showed a number that disagreed with every other
+    // total on screen, and usually nothing at all.
+    var cval=cards.reduce(function(a,c){ return a+cardValueMode(c.id); },0);
+    var sval=sealed.reduce(function(a,p){ var s=sealItem(p.id); return a+(+s.qty||0)*sealUnit(s); },0);
     var parts=[cards.length+(cards.length===1?" card":" cards")];
     if(gc) parts.push(gc+" graded"); if(sealed.length) parts.push(sealed.length+" sealed");
     if(showPrices && cval+sval>0) parts.push(money(cval+sval));
@@ -3165,7 +3196,9 @@
       var host=$("ownLine"); if(!host) return;
       var parts=[], q=parseInt($("fQty").value,10)||0;
       if(q>0) parts.push('<span class="ownpill" data-t="raw">'+q+' raw · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" type="button" aria-label="Remove one raw copy">−</button></span>');
-      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
+      // again anywhere in the app, so there was no way to check a slab against its label.
+      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
       host.hidden=!parts.length;
       host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
       Array.prototype.forEach.call(host.querySelectorAll(".ownx"), function(b){
@@ -3235,7 +3268,7 @@
         row.innerHTML=
           '<select class="gg gGrader">'+GRADERS.map(function(x){return '<option'+(x===g.grader?' selected':'')+'>'+x+'</option>';}).join("")+'</select>'+
           '<select class="gg gGrade">'+GRADES.map(function(x){return '<option'+(x===g.grade?' selected':'')+'>'+x+'</option>';}).join("")+'</select>'+
-          '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="value $" value="'+(g.value||0)+'">'+
+          '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="value '+esc(CUR.sym)+'" value="'+(g.value||0)+'">'+
           '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>';
         row.querySelector(".gGrader").onchange=function(){ g.grader=this.value; };
         row.querySelector(".gGrade").onchange=function(){ g.grade=this.value; };
@@ -3245,7 +3278,10 @@
       });
     }
     function updateSum(){
-      var q=Math.max(0,parseInt($("fQty").value,10)||0), mk=parseFloat($("fMkt").value)||0;
+      // Follow the price mode, like the tile the user just tapped and the portfolio total do. Reading fMkt
+      // alone showed a different number for the same card in the same session.
+      var q=Math.max(0,parseInt($("fQty").value,10)||0);
+      var mk=(typeof unitOfEntry==="function" ? (unitOfEntry(c.id, priceMode(), s)||0) : 0) || (parseFloat($("fMkt").value)||0);
       var graded=gwork.reduce(function(a,g){ return a+(+g.value||0); },0);
       var total=q*mk+graded;
       $("sumVal").textContent=money(total);
@@ -3507,7 +3543,13 @@
   // The web shares the file on iOS / iPadOS browsers that can share files, else downloads it.
   // onSaved(how) fires only on success ("native", "share" or "download") so callers can toast.
   var _sdFileCb=null;
-  window.SDFileDone=function(ok){ if(ok!==true) return; var cb=_sdFileCb; _sdFileCb=null; if(cb){ try{ cb("native"); }catch(e){} } };
+  // false means the save did not happen. It covers both a cancel and a real failure, and saying nothing at
+  // all left the user tapping Export with no file and no explanation, so it now speaks up either way.
+  window.SDFileDone=function(ok){
+    var cb=_sdFileCb; _sdFileCb=null;
+    if(ok===true){ if(cb){ try{ cb("native"); }catch(e){} } return; }
+    try{ toast("The file was not saved."); }catch(e){}
+  };
   function fileSlug(name, fallback){ var s=String(name||"").replace(/[^a-z0-9]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase(); return s||fallback||"file"; }
   function downloadTextBlob(blob, name, onSaved){
     var url; try{ url=URL.createObjectURL(blob); }catch(e){ toast("Saving files is not supported here"); return; }
@@ -3791,7 +3833,9 @@
     root.setProperty("--logo-c", c);
   }
   var SPHERE_ICON_KEYS=["pal","mega","giga","hyper","ultra","legendary"];
-  function nativeIcon(){ return (window.AndroidIcon && typeof window.AndroidIcon.setIcon==="function") ? window.AndroidIcon : null; }
+  // Only Android implements this bridge. On iOS the object is absent, so the promise of an icon change and
+  // an app restart could never be kept; the theme still applies, which is the part that works everywhere.
+  function nativeIcon(){ return (!window.IS_IOS && window.AndroidIcon && typeof window.AndroidIcon.setIcon==="function") ? window.AndroidIcon : null; }
   function applySphereChoice(i){
     SETTINGS.sphere = i; saveSettings(); applySphere(); renderSphereThemes();
     // On the Android app, also swap the home-screen launcher icon to match the sphere (this relaunches the app).
@@ -3863,7 +3907,15 @@
   }
   function finishOnboard(mode){
     SETTINGS.mode=mode;
-    var reg=$("obRegion"); if(reg && reg.value){ SETTINGS.ebayRegion=reg.value; if(REGION_CUR[reg.value]) applyCurrency(REGION_CUR[reg.value]); }
+    var reg=$("obRegion");
+    if(reg && reg.value){
+      SETTINGS.ebayRegion=reg.value;
+      if(REGION_CUR[reg.value]) applyCurrency(REGION_CUR[reg.value]);
+      // Settings kept showing the auto detected region, so the app disagreed with itself from the first
+      // screen: prices came from the chosen market while Settings named another one.
+      var er=$("setEbayRegion"); if(er) er.value=SETTINGS.ebayRegion;
+      if(typeof syncPushPrefs==="function") syncPushPrefs();
+    }
     SETTINGS.onboarded=true; saveSettings(); applyMode();
     var ob=$("onboard"); if(ob) ob.hidden=true;
     render();
@@ -3923,7 +3975,14 @@
     db.onclick=function(){ sortDir = -sortDir; lsSet("palvault-sortdir", sortDir); paint(); render(); };
   })();
   $("viewSel").value = viewMode;
-  $("viewSel").addEventListener("change", function(e){ viewMode=e.target.value; lsSet("palvault-view",viewMode); render(); });
+  $("viewSel").addEventListener("change", function(e){
+    viewMode=e.target.value; lsSet("palvault-view",viewMode);
+    // Mirror it back into Settings, which used to keep showing the old layout for the rest of the session
+    // even though both controls write the same stored value.
+    SETTINGS.defaultView=viewMode; saveSettings();
+    var sv=$("setViewSel"); if(sv) sv.value=viewMode;
+    render();
+  });
 
   var toastEl=$("toast"), toastT;
   function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove("show"); },2200); }
@@ -4174,11 +4233,11 @@
     // Tell the backend the product type so the search stays strict (a Box never averages in packs/singles).
     var pkind=/box/i.test(p.name)?"box":(/pack/i.test(p.name)?"pack":(/deck/i.test(p.name)?"deck":""));
     function url(source, reg){ return "/api/sales?name="+encodeURIComponent((p.q||("Palworld "+p.name))+(kw?(" "+kw):""))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(pkind?("&kind="+pkind):""); }
-    function getSold(reg){ return salesGet(url("soldcomps",reg), !!btn).then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; pr.sales=(b.sales||[]).slice(0,5).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}); return true; } return false; }).catch(function(){ return false; }); }
+    function getSold(reg){ return salesGet(url("soldcomps",reg), !!btn).then(function(r){ var b=(r&&r.body)||{}; if(b.market!=null){ pr.sold=+(b.avg!=null?b.avg:b.market)||0; if(b.sales&&b.sales.length) pr.last=+b.sales[0].p||0; if(b.avg!=null) pr.avg=+b.avg||0; pr.sales=(b.sales||[]).slice(0,5).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}); return true; } return false; }).catch(function(){ return null; }); }
     function getList(reg){ return salesGet(url("ebay-active",reg), !!btn).then(function(r){ var b=(r&&r.body)||{};
       var rows=(b.sales||[]).map(function(x){return {p:+x.p||0,url:x.url||"",date:x.date||""};}).filter(function(x){return x.p>0;}).sort(function(a,z){return a.p-z.p;});
       if(rows.length) pr.listings=rows.slice(0,5);
-      if(b.market!=null){ pr.list=+b.market||0; return true; } return false; }).catch(function(){ return false; }); }
+      if(b.market!=null){ pr.list=+b.market||0; return true; } return false; }).catch(function(){ return null; }); }
     // Update the open detail sheet's price slots + panels in place (only if this product's sheet is showing).
     function paintSlots(loading){
       if(_sealDetailId!==p.id) return;
@@ -4191,10 +4250,14 @@
     return Promise.all([getSold(region), getList(region)]).then(function(res){
       if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]) return Promise.all([getSold("com"), getList("com")]);
       return res;
-    }).then(function(){
+    }).then(function(got){
       delete _sealPulling[p.id];
       pr.mkt=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:(+pr.mkt||0));   // headline = sold preferred, else list
-      pr.pAt=Date.now(); done(); paintSlots(false); save(); renderSealed(); renderHome();
+      // Only stamp a refresh time when nothing FAILED. A pull that could not reach the server used to count
+      // as a successful refresh and then block the next automatic one for 18 hours. An empty answer from a
+      // reachable server still counts, so a product with no market genuinely does wait.
+      if(!(got||[]).some(function(x){ return x===null; })) pr.pAt=Date.now();
+      done(); paintSlots(false); save(); renderSealed(); renderHome();
       if(btn) toast(((+pr.sold>0)||(+pr.list>0))? ("Prices updated · "+money(sealUnit(s))) : "No market data found");
       return pr;
     }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
@@ -4564,7 +4627,7 @@
   }
   function renderPortfolio(){
     var card=$("portfolioCard"); if(!card) return;
-    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, curLive=Math.round((cardsValueMode("live")+sealedValue())*100)/100, curSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100, today=todayKey(), ct=collCounts();
+    var series=portfolioSeries(), cur=Math.round((cardsValue()+sealedValue())*100)/100, curLive=Math.round((cardsValueMode("live")+sealedValueMode("live"))*100)/100, curSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100, today=todayKey(), ct=collCounts();
     var storedToday=(activeCol().hist||{})[today]||{};
     var live={d:today, v:cur, vLive:curLive, vSold:(storedToday.vSold!=null?+storedToday.vSold:null), cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     // Make sure today's live figure is always the last point on the chart.
@@ -5777,7 +5840,11 @@
         var act=b.getAttribute("data-act"); menu.hidden=true; var col=activeCol();
         if(act==="new"){ openAsk({title:"New collection", value:"Collection "+(STATE.cols.length+1), okText:"Create", onOk:function(n){ var id="c"+Date.now(); STATE.cols.push({id:id,name:n,own:{}}); switchCol(id); toast("Collection “"+n+"” created"); }}); }
         else if(act==="rename"){ openAsk({title:"Rename collection", value:col.name, okText:"Rename", onOk:function(r){ col.name=r; save(); buildColSel(); render(); }}); }
-        else if(act==="dupe"){ var id2="c"+Date.now(), dup={id:id2,name:col.name+" copy",own:JSON.parse(JSON.stringify(col.own))}; STATE.cols.push(dup); baseCol(dup); switchCol(id2); }   // the copy keeps its add times
+        else if(act==="dupe"){
+          // Copy the WHOLE collection, not just the cards: sealed holdings and the value history used to be
+          // silently dropped, so the copy's portfolio total disagreed with the original from the first open.
+          var id2="c"+Date.now(), dup=JSON.parse(JSON.stringify(col)); dup.id=id2; dup.name=col.name+" copy";
+          STATE.cols.push(dup); baseCol(dup); switchCol(id2); }   // the copy keeps its add times
         else if(act==="delete"){ if(STATE.cols.length<2){ toast("Keep at least one collection"); return; } openAsk({title:"Delete this collection?", message:"“"+col.name+"” and its contents will be removed from this device. This can’t be undone.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.cols=STATE.cols.filter(function(x){return x.id!==col.id;}); switchCol(STATE.cols[0].id); toast("Collection deleted"); }}); }
       };
     });
@@ -6065,7 +6132,9 @@
           }
         } else {
           var te=null;
-          addToCollection(colId, card.id, function(x){ te=x; if(ed) x.edition=ed; scanLinkPrices(rec, colId, x); });
+          // Edition is one flag on the shared card entry, so writing it again relabels copies already
+          // recorded under the other edition. Only set it when the entry does not carry one yet.
+          addToCollection(colId, card.id, function(x){ te=x; if(ed && !x.edition) x.edition=ed; scanLinkPrices(rec, colId, x); });
           if(te) added=unitOfEntry(card.id, null, te);
           toast(card.name+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
         }
@@ -6158,6 +6227,9 @@
     sv.onchange=function(){ viewMode=sv.value; SETTINGS.defaultView=sv.value; lsSet("palvault-view",viewMode); saveSettings(); $("viewSel").value=viewMode; render(); };
     var nf=$("setNoFade"); if(nf){ nf.checked=!!SETTINGS.noFade; nf.onchange=function(){ SETTINGS.noFade=nf.checked; saveSettings(); render(); }; }
     var ov=$("setOverlays"); if(ov){ ov.checked=!SETTINGS.hideOverlays; ov.onchange=function(){ SETTINGS.hideOverlays=!ov.checked; saveSettings(); applySettings(); }; }
+    // The colour completion panel was built, styled and rendered, but nothing could set the flag that
+    // reveals it, so it shipped unreachable.
+    var cd=$("setColorDash"); if(cd){ cd.checked=!!SETTINGS.showColorCompletion; cd.onchange=function(){ SETTINGS.showColorCompletion=!!cd.checked; saveSettings(); if(typeof stats==="function") stats(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){ SETTINGS.ebayRegion=er.value; saveSettings(); if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]); syncPushPrefs(); renderPriceAlertList(); fetchServerPrices(true); }; }
@@ -6379,7 +6451,7 @@
       if(!r.ok){ acctMsg(r.body.error||"Sign in failed.", true); return; }
       AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
       renderAccount(); pullState(); toast("Signed in as "+AUTH.email);
-    }).catch(function(e){ done(); acctMsg(String(e.message||e), true); });
+    }).catch(function(){ done(); acctMsg(netErr(), true); });
   }
   function signOut(){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Signed out (data stays on this device)"); }
   // Server rejected our token: it expired, the account was deleted, or the password was reset on
@@ -6442,7 +6514,7 @@
         api("/api/account","DELETE").then(function(r){
           if(r&&r.ok){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Your account has been deleted"); }
           else fail((r&&r.body&&r.body.error)||"Couldn't delete the account. Please try again.");
-        }).catch(function(e){ fail(String((e&&e.message)||e)); });
+        }).catch(function(){ fail(netErr()); });
       }
       delInitial();
     } else {
@@ -6482,7 +6554,7 @@
       api("/api/forgot-password","POST",{email:email}).then(function(r){
         if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't send a code right now.", true); done(); return; }
         renderForgotReset(true);
-      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); done(); });
+      }).catch(function(){ fpMsg(netErr(), true); done(); });
     };
   }
   function renderForgotReset(justSent){
@@ -6517,7 +6589,7 @@
         AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; saveAuth();
         RESET_EMAIL="";
         renderAccount(); pullState(); toast("Password reset. Signed in as "+AUTH.email);
-      }).catch(function(e){ fpMsg(String((e&&e.message)||e), true); done(); });
+      }).catch(function(){ fpMsg(netErr(), true); done(); });
     };
   }
   // Pull the server price book (all cards) into PRICEBOOK so "Sort by Value" ranks every card, not
@@ -6627,7 +6699,9 @@
   // fresh last-sold for owned cards so the collection + graph are up to date - shown by the graph's
   // loading circle. Staleness-gated + server-shared, so it can't run away with the sold-comp quota.
   function autoRefreshPrices(){ refreshLastSold({auto:true}); }
-  if(AUTH.token && apiBase()){ pullState().then(function(){ setTimeout(autoRefreshPrices, 500); }); }
+  // The refresh must run even when the sync fails (offline, server down), so it hangs off a settled
+  // promise rather than a fulfilled one.
+  if(AUTH.token && apiBase()){ pullState().catch(function(){}).then(function(){ setTimeout(autoRefreshPrices, 500); }); }
   else { setTimeout(autoRefreshPrices, 900); }
 })();
 </script>

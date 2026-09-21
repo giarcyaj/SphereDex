@@ -120,8 +120,21 @@ class ScannerActivity : ComponentActivity() {
 
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) startCamera() else finish()
+            // A permanently denied permission no longer shows a dialog, so finishing here was a black flash
+            // and nothing else: no message, no explanation, no idea what to do. Stay up and say it. The back
+            // button is already on screen, so there is still a way out.
+            if (granted) startCamera()
+            else showProblem("SphereDex cannot use the camera. Turn on camera access for SphereDex in your phone settings, then open the scanner again.")
         }
+
+    /** Replace the hint line with an explanation and leave the scanner open. Safe from any thread. */
+    private fun showProblem(message: String) {
+        runOnUiThread {
+            if (!::hint.isInitialized) return@runOnUiThread     // called before the UI was built
+            hint.text = message
+            hint.setPadding(dp(24), dp(40), dp(24), dp(12))
+        }
+    }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
@@ -314,34 +327,41 @@ class ScannerActivity : ComponentActivity() {
     private fun startCamera() {
         val future = ProcessCameraProvider.getInstance(this)
         future.addListener({
-            val provider = future.get()
-            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-            val analysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
-            analysis.setAnalyzer(exec) { proxy ->
-                if (handled || processing) { proxy.close(); return@setAnalyzer }
-                val forced = forceCapture.getAndSet(false)
-                val upright = try { proxy.toUprightBitmap() } finally { proxy.close() }
-                if (upright == null) return@setAnalyzer
-                try {
-                    if (mode == "code") processCode(upright, forced) else processFull(upright, forced)
-                } catch (_: Throwable) {
-                    if (!upright.isRecycled) upright.recycle()
-                }
-            }
-            provider.unbindAll()
-            // Bind preview + analysis in a group sharing the preview's ViewPort, so each analysis frame's
-            // cropRect matches what the user sees (same FOV/crop). Without this the analyzer gets a wider
-            // FOV than the preview, so the card fills the on-screen reticle but is small-with-background in
-            // the buffer, and whole-frame hashing never matches the tight reference images. Falls back to a
-            // plain bind if the preview is not laid out yet (viewPort null).
-            val viewPort = previewView.viewPort
-            if (viewPort != null) {
-                val group = UseCaseGroup.Builder()
-                    .addUseCase(preview).addUseCase(analysis).setViewPort(viewPort).build()
-                provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, group)
-            } else {
-                provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+            // getInstance can fail, get() can throw, and a device with no back camera throws on bind.
+            // On the camera thread that is an uncaught exception, i.e. the app disappears to the home
+            // screen mid scan. Say so and stay open instead.
+            try {
+              val provider = future.get()
+              val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+              val analysis = ImageAnalysis.Builder()
+                  .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+              analysis.setAnalyzer(exec) { proxy ->
+                  if (handled || processing) { proxy.close(); return@setAnalyzer }
+                  val forced = forceCapture.getAndSet(false)
+                  val upright = try { proxy.toUprightBitmap() } finally { proxy.close() }
+                  if (upright == null) return@setAnalyzer
+                  try {
+                      if (mode == "code") processCode(upright, forced) else processFull(upright, forced)
+                  } catch (_: Throwable) {
+                      if (!upright.isRecycled) upright.recycle()
+                  }
+              }
+              provider.unbindAll()
+              // Bind preview + analysis in a group sharing the preview's ViewPort, so each analysis frame's
+              // cropRect matches what the user sees (same FOV/crop). Without this the analyzer gets a wider
+              // FOV than the preview, so the card fills the on-screen reticle but is small-with-background in
+              // the buffer, and whole-frame hashing never matches the tight reference images. Falls back to a
+              // plain bind if the preview is not laid out yet (viewPort null).
+              val viewPort = previewView.viewPort
+              if (viewPort != null) {
+                  val group = UseCaseGroup.Builder()
+                      .addUseCase(preview).addUseCase(analysis).setViewPort(viewPort).build()
+                  provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, group)
+              } else {
+                  provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+              }
+            } catch (t: Throwable) {
+                showProblem("The camera could not start on this device. You can still add cards by typing their number.")
             }
         }, ContextCompat.getMainExecutor(this))
     }
