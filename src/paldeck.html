@@ -2676,6 +2676,7 @@
     o._currency=lsGet("paldeck-currency")||(CUR&&CUR.code);
     o._edition=SEAL_ED; return o; }
   function applyAccountSettings(a){ if(!a||typeof a!=="object") return;
+    var _regionBefore=SETTINGS.ebayRegion;
     ACCT_SETTING_KEYS.forEach(function(k){ if(a[k]!==undefined) SETTINGS[k]=a[k]; });
     try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){}
     if(a._currency){ lsSet("paldeck-currency", a._currency); var c=CURRENCIES.filter(function(x){return x.code===a._currency;})[0]; if(c) CUR=c; }
@@ -2685,6 +2686,14 @@
     // the binder headline could contradict the tiles right under it.
     if(typeof basisOf==="function") valueBasis=basisOf();
     if(typeof applySettings==="function") applySettings();
+    // A market arriving from the account used to be adopted AFTER the price book had already been fetched
+    // for the old one, and nothing refetched: for up to 12 hours the user saw one market's prices under
+    // another market's currency symbol. Empty the books and ask again.
+    if(a.ebayRegion!==undefined && a.ebayRegion!==_regionBefore){
+      PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEMETA={}; PRICEPREV={};
+      try{ localStorage.removeItem("palvault-pricebook-at"); }catch(e){}
+      if(typeof fetchServerPrices==="function") fetchServerPrices(true);
+    }
     if(a.ebayRegion!==undefined){
       if(typeof renderPriceAlertList==="function") renderPriceAlertList();
       if(typeof syncPushPrefs==="function") syncPushPrefs();   // stock alerts were still polling the old market
@@ -6596,8 +6605,15 @@
       // The server now returns two books: live listings (daily) and last sold (weekly). Until either
       // table is populated it comes back empty, so fall back to the blended book so value-sort still works.
       var liveSrc=Object.keys(liveMap).length?liveMap:base, soldSrc=Object.keys(soldMap).length?soldMap:base;
-      Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ PRICEBOOK[id]=+row.market; PRICEMETA[id]=row.converted?1:0; n++; if(row.prev!=null) PRICEPREV[id]=+row.prev; } });
-      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null) PRICEBOOK_SOLD[id]=+row.market; });
+      // Build fresh books rather than merging into the old ones. Merging meant a card the server stopped
+      // returning, or one with no row in a market the user just switched to, kept its previous number for
+      // good: ranked in value sort, counted in the portfolio total, and impossible to tell from a real
+      // price. Only replace when the answer actually carries prices, so an empty reply never blanks the app.
+      var nextLive={}, nextSold={}, nextMeta={}, nextPrev={};
+      Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ nextLive[id]=+row.market; nextMeta[id]=row.converted?1:0; n++; if(row.prev!=null) nextPrev[id]=+row.prev; } });
+      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null) nextSold[id]=+row.market; });
+      if(Object.keys(nextLive).length){ PRICEBOOK=nextLive; PRICEMETA=nextMeta; PRICEPREV=nextPrev; }
+      if(Object.keys(nextSold).length){ PRICEBOOK_SOLD=nextSold; }
       // Only overwrite when the server actually reports a time; an empty table (no timestamp) must NOT wipe the
       // value we loaded from localStorage, or the mode-specific "updated Xd ago" label is lost until a full reload.
       if(r.body.liveRefreshedAt){ var _lt=Date.parse(r.body.liveRefreshedAt); if(_lt) LIVE_ASOF=_lt; }   // server's daily live-listings refresh
