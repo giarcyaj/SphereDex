@@ -12,6 +12,8 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.ViewGroup
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.JavascriptInterface
@@ -38,6 +40,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private var insetJs: String? = null
     private var pageLoaded = false
+
+    // Renderer deaths inside a rolling minute. Rebuilding forever would be a loop, so past a few in a row
+    // the process is handed back to the platform and the next launch starts clean. These have to outlive
+    // the Activity, because recreate() is exactly what the counter is counting.
+    companion object {
+        private var goneCount = 0
+        private var goneSince = 0L
+    }
     private var pendingPushUrl: String? = null
 
     // Android 13+ notification permission. Result ignored: if declined, the user can still opt in
@@ -130,13 +140,24 @@ class MainActivity : ComponentActivity() {
                     return false
                 }
                 // The WebView renderer runs in its own process and the system kills it under memory
-                // pressure. Returning false (the default) takes the WHOLE APP down with it, so the app
-                // simply disappears; returning true after reloading brings the page back instead. The
-                // collection is in localStorage, which outlives the renderer, so nothing is lost.
+                // pressure. Returning false (the default) takes the WHOLE APP down with it. But a WebView
+                // whose renderer has gone is DEAD: loading a url into it does nothing, so "just reload"
+                // leaves a permanently blank screen, which is worse than the crash it replaced. The only
+                // supported recovery is to remove it from the view tree, destroy it, and build a new one,
+                // which recreate() does by rerunning onCreate. The collection is in localStorage, which
+                // outlives the renderer, so nothing is lost but the scroll position.
+                // A real page crash (didCrash) is not a memory kill, and rebuilding into the same crash is
+                // a loop, so those are handed back to the platform, which is the pre-existing behaviour.
                 @RequiresApi(Build.VERSION_CODES.O)
                 override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                    if (detail.didCrash()) return false
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - goneSince > 60_000L) { goneSince = now; goneCount = 0 }
+                    if (++goneCount > 3) return false        // rebuilding is not working: let the process go
                     pageLoaded = false
-                    view.loadUrl("file:///android_asset/spheredex.html")
+                    (view.parent as? ViewGroup)?.removeView(view)
+                    view.destroy()
+                    recreate()                               // onCreate builds a fresh WebView and rewires every bridge
                     return true
                 }
                 // Re-apply insets once the page's DOM exists (the listener may fire before load).

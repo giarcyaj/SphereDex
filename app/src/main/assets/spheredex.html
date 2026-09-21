@@ -2236,6 +2236,13 @@
     CHASE_TOTAL = CARDS.filter(function(c){return c.special;}).length;
     COLORS.forEach(function(c){ COLOR_TOTAL[c]=CARDS.filter(function(x){return x.color===c;}).length; });
     SET_ORDER.forEach(function(k){ SET_TOTAL[k]=CARDS.filter(function(x){return x.set===k;}).length; });
+    // The id lookups are built once and memoised, so a card delivered by the catalogue channel mid session
+    // would be counted in the totals and drawn in the grid while being invisible to the scanner, to search
+    // by number, to price alerts and to anything else that resolves an id. Rebuild them with the counts.
+    try{
+      byNumberIdx={}; CARDS.forEach(function(c){ byNumberIdx[String(c.id).toUpperCase()]=c; });
+      CARD_BY_ID=null;
+    }catch(e){}
   }
   function applyCatalogue(pay){
     if(!pay || !pay.rows || !pay.rows.length) return 0;
@@ -2400,7 +2407,11 @@
   var PRICEBOOK={};   // id -> LIVE-listings market price (daily), in the chosen market's currency (value sort + reference display)
   var PRICEBOOK_SOLD={}; // id -> LAST-SOLD market price (weekly rotation), same currency; used when price mode = "last sold"
   var PRICEPREV={};   // id -> previous day's market price (day-over-day movers, from the live book)
-  var PRICEMETA={};   // id -> 1 when that price was converted from USD (Palworld fallback), else 0
+  var PRICEMETA={};   // id -> 1 when that LIVE price was converted from USD (Palworld fallback), else 0
+  // The same flag for the SOLD book. Without it the tilde was driven by the live row whatever mode you were
+  // in, so in every market outside the US most sold values, which are the free converted baseline, showed
+  // as though somebody had really sold a card for that.
+  var PRICEMETA_SOLD={};
   var PRICEASOF=0;    // ms timestamp the SERVER last refreshed the price book (its daily 1am cron), 0 if unknown
   var LIVE_ASOF=0, SOLD_ASOF=0;  // per-mode server refresh times (live = daily, sold = weekly) so the label names the right one
   var PWMOVERS=[];    // Palworld Prices weekly movers [{id,dir,pct,priceUsd}] - cold-start fallback only
@@ -2442,7 +2453,8 @@
   function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
   // figure. Your own entered value (owned cards) is always native, so it is never flagged converted.
-  function isConverted(id){ var e=own[id]; if(e&&+e.mkt>0) return false; return !!PRICEMETA[id]; }
+  function isConverted(id){ var e=own[id]; if(e&&+e.mkt>0) return false;
+    return !!(priceMode()==="sold" ? PRICEMETA_SOLD[id] : PRICEMETA[id]); }
   // Binder value follows the collection price mode: last 5 sold (e.sold) or live listings (e.list). Synced to SETTINGS.priceMode.
   var valueBasis="list";
   function unitPrice(s, basis){ if(basis==="sold") return (s.sold!=null&&s.sold>0)?s.sold:(+s.mkt||0); if(basis==="list") return (s.list!=null&&s.list>0)?s.list:(+s.mkt||0); return (+s.mkt||0); }
@@ -2457,12 +2469,20 @@
   // happened to open the currency selector. With nothing saved, the market decides. A saved choice still
   // wins, so anyone who has picked a currency keeps it. This reads the stored settings directly because
   // SETTINGS itself is built further down the file.
+  // Every currency the picker offers, mapped to the market that quotes it. Declared here rather than beside
+  // the picker because the saved value has to be checked against it before anything renders.
+  var CUR_REGION={ USD:"com", GBP:"co.uk", EUR:"de", CAD:"ca", AUD:"com.au" };
   var CUR = (function(){
     var code = lsGet("paldeck-currency");
+    // A code the picker no longer offers (JPY, dropped when no market quoted this game in it) left the
+    // selector showing one currency while every price on screen wore another, and picking the one already
+    // displayed fires no change event, so there was no way out. Move those installs to their market's own.
+    if(code && !CUR_REGION[code]) code = "";
     if(!code){
       var reg = "";
       try{ var saved = JSON.parse(localStorage.getItem("palvault-settings")||"{}"); reg = saved && saved.ebayRegion; }catch(e){}
       code = REGION_CUR[reg || detectRegion()] || "USD";
+      try{ lsSet("paldeck-currency", code); }catch(e){}
     }
     return CURRENCIES.filter(function(c){ return c.code===code; })[0] || CURRENCIES[0];
   })();
@@ -2750,6 +2770,24 @@
   function accountSettingsBlob(){ var o={}; ACCT_SETTING_KEYS.forEach(function(k){ if(SETTINGS[k]!==undefined) o[k]=SETTINGS[k]; });
     o._currency=lsGet("paldeck-currency")||(CUR&&CUR.code);
     o._edition=SEAL_ED; return o; }
+  // Prices we FETCHED for the old market are in the old market's money, and the symbol beside them has just
+  // changed, so they are cleared and refill from the new one. Sealed products carry their own per edition
+  // copies of the same figures and used to be left behind, so the Sealed page and the portfolio total went
+  // on mixing two currencies. Values the USER typed in (graded slabs, a card's own market value, the retail
+  // price on a sealed product) are never touched: those are their data, not ours to rewrite.
+  function clearFetchedPrices(){
+    var PF=["mkt","last","avg","sold","list","pAt"];
+    try{
+      (STATE.cols||[]).forEach(function(col){
+        var m=col.own||{}, k;
+        for(k in m){ var e=m[k]; if(!e) continue; e.sold=0; e.list=0; e.mkt=0; e.last=0; e.avg=0; e.pAt=0; }
+        var sm=col.sealed||{};
+        for(k in sm){ var sp=sm[k]; if(!sp || typeof sp!=="object") continue;
+          PF.forEach(function(f){ sp[f]=0; if(sp.ed){ if(sp.ed.en) sp.ed.en[f]=0; if(sp.ed.jp) sp.ed.jp[f]=0; } }); }
+      });
+      save();
+    }catch(e){}
+  }
   function applyAccountSettings(a){ if(!a||typeof a!=="object") return;
     var _regionBefore=SETTINGS.ebayRegion;
     ACCT_SETTING_KEYS.forEach(function(k){ if(a[k]!==undefined) SETTINGS[k]=a[k]; });
@@ -2761,12 +2799,18 @@
     // the binder headline could contradict the tiles right under it.
     if(typeof basisOf==="function") valueBasis=basisOf();
     if(typeof applySettings==="function") applySettings();
+    // applySettings only covers the overlay and colour panel switches. Collector mode and the text size are
+    // CSS driven, so without these the synced answer showed in the grid while the portfolio card, the price
+    // controls and the root font size kept the other device's.
+    if(typeof applyMode==="function") applyMode();
+    if(typeof applyTextScale==="function") applyTextScale();
     // A market arriving from the account used to be adopted AFTER the price book had already been fetched
     // for the old one, and nothing refetched: for up to 12 hours the user saw one market's prices under
     // another market's currency symbol. Empty the books and ask again.
     if(a.ebayRegion!==undefined && a.ebayRegion!==_regionBefore){
-      PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEMETA={}; PRICEPREV={};
+      PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEMETA={}; PRICEMETA_SOLD={}; PRICEPREV={};
       try{ localStorage.removeItem("palvault-pricebook-at"); }catch(e){}
+      clearFetchedPrices();   // the books refill, but the per card and per sealed figures had to go too
       if(typeof fetchServerPrices==="function") fetchServerPrices(true);
     }
     if(a.ebayRegion!==undefined){
@@ -4052,7 +4096,6 @@
   // anything, it only swapped the symbol: GBP amounts read as dollars, and as whole yen since JPY has no
   // decimals. Picking a currency now moves the market to the one that quotes in it, which is the only way
   // the symbol and the number agree. JPY is not offered because no eBay market quotes this game in it.
-  var CUR_REGION={ USD:"com", GBP:"co.uk", EUR:"de", CAD:"ca", AUD:"com.au" };
   (function(){
     var sel=$("curSel");
     sel.title="Currency follows your market";
@@ -5995,6 +6038,7 @@
   // ---- Rich scan confirmation: card image → Wishlist/Collection → Raw/Graded → which collection.
   var scanScrim=$("scanScrim");
   var scanState={card:null,dest:"collection",type:"raw",edition:"1"};
+  var scanBusy=false;   // one press per sheet; cleared by openScanModal and closeScanModal
   var scanSession={count:0,value:0,ts:0};  // running tally across a continuous-scan burst (Collectr-inspired); auto-resets after 60s idle
   function paintSeg(rowId,attr,val){
     var row=$(rowId); if(!row) return;
@@ -6163,6 +6207,7 @@
   }
   function openScanModal(card, edition, graded, lowConf){
     if(!scanScrim) return;
+    scanBusy=false;   // a fresh sheet always accepts a press
     // Collector mode hides every graded control, so filing a scan as a slab there leaves the user with a
     // card they cannot see the count of, cannot value and cannot convert back. Add it as a raw copy.
     scanState.dest="collection"; scanState.type=(SETTINGS.mode!=="collector" && graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
@@ -6206,7 +6251,7 @@
     scanScrim.hidden=false;
     if(!_scWas) openOverlay(closeScanModal);
   }
-  function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; clearTimeout(scanGpTimer); scanGpTimer=null; }
+  function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; scanBusy=false; clearTimeout(scanGpTimer); scanGpTimer=null; }
   // Continuous scanning: after Add/Cancel, reopen the native camera so the user can scan the next card.
   function scanContinue(){ try{ if(SETTINGS.scanLoop!==false && window.AndroidScan && typeof window.AndroidScan.scan==="function") setTimeout(function(){ window.AndroidScan.scan(); },120); }catch(e){} }
   (function(){
@@ -6221,8 +6266,10 @@
       scanPriceRow(scanState.card, true); }); });
     $("scanEdition").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.edition=b.getAttribute("data-edition"); paintScan(); });
     // dismissOverlay goes through history.back(), so the sheet is still on screen and scanState is still
-    // set until the popstate task runs. A second press in that window used to add the card twice.
-    var scanBusy=false;
+    // set until the popstate task runs. A second press in that window used to add the card twice. The flag
+    // that closes that window lives beside scanState, and is cleared when the sheet opens and closes: as a
+    // local here it was set once and never cleared, so from the second card of a session onwards Add and
+    // Cancel silently did nothing and the sheet looked frozen.
     $("scanCancel").onclick=function(){ if(scanBusy) return; scanBusy=true; dismissOverlay(); scanContinue(); };
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
     var si=$("scanImg"); if(si){ si.onclick=function(){ if(scanState.card) openLightbox(scanState.card); }; si.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(scanState.card) openLightbox(scanState.card); } }; }
@@ -6368,16 +6415,7 @@
     var er=$("setEbayRegion"); if(er){ er.value=SETTINGS.ebayRegion||"co.uk"; er.onchange=function(){
       SETTINGS.ebayRegion=er.value; saveSettings();
       if(REGION_CUR[er.value]) applyCurrency(REGION_CUR[er.value]);
-      // Per card prices FETCHED for the old market are in the old market's money, and the symbol beside
-      // them has just changed, so they are cleared and will refill from the new market. Values the user
-      // typed in (graded slabs) are never touched: those are their data, not ours to rewrite.
-      try{
-        (STATE.cols||[]).forEach(function(col){
-          var m=col.own||{}, k;
-          for(k in m){ var e=m[k]; if(!e) continue; e.sold=0; e.list=0; e.mkt=0; e.last=0; e.avg=0; e.pAt=0; }
-        });
-        save();
-      }catch(e){}
+      clearFetchedPrices();
       syncPushPrefs(); renderPriceAlertList(); fetchServerPrices(true);
     }; }
     var fu=$("setFallbackUS"); if(fu){ fu.checked=!!SETTINGS.fallbackUS; fu.onchange=function(){ SETTINGS.fallbackUS=fu.checked; saveSettings(); }; }
@@ -6475,7 +6513,9 @@
       return (STATE.cols||[]).some(function(col){
         var m=col.own||{}, s=col.sealed||{}, k;
         for(k in m){ var e=m[k]; if(e && ((+e.qty>0) || (e.graded&&e.graded.length))) return true; }
-        for(k in s){ if(+s[k]>0) return true; }
+        // Sealed holdings are objects, so a plain + is NaN: a collection of nothing but boxes and pre
+        // orders reported itself empty and lost its protection against being replaced by the cloud copy.
+        for(k in s){ var sp=s[k]; if(sp && (typeof sp==="object" ? (+sp.qty>0) : (+sp>0))) return true; }
         return false;
       });
     }catch(e){ return false; }
@@ -6495,8 +6535,14 @@
     for(k in a) out[k]=a[k];                       // this device's own fields win on a tie
     out.qty=Math.max(+a.qty||0, +b.qty||0);
     out.wish=!!(a.wish||b.wish); out.fav=!!(a.fav||b.fav);
-    var seen={}, slabs=[];
-    ((a.graded)||[]).concat((b.graded)||[]).forEach(function(g){ var sk=slabSig(g); if(g && !seen[sk]){ seen[sk]=1; slabs.push(g); } });
+    // Slabs are counted per signature, not deduped by it. Two PSA 10 copies of the same card are identical
+    // right down to the (absent) cert number, so deduping collapsed a genuine pair into one, on one side as
+    // well as across the two. Take the higher count each side holds, which is the same additions win rule
+    // the quantity above uses.
+    function slabTally(arr){ var t={}; (arr||[]).forEach(function(g){ if(g){ var sk=slabSig(g); t[sk]=(t[sk]||0)+1; } }); return t; }
+    var ta=slabTally(a.graded), tb=slabTally(b.graded), first={}, order=[], slabs=[];
+    ((a.graded)||[]).concat((b.graded)||[]).forEach(function(g){ if(!g) return; var sk=slabSig(g); if(!first[sk]){ first[sk]=g; order.push(sk); } });
+    order.forEach(function(sk){ var n=Math.max(ta[sk]||0, tb[sk]||0); for(var i=0;i<n;i++) slabs.push(cloneSlab(first[sk])); });
     out.graded=slabs;
     if((b.notes||"").length > (a.notes||"").length) out.notes=b.notes;
     return out;
@@ -6509,10 +6555,26 @@
     for(k in ao) own[k]=ao[k];
     for(k in bo) own[k]=mergeEntry(ao[k], bo[k]);
     out.own=own;
+    // Sealed holdings are OBJECTS ({qty,rrp,mkt,last,avg} plus a per edition .ed), not numbers. Merging
+    // them with Math.max turned every one into NaN and then 0, which silently emptied the whole Sealed tab
+    // and dropped it out of the portfolio. Union the fields, take the higher count, and keep both editions.
     var seal={}, as=a.sealed||{}, bs=b.sealed||{};
     for(k in as) seal[k]=as[k];
-    for(k in bs) seal[k]=Math.max(+as[k]||0, +bs[k]||0);
+    for(k in bs){
+      var A=as[k], B=bs[k];
+      if(A && typeof A==="object" && B && typeof B==="object"){
+        var sp=Object.assign({}, B, A);                        // this device's own fields win on a tie
+        sp.qty=Math.max(+A.qty||0, +B.qty||0);
+        sp.rrp=Math.max(+A.rrp||0, +B.rrp||0);
+        if(A.ed||B.ed){ sp.ed={}; ["en","jp"].forEach(function(x){
+          var ea=(A.ed||{})[x], eb=(B.ed||{})[x]; if(ea||eb) sp.ed[x]=Object.assign({}, eb||{}, ea||{}); }); }
+        seal[k]=sp;
+      } else seal[k]=A||B;                                     // anything that is not a pair of objects: keep whichever exists
+    }
     out.sealed=seal;
+    // Price history is per collection, so the copy that only the other device recorded has to survive too.
+    // A day key present on both sides keeps this device's entry.
+    if(a.hist || b.hist) out.hist=Object.assign({}, b.hist||{}, a.hist||{});
     return out;
   }
   function mergeStates(local, remote){
@@ -6528,6 +6590,21 @@
     (remote.cols||[]).forEach(function(c){ if(c && c.id && !byId[c.id]) merged.push(c); });   // only on the cloud: keep it
     out.cols=merged;
     if(!merged.filter(function(c){ return c.id===out.active; })[0] && merged.length) out.active=merged[0].id;
+    // The wishlist, favourites and decks live at the TOP of the state, not inside a collection, so copying
+    // this device's top level and then only replacing cols dropped the other device's copy of all three and
+    // pushed the loss straight back up. Union them, this device winning a clash, the same rule as cards.
+    out.wishlist=Object.assign({}, remote.wishlist||{}, local.wishlist||{});
+    out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
+    var dm={}, dorder=[];
+    (remote.decks||[]).concat(local.decks||[]).forEach(function(d){
+      if(!d || !d.id) return;
+      if(!dm[d.id]) dorder.push(d.id);
+      dm[d.id]=d;                                  // local comes second, so this device's copy wins
+    });
+    if(dorder.length){
+      out.decks=dorder.map(function(id){ return dm[id]; });
+      if(!dm[out.activeDeck]) out.activeDeck=out.decks[0].id;
+    }
     return out;
   }
   function adoptRemote(blob, rev){
@@ -6792,11 +6869,11 @@
       // returning, or one with no row in a market the user just switched to, kept its previous number for
       // good: ranked in value sort, counted in the portfolio total, and impossible to tell from a real
       // price. Only replace when the answer actually carries prices, so an empty reply never blanks the app.
-      var nextLive={}, nextSold={}, nextMeta={}, nextPrev={};
+      var nextLive={}, nextSold={}, nextMeta={}, nextSoldMeta={}, nextPrev={};
       Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ nextLive[id]=+row.market; nextMeta[id]=row.converted?1:0; n++; if(row.prev!=null) nextPrev[id]=+row.prev; } });
-      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null) nextSold[id]=+row.market; });
+      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null){ nextSold[id]=+row.market; nextSoldMeta[id]=row.converted?1:0; } });
       if(Object.keys(nextLive).length){ PRICEBOOK=nextLive; PRICEMETA=nextMeta; PRICEPREV=nextPrev; }
-      if(Object.keys(nextSold).length){ PRICEBOOK_SOLD=nextSold; }
+      if(Object.keys(nextSold).length){ PRICEBOOK_SOLD=nextSold; PRICEMETA_SOLD=nextSoldMeta; }
       // Only overwrite when the server actually reports a time; an empty table (no timestamp) must NOT wipe the
       // value we loaded from localStorage, or the mode-specific "updated Xd ago" label is lost until a full reload.
       if(r.body.liveRefreshedAt){ var _lt=Date.parse(r.body.liveRefreshedAt); if(_lt) LIVE_ASOF=_lt; }   // server's daily live-listings refresh
@@ -6809,7 +6886,7 @@
       // of reporting the newest single write as if it covered everything.
       if(r.body.liveCoverage) LIVE_COV=r.body.liveCoverage;
       if(r.body.soldCoverage) SOLD_COV=r.body.soldCoverage;
-      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); else localStorage.removeItem("palvault-sold-asof"); }catch(_){}
+      try{ localStorage.setItem("palvault-pricebook", JSON.stringify(PRICEBOOK)); localStorage.setItem("palvault-pricebook-sold", JSON.stringify(PRICEBOOK_SOLD)); localStorage.setItem("palvault-priceprev", JSON.stringify(PRICEPREV)); localStorage.setItem("palvault-pricemeta", JSON.stringify(PRICEMETA)); localStorage.setItem("palvault-pricemeta-sold", JSON.stringify(PRICEMETA_SOLD)); localStorage.setItem("palvault-pricebook-at", String(Date.now())); if(PRICEASOF) localStorage.setItem("palvault-price-asof", String(PRICEASOF)); if(LIVE_ASOF) localStorage.setItem("palvault-live-asof", String(LIVE_ASOF)); if(SOLD_ASOF) localStorage.setItem("palvault-sold-asof", String(SOLD_ASOF)); else localStorage.removeItem("palvault-sold-asof"); }catch(_){}
       // Drop a blue "last sold" mark automatically when the server's weekly sold rotation produced newer
       // data than we've already marked (so the graph gets a fresh sold point about weekly without a manual tap).
       if(SOLD_ASOF){ var lastMark=+lsGet("palvault-sold-mark-asof")||0;
@@ -6854,7 +6931,7 @@
     var fp=$("fetchPrices"); if(fp) fp.onclick=function(){ var done=busyBtn(fp,"Refreshing…"); Promise.resolve(fetchServerPrices(false)).then(done,done); };
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background on the first open after the server's daily ~1am refresh (12h fallback).
-    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
+    try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEMETA_SOLD=JSON.parse(localStorage.getItem("palvault-pricemeta-sold")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEMETA_SOLD={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
     if(apiBase()){
       priceBookGate();
     }
@@ -6883,7 +6960,10 @@
   // force closed. The web has the same shape, since a pinned tab is never reloaded either. So: when the
   // app becomes visible again, and at most once every 15 minutes, refresh the things that go stale and
   // ask the server whether a newer build exists.
-  var WAKE_AT=Date.now(), WAKE_GAP=15*60*1000, updateAt=0, UPDATE_GAP=60*60*1000;
+  // updateAt paces the update TOAST; verAt paces the request itself. With only the first, an app that was
+  // already up to date never set it, so it checked in on every wake while an app on an old build checked in
+  // once an hour, and the digest's "percent behind" counted the wrong people four times as often.
+  var WAKE_AT=Date.now(), WAKE_GAP=15*60*1000, updateAt=0, verAt=0, UPDATE_GAP=60*60*1000;
   function verNum(v){
     var p=String(v||"").split(".");
     return (+p[0]||0)*10000 + (+p[1]||0)*100 + (+p[2]||0);
@@ -6908,16 +6988,30 @@
         if(!j || j.uptodate || !j.rows) return;
         var n=applyCatalogue(j);
         if(!n) return;
-        try{ localStorage.setItem(CAT_KEY, JSON.stringify(j)); }catch(e){}
+        // Store the UNION of what we had and what arrived. The server keeps one payload, so a later publish
+        // scoped to one set would otherwise replace the earlier one here, and the next cold start would
+        // rebuild the card list without the first set: gone from the grid, the filters and the totals, with
+        // no way back because the version check then says we are up to date.
+        try{
+          var prev=storedCatalogue()||{}, merged={version:(+j.version||0), rows:[], sets:{}, setOrder:[], img:{}}, seenRow={};
+          (prev.rows||[]).concat(j.rows||[]).forEach(function(row){ var id=row&&row[0]; if(!id||seenRow[id]) return; seenRow[id]=1; merged.rows.push(row); });
+          merged.sets=Object.assign({}, prev.sets||{}, j.sets||{});
+          merged.img=Object.assign({}, prev.img||{}, j.img||{});
+          (prev.setOrder||[]).concat(j.setOrder||[]).forEach(function(c){ if(c && merged.setOrder.indexOf(c)<0) merged.setOrder.push(c); });
+          localStorage.setItem(CAT_KEY, JSON.stringify(merged));
+        }catch(e){ try{ localStorage.setItem(CAT_KEY, JSON.stringify(j)); }catch(_){} }
         try{ render(); }catch(e){}
         try{ if(typeof renderHome==="function") renderHome(); }catch(e){}
+        try{ if(typeof renderSealed==="function") renderSealed(); }catch(e){}
+        try{ if(typeof syncSetChips==="function") syncSetChips(); }catch(e){}
         try{ if(typeof renderReleases==="function") renderReleases(); }catch(e){}
         try{ if(typeof fetchServerPrices==="function") fetchServerPrices(true); }catch(e){}   // price the new cards
         toast(n+" new card"+(n===1?"":"s")+" added to your app");
       }).catch(function(){});
   }
   function checkAppVersion(){
-    if(!apiBase() || (updateAt && Date.now()-updateAt < UPDATE_GAP)) return;
+    if(!apiBase() || (verAt && Date.now()-verAt < UPDATE_GAP)) return;
+    verAt=Date.now();
     // Sending our version lets the server count how many people are on which build, which is how a fix is
     // known to have reached anyone. It is a version string and nothing else.
     fetch(apiBase()+"/api/version?v="+encodeURIComponent(APP_VERSION),{cache:"no-store"})
