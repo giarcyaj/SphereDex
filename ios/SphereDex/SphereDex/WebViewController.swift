@@ -24,7 +24,6 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         view.backgroundColor = Self.bgColor
 
         let controller = WKUserContentController()
-        // Shim so the existing web code detects a native shell (IS_NATIVE) and routes scan/icon to us.
         // Shim so the web app detects a native shell: scan/icon route to us, and the Settings
         // Notifications toggles (gated on a native push bridge) drive per-device push categories.
         // IOSFile.save hands CSV / JSON exports to the native share sheet (a web download can't work here).
@@ -124,8 +123,19 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
 
     /// Hand a scan result to the web app's rich add dialog:
     /// SDScanAdd(number, edition, graded{grader,grade,cert}|null, lowConfidence).
+    /// Every argument is serialized through JSONEncoder-compatible literals (strings quoted with
+    /// escaped control characters), so text read off a card stays data and can never be
+    /// re-interpreted as JavaScript inside evaluateJavaScript.
     private func deliverScan(_ outcome: ScanOutcome) {
-        let num = outcome.number.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "'", with: "")
+        func jsString(_ s: String) -> String {
+            let escaped = s
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\r", with: "\\r")
+                .replacingOccurrences(of: "\t", with: "\\t")
+            return "\"" + escaped + "\""
+        }
         var gradedJS = "null"
         if let slab = outcome.slab {
             let dict: [String: String] = ["grader": slab.grader, "grade": slab.grade, "cert": slab.cert ?? ""]
@@ -135,7 +145,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             }
         }
         let lowConf = outcome.lowConfidence ? "true" : "false"
-        let js = "window.SDScanAdd && window.SDScanAdd('\(num)', \(outcome.edition), \(gradedJS), \(lowConf))"
+        let js = "window.SDScanAdd && window.SDScanAdd(\(jsString(outcome.number)), \(outcome.edition), \(gradedJS), \(lowConf))"
         webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
@@ -379,9 +389,11 @@ final class PushRouter {
     private func flush() {
         guard ready, let webView = webView, let url = pending else { return }
         pending = nil
-        let safe = url.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "'", with: "")
+        // JSON-serialize the URL so it stays a string argument and cannot be re-interpreted as code.
+        let data = try? JSONSerialization.data(withJSONObject: [url])
+        guard let quoted = data.flatMap({ String(data: $0, encoding: .utf8) }) else { return }
         DispatchQueue.main.async {
-            webView.evaluateJavaScript("window.SDOpenPush && window.SDOpenPush('\(safe)')", completionHandler: nil)
+            webView.evaluateJavaScript("window.SDOpenPush && window.SDOpenPush(\(quoted)[0])", completionHandler: nil)
         }
     }
 }

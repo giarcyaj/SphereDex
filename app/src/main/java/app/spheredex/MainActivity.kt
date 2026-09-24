@@ -25,6 +25,8 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
             // The on camera Code / Full card toggle sticks: tell the web app which mode the camera ended
             // on, so the next card in a continuous run opens in it (SDScanPrefs reads it back).
             res.data?.getStringExtra("mode")?.let { m ->
+                // safeMode is one of two literals, not user data, so it needs no JSON quoting.
                 val safeMode = if (m == "code") "code" else "full"
                 web.evaluateJavascript("window.SDScanMode && window.SDScanMode('$safeMode')", null)
             }
@@ -70,13 +73,17 @@ class MainActivity : ComponentActivity() {
             if (res.resultCode == RESULT_OK && !number.isNullOrEmpty()) {
                 // Deliver the rich scan outcome to the web app's add dialog:
                 // SDScanAdd(number, edition, graded{grader,grade,cert}|null, lowConfidence).
-                val safe = number.replace("\\", "").replace("'", "")
+                // Every argument is serialized to a JSON literal, so whatever the scanner read off a
+                // card stays data and can never be re-interpreted as JavaScript.
                 val edition = res.data?.getIntExtra("edition", 1) ?: 1
                 val graded = res.data?.getStringExtra("graded")     // JSON object string, or null for a raw card
                 val lowConf = res.data?.getBooleanExtra("lowConf", false) ?: false
-                val gradedArg = if (graded.isNullOrEmpty()) "null" else graded   // valid JS object literal
+                val gradedArg = if (graded.isNullOrEmpty()) "null" else graded   // valid JSON object literal
+                val args = JSONArray().put(number).put(edition)
+                    .put(if (gradedArg == "null") JSONObject.NULL else JSONObject(gradedArg))
+                    .put(lowConf)
                 web.evaluateJavascript(
-                    "window.SDScanAdd && window.SDScanAdd('$safe', $edition, $gradedArg, $lowConf)", null
+                    "window.SDScanAdd && window.SDScanAdd.apply(null, ${args.toString()})", null
                 )
             }
         }
@@ -116,7 +123,8 @@ class MainActivity : ComponentActivity() {
             with(settings) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                allowFileAccess = true
+                // No allowFileAccess: the only file URL the app loads is the bundled asset above, which
+                // works without it, and a blanket file grant is wider than the app needs.
                 useWideViewPort = true
                 loadWithOverviewMode = true
                 builtInZoomControls = false
@@ -298,8 +306,9 @@ class MainActivity : ComponentActivity() {
         if (!pageLoaded) return
         val u = pendingPushUrl ?: return
         pendingPushUrl = null
-        val safe = u.replace("\\", "").replace("'", "")
-        web.evaluateJavascript("window.SDOpenPush && window.SDOpenPush('$safe')", null)
+        web.evaluateJavascript(
+            "window.SDOpenPush && window.SDOpenPush(${JSONObject.quote(u)})", null
+        )
     }
 
     private fun launchScanner(collection: String, mode: String, showToggle: Boolean) {

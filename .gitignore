@@ -5,6 +5,21 @@
 # GOOGLE_SERVICES_JSON_BASE64 secret at build time, like the signing keystore).
 app/google-services.json
 
+# Android build machine state. local.properties holds the local SDK path (the
+# header comment inside it says exactly that), .gradle/ is Gradle's per-project
+# cache, and app/build/ is build output. None of it belongs in version control;
+# tracking it kept git status permanently dirty on every build.
+local.properties
+.gradle/
+app/build/
+
+# Python tooling cache (tools/*.py)
+__pycache__/
+
+# Local scratch, previews and superseded store assets
+tmp/
+store-assets/google-play/_old-v1/
+
 # Xcode user state & build artifacts (iOS)
 ios/**/xcuserdata/
 ios/**/*.xcuserstate
