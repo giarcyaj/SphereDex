@@ -770,6 +770,10 @@
   .featbadge .ic { width:.85rem; height:.85rem; margin:0; }
   .feattitle { display:block; font-family:var(--font-display); font-weight:800; font-size:1.04rem; line-height:1.25; margin:9px 0 3px; }
   .featmeta { display:block; font-size:.73rem; color:rgba(255,255,255,.8); }
+  .featpoints { display:block; margin-top:4px; font-size:.68rem; line-height:1.35; color:rgba(255,255,255,.88); }
+  .featpoints span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .featpoints span::before { content:"\u2022  "; opacity:.9; }
+  @media (min-width:760px){ .featpoints span{ white-space:normal; } }
   .featdots { position:absolute; right:11px; top:11px; display:flex; gap:6px; }
   .featdot { width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer; background:rgba(255,255,255,.42); }
   .featdot[aria-current="true"] { background:#fff; transform:scale(1.25); }
@@ -2697,6 +2701,36 @@
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 1.11.
   var APP_VERSION = "1.11";
+  // Highlights shown in the Home headliner when this build is behind the store build.
+  // Keep 3 short lines per version; the headliner shows them as bullets.
+  // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
+  // same number, and add the next version's 3 lines here so the *following* update is ready.
+  var RELEASE_HIGHLIGHTS = {
+    "1.10": [
+      "Price alerts \u2014 follow any card, get told when it moves the way you want",
+      "Sort by recently added & a blue tick for what you just added",
+      "Filter by set and product \u2014 booster, trial deck or promo"
+    ],
+    "1.11": [
+      "iPhone notifications live \u2014 new sets, news, stock & price alerts",
+      "Honest prices: real vs estimate and freshness on every card",
+      "New cards arrive without waiting for a store update"
+    ],
+    "1.12": [
+      "A more useful Home \u2014 next actions for collection, wishlist & decks",
+      "Home opens on what\u2019s new \u2014 the scrolling headliner for news & releases",
+      "PalDex \u2014 every printing of a Pal in one place, by Paldex number"
+    ]
+  };
+  // The store build the version check learns about ("" until the first check completes).
+  // Persisted so an offline behind user still sees the update headliner from the last check.
+  var _latestAppVersion = (function(){ try{ return String(localStorage.getItem("palvault-latest")||""); }catch(e){ return ""; } })();
+  var _latestNotes = (function(){ try{ var j=JSON.parse(localStorage.getItem("palvault-latest-notes")||"null"); return Array.isArray(j)?j.slice(0,3).map(String):null; }catch(e){ return null; } })();
+  function updateNotesFor(v){
+    if(_latestNotes && _latestNotes.length) return _latestNotes.slice(0,3);
+    var m = RELEASE_HIGHLIGHTS[String(v||"")] || [];
+    return m.slice(0,3);
+  }
   // Label the web prototype without changing the installed app's real build version.
   var V2_PREVIEW = /(?:^|&)preview=v2(?:&|$)/i.test((window.location.search||"").replace(/^\?/,"")) && !window.IS_IOS && !window.IS_NATIVE;
   var STATE = loadState();
@@ -6716,6 +6750,16 @@
       if(!up || t<up.t) up={t:t, name:p.set||p.name, date:sealDate(p), banner:p.banner||"", box:p.box||"", product:p};
     });
     var out=[], news=(typeof visibleNews==="function") ? visibleNews()[0] : null;
+    // Update headliner: only when the installed build is behind the store build.
+    // It is the first slide so it is the first thing a behind user sees, and the
+    // three highlights tell them why it is worth tapping.
+    if(typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION)){
+      var _upNotes = (typeof updateNotesFor==="function" ? updateNotesFor(_latestAppVersion) : (typeof RELEASE_HIGHLIGHTS!=="undefined" ? (RELEASE_HIGHLIGHTS[_latestAppVersion]||[]) : []));
+      if(!_upNotes || !_upNotes.length) _upNotes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
+      _upNotes=_upNotes.slice(0,3);
+      var _upArt = liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : "");
+      out.push({kind:"update", badge:"Update available", title:"SphereDex "+_latestAppVersion+" is here", meta:_upNotes.join(" \u00b7 "), notes:_upNotes, art:_upArt, version:_latestAppVersion});
+    }
     // Fall back to a set whose art is bundled, so the newest headline still gets a real image offline.
     var newsSet=news ? (featNewsSet(news)||liveArt[0]||live[0]||"") : "";
     if(news) out.push({ kind:"news", badge:"Latest news", title:decodeEntities(news.title||"What\u2019s new"),
@@ -6773,6 +6817,17 @@
   }
   function openFeatured(s){
     if(!s) return;
+    if(s.kind==="update"){
+      var v = s.version || _latestAppVersion || "";
+      if(window.IS_NATIVE || window.IS_IOS){
+        toast("Version "+v+" is out. Update SphereDex for the newest cards and prices.");
+      } else {
+        toast("Version "+v+" is ready. Reloading to get it\u2026");
+        try{ if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){ navigator.serviceWorker.getRegistration().then(function(r){ if(r&&r.update) r.update(); }).catch(function(){}); } }catch(e){}
+        setTimeout(function(){ try{ location.reload(); }catch(e){} }, 600);
+      }
+      return;
+    }
     if(s.kind==="release" && s.set){ openSet(s.set); return; }
     if(s.kind==="news"){ showPage("news"); return; }
     showPage("releases");
@@ -6782,7 +6837,7 @@
     var slides=featuredSlides();
     featStop();
     if(!slides.length){ host.hidden=true; host.innerHTML=""; _featSig=""; return; }
-    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta; }).join("~");
+    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta+"|"+(s.notes?s.notes.join("|"):""); }).join("~");
     // renderHome runs on every collection change; rebuilding identical slides would restart the scroll
     // animation mid-way, so only repaint when the content itself has moved on.
     if(sig===_featSig && !host.hidden){ featStart(); return; }
@@ -6791,10 +6846,14 @@
     var cells=slides.map(function(s,i){
       var img=s.art ? '<img src="'+esc(s.art)+'" alt="" loading="lazy">' : "";
       var on=(i===_featIndex);
+      var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="update"?"refresh":"news"));
+      var bodyMeta = (s.kind==="update" && s.notes && s.notes.length)
+        ? '<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>'
+        : '<span class="featmeta">'+esc(s.meta)+'</span>';
       return '<button class="featslide'+(on?" on":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
         '><span class="featimg'+(s.art?"":" featnoimg")+'">'+img+'</span><span class="featscrim"></span>'+
-        '<span class="featbody"><span class="featbadge">'+icon(s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":"news"))+esc(s.badge)+'</span>'+
-        '<span class="feattitle">'+esc(s.title)+'</span><span class="featmeta">'+esc(s.meta)+'</span></span></button>';
+        '<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
+        '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span></button>';
     }).join("");
     var dots=slides.length>1 ? '<span class="featdots">'+slides.map(function(s,i){
         return '<button class="featdot" type="button" data-i="'+i+'" aria-current="'+(i===_featIndex)+'" aria-label="Show slide '+(i+1)+' of '+slides.length+'"></button>';
@@ -8439,7 +8498,17 @@
       .then(function(r){ return r.ok? r.json() : null; })
       .then(function(j){
         var latest=j && j.app ? String(j.app) : "";
+        var notes=j && j.notes && Array.isArray(j.notes) ? j.notes.slice(0,3).map(String) : null;
+        if(latest){
+          _latestAppVersion = latest;
+          if(notes && notes.length) _latestNotes = notes;
+          else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[latest]) _latestNotes = RELEASE_HIGHLIGHTS[latest].slice(0,3);
+          else _latestNotes = null;
+          try{ localStorage.setItem("palvault-latest", _latestAppVersion); }catch(e){}
+          try{ if(_latestNotes && _latestNotes.length) localStorage.setItem("palvault-latest-notes", JSON.stringify(_latestNotes)); else localStorage.removeItem("palvault-latest-notes"); }catch(e){}
+        }
         if(latest && verNum(latest) > verNum(APP_VERSION)) offerUpdate(latest);
+        try{ if(typeof renderFeatured==="function") renderFeatured(); }catch(e){}
       }).catch(function(){});
     // The web also has a service worker holding the shell: let it look for a new one on the same beat.
     try{
