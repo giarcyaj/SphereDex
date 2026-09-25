@@ -37,6 +37,16 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Install Infisical CLI
+        run: |
+          curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
+          sudo apt-get update && sudo apt-get install -y infisical
+
+      - name: Verify Infisical secrets (SIEVE_API_KEY)
+        run: |
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py doctor
+
       # Write the Firebase config for push. If the secret isn't set, the build still succeeds -
       # the google-services plugin is applied only when this file exists, so push is simply inert.
       - name: Write google-services.json (if configured)

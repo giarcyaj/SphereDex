@@ -321,6 +321,10 @@
   .card:hover .wish, .wish.on { opacity:1; }
   .wish.on { background:var(--r-RR); color:#2a1e00; }
   .cbody { padding:9px 10px 11px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:5px; flex:1; transition:filter .25s, opacity .25s; }
+  .card .datetag { font-size:.68rem; color:var(--ink-soft); font-weight:400; }
+  .kv.dates { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .kv.dates dt { color:var(--ink-soft); font-size:.72rem; }
+  .kv.dates dd { font-size:.78rem; }
   .cname { font-family:var(--font-display); font-weight:750; font-size:.92rem; letter-spacing:-.01em; line-height:1.05; }
   .cname .suffix { color:var(--ink-faint); font-weight:600; font-size:.82em; }
   .crow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
@@ -571,6 +575,11 @@
   #homeAway .hcfoot > span:first-child { flex:1 1 180px; min-width:0; }
   #homeAway .homeupdate-actions { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex:0 0 auto; flex-wrap:wrap; }
   #homeAway .homeupdate-actions .homeaction { white-space:nowrap; }
+  #homeAway .awaylist { margin:10px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
+  #homeAway .awaylist li { display:flex; gap:8px; align-items:flex-start; font-size:.78rem; color:var(--ink-soft); line-height:1.35; }
+  #homeAway .awaylist li::before { content:"•"; color:var(--accent); font-weight:800; flex:none; }
+  #homeAway .hcname { font-size:1.05rem; }
+  #homeAway .hcmeta { font-size:.74rem; color:var(--ink-soft); margin-top:4px; }
   .homegrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; margin-bottom:13px; }
   .homegrid .homecard { margin:0; min-height:150px; display:flex; flex-direction:column; }
   .homegrid .hcname { font-size:1rem; } .homegrid .hcvalue { font-size:1.35rem; text-align:left; margin-top:14px; } .homegrid .hcvalue small { text-align:left; }
@@ -708,15 +717,38 @@
   .spherebreakdown { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
   .spherebreakdown span { border:1px solid var(--line); border-radius:999px; padding:4px 7px; color:var(--ink-soft); font-size:.67rem; font-weight:700; }
   .spherebreakdown b { color:var(--ink); }
+  .spherehero { display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .spherehero .spherelabel { font-size:.78rem; font-weight:700; color:var(--ink); }
+  .sphereeligibility { margin-top:8px; color:var(--ink-soft); font-size:.67rem; }
+  .spherefoot { display:flex; align-items:center; gap:10px; }
+  .spherefoot .rwsphere { flex-shrink:0; }
+  .missingrow.collected { opacity:.88; border-color:color-mix(in srgb,var(--up) 32%,var(--line)); }
+  .missingrow .mtag.collected { background:var(--up); color:#fff; border-color:var(--up); }
   /* PalDex: one tile per Pal, pips for each printing family it exists in. */
   .palbar { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin:0 0 13px; }
   .palbar .qinput { flex:1 1 200px; }
+  .palsearchwrap .qinput { width:100%; }
+  .palsearchwrap .qsug { max-height:320px; }
+  .palsugrow { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--line); }
+  .palsugrow:last-child{border-bottom:none;}
+  .palsugrow.hi{background:var(--surface-2);}
+  .palsugrow img{width:32px;height:32px;object-fit:contain;border-radius:6px;background:var(--surface-2);}
+  .palsugmeta{font-size:.72rem;color:var(--ink-soft);}
+  .palsugname{font-weight:700;font-size:.86rem;}
+  .palsugno{font-size:.70rem;color:var(--ink-faint);}
   .palchips { display:flex; gap:7px; flex-wrap:wrap; }
   .palchip { border:1px solid var(--line); background:transparent; color:var(--ink-soft); border-radius:999px; padding:6px 11px;
     font-size:.72rem; font-weight:700; font-family:var(--font-display); cursor:pointer; }
   .palchip b { color:var(--ink); font-family:var(--font-mono); font-weight:700; }
   .palchip[aria-pressed="true"] { background:color-mix(in srgb,var(--accent) 16%,transparent); border-color:var(--accent); color:var(--accent-ink); }
   .palgrid { display:grid; gap:13px; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); }
+  .palgrid.compact { gap:9px; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+  .palgrid.compact .palname { font-size:.78rem; }
+  .palgrid.list { display:flex; flex-direction:column; gap:8px; }
+  .palgrid.list .paltile { display:grid; grid-template-columns:78px minmax(0,1fr) auto; align-items:center; padding:0; min-height:92px; }
+  .palgrid.list .paltile .palart { width:78px; height:92px; aspect-ratio:auto; }
+  .palgrid.list .paltile .palname, .palgrid.list .paltile .palsub, .palgrid.list .paltile .palprog, .palgrid.list .paltile .palcount { margin-left:12px; margin-right:12px; }
+  .palgrid.list .paltile .palpips { justify-content:flex-start; margin-right:12px; }
   .paltile { border:1px solid var(--line); border-radius:13px; background:var(--surface); overflow:hidden; padding:0 0 11px;
     cursor:pointer; text-align:left; display:block; }
   .paltile:hover, .paltile:focus-visible { border-color:color-mix(in srgb,var(--accent) 45%,var(--line)); }
@@ -748,7 +780,7 @@
   .palprog { height:5px; border-radius:4px; overflow:hidden; background:var(--surface-2); margin:0 10px 5px; }
   .palprog span { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,var(--accent),var(--up)); transition:width .3s ease; }
   .palcount { margin:0 10px 9px; color:var(--ink-faint); font-size:.64rem; font-family:var(--font-mono); }
-  /* Featured window: the top of Home. Three images that scroll themselves through the newest news and
+  /* Featured window: the top of Home. Four images that scroll themselves through the newest news,
      releases. A track of full-width slides, moved with one transform, so the animation is a genuine
      horizontal scroll rather than a cross-fade. */
   .featured { position:relative; margin:0 0 16px; border-radius:16px; overflow:hidden; height:200px;
@@ -756,13 +788,29 @@
   .feattrack { display:flex; height:100%; transition:transform .62s cubic-bezier(.4,.02,.2,1); }
   .featslide { position:relative; flex:0 0 100%; height:100%; border:0; padding:0; margin:0; background:none;
     display:block; text-align:left; cursor:pointer; color:#fff; font:inherit; }
-  .featimg { position:absolute; inset:0; display:block; overflow:hidden; }
-  .featimg img { width:100%; height:100%; object-fit:cover; display:block; }
+  /* any image looks designed */
+  .featimg { position:absolute; inset:0; display:block; overflow:hidden; background:#0d1117; }
+  .featimg img { display:block; }
+  .featimg-bg { position:absolute; inset:-8%; width:116%; height:116%; object-fit:cover; object-position:center;
+    filter:blur(22px) saturate(1.24) brightness(0.88); transform:scale(1.02); opacity:1; }
+  .featimg-fg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+  .featimg--banner .featimg-bg { display:none; }
+  .featimg--banner .featimg-fg { object-fit:cover; }
+  .featimg--card .featimg-bg { display:block; }
+  .featimg--card .featimg-fg { object-fit:contain; object-position:center; padding:10px 18px 14px;
+    filter:drop-shadow(0 14px 28px rgba(0,0,0,.52)) drop-shadow(0 3px 10px rgba(0,0,0,.42)); }
+  .featimg--card::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(520px 220px at 70% 18%, rgba(255,255,255,.10), transparent 58%),
+               linear-gradient(180deg, rgba(255,255,255,.06), transparent 34%); opacity:.9; }
   .featimg.featnoimg { background:linear-gradient(135deg,#1d2735,#3a2b46 55%,#123043); }
-  .featslide.on .featimg img.zoom { animation:featzoom 7.2s ease-out forwards; }
-  @keyframes featzoom { from { transform:scale(1); } to { transform:scale(1.07); } }
+  .featimg.featnoimg .featimg-bg, .featimg.featnoimg .featimg-fg { display:none; }
+  .featslide.on .featimg-fg.zoom { animation:featzoom 7.2s ease-out forwards; }
+  @keyframes featzoom { from { transform:scale(1); } to { transform:scale(1.04); } }
+  .featslide.on .featimg--card .featimg-fg.zoom { animation:featzoom-card 7.2s ease-out forwards; }
+  @keyframes featzoom-card { from { transform:scale(1); } to { transform:scale(1.025); } }
   .featscrim { position:absolute; inset:0; display:block;
     background:linear-gradient(180deg,rgba(6,9,14,.06) 6%,rgba(6,9,14,.45) 48%,rgba(6,9,14,.9)); }
+  .featimg--card ~ .featscrim { background:linear-gradient(180deg,rgba(6,9,14,.04) 10%,rgba(6,9,14,.32) 42%,rgba(6,9,14,.94) 78%); }
   .featbody { position:absolute; left:0; right:0; bottom:0; padding:14px 16px 16px; display:block; color:#fff; }
   .featbadge { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-display); font-size:.6rem;
     font-weight:750; letter-spacing:.13em; text-transform:uppercase; background:rgba(255,255,255,.16);
@@ -772,13 +820,13 @@
   .featmeta { display:block; font-size:.73rem; color:rgba(255,255,255,.8); }
   .featpoints { display:block; margin-top:4px; font-size:.68rem; line-height:1.35; color:rgba(255,255,255,.88); }
   .featpoints span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .featpoints span::before { content:"\u2022  "; opacity:.9; }
+  .featpoints span::before { content:"•  "; opacity:.9; }
   @media (min-width:760px){ .featpoints span{ white-space:normal; } }
   .featdots { position:absolute; right:11px; top:11px; display:flex; gap:6px; }
   .featdot { width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer; background:rgba(255,255,255,.42); }
   .featdot[aria-current="true"] { background:#fff; transform:scale(1.25); }
   .featslide:focus-visible, .featdot:focus-visible { outline:2px solid #fff; outline-offset:2px; }
-  @media (min-width:760px) { .featured { height:240px; } }
+  @media (min-width:760px) { .featured { height:240px; } .featimg--card .featimg-fg { padding:12px 22px 16px; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featimg img.zoom { animation:none; } }
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.67rem; }
   .pallegend i { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:-1px; }
@@ -795,6 +843,14 @@
   .missingprice small { display:block; font-family:var(--font-body); color:var(--ink-faint); font-size:.61rem; font-weight:600; margin-top:1px; }
   .missingwish { margin-top:6px; border:1.5px solid var(--accent); color:var(--accent-ink); background:transparent; border-radius:8px; padding:6px 7px; font-size:.66rem; font-weight:750; }
   .missingwish.on { color:var(--gold-deep); border-color:var(--gold); }
+  /* Quick icon buttons replacing the old Wishlist / Build-a-deck pills. Cyan-outlined, pill shape, icon-only. */
+  .missactions { display:flex; gap:6px; justify-content:flex-end; margin-top:6px; }
+  .missact { width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border:1.5px solid var(--accent); border-radius:999px; background:transparent; color:var(--accent-ink); cursor:pointer; transition:.13s; }
+  .missact:hover { background:color-mix(in srgb,var(--accent) 14%,transparent); transform:translateY(-1px); }
+  .missact:active { transform:none; opacity:.85; }
+  .missact.on { color:var(--gold-deep); border-color:var(--gold); background:color-mix(in srgb,var(--gold) 12%,transparent); }
+  .missact svg { width:15px; height:15px; }
+  .missact[disabled] { opacity:.45; cursor:not-allowed; transform:none; }
   .missingempty { padding:30px 8px; color:var(--ink-faint); text-align:center; font-size:.88rem; }
   @media (max-width:420px){ .missinghero { padding:15px; } .missingrow { grid-template-columns:43px minmax(0,1fr) auto; gap:9px; } .missingrow img { width:43px; height:60px; } .missingside { min-width:64px; } }
 
@@ -1313,20 +1369,39 @@
   .rwd.done .rwmeta { color:var(--ink-soft); }
   .rwcap { margin-top:14px; font-size:.84rem; color:var(--ink-soft); }
   .rwcap.gold { font-weight:750; color:var(--accent-ink); }
-  /* V2 set Sphere shelf: one permanent reward per main set, never diluted by later releases. */
-  .setspheres { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:13px; max-width:680px; padding:16px 10px 14px; background:linear-gradient(var(--surface),var(--surface-2)); border-bottom:12px solid color-mix(in srgb,var(--line-strong) 65%,#000); border-radius:16px 16px 4px 4px; }
-  .setsphere { min-height:172px; text-align:center; border:1.5px solid transparent; border-radius:14px; padding:13px 9px 11px; background:transparent; color:var(--ink); font-family:inherit; cursor:pointer; }
-  .setsphere:hover { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,transparent); }
+  /* V2 set Sphere shelf: Wooden shelf 6 slots, Iron shelf 15, Large Container 40 · one Sphere per main set on a plank with iron brackets · never diluted by later releases. */
+  .setspheres { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:13px; max-width:700px; padding:20px 12px 28px; background:
+      radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.22), transparent 56%),
+      linear-gradient(180deg, var(--surface) 0 58%, transparent 58%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, #1a2330), var(--surface-2));
+    border:1.5px solid color-mix(in srgb, #b9a07a 62%, var(--line-strong)); border-bottom:16px solid #4e2e12; border-radius:11px 11px 7px 7px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.62), inset 0 8px 16px rgba(255,255,255,.06), 0 12px 28px rgba(0,0,0,.22); position:relative; }
+  .setspheres::before, .setspheres::after { content:""; position:absolute; width:12px; height:18px; bottom:-16px; background: linear-gradient(180deg, #e8ecf0, #a9adb3 48%, #5a5d64); border-radius:2px 2px 3px 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.78), 0 2px 6px rgba(0,0,0,.32); }
+  .setspheres::before { left:24px; } .setspheres::after { right:24px; }
+  .setsphere { min-height:172px; text-align:center; border:1.5px solid color-mix(in srgb, #b9a07a 32%, transparent); border-radius:14px; padding:13px 9px 11px; background: color-mix(in srgb, var(--surface) 94%, transparent); color:var(--ink); font-family:inherit; cursor:pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.58), 0 4px 12px rgba(0,0,0,.08); }
+  .setsphere:hover { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--surface)); transform:translateY(-1px); }
   .setsphere .rwsphere { filter:grayscale(1) opacity(.34); }
   .setsphere.earned .rwsphere { filter:none; animation:rwglow 2.6s ease-in-out infinite; }
   .setsphere .ssname { display:block; font-family:var(--font-display); font-weight:750; font-size:.85rem; line-height:1.2; }
   .setsphere .ssmeta { display:block; margin-top:4px; color:var(--ink-faint); font-size:.72rem; line-height:1.3; }
   .setsphere.earned .ssmeta { color:var(--el-Grass); }
   @keyframes rwglow { 0%,100%{ filter:none; } 50%{ filter:drop-shadow(0 0 9px var(--rc)); } }
-  .achievementgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; max-width:680px; }
-  .achievement { border:1.5px solid var(--line); border-radius:13px; padding:12px; background:var(--surface-2); color:var(--ink-faint); }
-  .achievement.earned { border-color:color-mix(in srgb,var(--accent) 60%,var(--line)); color:var(--ink); background:color-mix(in srgb,var(--accent) 9%,var(--surface)); }
-  .achievement b { display:block; font-size:.83rem; } .achievement span { display:block; margin-top:3px; font-size:.7rem; color:var(--ink-soft); }
+  /* Pal Effigies: 13 separate effigies on stone pedestals, glowing at night · offered at the Statue of Power (Lv 9) for permanent ranks · Lifmunk green and deepest, 8 commons 20 ranks, 3 rares 4 each, Mimog 92 from capture bonuses. */
+  .achievementgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:10px; max-width:720px; }
+  .achievement { position:relative; text-align:center; padding:12px 8px 11px; border:1.5px solid var(--line); border-radius:16px; background: linear-gradient(180deg, var(--surface), var(--surface-2)); color:var(--ink-faint); overflow:hidden; }
+  .achievement::before { content:""; position:absolute; inset:0; background: radial-gradient(ellipse at 50% 16%, color-mix(in srgb, var(--eff, var(--accent)) 18%, transparent), transparent 62%); opacity:0; transition:opacity .25s; }
+  .achievement.earned { border-color:color-mix(in srgb, var(--eff, var(--accent)) 55%, var(--line)); color:var(--ink); background: color-mix(in srgb, var(--eff, var(--accent)) 8%, var(--surface)); }
+  .achievement.earned::before { opacity:1; }
+  .achievement b { position:relative; display:block; font-size:.78rem; line-height:1.22; }
+  .achievement span { position:relative; display:block; margin-top:3px; font-size:.66rem; color:var(--ink-soft); line-height:1.28; }
+  .effigy-figure { position:relative; width:56px; height:56px; margin:0 auto 7px; display:grid; place-items:center; }
+  .effigy-glow { position:absolute; inset:6px; border-radius:50%; background: radial-gradient(circle, color-mix(in srgb, var(--eff) 46%, transparent) 0%, transparent 68%); opacity:0; transition:opacity .25s; }
+  .achievement.earned .effigy-glow { opacity:1; }
+  .effigy-img, .effigy-svg { position:relative; width:44px; height:44px; display:block; object-fit:contain; filter: grayscale(1) opacity(.42); transition: filter .25s; }
+  .achievement.earned .effigy-img { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)) drop-shadow(0 1px 6px rgba(0,0,0,.18)); }
+  .achievement.earned .effigy-svg { filter:none; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)); }
+  .effigy-pedestal { position:absolute; left:50%; bottom:1px; transform:translateX(-50%); width:42px; height:9px; background: linear-gradient(180deg, #ede9e0, #c2b8a6 58%, #8a8680); border-radius:2px 2px 3px 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.76), 0 2px 6px rgba(0,0,0,.22); }
+  .effigy-pedestal::after { content:""; position:absolute; left:4px; right:4px; top:2px; height:1px; background: rgba(255,255,255,.58); border-radius:1px; }
 
   /* Hero trophy row, earned Legendary Spheres */
   .trophyrow { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:16px; padding-top:15px; border-top:1.5px solid var(--line); }
@@ -1890,30 +1965,36 @@
       <div class="hcfoot"><span id="paldexFoot"></span></div>
     </div>
     <div class="palbar">
-      <input id="paldexSearch" class="qinput" placeholder="Search Pals\u2026" autocomplete="off" spellcheck="false" aria-label="Search Pals">
+      <div class="palsearchwrap" style="position:relative;flex:1 1 200px;"><input id="paldexSearch" class="qinput" placeholder="Search Pals\u2026" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="paldexSug" spellcheck="false" aria-label="Search Pals"><div class="qsug" id="paldexSug" role="listbox" hidden style="position:absolute;left:0;right:0;top:calc(100% + 6px);"></div></div>
       <select class="sortsel" id="paldexSortSel" aria-label="Sort Pals">
         <option value="dex" selected>PalDex number</option>
         <option value="closest">Closest to complete</option>
         <option value="owned">Most owned</option>
         <option value="name">Name</option>
       </select>
+      <select class="sortsel" id="paldexViewSel" aria-label="PalDex layout">
+        <option value="grid">View &middot; Grid</option>
+        <option value="compact">View &middot; Compact</option>
+        <option value="list">View &middot; List</option>
+      </select>
       <div class="palchips" id="paldexChips"></div>
+      <div class="palchips" id="paldexVariantChips"></div>
     </div>
     <div class="pallegend" id="paldexLegend"></div>
     <div class="palgrid" id="paldexGrid"></div>
   </section>
   <section class="page" id="page-rewards">
     <h2 class="sech">Rewards</h2>
-    <h2 class="sech" style="margin-top:12px">Set Sphere shelf</h2>
-    <p class="rwintro">Complete an eligible main set to earn its Sphere permanently. New releases add a new silhouette; they never take away a Sphere you have earned.</p>
+    <h2 class="sech" style="margin-top:12px">Storage shelf · Set Spheres</h2>
+    <p class="rwintro">Wooden shelf · 6 slots, iron shelf · 15, large container · 40 · one Sphere per main set on a plank with iron brackets · complete the eligible card list to place it permanently · new releases add a new slot, never take one away.</p>
     <div class="setspheres" id="rewardGrid"></div>
     <div class="rwcap" id="rewardCap"></div>
 
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
     <p class="rwintro">Pal is available from the start. Higher themes unlock as your collection reaches milestones and remain available once earned, even when a new set adds more cards. Set one as your app icon and colour theme; the header orb becomes that Sphere and the app recolours to match. On Android the home-screen icon changes too.</p>
     <div class="spherethemes" id="sphereThemes"></div>
-    <h2 class="sech" style="margin-top:30px">Collection milestones</h2>
-    <p class="rwintro">Simple markers for collecting and building — no currency, XP, or streak pressure.</p>
+    <h2 class="sech" style="margin-top:30px">Pal Effigies · Collection milestones</h2>
+    <p class="rwintro">13 Pal effigies, one per milestone · find them glowing in the wild at night, offer them at the Statue of Power · Lifmunk is green, 12 Pals each feed a different stat · each stays earned like capture power at level 9.</p>
     <div class="achievementgrid" id="achievementGrid"></div>
   </section>
 
@@ -2249,7 +2330,7 @@
 
       <div id="notifGroup" style="display:none;flex-direction:column;gap:14px">
         <div class="setcat">Notifications</div>
-        <div class="sdesc" style="margin:0 2px">Push notifications only — no email alerts. Choose which alerts this device can receive.</div>
+        <div class="sdesc" style="margin:0 2px">Push notifications only · no email alerts. Choose which alerts this device can receive.</div>
         <div class="setrow">
           <div class="setinfo"><div class="stitle">New release alerts</div><div class="sdesc">Get notified when a new Palworld TCG set or product is announced.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifReleases"><span class="track"></span></label>
@@ -2707,19 +2788,19 @@
   // same number, and add the next version's 3 lines here so the *following* update is ready.
   var RELEASE_HIGHLIGHTS = {
     "1.10": [
-      "Price alerts \u2014 follow any card, get told when it moves the way you want",
+      "Price alerts \u00b7 follow any card, get told when it moves the way you want",
       "Sort by recently added & a blue tick for what you just added",
-      "Filter by set and product \u2014 booster, trial deck or promo"
+      "Filter by set and product \u00b7 booster, trial deck or promo"
     ],
     "1.11": [
-      "iPhone notifications live \u2014 new sets, news, stock & price alerts",
+      "iPhone notifications live \u00b7 new sets, news, stock & price alerts",
       "Honest prices: real vs estimate and freshness on every card",
       "New cards arrive without waiting for a store update"
     ],
     "1.12": [
-      "A more useful Home \u2014 next actions for collection, wishlist & decks",
-      "Home opens on what\u2019s new \u2014 the scrolling headliner for news & releases",
-      "PalDex \u2014 every printing of a Pal in one place, by Paldex number"
+      "A more useful Home \u00b7 next actions for collection, wishlist & decks",
+      "Home opens on what\u2019s new \u00b7 the scrolling headliner for news & releases",
+      "PalDex \u00b7 every printing of a Pal in one place, by Paldex number"
     ]
   };
   // The store build the version check learns about ("" until the first check completes).
@@ -2746,8 +2827,15 @@
   // Global wishlist (its own list, separate from owned collections). Migrate old per-card flags once.
   if (!STATE.wishlist){ STATE.wishlist={};
     STATE.cols.forEach(function(c){ Object.keys(c.own||{}).forEach(function(id){ if(c.own[id]&&c.own[id].wish) STATE.wishlist[id]=true; }); }); }
+  if(!STATE.wishlistAt) STATE.wishlistAt={};
+  (function(){ Object.keys(STATE.wishlist).forEach(function(id){ if(!STATE.wishlistAt[id]){ var at=addedAt(id); STATE.wishlistAt[id]= at||0; }}); })();
   function isWished(id){ return !!STATE.wishlist[id]; }
-  function toggleWish(id){ if(STATE.wishlist[id]) delete STATE.wishlist[id]; else STATE.wishlist[id]=true; }
+  if(!STATE.wishlistAt) STATE.wishlistAt={};
+  function wishlistAt(id){ return STATE.wishlistAt[id]||0; }
+  function toggleWish(id){
+    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; }
+    else { STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); }
+  }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
   // Global favourites (starred standout cards), separate from owning or wishing.
   if (!STATE.fav) STATE.fav={};
@@ -3460,7 +3548,11 @@
       if (favMode && !isFav(c.id)) return false;
       if (gradedMode){ var g=o(c.id); if(!(g.graded && g.graded.length)) return false; }
       if (collectedMode){ var cm=o(c.id); if(!has(cm)) return false; if(!ownShowGraded && (+cm.qty||0)===0 && cm.graded && cm.graded.length) return false; }
-      if (q && (c.name+" "+c.id).toLowerCase().indexOf(q)===-1) return false;
+      if (q){
+        var n=(c.name+" "+c.id).toLowerCase();
+        var pk=palKey(c).toLowerCase();
+        if(n.indexOf(q)===-1 && pk.indexOf(q)===-1) return false;
+      }
       if (sets.length && sets.indexOf(c.set)===-1) return false;
       if (cols.length && cols.indexOf(c.color)===-1) return false;
       if (kinds.length && kinds.indexOf(c.kind)===-1) return false;
@@ -3605,11 +3697,15 @@
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var wished = isWished(c.id);
+    var at=addedAt(c.id), wt=wishlistAt(c.id);
+    var dateTag="";
+    if(wishMode && wished && wt) dateTag='<span class="datetag">· added '+esc(relTime(wt))+'</span>';
+    else if(at && (collectedMode || has(s))) dateTag='<span class="datetag">· added '+esc(relTime(at))+'</span>';
     el.innerHTML =
       '<div class="art">'+artHTML(c)+ gbadge +
       '</div>'+
       '<div class="cbody">'+
-        '<div class="cname">'+esc(c.name)+'</div>'+
+        '<div class="cname">'+esc(c.name)+(dateTag? ' <small class="datetag" style="font-weight:400;opacity:.72">'+dateTag+'</small>':'')+'</div>'+
         (priceTag?'<div class="cstats">'+priceTag+'</div>':'')+
       '</div>'+
       '<div class="cardfoot iconfoot">'+
@@ -3814,6 +3910,7 @@
       (c.els.length?'<dt>Element</dt><dd>'+c.els.join(" / ")+'</dd>':'')+
       (c.apt.length?'<dt>Work</dt><dd>'+c.apt.join(", ")+'</dd>':'')+
       '</dl>';
+    var dateAddedHtml=(function(){ var at=addedAt(c.id), wt=wishlistAt(c.id), parts=[]; if(at) parts.push('<dt>Added to collection</dt><dd>'+esc(new Date(at).toLocaleDateString())+' · '+esc(relTime(at))+'</dd>'); if(isWished(c.id)) parts.push('<dt>Added to wishlist</dt><dd>'+(wt? esc(new Date(wt).toLocaleDateString())+' · '+esc(relTime(wt)) : 'in wishlist')+'</dd>'); return parts.length? '<dl class="kv dates">'+parts.join("")+'</dl>' : ""; })();
     var setTrack=(typeof SET_SPHERE_TRACKS!=="undefined")?SET_SPHERE_TRACKS.filter(function(x){ return x.available&&x.id===c.set; })[0]:null;
     var sphereDetail="";
     if(setTrack){ var setCards=setSphereCards(setTrack), setOwned=setCards.filter(function(x){ return has(o(x.id)); }).length;
@@ -3831,6 +3928,7 @@
         '<span class="eltag" style="background:'+rareVar(c.rare)+';color:#fff">'+c.rare+'</span></div>'+
       (statBoxes.length?'<div class="statline">'+statBoxes.join("")+'</div>':'')+
       kv+
+      dateAddedHtml+
       promoContext(c)+
       '<div class="meditor">'+
       // ---- Collection action bubbles ----
@@ -3845,7 +3943,7 @@
           '<button class="segb on" data-type="raw" type="button">Raw</button>'+
           '<button class="segb" data-type="graded" type="button">Graded</button>'+
         '</div>'+
-        (canEdition(c)?'<div class="field"><label for="addEdition">Edition to add</label><select id="addEdition"><option value="unknown">Not specified</option><option value="1">1st edition</option><option value="2">2nd edition</option></select></div>':'')+
+        (function(){ if(!canEdition(c)) return ""; var def=defaultEditionFor(c); var sel=def||"unknown"; return '<div class="field"><label for="addEdition">Edition to add</label><select id="addEdition"><option value="unknown"'+(sel==="unknown"?' selected':'')+'>Not specified</option><option value="1"'+(sel==="1"?' selected':'')+'>1st edition</option><option value="2"'+(sel==="2"?' selected':'')+'>2nd edition</option></select></div>'; })()+
         '<div class="addgrid" id="rawAdd">'+
           '<div class="field"><label>Condition</label><select id="fCond">'+
             [["Near Mint","NM"],["Lightly Played","LP"],["Moderately Played","MP"],["Heavily Played","HP"],["Damaged","D"]].map(function(p){return '<option value="'+p[0]+'"'+(p[0]===s.cond?' selected':'')+'>'+p[1]+' · '+p[0]+'</option>';}).join("")+
@@ -4790,7 +4888,22 @@
     user:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
     layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
     chev:'<path d="M6 9l6 6 6-6"/>',
-    menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'
+    menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+    effigy:'<path d="M12 3l2 7h-2l-1 9 1-9H8l2-7z" stroke-width="1.8"/><path d="M12 12v2"/><path d="M9 16h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyLifmunk:'<path d="M12 3c1.2 1.2 2 2.2 2 3.5 0 1.8-1.2 3.2-2.8 3.6l.8 5.2H9l.8-5.2C8.1 9.7 7 8.3 7 6.5c0-1.3.8-2.3 2-3.5h3z" fill="none"/><circle cx="12" cy="7.2" r="1.2" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyLamball:'<circle cx="12" cy="8" r="3.2" fill="none"/><path d="M9 7l-2-1M15 7l2-1"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyPengullet:'<path d="M12 4l-1.5 3h3z"/><path d="M9 7c-1.5 1.5-2 3-1.5 4.5L12 16l4.5-4.5C17 10 16.5 8.5 15 7z" fill="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyMunchill:'<path d="M12 4l4 3-1 6-3 3-3-3-1-6z" fill="none"/><circle cx="12" cy="8.5" r="1" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyRooby:'<path d="M7 6l5-2 5 2-1 6-4 4-4-4z" fill="none"/><path d="M7 12l-1 2 6 2 7-2-1-2z"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyHerbil:'<path d="M12 3.5c3 2 4.5 4 4.5 6 0 2-1.5 4-4.5 6.5C7.5 13.5 6 11.5 6 9.5c0-2 1.5-4 4.5-6z" fill="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyTanzee:'<path d="M12 4l2 4h3l-3 5h-4l-3-5h3z" fill="none"/><path d="M9 9H7M17 9h-2"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyDepresso:'<circle cx="12" cy="8" r="3" fill="none"/><path d="M9.5 9.5l5 3M14.5 9.5l-5 3"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyCattiva:'<circle cx="12" cy="7.5" r="3" fill="none"/><path d="M8.5 5.5l-1.5-1.5M15.5 5.5l1.5-1.5"/><circle cx="10.2" cy="7.2" r=".9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="7.2" r=".9" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyLunaris:'<circle cx="12" cy="7" r="2.8" fill="none"/><path d="M12 4v3M9.5 5.5l-1.5-1.5M14.5 5.5l1.5-1.5M12 10l-2 4h4z" fill="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyRelaxaurus:'<path d="M8 6l4-2 4 2v4l-4 4-4-4z" fill="none"/><path d="M8 10l4 4 4-4"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyYakumo:'<path d="M12 4l3 2-1.5 3H9.5L8 6z" fill="none"/><path d="M12 9l-1.5 2h3z"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
+    effigyMimog:'<rect x="9" y="4" width="6" height="8" rx="1.2" fill="none"/><path d="M10 6h4M10 8h4M10 10h2"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>'
+
   };
   function icon(name, cls){ return '<svg class="ic'+(cls?' '+cls:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||'')+'</svg>'; }
 
@@ -5804,10 +5917,10 @@
     $("missingIntro").textContent=missingGoal==="master"?"Every card you still need for your collection.":missingGoal==="sphere"?"Finish an official main-set list to earn its permanent Set Sphere.":missingGoal==="set"?"Your most achievable incomplete set, ready to finish.":missingGoal==="rarity"?"The closest rarity to completing in your collection.":missingGoal==="pal"?"The closest Pal to completing across its card variants.":missingGoal==="deck"?"The exact copies you still need for your active deck.":"Cards saved for a future collection goal.";
     $("missingListTitle").textContent=copy.title;
     var progress=data&&data.total?Math.min(100,Math.round(data.owned/data.total*100)):0;
-    var breakdown=missingGoal==="sphere"&&data?'<span><b>'+esc(data.track.name)+'</b> · '+data.remaining+' cards to '+esc(data.track.sphere.name)+'</span>':"";
+        var sphereSilhouette=missingGoal==="sphere"&&data?'<div class="spherehero"><span class="rwsphere" style="--rc:'+data.track.sphere.c+';width:54px;height:54px;margin:0;">'+sphereSVG(data.track.sphere.c,data.track.id)+'</span><span class="spherelabel">'+esc(data.track.sphere.name)+'</span></div>':"";
     var eligibility=missingGoal==="sphere"?'Each official main-set printing counts once. Trial decks and promos do not count.':missingGoal==="master"?'Each catalogued printing counts once; raw or graded copies both qualify, while duplicates do not.':(missingGoal==="set"||missingGoal==="rarity"||missingGoal==="pal")?'Each unique printing counts once, whether raw or graded.':'';
     hero.innerHTML='<div class="missingherohead"><div><div class="missingeyebrow">'+esc(copy.eyebrow)+'</div><div class="missingname">'+esc(copy.name)+'</div></div><div class="missingcount"><b>'+copy.count+'</b>'+esc(copy.detail)+'</div></div>'+
-      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+(breakdown?'<div class="spherebreakdown">'+breakdown+'</div>':'')+(eligibility?'<div class="spherebreakdown"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
+      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
     var choice=$("missingChoice"); if(choice) choice.onchange=function(){ missingChoice[missingGoal]=choice.value; renderMissing(); };
     var bulk=$("missingBulkAction"); if(bulk) bulk.onclick=function(){ addMissingToWishlist(items); };
     $("missingHeroAction").onclick=function(){
@@ -5820,7 +5933,7 @@
       else if(copy.actionType==="wishlist") showPage("wishlist");
       else showPage("collection");
     };
-    if(!items.length){ list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete - choose another deck or add cards to keep building.":"No cards to show for this goal yet.")+'</div>'; return; }
+    if(!items.length){ list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"No cards to show for this goal yet.")+'</div>'; return; }
     list.innerHTML="";
     items.sort(function(a,b){
       if(missingSort==="number") return a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
@@ -5830,10 +5943,42 @@
     }).forEach(function(item){
       var c=item.card, wished=isWished(c.id), row=document.createElement("article"); row.className="missingrow";
       var tag=missingGoal==="deck"?"NEED "+item.need:(wished?"WISHLISTED":(missingGoal==="sphere"?"NEXT SPHERE":(missingGoal==="set"?"SET GOAL":(missingGoal==="rarity"?"RARITY GOAL":(missingGoal==="pal"?"PAL GOAL":(missingGoal==="master"?"MISSING":"WISHLIST"))))));
-      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><button class="missingwish '+(wished?"on":"")+'" type="button">'+(wished?"Wishlisted":"Wishlist")+'</button><button class="missingwish deckadd" type="button">'+(activeDeck()?"Add to deck":"Build a deck")+'</button></div>';
+      var ownedH = (typeof ownsForCompletion==="function" ? ownsForCompletion(c) : false);
+      var deckOn = !!(activeDeck() && activeDeck().cards && activeDeck().cards[c.id]);
+      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button><button class="missact '+(deckOn?"on":"")+'" type="button" aria-label="'+(deckOn?"In deck · open deck":"Add to deck")+'" title="'+(deckOn?"In deck · open deck":"Add to deck")+'">'+icon("layers")+'</button></div></div>';
       row.querySelector("img").onclick=function(){ openDetail(c); }; row.querySelector(".mn").onclick=function(){ openDetail(c); };
-      var wish=row.querySelector(".missingwish"); if(wish) wish.onclick=function(){ toggleWish(c.id); save(); buildColSel(); renderMissing(); toast(isWished(c.id)?"Added to wishlist":"Removed from wishlist"); };
-      var deckAdd=row.querySelector(".deckadd"); if(deckAdd) deckAdd.onclick=function(){ var d=activeDeck(); if(!d){ showPage("decks"); toast("Create a deck first"); return; } d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderMissing(); renderDecks(); toast(c.name+" added to "+d.name); };
+      var acts=row.querySelectorAll(".missact"); var collBtn=acts[0], wish=acts[1], deckAdd=acts[2];
+      if(collBtn) collBtn.onclick=function(){
+        if(typeof ownsForCompletion==="function" && ownsForCompletion(c)){ openDetail(c); return; }
+        // Keep the row visible · show collected state without dropping from the list
+        collBtn.classList.add("on"); collBtn.innerHTML=icon("check"); collBtn.setAttribute("aria-label","Collected · open"); collBtn.title="Collected · open";
+        row.classList.add("collected");
+        var tagEl=row.querySelector(".mtag"); if(tagEl){ tagEl.textContent="COLLECTED"; tagEl.classList.add("collected"); }
+        addToChosen(c);
+        try{
+          var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,Math.round(data2.owned/data2.total*100)):0;
+          var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
+          var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+          var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+        }catch(_e){}
+        try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
+        try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
+      };
+      if(wish) wish.onclick=function(){
+        toggleWish(c.id);
+        var now=isWished(c.id);
+        this.classList.toggle("on", now);
+        this.innerHTML=icon(now?"starf":"star");
+        this.setAttribute("aria-label", now?"Remove from wishlist":"Add to wishlist");
+        this.title=now?"Remove from wishlist":"Add to wishlist";
+        save(); buildColSel(); renderMissing(); try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){} toast(now?"Added to wishlist":"Removed from wishlist");
+      };
+      if(deckAdd) deckAdd.onclick=function(){
+        var d=activeDeck(); if(!d){ showPage("decks"); toast("Create a deck first"); return; }
+        if(d.cards[c.id]){ showPage("decks"); return; }
+        this.classList.add("on");
+        d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderMissing(); renderDecks(); toast(c.name+" added to "+d.name);
+      };
       list.appendChild(row);
     });
   }
@@ -6454,10 +6599,10 @@
   // elemental variant sitting behind its base Pal with a letter (#121 Jormuntide, #121B Jormuntide Ignis).
   // Built in rather than fetched - the screen has to work offline, and a third party's site should not be
   // load-bearing for it. A Pal with no number sorts last instead of silently landing at the top.
-  var PALDEX_NO = {"Lamball":"1","Cattiva":"2","Chikipi":"3","Lifmunk":"4","Fuack":"5","Fuack Ignis":"5B","Vixy":"6","Celaray":"7","Celaray Lux":"7B","Cremis":"8","Croajiro":"9","Croajiro Noct":"9B","Herbil":"10","Teafant":"11","Gumoss":"12","Pupperai":"13","Clovee":"14","Jolthog":"15","Jolthog Cryst":"15B","Depresso":"16","Pengullet":"17","Pengullet Lux":"17B","Penking":"18","Penking Lux":"18B","Hoocrates":"19","Melpaca":"20","Kingpaca":"21","Kingpaca Cryst":"21B","Daedream":"22","Tanzee":"23","Tanzee Ignis":"23B","Nox":"24","Flambelle":"25","Rooby":"26","Mau":"27","Mau Cryst":"27B","Rushoar":"28","Foxparks":"29","Foxparks Cryst":"29B","Killamari":"30","Killamari Primo":"30B","Fuddler":"31","Eikthyrdeer":"32","Eikthyrdeer Terra":"32B","Direhowl":"33","Caprity":"34","Caprity Noct":"34B","Swee":"35","Sweepa":"36","Turtacle":"37","Turtacle Terra":"37B","Hangyu":"38","Hangyu Cryst":"38B","Woolipop":"39","Woolipop Terra":"39B","Mozzarina":"40","Azurobe":"41","Azurobe Cryst":"41B","Sparkit":"42","Kelpsea":"43","Kelpsea Ignis":"43B","Ribbuny":"44","Ribbuny Botan":"44B","Jelliette":"45","Jellroy":"46","Amione":"47","Gloopie":"48","Gloopie Primo":"48B","Galeclaw":"49","Wispaw":"50","Nitewing":"51","Tombat":"52","Tocotoco":"53","Univolt":"54","Univolt Cryst":"54B","Gobfin":"55","Gobfin Ignis":"55B","Loupmoon":"56","Loupmoon Cryst":"56B","Cawgnito":"57","Arsox":"58","Muffly":"59","Bristla":"60","Cinnamoth":"61","Puffolt":"62","Elphidran":"63","Elphidran Aqua":"63B","Vanwyrm":"64","Vanwyrm Cryst":"64B","Felbat":"65","Vaelet":"66","Beegarde":"67","Elizabee":"68","Lovander":"69","Grintale":"70","Tarantriss":"71","Polapup":"72","Polapup Terra":"72B","Leezpunk":"73","Leezpunk Ignis":"73B","Gorirat":"74","Gorirat Terra":"74B","Surfent":"75","Surfent Terra":"75B","Robinquill":"76","Robinquill Terra":"76B","Flopie":"77","Wixen":"78","Wixen Noct":"78B","Katress":"79","Katress Ignis":"79B","Helzephyr":"80","Helzephyr Lux":"80B","Elgrove":"81","Elgrove Cryst":"81B","Lunaris":"82","Fenglope":"83","Fenglope Lux":"83B","Dinossom":"84","Dinossom Lux":"84B","Bushi":"85","Bushi Noct":"85B","Munchill":"86","Mammorest":"87","Mammorest Cryst":"87B","Finsider":"88","Finsider Ignis":"88B","Petallia":"89","Petallia Ignis":"89B","Leafan":"90","Incineram":"91","Incineram Noct":"91B","Dazzi":"92","Dazzi Noct":"92B","Pyrin":"93","Pyrin Noct":"93B","Relaxaurus":"94","Relaxaurus Lux":"94B","Foxcicle":"95","Beakon":"96","Beakon Cryst":"96B","Ghangler":"97","Ghangler Ignis":"97B","Rayhound":"98","Rayhound Cryst":"98B","Menasting":"99","Menasting Terra":"99B","Needoll":"100","Needoll Noct":"100B","Reindrix":"101","Mossanda":"102","Mossanda Lux":"102B","Chillet":"103","Chillet Ignis":"103B","Ragnahawk":"104","Moldron":"105","Moldron Cryst":"105B","Palumba":"106","Digtoise":"107","Broncherry":"108","Broncherry Aqua":"108B","Dumud":"109","Dumud Gild":"109B","Braloha":"110","Kitsun":"111","Kitsun Noct":"111B","Blazehowl":"112","Blazehowl Noct":"112B","Warsect":"113","Warsect Terra":"113B","Frostplume":"114","Majex":"115","Sibelyx":"116","Sibelyx Primo":"116B","Maraith":"117","Shroomer":"118","Shroomer Noct":"118B","Icelyn":"119","Gildra":"120","Jormuntide":"121","Jormuntide Ignis":"121B","Suzaku":"122","Suzaku Aqua":"122B","Dazemu":"123","Quivern":"124","Quivern Botan":"124B","Lullu":"125","Kikit":"126","Yakumo":"127","Skutlass":"128","Skutlass Ignis":"128B","Reptyro":"129","Reptyro Cryst":"129B","Starryon":"130","Starryon Primo":"130B","Pierdon":"131","Pierdon Cryst":"131B","Cryolinx":"132","Cryolinx Terra":"132B","Snugloo":"133","Wumpo":"134","Wumpo Botan":"134B","Sootseer":"135","Carnibora":"136","Blazamut":"137","Blazamut Ryu":"137B","Dualith":"138","Dualith Noct":"138B","Anubis":"139","Sekhmet":"140","Prixter":"141","Prixter Lux":"141B","Tetroise":"142","Tetroise Primo":"142B","Nyafia":"143","Mimog":"144","Xenovader":"145","Xenogard":"146","Prunelia":"147","Nitemary":"148","Nitemary Botan":"148B","Smokie":"149","Smokie Cryst":"149B","Omascul":"150","Whalaska":"151","Whalaska Ignis":"151B","Verdash":"152","Splatterina":"153","Gildane":"154","Dogen":"155","Bulldosu":"156","Celesdir":"157","Celesdir Noct":"157B","Astegon":"158","Knocklem":"159","Knocklem Ignis":"159B","Silvegis":"160","Azurmane":"161","Valentail":"162","Snock":"163","Snock Terra":"163B","Souffline":"164","Lapiron":"165","Hoodle":"166","Slowatt":"167","Bakemi":"168","Solmora":"169","Solmora Lux":"169B","Lapure":"170","Eidrolon":"171","Eidrolon Ignis":"171B","Dynamoff":"172","Tropicaw":"173","Flaracle":"174","Ophydia":"175","Dupin":"176","Roujay":"177","Venusa":"178","Mycora":"179","Loomen":"180","Wistella":"181","Solenne":"182","Renjishi":"183","Aegidron":"184","Grizzbolt":"185","Lyleen":"186","Lyleen Noct":"186B","Orserk":"187","Faleris":"188","Faleris Aqua":"188B","Shadowbeak":"189","Selyne":"190","Bastigor":"191","Shaolong":"192","Silvance":"193","Dandilord":"194","Bellanoir":"195","Bellanoir Libero":"195B","Xenolord":"196","Hartalis":"197","Paladius":"198","Necromus":"199","Frostallion":"200","Frostallion Noct":"200B","Neptilius":"201","Jetragon":"202","Panthalus":"203","Astralym":"204"};
+  var PALDEX_NO = {"Lamball":"1","Cattiva":"2","Chikipi":"3","Lifmunk":"4","Fuack":"5","Fuack Ignis":"5B","Vixy":"6","Celaray":"7","Celaray Lux":"7B","Cremis":"8","Croajiro":"9","Croajiro Noct":"9B","Herbil":"10","Teafant":"11","Gumoss":"12","Pupperai":"13","Clovee":"14","Jolthog":"15","Jolthog Cryst":"15B","Depresso":"16","Pengullet":"17","Pengullet Lux":"17B","Penking":"18","Penking Lux":"18B","Hoocrates":"19","Melpaca":"20","Kingpaca":"21","Kingpaca Cryst":"21B","Daedream":"22","Tanzee":"23","Tanzee Ignis":"23B","Nox":"24","Flambelle":"25","Rooby":"26","Mau":"27","Mau Cryst":"27B","Rushoar":"28","Foxparks":"29","Foxparks Cryst":"29B","Killamari":"30","Killamari Primo":"30B","Fuddler":"31","Eikthyrdeer":"32","Eikthyrdeer Terra":"32B","Direhowl":"33","Caprity":"34","Caprity Noct":"34B","Swee":"35","Sweepa":"36","Turtacle":"37","Turtacle Terra":"37B","Hangyu":"38","Hangyu Cryst":"38B","Woolipop":"39","Woolipop Terra":"39B","Mozzarina":"40","Azurobe":"41","Azurobe Cryst":"41B","Sparkit":"42","Kelpsea":"43","Kelpsea Ignis":"43B","Ribbuny":"44","Ribbuny Botan":"44B","Jelliette":"45","Jellroy":"46","Amione":"47","Gloopie":"48","Gloopie Primo":"48B","Galeclaw":"49","Wispaw":"50","Nitewing":"51","Tombat":"52","Tocotoco":"53","Univolt":"54","Univolt Cryst":"54B","Gobfin":"55","Gobfin Ignis":"55B","Loupmoon":"56","Loupmoon Cryst":"56B","Cawgnito":"57","Arsox":"58","Muffly":"59","Bristla":"60","Cinnamoth":"61","Puffolt":"62","Elphidran":"63","Elphidran Aqua":"63B","Vanwyrm":"64","Vanwyrm Cryst":"64B","Felbat":"65","Vaelet":"66","Beegarde":"67","Elizabee":"68","Lovander":"69","Grintale":"70","Tarantriss":"71","Polapup":"72","Polapup Terra":"72B","Leezpunk":"73","Leezpunk Ignis":"73B","Gorirat":"74","Gorirat Terra":"74B","Surfent":"75","Surfent Terra":"75B","Robinquill":"76","Robinquill Terra":"76B","Flopie":"77","Wixen":"78","Wixen Noct":"78B","Katress":"79","Katress Ignis":"79B","Helzephyr":"80","Helzephyr Lux":"80B","Elgrove":"81","Elgrove Cryst":"81B","Lunaris":"82","Fenglope":"83","Fenglope Lux":"83B","Dinossom":"84","Dinossom Lux":"84B","Bushi":"85","Bushi Noct":"85B","Munchill":"86","Mammorest":"87","Mammorest Cryst":"87B","Finsider":"88","Finsider Ignis":"88B","Petallia":"89","Petallia Ignis":"89B","Leafan":"90","Incineram":"91","Incineram Noct":"91B","Dazzi":"92","Dazzi Noct":"92B","Pyrin":"93","Pyrin Noct":"93B","Relaxaurus":"94","Relaxaurus Lux":"94B","Foxcicle":"95","Beakon":"96","Beakon Cryst":"96B","Ghangler":"97","Ghangler Ignis":"97B","Rayhound":"98","Rayhound Cryst":"98B","Menasting":"99","Menasting Terra":"99B","Needoll":"100","Needoll Noct":"100B","Reindrix":"101","Mossanda":"102","Mossanda Lux":"102B","Chillet":"103","Chillet Ignis":"103B","Ragnahawk":"104","Moldron":"105","Moldron Cryst":"105B","Palumba":"106","Digtoise":"107","Broncherry":"108","Broncherry Aqua":"108B","Dumud":"109","Dumud Gild":"109B","Braloha":"110","Kitsun":"111","Kitsun Noct":"111B","Blazehowl":"112","Blazehowl Noct":"112B","Warsect":"113","Warsect Terra":"113B","Frostplume":"114","Majex":"115","Sibelyx":"116","Sibelyx Primo":"116B","Maraith":"117","Shroomer":"118","Shroomer Noct":"118B","Icelyn":"119","Gildra":"120","Jormuntide":"121","Jormuntide Ignis":"121B","Suzaku":"122","Suzaku Aqua":"122B","Dazemu":"123","Quivern":"124","Quivern Botan":"124B","Lullu":"125","Kikit":"126","Yakumo":"127","Skutlass":"128","Skutlass Ignis":"128B","Reptyro":"129","Reptyro Cryst":"129B","Starryon":"130","Starryon Primo":"130B","Pierdon":"131","Pierdon Cryst":"131B","Cryolinx":"132","Cryolinx Terra":"132B","Snugloo":"133","Wumpo":"134","Wumpo Botan":"134B","Sootseer":"135","Carnibora":"136","Blazamut":"137","Blazamut Ryu":"137B","Dualith":"138","Dualith Noct":"138B","Anubis":"139","Sekhmet":"140","Prixter":"141","Prixter Lux":"141B","Tetroise":"142","Tetroise Primo":"142B","Nyafia":"143","Mimog":"144","Xenovader":"145","Xenogard":"146","Prunelia":"147","Nitemary":"148","Nitemary Botan":"148B","Smokie":"149","Smokie Cryst":"149B","Omascul":"150","Whalaska":"151","Whalaska Ignis":"151B","Verdash":"152","Splatterina":"153","Gildane":"154","Dogen":"155","Bulldosu":"156","Celesdir":"157","Celesdir Noct":"157B","Astegon":"158","Knocklem":"159","Knocklem Ignis":"159B","Silvegis":"160","Azurmane":"161","Valentail":"162","Snock":"163","Snock Terra":"163B","Souffline":"164","Lapiron":"165","Hoodle":"166","Slowatt":"167","Bakemi":"168","Solmora":"169","Solmora Lux":"169B","Lapure":"170","Eidrolon":"171","Eidrolon Ignis":"171B","Dynamoff":"172","Tropicaw":"173","Flaracle":"174","Ophydia":"175","Dupin":"176","Roujay":"177","Venusa":"178","Mycora":"179","Loomen":"180","Wistella":"181","Solenne":"182","Renjishi":"183","Aegidron":"184","Grizzbolt":"185","Lyleen":"186","Lyleen Noct":"186B","Orserk":"187","Faleris":"188","Faleris Aqua":"188B","Shadowbeak":"189","Selyne":"190","Bastigor":"191","Shaolong":"192","Silvance":"193","Dandilord":"194","Bellanoir":"195","Bellanoir Libero":"195B","Xenolord":"196","Hartalis":"197","Paladius":"198","Necromus":"199","Frostallion":"200","Frostallion Noct":"200B","Neptilius":"201","Jetragon":"202","Panthalus":"203","Astralym":"204","Green Slime":"1001","Blue Slime":"1002","Red Slime":"1003","Purple Slime":"1004","Illuminant Slime":"1005","Rainbow Slime":"1006","Enchanted Sword":"1007","Cave Bat":"1008","Illuminant Bat":"1009","Eye of Cthulhu":"1010","Demon Eye":"1011"};
   function paldexNo(name){ return PALDEX_NO[name] || ""; }
   // "#107" for a base Pal, "#121B" for a variant, for the tile.
-  function paldexLabel(name){ var n=paldexNo(name); if(!n) return ""; var m=/^(\d+)([A-Z]?)$/.exec(n); return "#"+("00"+m[1]).slice(-3)+(m[2]||""); }
+  function paldexLabel(name){ var n=paldexNo(name); if(!n) return ""; if(parseInt(n,10)>=1000) return ""; var m=/^(\d+)([A-Z]?)$/.exec(n); if(!m) return ""; return "#"+("00"+m[1]).slice(-3)+(m[2]||""); }
   // Sort key: number first, then "no letter before B" so #121 leads #121B.
   function paldexKey(name){
     var m=/^(\d+)([A-Z]?)$/.exec(paldexNo(name)); if(!m) return [1e6,0];
@@ -6468,13 +6613,18 @@
   // the screen needs no third party at runtime and works offline). A Pal the card game has printed but this
   // table has no render for - or a file the build did not ship - falls back to that Pal's card art below.
   var PAL_ART = {"Lamball":"PAL_Lamball.webp","Cattiva":"PAL_Cattiva.webp","Chikipi":"PAL_Chikipi.webp","Lifmunk":"PAL_Lifmunk.webp","Fuack":"PAL_Fuack.webp","Celaray":"PAL_Celaray.webp","Teafant":"PAL_Teafant.webp","Gumoss":"PAL_Gumoss.webp","Jolthog":"PAL_Jolthog.webp","Jolthog Cryst":"PAL_Jolthog_Cryst.webp","Depresso":"PAL_Depresso.webp","Pengullet":"PAL_Pengullet.webp","Penking":"PAL_Penking.webp","Hoocrates":"PAL_Hoocrates.webp","Daedream":"PAL_Daedream.webp","Tanzee":"PAL_Tanzee.webp","Nox":"PAL_Nox.webp","Flambelle":"PAL_Flambelle.webp","Rooby":"PAL_Rooby.webp","Mau Cryst":"PAL_Mau_Cryst.webp","Rushoar":"PAL_Rushoar.webp","Foxparks":"PAL_Foxparks.webp","Eikthyrdeer Terra":"PAL_Eikthyrdeer_Terra.webp","Direhowl":"PAL_Direhowl.webp","Hangyu Cryst":"PAL_Hangyu_Cryst.webp","Azurobe":"PAL_Azurobe.webp","Sparkit":"PAL_Sparkit.webp","Kelpsea Ignis":"PAL_Kelpsea_Ignis.webp","Ribbuny":"PAL_Ribbuny.webp","Tombat":"PAL_Tombat.webp","Univolt":"PAL_Univolt.webp","Gobfin Ignis":"PAL_Gobfin_Ignis.webp","Loupmoon":"PAL_Loupmoon.webp","Cawgnito":"PAL_Cawgnito.webp","Arsox":"PAL_Arsox.webp","Elphidran":"PAL_Elphidran.webp","Elphidran Aqua":"PAL_Elphidran_Aqua.webp","Vanwyrm":"PAL_Vanwyrm.webp","Felbat":"PAL_Felbat.webp","Vaelet":"PAL_Vaelet.webp","Beegarde":"PAL_Beegarde.webp","Elizabee":"PAL_Elizabee.webp","Lovander":"PAL_Lovander.webp","Leezpunk":"PAL_Leezpunk.webp","Surfent":"PAL_Surfent.webp","Flopie":"PAL_Flopie.webp","Katress":"PAL_Katress.webp","Helzephyr":"PAL_Helzephyr.webp","Dinossom":"PAL_Dinossom.webp","Bushi":"PAL_Bushi.webp","Mammorest":"PAL_Mammorest.webp","Mammorest Cryst":"PAL_Mammorest_Cryst.webp","Petallia":"PAL_Petallia.webp","Incineram":"PAL_Incineram.webp","Pyrin":"PAL_Pyrin.webp","Pyrin Noct":"PAL_Pyrin_Noct.webp","Relaxaurus":"PAL_Relaxaurus.webp","Menasting":"PAL_Menasting.webp","Reindrix":"PAL_Reindrix.webp","Mossanda":"PAL_Mossanda.webp","Mossanda Lux":"PAL_Mossanda_Lux.webp","Chillet":"PAL_Chillet.webp","Ragnahawk":"PAL_Ragnahawk.webp","Digtoise":"PAL_Digtoise.webp","Broncherry":"PAL_Broncherry.webp","Dumud":"PAL_Dumud.webp","Kitsun":"PAL_Kitsun.webp","Blazehowl":"PAL_Blazehowl.webp","Blazehowl Noct":"PAL_Blazehowl_Noct.webp","Warsect":"PAL_Warsect.webp","Maraith":"PAL_Maraith.webp","Jormuntide":"PAL_Jormuntide.webp","Jormuntide Ignis":"PAL_Jormuntide_Ignis.webp","Suzaku":"PAL_Suzaku.webp","Suzaku Aqua":"PAL_Suzaku_Aqua.webp","Reptyro":"PAL_Reptyro.webp","Reptyro Cryst":"PAL_Reptyro_Cryst.webp","Cryolinx":"PAL_Cryolinx.webp","Wumpo":"PAL_Wumpo.webp","Wumpo Botan":"PAL_Wumpo_Botan.webp","Blazamut":"PAL_Blazamut.webp","Astegon":"PAL_Astegon.webp","Grizzbolt":"PAL_Grizzbolt.webp","Lyleen":"PAL_Lyleen.webp","Lyleen Noct":"PAL_Lyleen_Noct.webp","Shadowbeak":"PAL_Shadowbeak.webp"};
-  function palImgSrc(g){ var f=PAL_ART[g.name]; return f ? "img/"+f : imgSrc(g.hero); }
-  var paldexFilter = "all", paldexSort = "dex", paldexQuery = "";
+  function palImgSrc(g){ var f=PAL_ART[g.name]; if(f) return "img/"+f; if(g.hero) return imgSrc(g.hero); return ""; }
+  var paldexFilter = "all", paldexSort = "dex", paldexQuery = "", paldexVariant = "all", paldexView = (function(){ try{ return localStorage.getItem("palvault-paldex-view")||"grid"; }catch(e){ return "grid"; } })();
   // Base Pal name: "Jormuntide - Surging Sea Serpent" -> "Jormuntide". The en dash is what separates the
   // Pal from its card title, so this also decides how the Missing screen's Pal goal groups cards.
   function palKey(c){ return String((c&&c.name)||"").split(" \u2013 ")[0].trim(); }
   function palGroups(){
     var map = {}, order = [];
+    // Seed every Pal from the dex (including future/not-yet-printed) so gap pals appear as 0-printing tiles.
+    Object.keys(PALDEX_NO).forEach(function(name){
+      if(!map[name]){ map[name] = {name:name, cards:[]}; order.push(name); }
+    });
+    // Attach the actual card printings (keeps order stable for any Pal that somehow has a card but no dex number).
     CARDS.forEach(function(c){
       if(c.kind !== "Pal") return;
       var k = palKey(c); if(!k) return;
@@ -6492,7 +6642,7 @@
       var owned = g.cards.filter(ownsForCompletion).length;
       return {name:g.name, cards:g.cards, variants:variants, owned:owned, total:g.cards.length,
               percent: g.cards.length ? Math.round(owned/g.cards.length*100) : 0,
-              hero: g.cards.filter(ownsForCompletion)[0] || g.cards[0]};
+              hero: g.cards.filter(ownsForCompletion)[0] || g.cards[0] || null};
     });
   }
   function paldexFiltered(){
@@ -6502,11 +6652,32 @@
       if(paldexFilter === "started") return g.owned > 0 && g.owned < g.total;
       if(paldexFilter === "complete") return g.total > 0 && g.owned >= g.total;
       if(paldexFilter === "missing") return g.owned === 0;
+      if(paldexVariant !== "all"){
+        var v = null; for(var i=0;i<PAL_VARIANTS.length;i++){ if(PAL_VARIANTS[i].id===paldexVariant){ v=PAL_VARIANTS[i]; break; } }
+        if(v){
+          var hasVariant = g.cards.some(function(c){ return v.rares.indexOf(c.rare) >= 0; });
+          if(!hasVariant) return false;
+        }
+      }
       return true;
     });
     if(paldexSort === "name") out.sort(function(a,b){ return a.name.localeCompare(b.name); });
-    else if(paldexSort === "owned") out.sort(function(a,b){ return b.owned - a.owned || a.name.localeCompare(b.name); });
-    else if(paldexSort === "closest") out.sort(function(a,b){ return (a.total-a.owned) - (b.total-b.owned) || b.percent - a.percent || a.name.localeCompare(b.name); });
+    else if(paldexSort === "owned"){
+      out.sort(function(a,b){
+        if(a.total===0 && b.total===0) return a.name.localeCompare(b.name);
+        if(a.total===0) return 1;
+        if(b.total===0) return -1;
+        return b.owned - a.owned || a.name.localeCompare(b.name);
+      });
+    }
+    else if(paldexSort === "closest"){
+      out.sort(function(a,b){
+        if(a.total===0 && b.total===0) return a.name.localeCompare(b.name);
+        if(a.total===0) return 1;
+        if(b.total===0) return -1;
+        return (a.total-a.owned) - (b.total-b.owned) || b.percent - a.percent || a.name.localeCompare(b.name);
+      });
+    }
     // Default, and the point of the screen: the Paldex order.
     else out.sort(function(a,b){ var ka=paldexKey(a.name), kb=paldexKey(b.name); return ka[0]-kb[0] || ka[1]-kb[1] || a.name.localeCompare(b.name); });
     return out;
@@ -6539,12 +6710,24 @@
         b.onclick = function(){ paldexFilter = b.getAttribute("data-f"); renderPaldex(); };
       });
     }
+    var vchips = $("paldexVariantChips");
+    if(vchips){
+      var vcounts = {all:all.length};
+      PAL_VARIANTS.forEach(function(v){ vcounts[v.id]=all.filter(function(g){ return g.cards.some(function(c){ return v.rares.indexOf(c.rare)>=0; }); }).length; });
+      var vopts=[["all","All variants"]].concat(PAL_VARIANTS.map(function(v){ return [v.id, v.label]; }));
+      vchips.innerHTML = vopts.map(function(pair){ return '<button class="palchip" type="button" data-v="'+pair[0]+'" aria-pressed="'+(paldexVariant===pair[0])+'">'+esc(pair[1])+' <b>'+(vcounts[pair[0]]||0)+'</b></button>'; }).join("");
+      Array.prototype.forEach.call(vchips.querySelectorAll(".palchip"), function(b){
+        b.onclick=function(){ paldexVariant=b.getAttribute("data-v"); renderPaldex(); };
+      });
+    }
+    var viewSel=$("paldexViewSel"); if(viewSel){ viewSel.value=paldexView; }
     var legend = $("paldexLegend");
     if(legend) legend.innerHTML = '<span>Every printing of a Pal in one place \u00b7 tap a pip for that card.</span>' +
       PAL_VARIANTS.map(function(v){ return '<span><i style="background:'+v.color+'"></i>'+esc(v.label)+'</span>'; }).join("") +
       '<span><i style="border:2px dashed var(--line);background:transparent"></i>not printed</span>' +
       '<span style="opacity:.72">Japanese printings are not in the English catalogue yet.</span>';
     var list = paldexFiltered();
+    if(grid){ grid.className="palgrid"+(paldexView==="compact"?" compact":(paldexView==="list"?" list":"")); }
     if(!list.length){ grid.innerHTML = '<div class="deckempty">No Pals match that filter yet.</div>'; return; }
     grid.innerHTML = "";
     list.forEach(function(g){
@@ -6559,24 +6742,27 @@
         var tip = x.v.label + " \u00b7 " + x.owned + "/" + x.cards.length + " owned" + (x.owned ? "" : " \u00b7 none yet");
         return '<button class="palpip '+state+'" type="button" data-cid="'+esc(x.cards[0].id)+'" style="color:'+x.v.color+'" title="'+esc(tip)+'" aria-label="'+esc(tip)+'"></button>';
       }).join("");
+      var countText = (g.total ? g.owned+" of "+g.total+((g.total===1)?" printing":" printings") : "no printings yet \u00b7 future set");
+      var subText = (paldexLabel(g.name) ? paldexLabel(g.name)+" \u00b7 " : "")+ (g.total ? g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "") : "not printed yet");
       var tint = (g.hero && g.hero.els && g.hero.els.length) ? artTint(g.hero) : null;
       var haveArt = !!PAL_ART[g.name];
       el.innerHTML = '<span class="palart palart-pal"'+(tint ? ' style="--_pal:'+elVar(tint)+'"' : "")+'>' +
-          '<img src="'+palImgSrc(g)+'" alt="'+esc(g.name)+'" loading="lazy">' +
+          (palImgSrc(g) ? '<img src="'+palImgSrc(g)+'" alt="'+esc(g.name)+'" loading="lazy">' : '<span style="display:grid;place-items:center;width:100%;height:100%;color:var(--ink-faint);font-size:.72rem">No art yet</span>') +
           '<span class="palpct">'+g.owned+"/"+g.total+'</span>' +
           (g.total && g.owned >= g.total ? '<span class="paldone">'+icon('check')+'</span>' : '') + '</span>' +
         '<div class="palname">'+esc(g.name)+'</div>' +
-        '<div class="palsub">'+(paldexLabel(g.name) ? paldexLabel(g.name)+" \u00b7 " : "")+g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "")+'</div>' +
+        '<div class="palsub">'+esc(subText)+'</div>' +
         '<div class="palprog" role="img" aria-label="'+g.owned+' of '+g.total+((g.total===1)?" printing":" printings")+' owned"><span style="width:'+g.percent+'%"></span></div>' +
-        '<div class="palcount">'+(g.total ? g.owned+" of "+g.total+((g.total===1)?" printing":" printings") : "no printings yet")+'</div>' +
+        '<div class="palcount">'+esc(countText)+'</div>' +
         '<div class="palpips">'+pips+'</div>';
       // A render the bundle is missing should look like an older build, not like a broken tile.
       if(haveArt){
         var artImg = el.querySelector(".palart img");
         if(artImg) artImg.onerror = function(){ artImg.onerror = null; artImg.src = imgSrc(g.hero); };
       }
-      el.onclick = function(){ openPalGoal(g.name); };
-      el.onkeydown = function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openPalGoal(g.name); } };
+      if(!g.total){ el.style.opacity=".78"; el.title=esc(g.name)+" \u00b7 not printed yet \u00b7 future set"; }
+      el.onclick = function(){ if(!g.total){ toast(esc(g.name)+" has no cards yet \u00b7 future set"); return; } openPalGoal(g.name); };
+      el.onkeydown = function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); if(!g.total){ toast(esc(g.name)+" has no cards yet \u00b7 future set"); return; } openPalGoal(g.name); } };
       Array.prototype.forEach.call(el.querySelectorAll(".palpip"), function(b){
         b.onclick = function(e){
           e.stopPropagation();
@@ -6588,10 +6774,51 @@
     });
   }
   (function(){
-    var qi = $("paldexSearch");
-    if(qi) qi.oninput = function(){ paldexQuery = qi.value.trim(); renderPaldex(); };
+    var qi = $("paldexSearch"), box=$("paldexSug");
+    function palSugClose(){ if(box){ box.hidden=true; box.innerHTML=""; qi.setAttribute("aria-expanded","false"); } }
+    function palSugOpen(){
+      if(!qi||!box) return;
+      var q=qi.value.trim().toLowerCase();
+      if(q.length<1){ palSugClose(); return; }
+      var groups=palGroups(), matches=[];
+      groups.forEach(function(g){
+        var name=g.name.toLowerCase();
+        if(name.indexOf(q)===0) matches.push({g:g,s:100});
+        else if(name.split(/[^a-z0-9]+/).some(function(w){return w.indexOf(q)===0;})) matches.push({g:g,s:84});
+        else if(name.indexOf(q)>-1) matches.push({g:g,s:60});
+      });
+      matches.sort(function(a,b){ return b.s-a.s || a.g.name.localeCompare(b.g.name); });
+      var top=matches.slice(0,8).map(function(x){return x.g;});
+      if(!top.length){ palSugClose(); return; }
+      box.innerHTML=top.map(function(g){
+        var hasArt=!!PAL_ART[g.name];
+        var sub=(paldexLabel(g.name)?paldexLabel(g.name)+" · ":"")+ (g.total? (g.owned+"/"+g.total+" printings"):"no printings");
+        var img=palImgSrc(g)|| (g.hero?imgSrc(g.hero):"");
+        return '<div class="palsugrow" role="option" data-pal="'+esc(g.name)+'"><img src="'+esc(img)+'" alt=""><div style="min-width:0"><div class="palsugname">'+hiName(g.name, qi.value.trim())+'</div><div class="palsugmeta">'+esc(sub)+'</div></div><span class="palsugno">'+(hasArt?"":"no art")+'</span></div>';
+      }).join("");
+      Array.prototype.forEach.call(box.querySelectorAll(".palsugrow"), function(el){
+        el.addEventListener("mousedown", function(e){ e.preventDefault(); var name=el.getAttribute("data-pal"); qi.value=name; paldexQuery=name; renderPaldex(); palSugClose(); qi.focus(); });
+      });
+      box.hidden=false; qi.setAttribute("aria-expanded","true");
+    }
+    if(qi){
+      qi.oninput = function(){ paldexQuery = qi.value.trim(); renderPaldex(); palSugOpen(); };
+      qi.addEventListener("focus", function(){ if(qi.value.trim().length>=1) palSugOpen(); });
+      qi.addEventListener("blur", function(){ setTimeout(palSugClose, 120); });
+      qi.addEventListener("keydown", function(e){
+        if(e.key==="Escape"){ palSugClose(); }
+        else if(e.key==="Enter"){
+          if(box && !box.hidden){
+            var first=box.querySelector(".palsugrow");
+            if(first){ e.preventDefault(); var name=first.getAttribute("data-pal"); qi.value=name; paldexQuery=name; renderPaldex(); palSugClose(); return; }
+          }
+        }
+      });
+    }
     var so = $("paldexSortSel");
     if(so) so.onchange = function(){ paldexSort = so.value; renderPaldex(); };
+    var vs = $("paldexViewSel");
+    if(vs) vs.onchange=function(){ paldexView=vs.value; try{ localStorage.setItem("palvault-paldex-view", paldexView); }catch(e){} renderPaldex(); };
   })();
   function renderRewards(){
     var host=$("rewardGrid"); if(!host) return;
@@ -6617,27 +6844,62 @@
     renderSphereThemes();
     renderAchievements();
   }
+  /* Pal Effigies: 13 separate effigies at the Statue of Power, one per milestone. Lifmunk is green and deepest, 8 commons are 20 ranks each, 3 rares are 4 each, Mimog is 92 from capture bonuses. Each tile is a stone pedestal; earned effigies glow in their Pal's colour like at night. */
+  var EFFIGY_FILE={
+    effigyLifmunk:"EFFIGY_LIFMUNK.webp",
+    effigyLamball:"EFFIGY_LAMBALL.webp",
+    effigyPengullet:"EFFIGY_PENGULLET.webp",
+    effigyMunchill:"EFFIGY_MUNCHILL.webp",
+    effigyRooby:"EFFIGY_ROOBY.webp",
+    effigyHerbil:"EFFIGY_HERBIL.webp",
+    effigyTanzee:"EFFIGY_TANZEE.webp",
+    effigyDepresso:"EFFIGY_DEPRESSO.webp",
+    effigyCattiva:"EFFIGY_CATTIVA.webp",
+    effigyLunaris:"EFFIGY_LUNARIS.webp",
+    effigyRelaxaurus:"EFFIGY_RELAXAURUS.webp",
+    effigyYakumo:"EFFIGY_YAKUMO.webp",
+    effigyMimog:"EFFIGY_MIMOG.webp"
+  };
+  function effigySVG(name){
+    var inner = ICONS[name];
+    if(!inner) inner = ICONS["effigy"];
+    return '<svg class="effigy-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>';
+  }
+  function effigyImg(name){
+    var f=EFFIGY_FILE[name];
+    if(!f) return effigySVG(name);
+    var fb=effigySVG(name).replace('class="effigy-svg"','class="effigy-svg effigy-svg-fallback" style="display:none"');
+    return "<img class=\"effigy-img\" src=\"img/"+f+"\" alt=\"\" loading=\"lazy\" decoding=\"async\" width=\"44\" height=\"44\" onerror=\"this.onerror=null;this.style.display='none';var n=this.nextElementSibling;if(n) n.style.display='block'\">"+fb;
+  }
   function renderAchievements(){
     var host=$("achievementGrid"); if(!host) return;
     var owned=CARDS.filter(function(c){return has(o(c.id));}).length, ds=decks().length, completed=SET_SPHERE_TRACKS.filter(function(track){return !!(activeCol().setSpheres||{})[track.id];}).length;
     var total=TOTAL||CARDS.length, half=owned*2>=total&&owned>0;
-    var sealedOwned=0; try{ sealedOwned=SEALED.filter(function(p){ return (+((sealItem(p.id)||{}).qty)||0)>0; }).length; }catch(e){ /* sealed table not ready yet */ }
+    var sealedOwned=0; try{ sealedOwned=SEALED.filter(function(p){ return (+((sealItem(p.id)||{}).qty)||0)>0; }).length; }catch(e){}
     var decksDone=0; decks().forEach(function(d){ var ids=Object.keys(d.cards||{}); if(!ids.length) return;
       var need=0, haveN=0; ids.forEach(function(id){ var q=+d.cards[id]||0; need+=q; haveN+=Math.min(q,(activeCol().own[id]&&activeCol().own[id].qty)||0); });
       if(need&&haveN>=need) decksDone++; });
     var badges=[
-      {name:"First catch",detail:"Add your first card",ok:owned>=1},
-      {name:"Binder starter",detail:"Collect 25 cards",ok:owned>=25},
-      {name:"Getting serious",detail:"Collect 100 cards",ok:owned>=100},
-      {name:"Half way",detail:"Reach 50% of the full set",ok:half},
-      {name:"Deck builder",detail:"Create a deck",ok:ds>=1},
-      {name:"Prepared",detail:"Complete a deck from your collection",ok:decksDone>=1},
-      {name:"Wish maker",detail:"Save a card to your wishlist",ok:wishCount()>=1},
-      {name:"Set finisher",detail:"Earn a Set Sphere",ok:completed>=1},
-      {name:"Master collector",detail:"Earn every current Set Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0},
-      {name:"Sealed collector",detail:"Own 10 sealed products",ok:sealedOwned>=10}
+      {name:"Lifmunk Effigy",detail:"Capture power · first catch",ok:owned>=1, icon:"effigyLifmunk", eff:"#82c23f", sub:"offered at the Statue of Power · 15 ranks · +0.5 per rank"},
+      {name:"Lamball Effigy",detail:"Satiety duration · 25 cards",ok:owned>=25, icon:"effigyLamball", eff:"#f3c31c", sub:"slower hunger drain"},
+      {name:"Pengullet Effigy",detail:"Swimming ability · 50 cards",ok:owned>=50, icon:"effigyPengullet", eff:"#2f8fe0", sub:"faster swimming · less stamina"},
+      {name:"Munchill Effigy",detail:"Food preservation · 75 cards",ok:owned>=75, icon:"effigyMunchill", eff:"#d6a15e", sub:"food spoils slower"},
+      {name:"Rooby Effigy",detail:"Jump power · 100 cards",ok:owned>=100, icon:"effigyRooby", eff:"#e85d2a", sub:"higher jumps"},
+      {name:"Herbil Effigy",detail:"Flight capacity · reach 50% of the set",ok:half, icon:"effigyHerbil", eff:"#82c23f", sub:"faster gliding"},
+      {name:"Tanzee Effigy",detail:"Climbing proficiency · create a deck",ok:ds>=1, icon:"effigyTanzee", eff:"#5aa85a", sub:"faster climbing"},
+      {name:"Depresso Effigy",detail:"Status resistance · complete a deck",ok:decksDone>=1, icon:"effigyDepresso", eff:"#8a7fd6", sub:"fewer status conditions"},
+      {name:"Cattiva Effigy",detail:"Endurance · save a card to your wishlist",ok:wishCount()>=1, icon:"effigyCattiva", eff:"#b7ada3", sub:"mounted stamina"},
+      {name:"Lunaris Effigy",detail:"Sphere tracking · earn a Set Sphere",ok:completed>=1, icon:"effigyLunaris", eff:"#a0e0e8", sub:"4 effigies · spheres pursue · 25% per rank"},
+      {name:"Relaxaurus Effigy",detail:"EXP gain · earn every current Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0, icon:"effigyRelaxaurus", eff:"#4ec07a", sub:"4 effigies · +50% EXP"},
+      {name:"Yakumo Effigy",detail:"Rainbow fortune · own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"#c51f67", sub:"4 effigies · better wild passives"},
+      {name:"Mimog Effigy",detail:"Movement speed · 92 ranks · from capture bonuses",ok:owned>=150, icon:"effigyMimog", eff:"#c98a12", sub:"complete species capture bonuses · +50% at rank 92"}
     ];
-    host.innerHTML=badges.map(function(b){return '<div class="achievement '+(b.ok?'earned':'')+'"><b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+esc(b.detail)+(b.ok?' · earned':'')+'</span></div>';}).join("");
+    host.innerHTML=badges.map(function(b){
+      var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'<span class="effigy-pedestal"></span></div>';
+      var meta = esc(b.detail);
+      if(b.sub) meta += '<br><span style="opacity:.82">'+esc(b.sub)+'</span>';
+      return '<div class="achievement '+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'">'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+meta+(b.ok?' · offered':'')+'</span></div>';
+    }).join("");
   }
   function openSetSphere(id, earned){
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={};
@@ -6700,11 +6962,12 @@
 
   // ---- Home ----
   // ---- Featured window -------------------------------------------------------------------------------
-  // The first thing on Home: three images that scroll themselves through the newest news and releases.
-  // This replaces the old NEWS & RELEASES card, which could only ever show one headline. Every slide is
-  // built from data the app already holds - the news feed it caches, SET_META's bundled set art, and the
-  // sealed pre-order list - so it renders offline, needs no extra request, and follows each new set
-  // automatically instead of being a second list someone has to remember to update.
+  // The first thing on Home: five images that scroll themselves through the newest news and releases.
+  // Slides: 1) latest official news, 2) latest X post with an image, 3) app update (when behind),
+  // 4) collection — biggest riser/faller when prices are shown, otherwise a summary — and 5) latest
+  // card reveal from X. Every slide is built from data the app already holds - the news feed it caches,
+  // SET_META's bundled set art, sealed pre-order art and price movers - so it renders offline, needs
+  // no extra request, and follows each new set automatically.
   var FEAT_MS = 5200, _featIndex = 0, _featTimer = null, _featSig = "", _featPaused = false;
   // Same month-name parsing the release timeline uses: "Oct 30, 2026" / "Dec 2026" / anything else.
   function featTime(str){
@@ -6729,13 +6992,11 @@
   function featNewsSet(news){
     var text=(String((news&&news.title)||"")+" "+String((news&&news.summary)||"")).toLowerCase();
     var map=[["dawn of palpagos","EBP01"],["ebp01","EBP01"],["trial deck","ETD01"],["starter deck","ETD01"],
-             ["promo","PR2026"]];
+             ["promo","PR2026"],["card reveal",""],["reveal",""],["new card",""]];
     for(var i=0;i<map.length;i++){ if(text.indexOf(map[i][0])>=0) return map[i][1]; }
     return "";
   }
   function featuredSlides(){
-    // A set with a real release date ranks above one that only carries a year ("2026"): the dated set is
-    // the one that actually shipped most recently, and it is the one worth showing art for.
     function liveRank(k){ var t=featTime((SET_META[k]||{}).release); return t===Infinity ? 0 : t; }
     var live=[];
     SET_ORDER.forEach(function(k){
@@ -6744,15 +7005,36 @@
     });
     live.sort(function(a,b){ return liveRank(b)-liveRank(a) || SET_ORDER.indexOf(a)-SET_ORDER.indexOf(b); });
     var liveArt=live.filter(function(k){ return !!((SET_META[k]||{}).art); });
-    var up=null;
-    SEALED.filter(function(p){ return p.pre; }).forEach(function(p){
-      var t=featTime(sealDate(p)); if(t===Infinity) return;
-      if(!up || t<up.t) up={t:t, name:p.set||p.name, date:sealDate(p), banner:p.banner||"", box:p.box||"", product:p};
-    });
-    var out=[], news=(typeof visibleNews==="function") ? visibleNews()[0] : null;
-    // Update headliner: only when the installed build is behind the store build.
-    // It is the first slide so it is the first thing a behind user sees, and the
-    // three highlights tell them why it is worth tapping.
+    var list=(typeof visibleNews==="function"?visibleNews():[]);
+    // 1 - latest official news (source "official"; seed items have no source and count as official)
+    var official=null;
+    for(var i=0;i<list.length;i++){ var n=list[i]; if(!n) continue; var src=String(n.source||""); if(src.indexOf("x:")===0) continue; official=n; break; }
+    if(!official && list.length) official=list[0];
+    // 2 - latest X post that carries an image
+    var xImage=null;
+    for(var j=0;j<list.length;j++){ var x=list[j]; if(x && x.image && String(x.source||"").indexOf("x:")===0){ xImage=x; break; } }
+    if(!xImage){ for(var kk=0; kk<list.length; kk++){ var y=list[kk]; if(y && y.image && /pbs\.twimg\.com/i.test(String(y.image))){ xImage=y; break; } } }
+    // 5 - latest card reveal (computed first so we can deduplicate against 1/2, but pushed last)
+    var reveal=null;
+    try{
+      for(var r=0;r<list.length;r++){ var rn=list[r]; if(rn&&rn.image && (/card reveal|reveal|new card/i.test((rn.title||"")+" "+(rn.summary||"")) || /cardlist|palworld.*card/i.test(String(rn.image)))){ reveal=rn; break; } }
+      if(!reveal) for(var r2=0;r2<list.length;r2++){ var rn2=list[r2]; if(rn2&&rn2.image && /cardlist|pbs\.twimg\.com/i.test(String(rn2.image))){ reveal=rn2; break; } }
+    }catch(e){}
+    var out=[];
+    // 1 - official
+    if(official){
+      var newsSet=featNewsSet(official)||liveArt[0]||live[0]||"";
+      var oArt = official.image || featArt(newsSet);
+      out.push({ kind:"news", badge:"Latest news", title:decodeEntities(official.title||"What\u2019s new"), meta:(official.date||"Latest update")+" \u00b7 Official site", art:oArt, set:newsSet, image:official.image||"", link:official.link||OFFICIAL_NEWS });
+    }
+    // 2 - X image
+    if(xImage){
+      var isDupOfficial = official && xImage===official;
+      if(!isDupOfficial){
+        out.push({ kind:"ximage", badge:"Latest on X", title:decodeEntities(xImage.title||"New from @PalworldOCG_EN"), meta:(xImage.date||"Today")+" \u00b7 @PalworldOCG_EN", art:xImage.image, set:featNewsSet(xImage), image:xImage.image, link:xImage.link||"https://x.com/PalworldOCG_EN" });
+      }
+    }
+    // 3 - app update, only for behind users (three bullets from ko-fi / RELEASE_HIGHLIGHTS / server notes)
     if(typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION)){
       var _upNotes = (typeof updateNotesFor==="function" ? updateNotesFor(_latestAppVersion) : (typeof RELEASE_HIGHLIGHTS!=="undefined" ? (RELEASE_HIGHLIGHTS[_latestAppVersion]||[]) : []));
       if(!_upNotes || !_upNotes.length) _upNotes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
@@ -6760,22 +7042,70 @@
       var _upArt = liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : "");
       out.push({kind:"update", badge:"Update available", title:"SphereDex "+_latestAppVersion+" is here", meta:_upNotes.join(" \u00b7 "), notes:_upNotes, art:_upArt, version:_latestAppVersion});
     }
-    // Fall back to a set whose art is bundled, so the newest headline still gets a real image offline.
-    var newsSet=news ? (featNewsSet(news)||liveArt[0]||live[0]||"") : "";
-    if(news) out.push({ kind:"news", badge:"Latest news", title:decodeEntities(news.title||"What\u2019s new"),
-      meta:news.date||"Latest update", art:featArt(newsSet), set:newsSet });
-    if(live.length){
-      var k=live[0], sp=setProgress(), owned=sp.owned[k]||0, tot=sp.tot[k]||0, pct=tot?Math.round(owned/tot*100):0, rel=(SET_META[k]||{}).release||"";
-      out.push({ kind:"release", badge:"Available now", title:(SETS[k]||{}).name||k,
-        meta:(rel?rel+" \u00b7 ":"")+owned+"/"+tot+" collected \u00b7 "+pct+"%", art:featArt(k), set:k });
+    // 4 - collection: riser/faller when prices are on, otherwise a summary
+    (function(){
+      var showPrices = (typeof SETTINGS!=="undefined" && SETTINGS.mode!=="collector");
+      if(showPrices){
+        var upM=null, downM=null;
+        try{
+          if(typeof moverCard==="function"){
+            upM=moverCard("up", "collection");
+            downM=moverCard("down", "collection");
+            if(!upM && !downM){
+              var uA=moverCard("up","all"), dA=moverCard("down","all");
+              if(uA) upM=uA; if(dA) downM=dA;
+            }
+          }
+        }catch(e){}
+        if(upM || downM){
+          var notes=[];
+          if(upM) notes.push("\u25B2 "+upM.c.name+" +"+Math.abs(upM.pct).toFixed(1)+"% \u00b7 "+money(upM.prev)+" \u2192 "+money(upM.cur));
+          if(downM) notes.push("\u25BC "+downM.c.name+" "+(-Math.abs(downM.pct)).toFixed(1)+"% \u00b7 "+money(downM.prev)+" \u2192 "+money(downM.cur));
+          var mArt="";
+          try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
+          if(!mArt) mArt = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
+          var mTitle = (upM && downM) ? "Movers in your collection" : (upM ? "Biggest riser today" : "Biggest faller today");
+          out.push({kind:"movers", badge:"Your collection", title:mTitle, meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, art:mArt});
+        } else {
+          var total=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP=0;
+          try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
+          var pct=total?Math.round(ownedP/total*100):0;
+          var art2 = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
+          out.push({kind:"collection", badge:"Your collection", title:ownedP+" / "+total+" cards \u00b7 "+pct+"%", meta:(Object.keys((typeof setProgress==="function"?setProgress().tot:{})).length||0)+" sets tracked \u00b7 movers building baseline", art:art2});
+        }
+      } else {
+        var total2=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP2=0;
+        try{ ownedP2=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
+        var pct2=total2?Math.round(ownedP2/total2*100):0;
+        var sp=null; try{ sp=(typeof setProgress==="function"?setProgress():null); }catch(e){}
+        var tracked = sp ? Object.keys(sp.tot||{}).length : 0;
+        var art3 = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
+        var collMeta = tracked+" sets tracked";
+        try{ var sph=(typeof nextSphereMissingGoal==="function"?nextSphereMissingGoal():null); if(sph && sph.track) collMeta += " \u00b7 Next Sphere: "+sph.track.name+" ("+sph.remaining+" left)"; }catch(e){}
+        out.push({kind:"collection", badge:"Your collection", title:ownedP2+" / "+total2+" cards \u00b7 "+pct2+"%", meta:collMeta, art:art3});
+      }
+    })();
+    // 5 - card reveal from X
+    if(reveal){
+      var dup=false;
+      for(var d=0; d<out.length; d++){ if(out[d].image && reveal.image && out[d].image===reveal.image){ dup=true; break; } }
+      if(official===reveal || xImage===reveal) dup=true;
+      if(dup){
+        var alt=null;
+        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand && cand!==reveal && cand.image && (/card reveal|reveal|new card/i.test((cand.title||"")+" "+(cand.summary||"")) || /cardlist|palworld.*card/i.test(String(cand.image)))){ alt=cand; break; } }
+        if(alt) { reveal=alt; dup=false; for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } } else { reveal=null; dup=false; }
+      }
+      if(reveal && !dup){
+        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(reveal.date||"Today")+" \u00b7 from @PalworldOCG_EN", art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||"https://x.com/PalworldOCG_EN" });
+      }
     }
-    if(up){
-      var img=(window.CARD_IMG&&(window.CARD_IMG[up.banner]||window.CARD_IMG[up.box]))||"";
-      out.push({ kind:"soon", badge:"Coming soon", title:up.name, meta:(up.date||"Date TBA")+" \u00b7 preorder open",
-        art:img, product:up.product });
+    if(out.length<2 && live.length){
+      var k=live[0], sp2=setProgress(), owned=sp2.owned[k]||0, tot=sp2.tot[k]||0, pct3=tot?Math.round(owned/tot*100):0, rel=(SET_META[k]||{}).release||"";
+      out.push({ kind:"release", badge:"Available now", title:(SETS[k]||{}).name||k, meta:(rel?rel+" \u00b7 ":"")+owned+"/"+tot+" collected \u00b7 "+pct3+"%", art:featArt(k), set:k });
     }
-    return out.slice(0,3);
+    return out.slice(0,5);
   }
+
   function featPaint(){
     var host=$("homeFeatured"), track=$("featTrack"); if(!host||!track) return;
     track.style.transform="translateX(-"+(_featIndex*100)+"%)";
@@ -6783,7 +7113,7 @@
       var on=(i===_featIndex);
       if(on){ s.classList.add("on"); s.removeAttribute("tabindex"); s.removeAttribute("aria-hidden"); }
       else { s.classList.remove("on"); s.setAttribute("tabindex","-1"); s.setAttribute("aria-hidden","true"); }
-      var im=s.querySelector("img.zoom"); if(im && on){ im.style.animation="none"; void im.offsetWidth; im.style.animation=""; }
+      var im=s.querySelector(".featimg-fg.zoom"); if(im && on){ im.style.animation="none"; void im.offsetWidth; im.style.animation=""; }
     });
     Array.prototype.forEach.call(host.querySelectorAll(".featdot"), function(d,i){ d.setAttribute("aria-current", String(i===_featIndex)); });
   }
@@ -6830,6 +7160,10 @@
     }
     if(s.kind==="release" && s.set){ openSet(s.set); return; }
     if(s.kind==="news"){ showPage("news"); return; }
+    if(s.kind==="ximage"){ if(s.link && !window.IS_NATIVE && !window.IS_IOS){ try{ window.open(s.link,"_blank"); }catch(e){} } showPage("news"); return; }
+    if(s.kind==="movers"){ showPage("portfolio"); if(typeof renderTrending==="function") setTimeout(renderTrending, 30); return; }
+    if(s.kind==="collection"){ showPage("collection"); return; }
+    if(s.kind==="reveal"){ showPage("news"); return; }
     showPage("releases");
   }
   function renderFeatured(){
@@ -6843,15 +7177,19 @@
     if(sig===_featSig && !host.hidden){ featStart(); return; }
     _featSig=sig;
     if(_featIndex>=slides.length) _featIndex=0;
+        function isCardArt(s){ var u=String(s.art||s.image||"").toLowerCase(); return s.kind==="reveal" || s.kind==="ximage" || s.kind==="movers" || /cardlist|pbs\.twimg\.com/i.test(u) || /card reveal|\breveal\b|jormuntide|savage lava/i.test(String(s.title||"")); }
     var cells=slides.map(function(s,i){
-      var img=s.art ? '<img src="'+esc(s.art)+'" alt="" loading="lazy">' : "";
+      var isCard=isCardArt(s);
+      var fgClass='featimg-fg'+(s.art?' zoom':'');
+      var bgImg=s.art ? '<img class="featimg-bg" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async">' : "";
+      var fgImg=s.art ? '<img class="'+fgClass+'" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async">' : "";
       var on=(i===_featIndex);
-      var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="update"?"refresh":"news"));
-      var bodyMeta = (s.kind==="update" && s.notes && s.notes.length)
+      var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="reveal"?"layers":(s.kind==="update"?"refresh":(s.kind==="ximage"?"camera":(s.kind==="movers"?"chart":(s.kind==="collection"?"grid":"news"))))));
+      var bodyMeta = ((s.kind==="update" || s.kind==="movers") && s.notes && s.notes.length)
         ? '<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>'
         : '<span class="featmeta">'+esc(s.meta)+'</span>';
       return '<button class="featslide'+(on?" on":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
-        '><span class="featimg'+(s.art?"":" featnoimg")+'">'+img+'</span><span class="featscrim"></span>'+
+        '><span class="featimg '+(s.art? (isCard?'featimg--card':'featimg--banner') : 'featnoimg')+'">'+bgImg+fgImg+'</span><span class="featscrim"></span>'+
         '<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
         '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span></button>';
     }).join("");
@@ -6916,38 +7254,55 @@
     var wishCards=CARDS.filter(function(c){ return isWished(c.id)&&!has(o(c.id)); }), deckWish=deck?wishCards.filter(function(c){ return deck.items.some(function(item){return item.card.id===c.id;}); }).length:0, sphereWish=sphere?wishCards.filter(function(c){ return sphere.items.some(function(item){return item.card.id===c.id;}); }).length:0, drops=wishCards.filter(function(c){ var now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; return now>0&&before>0&&now<before*.99; }).length;
     var marketMove=0, marketMoveCount=0; CARDS.forEach(function(c){ var e=o(c.id), now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; if((+e.qty||0)>0&&now>0&&before>0){ marketMove+=(+e.qty||0)*(now-before); marketMoveCount++; } });
     var away=$("homeAway"), addedSince=PREVIOUS_VISIT?CARDS.filter(function(c){return addedAt(c.id)>PREVIOUS_VISIT;}):[], weekCutoff=APP_OPENED_AT-7*24*60*60*1000, addedThisWeek=CARDS.filter(function(c){return addedAt(c.id)>=weekCutoff;});
-    if(away){ if((PREVIOUS_VISIT && (addedSince.length || APP_OPENED_AT-PREVIOUS_VISIT>6*60*60*1000)) || addedThisWeek.length){ var hrs=PREVIOUS_VISIT?Math.max(1,Math.round((APP_OPENED_AT-PREVIOUS_VISIT)/36e5)):0, title=addedSince.length?addedSince.length+' different card'+(addedSince.length===1?'':'s')+' added since your last visit':(addedThisWeek.length?addedThisWeek.length+' different card'+(addedThisWeek.length===1?'':'s')+' added this week':'Your collection is ready to pick back up'), meta=[]; if(hrs) meta.push(hrs+' hour'+(hrs===1?'':'s')+' since your last visit'); if(addedThisWeek.length) meta.push('Weekly summary · '+addedThisWeek.length+' different cards'); away.hidden=false; away.innerHTML='<div class="hclabel">'+icon('refresh')+(addedThisWeek.length?'Your collection update':'While you were away')+'</div><div class="hcname">'+title+'</div><div class="hcfoot"><span>'+esc(meta.join(' · '))+'</span><span class="homeupdate-actions"><button class="homeaction" data-action="recent" type="button">View recent</button><button class="homeaction" data-action="next" type="button">Find next card</button></span></div>'; away.querySelector('[data-action="recent"]').onclick=function(){ filters.view="recent"; showPage("collection"); showCollGrid(true); render(); }; away.querySelector('[data-action="next"]').onclick=function(){ missingGoal="sphere"; showPage("missing"); }; } else { away.hidden=true; away.innerHTML=""; } }
+
+    if(away){ if((PREVIOUS_VISIT && (addedSince.length || APP_OPENED_AT-PREVIOUS_VISIT>6*60*60*1000)) || addedThisWeek.length){ var hrs=PREVIOUS_VISIT?Math.max(1,Math.round((APP_OPENED_AT-PREVIOUS_VISIT)/36e5)):0;
+
+      var timeLine = hrs ? hrs+' hour'+(hrs===1?'':'s')+' since your last visit' : 'Welcome back';
+
+      var bullets=[];
+
+      if(addedSince.length) bullets.push(addedSince.length+' card'+(addedSince.length===1?'':'s')+' added to your collection since last visit');
+
+      else if(addedThisWeek.length) bullets.push(addedThisWeek.length+' card'+(addedThisWeek.length===1?'':'s')+' added this week');
+
+      try{ var prevTotal=(function(){try{return +localStorage.getItem("palvault-last-total")||0;}catch(e){return 0;}})(); if(prevTotal && TOTAL>prevTotal){ var d=TOTAL-prevTotal; bullets.push(d+' new card'+(d===1?'':'s')+' in the app · '+TOTAL+' total'); } }catch(e){}
+
+      try{ var up=null; SEALED.filter(function(p){return p.pre;}).forEach(function(p){ var tt=featTime(sealDate(p)); if(tt===Infinity) return; if(!up||tt<up.t) up={t:tt,name:p.set||p.name,date:sealDate(p)}; }); if(up) bullets.push('Next set: '+up.name+' · '+(up.date||'coming soon')); else if(closest) bullets.push('Closest set: '+SETS[closest.set].name+' · '+closest.remaining+' left'); }catch(e){}
+
+      try{ var feats=(typeof updateNotesFor==="function"?updateNotesFor(_latestAppVersion):null); if(!feats||!feats.length) feats=(typeof RELEASE_HIGHLIGHTS!=="undefined"?(RELEASE_HIGHLIGHTS[APP_VERSION]||[]):[]); feats.slice(0,2).forEach(function(f){ bullets.push(f); }); }catch(e){}
+
+      bullets=bullets.slice(0,4);
+
+      var bulletHtml = bullets.length ? '<ul class="awaylist">'+bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>' : '';
+
+      away.hidden=false; away.innerHTML='<div class="hclabel">'+icon('refresh')+'Your Collection Update</div><div class="hcname">'+esc(timeLine)+'</div>'+bulletHtml; } else { away.hidden=true; away.innerHTML=""; } }
     document.documentElement.style.setProperty("--logo-c", rk.c);
     var rr=$("rewardRank");
     if(rr){ rr.style.setProperty("--rc",rk.c);
       rr.innerHTML='<span class="rankbadge" style="--rc:'+rk.c+'"><span class="rankdot"></span>'+rk.name+'</span>'+
         '<div class="rankmeta">'+pct+'% of all cards collected'+(rk.next?' · next: '+esc(rk.next):' · maxed out!')+'</div>'; }
     $("homeCollection").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('grid')+'Your collection</div><div class="hcname">'+ownedP+' / '+total+' cards</div></div><div class="hcvalue">'+pct+'%<small>complete</small></div></div><div class="hctrack"><span style="width:'+pct+'%"></span></div><div class="hcfoot"><span>'+Object.keys(setProgress().tot).length+' sets tracked</span><button class="homeaction" type="button">View collection</button></div>';
-    var sphereChip="";
-    if(sphere){
-      var sb={}; sphere.items.forEach(function(x){ var r=x.card.rare||x.card.kind||"?"; (sb[r]=sb[r]||[]).push(x.card.id); });
-      var baseOrder=["C","U","R","RR","SR","SP","SSP","OSR","TD","TSR","TSP","PR","SSS"], chipOrder=baseOrder.filter(function(r){return sb[r];}).concat(Object.keys(sb).filter(function(r){return baseOrder.indexOf(r)<0;}));
-      sphereChip='<div class="spherebreakdown">'+chipOrder.map(function(r){ return '<span>'+esc(RARE_NAME[r]||r)+' <b>'+sb[r].length+'</b></span>'; }).join("")+(sphereWish?'<span>'+sphereWish+' already wishlisted</span>':'')+'</div>';
-    }
-    if(sphere){ $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Next Set Sphere</div><div class="hcname">'+esc(sphere.track.name)+'</div></div><div class="hcvalue">'+sphere.remaining+'<small>cards left</small></div></div><div class="hctrack"><span style="width:'+sphere.percent+'%"></span></div>'+(sphereChip||('<div class="hcfoot"><span>'+sphere.items.filter(function(x){return isWished(x.card.id);}).length+' already wishlisted · '+esc(sphere.track.sphere.name)+'</span></div>'))+'<div class="hcfoot"><span>'+esc(sphere.track.sphere.name)+'</span><button class="homeaction primary" type="button">View missing</button></div>'; }
-    else { $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Set Spheres</div><div class="hcname">Available Spheres earned</div></div><div class="hcvalue">100%<small>complete</small></div></div><div class="hctrack"><span style="width:100%"></span></div><div class="hcfoot"><span>Future set Spheres will appear on your shelf.</span><button class="homeaction primary" type="button">View rewards</button></div>'; }
-    if(closest){ $("homeClosest").innerHTML='<div class="hclabel">'+icon('star')+'Closest set goal</div><div class="hcname">'+esc(SETS[closest.set].name)+'</div><div class="hcvalue">'+closest.remaining+'<small>cards left · '+closest.percent+'%</small></div><div class="hcfoot">'+(closestIsSphere?'':'<span class="hchint">No Set Sphere reward</span>')+'<button class="homeaction" type="button">View missing</button></div>'; }
-    else { $("homeClosest").innerHTML='<div class="hclabel">'+icon('star')+'Closest completion</div><div class="hcname">Every set complete</div><div class="hcvalue">100%<small>collection complete</small></div>'; }
-    if(deck){ $("homeDeck").innerHTML='<div class="hclabel">'+icon('layers')+'Your deck</div><div class="hcname">'+esc(deck.deck.name)+'</div><div class="hcvalue">'+deck.owned+' / '+deck.total+'<small>'+deck.remaining+' copies missing</small></div><div class="hcfoot"><button class="homeaction" type="button">View deck</button></div>'; }
-    else { $("homeDeck").innerHTML='<div class="hclabel">'+icon('layers')+'Your decks</div><div class="hcname">Build your first deck</div><div class="hcvalue">0<small>decks</small></div><div class="hcfoot"><button class="homeaction" type="button">Build a deck</button></div>'; }
+        if(sphere){ $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Next Set Sphere</div><div class="hcname">'+esc(sphere.track.name)+'</div></div><div class="hcvalue">'+sphere.remaining+'<small>cards left</small></div></div><div class="hctrack"><span style="width:'+sphere.percent+'%"></span></div><div class="hcfoot"><span>'+esc(sphere.track.sphere.name)+'</span><button class="homeaction" type="button">View rewards</button></div>'; }
+    else { $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Set Spheres</div><div class="hcname">Available Spheres earned</div></div><div class="hcvalue">100%<small>complete</small></div></div><div class="hctrack"><span style="width:100%"></span></div><div class="hcfoot"><span>All Spheres earned</span><button class="homeaction" type="button">View rewards</button></div>'; }
+    if(closest){ $("homeClosest").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('star')+'Closest set goal</div><div class="hcname">'+esc(SETS[closest.set].name)+'</div></div><div class="hcvalue">'+closest.remaining+'<small>cards left</small></div></div><div class="hctrack"><span style="width:'+closest.percent+'%"></span></div><div class="hcfoot"><span>'+(closestIsSphere?closest.percent+'% · Set Sphere reward':'No Set Sphere reward')+'</span><button class="homeaction" type="button">View missing</button></div>'; }
+    else { $("homeClosest").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('star')+'Closest completion</div><div class="hcname">Every set complete</div></div><div class="hcvalue">100%<small>complete</small></div></div><div class="hctrack"><span style="width:100%"></span></div><div class="hcfoot"><span>All sets complete</span><button class="homeaction" type="button">View PalDex</button></div>'; }
+    if(deck){ $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your deck</div><div class="hcname">'+esc(deck.deck.name)+'</div></div><div class="hcvalue">'+deck.owned+' / '+deck.total+'<small>'+deck.remaining+' left</small></div></div><div class="hctrack"><span style="width:'+deck.percent+'%"></span></div><div class="hcfoot"><span>'+esc(deck.deck.format||'Deck')+' · '+deck.percent+'%</span><button class="homeaction" type="button">View deck</button></div>'; }
+    else { $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your decks</div><div class="hcname">Build your first deck</div></div><div class="hcvalue">0<small>decks</small></div></div><div class="hctrack"><span style="width:0%"></span></div><div class="hcfoot"><span>No decks yet</span><button class="homeaction" type="button">Build a deck</button></div>'; }
     var wishSignals=[]; if(deckWish) wishSignals.push(deckWish+' for your deck'); if(sphereWish) wishSignals.push(sphereWish+' for next Sphere'); if(drops) wishSignals.push(drops+' price drop'+(drops===1?'':'s'));
-    $("homeWishlist").innerHTML='<div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' cards</div><div class="hcvalue">'+wish.remaining+'<small>still to acquire</small></div><div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
+    var wishPct=wishCount()?Math.round((wishCount()-wish.remaining)/wishCount()*100):0;
+
+    $("homeWishlist").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' cards</div></div><div class="hcvalue">'+wish.remaining+'<small>to acquire</small></div></div><div class="hctrack"><span style="width:'+wishPct+'%"></span></div><div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
     var moveText=marketMoveCount?(marketMove>=0?'+':'−')+money(Math.abs(marketMove))+' today':'Awaiting market movement';
     var estimateCount=CARDS.filter(function(c){ return has(o(c.id))&&isConverted(c.id); }).length;
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
     var marketDetail=marketBasis+(estimateCount?" · "+estimateCount+" estimated":" · native market data");
-    $("homeMarket").innerHTML='<div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">Collection value</div><div class="hcvalue">'+money(value)+'<small>'+esc(marketDetail)+'</small></div><div class="hcfoot"><span>'+esc(moveText)+'</span><button class="homeaction" type="button">View market</button></div>';
-    $("homeCollection").querySelector("button").onclick=openAllCards;
-    $("homeSphere").querySelector("button").onclick=function(){ if(sphere){ missingGoal="sphere"; showPage("missing"); } else showPage("rewards"); };
-    var setButton=$("homeClosest").querySelector("button"); if(setButton) setButton.onclick=function(){ missingGoal="set"; showPage("missing"); };
-    $("homeDeck").querySelector("button").onclick=function(){ showPage("decks"); };
-    $("homeWishlist").querySelector("button").onclick=function(){ showPage("wishlist"); };
-    $("homeMarket").querySelector("button").onclick=function(){ showPage("portfolio"); };
+    $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">Collection value</div></div><div class="hcvalue">'+money(value)+'<small>'+esc(marketDetail)+'</small></div></div><div class="hctrack"><span style="width:'+pct+'%"></span></div><div class="hcfoot"><span>'+esc(moveText)+'</span><button class="homeaction" type="button">View market</button></div>';
+    $("homeCollection").onclick=openAllCards; $("homeCollection").style.cursor="pointer"; $("homeCollection").querySelector("button").onclick=function(e){ e.stopPropagation(); openAllCards(); };
+    $("homeSphere").onclick=function(){ showPage("rewards"); }; $("homeSphere").style.cursor="pointer"; (function(){ var b=$("homeSphere").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); showPage("rewards"); }; })();
+    $("homeClosest").onclick=function(){ if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; $("homeClosest").style.cursor="pointer"; (function(){ var b=$("homeClosest").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; })();
+    $("homeDeck").onclick=function(){ showPage("decks"); }; $("homeDeck").style.cursor="pointer"; $("homeDeck").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("decks"); };
+    $("homeWishlist").onclick=function(){ showPage("wishlist"); }; $("homeWishlist").style.cursor="pointer"; $("homeWishlist").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("wishlist"); };
+    $("homeMarket").onclick=function(){ showPage("portfolio"); }; $("homeMarket").style.cursor="pointer"; $("homeMarket").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("portfolio"); };
     renderFeatured();
     checkRewards();
     renderRewards();
@@ -7183,10 +7538,11 @@
         : 'A curated shortlist of Palworld TCG highlights.';
       el.innerHTML = list.map(function(n){
         var meta=[]; if(n.date) meta.push(esc(n.date)); if(n.source) meta.push(esc(n.source));
+        var img = n.image ? '<img src="'+esc(n.image)+'" alt="" loading="lazy" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;margin-bottom:8px;background:var(--surface-2)" onerror="this.style.display=\'none\'">' : '';
         return '<a class="newsitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
           (meta.length?'<div class="ndate">'+meta.join(' · ')+'</div>':'')+
           '<div class="ntitle">'+esc(decodeEntities(n.title))+'</div>'+
-          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+'</a>';
+          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+img+'</a>';
       }).join("");
       _newsList = list; updateBell();
     }
@@ -7269,7 +7625,8 @@
     tokens.forEach(function(t){
       t=t.replace(/[^A-Z0-9-]/g,"");
       var c=byNumberIdx[t]; if(!c){ bad.push(t); return; }
-      changeRaw(o(c.id),1); added++; qRecent.unshift(c.id);
+      var ed=null; var def=defaultEditionFor(c); if(def) ed=def;
+      changeRaw(o(c.id),1,ed); added++; qRecent.unshift(c.id);
     });
     if(added){ save(); render(); renderQuick(); }
     var h=$("qHint");
@@ -7281,7 +7638,8 @@
   // Add one specific card (by exact id) from a search result.
   function quickAddCard(id){
     var c=byNumberIdx[(id||"").toUpperCase()]; if(!c) return;
-    changeRaw(o(c.id),1); qRecent.unshift(c.id);
+    var ed=null; var def=defaultEditionFor(c); if(def) ed=def;
+    changeRaw(o(c.id),1,ed); qRecent.unshift(c.id);
     save(); render(); renderQuick();
     var h=$("qHint"); if(h){ h.className="qhint ok"; h.textContent="Added "+c.name+" ("+c.id+")."; }
     toast("Added "+c.name);
@@ -7379,9 +7737,10 @@
   function colName(id){ var col=STATE.cols.filter(function(x){return x.id===id;})[0]; return col?col.name:""; }
   function addToChosen(c){
     var d=SETTINGS.defaultAddCol;
-    if(d && d!=="ask" && STATE.cols.some(function(x){return x.id===d;})){ addToCollection(d, c.id); toast(c.name+" → "+colName(d)); }
+    var def=defaultEditionFor(c);
+    if(d && d!=="ask" && STATE.cols.some(function(x){return x.id===d;})){ addToCollection(d, c.id, null, def||undefined); toast(c.name+" → "+colName(d)); }
     else if(STATE.cols.length>1){ chooseCollection(c); }
-    else { addToCollection(STATE.cols[0].id, c.id); toast(c.name+" collected"); }
+    else { addToCollection(STATE.cols[0].id, c.id, null, def||undefined); toast(c.name+" collected"); }
   }
   function buildDefaultAddSel(){
     var sel=$("setDefaultAddSel"); if(!sel) return; sel.innerHTML="";
@@ -7426,7 +7785,21 @@
       var e=col.own[c.id], q=(e&&e.qty)||0;
       var b=document.createElement("button");
       b.innerHTML='<span>'+esc(col.name)+(col.id===STATE.active?' <span class="ct">· active</span>':'')+'</span><span class="ct">'+(q>0?'have ×'+q:'add')+'</span>';
-      b.onclick=function(){ addToCollection(col.id, c.id); chooser.classList.remove("open"); toast(c.name+" → "+col.name); };
+      b.onclick=function(){
+        var def=defaultEditionFor(c);
+        addToCollection(col.id, c.id, null, def||undefined); chooser.classList.remove("open");
+        try{
+          if($("page-missing") && !$("page-missing").hidden){
+            var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,Math.round(data2.owned/data2.total*100)):0;
+            var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
+            var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+            var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+          }
+        }catch(_e){}
+        try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
+        try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
+        toast(c.name+" → "+col.name);
+      };
       list.appendChild(b);
     });
     chooser.classList.add("open");
@@ -7434,10 +7807,33 @@
   // prep (optional) runs on the entry before the single save + render (the scanner sets edition + prices there).
   function addToCollection(colId, cardId, prep, edition){
     var col=STATE.cols.filter(function(x){return x.id===colId;})[0]; if(!col) return;
+    var card=byNumberIdx[(cardId||"").toUpperCase()]||null;
+    if(card && canEdition(card) && (edition===undefined || edition===null || String(edition)==="unknown")){
+      var def=defaultEditionFor(card); if(def) edition=def;
+    }
     var e=col.own[cardId]; if(!e){ e=col.own[cardId]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     changeRaw(e,1,edition);
     if(prep) prep(e);
     save(); render();
+    try{
+      if($("page-missing") && !$("page-missing").hidden){
+        var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,Math.round(data2.owned/data2.total*100)):0;
+        var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
+        var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+        var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+        if(card){
+          Array.prototype.forEach.call(document.querySelectorAll("#missingList .missingrow"), function(row){
+            var img=row.querySelector("img"), alt=img?img.getAttribute("alt"):""; if(alt===card.name){
+              row.classList.add("collected"); var b=row.querySelector(".missact"); if(b){ b.classList.add("on"); b.innerHTML=icon("check"); b.setAttribute("aria-label","Collected \u00b7 open"); b.title="Collected \u00b7 open"; }
+              var tagEl=row.querySelector(".mtag"); if(tagEl){ tagEl.textContent="COLLECTED"; tagEl.classList.add("collected"); }
+            }
+          });
+        }
+      } else { try{ renderMissing(); }catch(_){}
+      }
+    }catch(_e){}
+    try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
+    try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
   }
   // ---- Rich scan confirmation: card image → Wishlist/Collection → Raw/Graded → which collection.
   var scanScrim=$("scanScrim");
@@ -7517,8 +7913,15 @@
     $("scanGradeWrap").hidden=!(isColl && scanState.type==="graded");
   }
   // The 2nd Edition reprint only covers the Dawn of Palpagos sets, so the edition choice only shows for those.
+  // Dawn of Palpagos (EBP01) is 1st edition only until the 2nd print ships.
+  var EBP01_SECOND_RELEASED = false;
   var EDITION_SETS={EBP01:1,ETD01:1,ETD02:1};
   function canEdition(card){ return !!(card && EDITION_SETS[card.set]); }
+  function defaultEditionFor(card){
+    if(!card || !canEdition(card)) return null;
+    if(card.set==="EBP01" && !EBP01_SECOND_RELEASED) return "1";
+    return null;
+  }
   // Quick price glance in the scan popup. Convention (matches the rest of the app): blue = last sold, green = live listings.
   // Sold + Live are priced against the collection picked in the popup (plus the popup's fresh pull), so they show
   // what the add will be worth; a third chip shows the graded price for the chosen company + grade.
@@ -8552,6 +8955,7 @@
   render();
   renderHome(); renderReleases();   // populate Home (the default page) and Releases once at startup
   try{ localStorage.setItem("palvault-last-visit", String(APP_OPENED_AT)); }catch(e){}
+  try{ localStorage.setItem("palvault-last-total", String(TOTAL)); }catch(e){}
   renderQuick();
   renderAccount();
   paintBackupStatus();

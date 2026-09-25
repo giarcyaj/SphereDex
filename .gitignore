@@ -28,3 +28,9 @@ ios/**/build/
 
 # Superseded native-SwiftUI iOS prototype (kept on disk, not tracked)
 ios/Paldeck/
+
+# Local secrets for the sieve tooling (tools/sieve.py writes SIEVE_API_KEY here).
+# .env.example is a safe template and stays tracked.
+.env
+.env.*
+!.env.example

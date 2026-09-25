@@ -1,0 +1,98 @@
+name: Sieve Scheduled Refresh
+
+# Pulls News + Releases every 30 minutes from the official Palworld TCG site + X
+# and updates the app's News/Releases + the featured carousel's 4th slot (daily card reveal).
+# Uses Infisical-sourced SIEVE_API_KEY via the Viewer-scoped github-spheredex-ci / Universal Auth.
+# Output: POST to https://spheredex-backend.craigjayedit.workers.dev/api/news → api("/api/news")
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Infisical CLI
+        run: |
+          curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
+          sudo apt-get update && sudo apt-get install -y infisical
+
+      - name: Verify secrets source
+        run: |
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py doctor
+
+      - name: Scrape official news + releases
+        run: |
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
+            "Extract Palworld TCG news: for each item on this official news page extract title, date, summary, link, and the main image URL if present (card art). Return as JSON array with fields title, date, summary, link, image." \
+            --url https://en.palworld-official-cardgame.com/news/ \
+            --fields title,date,summary,link,image \
+            --shape long
+
+      - name: Scrape X daily card reveals (image-forward)
+        run: |
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
+            "Extract the latest Palworld TCG card reveal posts: for each post extract title/text, date, link, and the card image URL if present. Return as JSON array with fields title, date, summary, link, image." \
+            --url https://x.com/PalworldOCG_EN \
+            --fields title,date,summary,link,image \
+            --shape long \
+            --compliance conservative
+
+      - name: Consolidate sieve results
+        run: |
+          python3 << 'PY'
+          import json, pathlib, glob
+          sessions = sorted(glob.glob("stage/sieve/*/result.json"))
+          if not sessions:
+              print("No sieve results found"); pathlib.Path("stage/news-feed.json").write_text("[]"); exit(0)
+          items=[]; seen=set()
+          for sess in sessions[-2:]:
+              try:
+                  data=json.loads(pathlib.Path(sess).read_text())
+                  arr=data if isinstance(data,list) else data.get("items", data.get("result", []))
+                  if isinstance(arr,dict): arr=[arr]
+                  for it in arr:
+                      key=(it.get("title",""),it.get("link",""))
+                      if key in seen or not it.get("title"): continue
+                      seen.add(key)
+                      items.append({"title":it.get("title",""),"date":it.get("date",""),"summary":it.get("summary",""),"link":it.get("link",""),"image":it.get("image",""),"source":"sieve"})
+              except Exception as e: print(f"skip {sess}: {e}")
+          pathlib.Path("stage/news-feed.json").write_text(json.dumps(items[:20], indent=2, ensure_ascii=False))
+          print(f"Consolidated {len(items)} -> stage/news-feed.json")
+          print(json.dumps(items[:2], indent=2) if items else "[]")
+          PY
+          cat stage/news-feed.json | head -n 80
+
+      - name: POST to backend (/api/news)
+        env:
+          BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
+        run: |
+          if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST — skipping"; exit 0; fi
+          echo "POSTing $(jq length stage/news-feed.json 2>/dev/null || wc -c < stage/news-feed.json) items to $BACKEND_URL/api/news"
+          curl -sS -X POST "$BACKEND_URL/api/news" -H "Content-Type: application/json" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n" || echo "POST failed — check worker"
+
+      - name: Upload sieve sessions (artifact, no commit)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sieve-news-feed
+          path: |
+            stage/news-feed.json
+            stage/sieve/
+          if-no-files-found: warn
+          retention-days: 7
