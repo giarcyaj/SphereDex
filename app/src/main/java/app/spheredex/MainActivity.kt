@@ -260,8 +260,21 @@ class MainActivity : ComponentActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (web.canGoBack()) web.goBack()
-                else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                // The page owns "back", exactly as the on-screen Back button does: it closes whatever is open
+                // (menu, dialog, card sheet, scanner) and then steps back through the pages it opened, answering
+                // 1 when it handled the press. The WebView's own history only gets a turn when the page has
+                // nothing left (older bundles without the hook included), and then the system takes over and the
+                // app closes - the same outcome as the browser's back button on the last page.
+                web.evaluateJavascript(
+                    "(typeof window.SDHardwareBack==='function' && window.SDHardwareBack()) || 0"
+                ) { result ->
+                    if (result?.trim() == "1") return@evaluateJavascript
+                    if (web.canGoBack()) web.goBack()
+                    else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
+                }
             }
         })
 

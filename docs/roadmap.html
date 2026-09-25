@@ -152,16 +152,29 @@
   <span class="eyebrow">What I am building</span>
   <h1>Roadmap</h1>
   <p class="sub">What is shipped, what I am building now, and ideas I am weighing up. This is a living list and the order can change, but your feedback genuinely moves things up it.</p>
-  <div class="updated">Updated September 2026</div>
+  <div class="updated">Updated 24 September 2026</div>
 </div></header>
 
 <main class="wrap">
   <div class="cols">
     <section class="card now">
       <h2><span class="d"></span>Working on now</h2>
-      <p class="cap">In progress, landing soon.</p>
+      <p class="cap">V2.0 is in progress. These changes are being built and tested; they are not presented as live in the current app yet.</p>
       <ul class="items">
-        <li>Tracking 1st versus 2nd edition per card, ready for the Dawn of Palpagos 2nd Edition reprint</li>
+        <li>A more useful Home: clear next actions for your collection, wishlist, decks and closest set instead of a dashboard of numbers</li>
+        <li>A Home that opens with what is new: three images that scroll themselves through the latest news and releases — the newest headline, the set you can collect right now with your progress on it, and the next product on the way. Each one is a tap from the full story, and it replaces the fixed News &amp; releases card</li>
+        <li>A new Missing Cards view: switch between a master set, a set, rarity, Pal, deck, wishlist and your next Set Sphere</li>
+        <li>Set Spheres that stay meaningful as new sets arrive: complete an official set to earn its Sphere, with future Sphere silhouettes on your shelf</li>
+        <li>PalDex: every printing of a Pal in one place, ordered by the game's own Paldex number so it reads like the Paldex you already know — an elemental variant sits behind its base Pal (#121 Jormuntide, then #121B Jormuntide Ignis) and a Pal the card game has not printed yet simply leaves a gap. Grouped by the creature rather than by card, with a pip for each variant family it has been printed in — normal, rare, alternate, promo and trial deck — and a completion figure for that Pal. A dashed pip means the family does not exist yet, so it never looks like one you are missing. Tap a pip for the card, tap the Pal for exactly which printings you still need. Each tile shows the Pal itself rather than one of its cards, with how many of that Pal's printings you hold and a progress bar for that Pal under it; the render is bundled with the app instead of loaded from a third party, so the screen still reads offline</li>
+        <li>A clear way back: every page you reach from More, the header or a card opens with a Back button sitting above its title, so the heading is what you land on instead of something you have to scroll past. The five bottom-bar tabs keep none, and Cards and Market keep their own “Browse by set” and “Home” controls rather than showing two. Move a destination in or out of the bottom bar in Settings and the buttons follow. The header above them is one arrangement on every page now as well: the wordmark and the account button take the top line, with the rest of the controls grouped into a single toolbar beside them on a wide screen and on their own row underneath on a narrow one. Nothing is pinned over anything else any more, so a long collection or account name cannot end up underneath the title, and no control can overlap another at any width. The phone's own Back button and the Escape key now take that same route instead of a private one: they close whatever is on top — a menu, a dialog, a card sheet or the scanner — before they step back through the pages you opened, so the device button can no longer skip past something you still have open, and it only closes the app once there is genuinely nothing left to go back to</li>
+        <li>Bulk scanning with a review step, so you can correct a printing, adjust extra copies or undo a capture before it changes your collection</li>
+        <li>A short “While you were away” card, and an opt-in weekly recap that spells the week out: cards added, completion before and after, how your collection value moved, and how many cards your next Set Sphere still needs. The figures are worked out on your device and only send what the recap displays, so no collection sits on the server</li>
+        <li>A reliable nightly operational digest: it sends an error-aware stored-data snapshot at 01:00 UTC before the long catalog pass begins separately, and retries one unconfirmed delivery without creating a duplicate email</li>
+        <li>A clearer Release Timeline: regular sets and preorders first, then promo releases grouped by Demo &amp; event, Shop tournament (Aug–Oct 2026), Masters League (Nov 2026–Mar 2027), and Special/Soul cards, with date labels instead of card counts and separate collection progress</li>
+        <li>Push notifications only, with clear per-device choices. The weekly recap and collection-milestone alerts share opt-in aggregate counts only; wishlist availability sends card IDs only after separate opt-in and uses verified eBay listings. No collection snapshot is sent. Deck-need push alerts remain under privacy review.</li>
+        <li>Clearer market prices: distinguish native results from estimates, preserve source observations, and use privacy-limited demand signals. The production schema and matching Worker were deployed on 23 September; the first observation and paid-lookup telemetry tables were still empty at 19:11 UTC. Spain (11.4%) and Italy (1.2%) native-sold coverage remain below the 35% gate, so keep budgets/fallbacks unchanged until enough lookup outcomes accrue.</li>
+        <li>Built for V2, awaiting device testing: separate 1st- and 2nd-edition copy counts, including mixed holdings, scanning, manual edits and CSV backups. Older unlabelled copies stay “Not specified”.</li>
+        <li>Store listing and privacy-disclosure drafts now cover scanner/export behavior and separately opted-in push payloads (including aggregate-only milestones); production migrations and Worker deployment are verified, while final console answers still need release-build/dependency and backend-retention review</li>
       </ul>
     </section>
 
@@ -170,7 +183,11 @@
       <p class="cap">Coming, once the pieces are in place.</p>
       <ul class="items">
         <li>New sets added as they release</li>
-        <li>Store listings and privacy labels refreshed for the new scanner and export features</li>
+        <li>Collection list view and partial-playset filter (built; browser/device acceptance remains), plus typo-tolerant app-wide search (built locally)</li>
+        <li>Opt-in weekly recap, collection-milestone, and wishlisted-card availability alerts (aggregate counts for recap/milestones; fresh eBay listings for wishlist availability; production migrations and Worker deployment verified 23 Sep 2026; native-device acceptance remains)</li>
+        <li>Backup/sync recency and a JSON export offer before collection deletion (built locally; browser/native acceptance remains). Product analytics and scanner-feedback uploads remain disabled until a separate opt-in, logging, and retention review is approved.</li>
+        <li>After P1 validation and a separate consent/revocation review: privacy-safe public binders, visibility controls, and read-only trade lists</li>
+        <li>Later: useful collector goals, and evidence-led community/event features (PalDex has moved into development, above)</li>
       </ul>
     </section>
 
@@ -178,21 +195,11 @@
       <h2><span class="d"></span>Ideas I am considering</h2>
       <p class="cap">If interest is there. Tell me if you want these.</p>
       <ul class="items">
-        <li>A home screen that tells you what to do next, not just what you already own</li>
-        <li>A Missing cards view, grouped by set, by rarity and by price, so you can see exactly what is left</li>
-        <li>A countdown to your next Sphere, and the cards that would get you there</li>
-        <li>Closest to completion, so the set you are nearest finishing is always in front of you</li>
-        <li>A Paldex: how many of the Pals you have collected, rather than only how many cards</li>
-        <li>Add every card a deck is missing to your wishlist in one tap</li>
-        <li>Collection goals, so you can aim at a master set, every rare, or one of every Pal, and have the app follow along</li>
-        <li>Bulk scanning: a whole pile of cards in one go, reviewed together before anything is added</li>
-        <li>An optional weekly summary of what changed in your collection</li>
-        <li>A short note on what you missed when you open the app after a few days away</li>
         <li>Add a newly revealed card straight to your wishlist from News</li>
         <li>Collection milestones to mark along the way</li>
         <li>More context on a price: a 30 day average, and the range of recent sales</li>
         <li>Sealed products compared against their RRP, with a countdown to release</li>
-        <li>Trade and wishlist matching with other collectors</li>
+        <li>Trade and wishlist matching with other collectors, after enough active users are available</li>
       </ul>
     </section>
 

@@ -8,14 +8,16 @@
 //
 // tools/rebuild.py stamps BUILD with the app version and a hash of the built page, so this file never has
 // to be bumped by hand, which is what left it on one literal name for the app's whole life.
-const BUILD = '1.11-749f2917';
+const BUILD = '1.11-326730d1';
 const SHELL = 'spheredex-shell-' + BUILD;
 const ASSETS = 'spheredex-assets-v1';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest'];
 const ICONS = ['./icon-192.png', './icon-512.png', './icon-512-maskable.png'];
 // Roughly the catalogue plus icons and a margin. Beyond it the oldest entries go, so a browser never
-// carries an unbounded pile of art from sets the owner no longer looks at.
-const MAX_ASSETS = 420;
+// carries an unbounded pile of art from sets the owner no longer looks at. The catalogue now includes the
+// PalDex renders (img/PAL_*.webp, 86 files) alongside the card art, so the budget covers both: the old 420
+// left under 40 slots spare, which one new set would have spent evicting Pal renders PalDex still needs.
+const MAX_ASSETS = 600;
 // How long the shell waits for the network before the cached copy answers instead. A phone on a connected
 // but dead network does not fail fast: the socket stalls and a bare fetch can sit there for the browser's
 // full timeout, showing a white screen the whole time, while a good copy of the app sits in this cache.

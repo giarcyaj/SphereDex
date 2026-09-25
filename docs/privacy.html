@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SphereDex Privacy Policy</title>
-<meta name="description" content="How SphereDex handles your data. Your collection saves on your device, with no ads, analytics or trackers. Here is exactly what reaches our server, and why.">
+<meta name="description" content="How SphereDex handles your data. Your collection saves on your device, with no ads or cross-app tracking. See what reaches SphereDex and what scanner diagnostics Google receives.">
 <link rel="canonical" href="https://spheredex.app/privacy">
 <meta property="og:title" content="SphereDex Privacy Policy">
-<meta property="og:description" content="How SphereDex handles your data. Your collection saves on your device, with no ads, analytics or trackers. Here is exactly what reaches our server, and why.">
+<meta property="og:description" content="How SphereDex handles your data. Your collection saves on your device, with no ads or cross-app tracking. See what reaches SphereDex and what scanner diagnostics Google receives.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SphereDex">
 <meta property="og:url" content="https://spheredex.app/privacy">
@@ -61,11 +61,11 @@
 
 <main><div class="wrap">
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: 21 September 2026</p>
+  <p class="updated">Last updated: 23 September 2026</p>
 
   <div class="tldr">
     <h2>The short version</h2>
-    <p>SphereDex is built with privacy first. Your collection is saved <strong>on your own device</strong>. We do not use ads, analytics, or trackers, and we never sell your data. Only a little reaches our server: card names, numbers and grades with your chosen market when the app looks up prices; a notification token from the iPhone and Android apps; and anything you choose to send us, such as an account for cloud sync or a message. None of it is used to track you.</p>
+    <p>SphereDex has <strong>no ads and does not track you across apps or websites</strong>. Your collection is saved on your device unless you choose cloud sync. The Android scanner uses Google ML Kit: Google says the SDK sends limited device/app details and scanner performance and usage metrics to Google, but not the camera images or recognition results. We explain that below. SphereDex also receives the data needed for price lookups, push notifications, optional sync and messages you choose to send.</p>
   </div>
 
   <h2>What is stored on your device</h2>
@@ -80,22 +80,28 @@
   <p>This is entirely optional. If you never sign in, none of this is collected. You can delete your account and its synced data at any time from the <strong>Account</strong> page in the app using <strong>Delete account</strong>, or by contacting us using the details below.</p>
 
   <h2>Notifications</h2>
-  <p>The iPhone and Android apps can send you notifications about new sets, news, release dates and stock alerts. To make this work, the app registers a <strong>push token</strong> for your device with our server. The Android app does this when it opens, and the iPhone app does it once you allow notifications. Along with the token we store:</p>
+  <p>The iPhone and Android apps can send you push notifications about new sets, news, release dates, stock, card-price alerts, and (if you turn them on) a weekly collection recap, collection milestone, or wishlisted-card availability alert. To make this work, the app registers a <strong>push token</strong> for your device with our server. The Android app does this when it opens, and the iPhone app does it once you allow notifications. Along with the token we store:</p>
   <ul>
     <li>Your platform (iPhone or Android) and when the app last checked in.</li>
     <li>Your notification choices, including the sealed products you follow for stock alerts.</li>
     <li>Your chosen market, so alerts match your region.</li>
+    <li>Only if you enable the weekly recap: one aggregate number of distinct cards added to your active collection in the last seven days. This count is refreshed with your push preferences, used to send the weekly push, and is not accompanied by card names, IDs, notes, deck contents or a collection snapshot.</li>
+    <li>Only if you enable collection milestone alerts: the aggregate number of unique cards in your active collection, so the server can detect milestone thresholds. We do not send the card identities, names, notes or collection list for this feature. Turning it off deletes its per-device milestone records.</li>
+    <li>Only if you enable wishlisted-card availability: the card IDs on your wishlist and your market, so the server can compare them with current eBay listings. A small per-device/card state records whether a verified listing was present, to detect when one appears. It is not linked to your account. Turning the option off removes this watch state during the next daily check; names and IDs are not included in the push message.</li>
   </ul>
-  <p>The token is not linked to your account or email address. Notifications are delivered through Google Firebase Cloud Messaging (Android) and Apple Push Notification service (iPhone). The web app does not register a push token.</p>
+  <p>The token is not linked to your account or email address. Optional recap, milestone and availability alerts are off by default. Switching the weekly recap off stops future counts being included in push preferences. A small per-token/week send record prevents duplicate recaps and is deleted after 90 days. Turning milestone alerts off deletes their per-device milestone records; first-time opt-in establishes a baseline without sending past milestones. Turning availability off removes its per-device/card state on the next daily check. Notifications are delivered through Google Firebase Cloud Messaging (Android) and Apple Push Notification service (iPhone). The web app does not register a push token.</p>
+
+  <h2>Sharing and visibility</h2>
+  <p>Collections, wishlists, decks, notes, and account data are private by default. SphereDex currently has no public profile, public binder, or trade-list sharing feature. We will not expose synced collection data through a public link unless a future feature clearly identifies exactly what will be visible, requires a separate opt-in, supports revoking access, and excludes private notes and account details by default.</p>
 
   <h2>Contact form</h2>
   <p>If you send feedback through the app or the form on our roadmap page, we receive the <strong>topic, your message, and your email address</strong> if you choose to add one so we can reply. Messages sent from the app also include the app version and platform (web, iPhone or Android) so we can look into problems. It is delivered to us by email through our email provider (Resend) and is used only to respond to you.</p>
 
   <h2>Camera</h2>
-  <p>In the iPhone and Android apps, SphereDex can use your camera to recognise a card, or the grading label on a slab, and add it to your collection. This happens <strong>entirely on your device</strong>. Camera images are never uploaded, stored, or shared.</p>
+  <p>In the iPhone and Android apps, SphereDex can use your camera to recognise a card, or the grading label on a slab. Camera frames are processed on your device and are <strong>not uploaded, stored or shared by SphereDex</strong>. The iPhone app uses Apple Vision on-device. The Android app uses Google ML Kit on-device; Google says ML Kit may send SDK diagnostics and usage metrics (such as device/app details, API events and performance measurements) to Google. Google says it uses those metrics to measure performance, debug, maintain and improve ML Kit, and detect misuse or abuse. They do not include the camera images or recognition results. See Google's <a href="https://developers.google.com/ml-kit/android-data-disclosure">ML Kit data disclosure</a> for the current Android SDK details.</p>
 
   <h2>Prices and card data</h2>
-  <p>To show market values, the app asks our server for prices using card names and numbers (plus the grade, for graded slabs) and the market you chose. When the app opens it may also send the numbers of the cards you own, so their last sold prices can be refreshed. Price lookups are not linked to your account. To stop any one install using up the shared daily price lookups, the app makes a random tag for itself, keeps it on your device, and sends it only with price lookups. The server keeps a one way scrambled form of it for a day, then deletes it. It is tied to nothing else and is never used to identify you. Older versions of the app send no tag, and for those the server uses your IP address the same way. The app also tells the server which version it is running, so we can see how many people are on each build. That is a version number on its own, with nothing attached to it. Our server then asks eBay and our price providers (OpenWeb Ninja and <a href="https://palworldprices.com">Palworld Prices</a>) for prices, without sending anything that identifies you. Buy links open the retailer's own website, where that retailer's privacy policy applies.</p>
+  <p>To show market values, the app asks our server for prices using card names and numbers (plus the grade, for graded slabs) and the market you chose. When the app opens it may also send the numbers of the cards you own, so their last sold prices can be refreshed. Price lookups are not linked to your account. For market-quality planning, our server records the card number, market, source, price type and confidence, observed market/last/average values and currency, lookup outcome, whether it was a direct or background request, and (when available) the number of valid sales and the price difference from the previous result. These records are used to assess source coverage and lookup quality, not to build a profile; they are automatically deleted after 90 days and are not joined to your account or push token. To stop any one install using up the shared daily price lookups, the app makes a random tag for itself, keeps it on your device, and sends it only with price lookups. The server keeps a one way scrambled form of it for a day, then deletes it. It is tied to nothing else and is never used to identify you. Older versions of the app send no tag, and for those the server uses your IP address the same way. The app also tells the server which version it is running, so we can see how many people are on each build. That is a version number on its own, with nothing attached to it. Our server then asks eBay and our price providers (OpenWeb Ninja and <a href="https://palworldprices.com">Palworld Prices</a>) for prices, without sending anything that identifies you. Buy links open the retailer's own website, where that retailer's privacy policy applies.</p>
 
   <h2>Service providers</h2>
   <p>We use a small number of companies to run SphereDex. Each one only gets what it needs for its job:</p>
@@ -105,14 +111,14 @@
     <li><strong>Resend</strong> sends password reset codes and delivers contact form messages to us.</li>
     <li><strong>Google Firebase Cloud Messaging</strong> and <strong>Apple Push Notification service</strong> deliver notifications to Android and iPhone.</li>
     <li><strong>eBay, OpenWeb Ninja and Palworld Prices</strong> supply price data. They receive card searches from our server, never your personal details.</li>
-    <li><strong>Google ML Kit</strong> recognises cards on your device in the Android app. The library sends Google anonymous performance and usage metrics, never camera images.</li>
+    <li><strong>Google ML Kit</strong> recognises cards on your device in the Android app. Google says the SDK sends device/app details and API performance/utilisation metrics for diagnostics, analytics and abuse prevention. Camera images and recognition results stay on your device.</li>
     <li><strong>The official Palworld card game website</strong> supplies the artwork for any card whose image is not yet built into the app, so your device loads that image from their site.</li>
   </ul>
 
   <h2>What we do not do</h2>
   <ul>
     <li>No advertising and no ad networks.</li>
-    <li>No analytics or usage tracking, and no tracking across other apps or websites. The download and install counts we see come from the standard reports Apple and Google give every developer, not from the app.</li>
+    <li>No SphereDex advertising analytics, behavioural profiling, or tracking across other apps or websites. The Android ML Kit scanner SDK sends its own limited diagnostics and API utilisation metrics to Google, as described above. The download and install counts we see come from the standard reports Apple and Google give every developer.</li>
     <li>No selling or sharing of your data with third parties for their own use.</li>
   </ul>
 
