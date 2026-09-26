@@ -9,12 +9,16 @@ name: Tests
 #      app bundle regeneration itself.
 #   5. A rebuild + git diff so a src/ edit without regenerated WEB/Android/iOS bundles
 #      fails the push instead of shipping stale bundles.
+#   6. A plain grep fails fast (before Node is even installed, independent of the .cjs suites)
+#      if the FEATURED CAROUSEL or SCAN REVIEW markers vanish or duplicate in src/paldeck.html.
 # Everything is stdlib-only on both runtimes: no dependency install step to rot.
 
+# No standalone push trigger: build-apk.yml calls this workflow as a gate on every push to
+# main, so the guards run exactly once per push AND block the APK build. If build-apk is ever
+# disabled, re-add "push: branches: [ main ]" here or the guards stop running.
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -26,6 +30,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Belt and braces: the .cjs suites assert marker placement and four-copy sync in detail, but
+      # this plain grep fails first — and even if the suites themselves were deleted or broken —
+      # if a section's markers go missing or get duplicated in the canonical source.
+      - name: Section markers present exactly once (carousel + scan review)
+        run: |
+          fail=0
+          for marker in \
+            "FEATURED CAROUSEL BEGIN (styles" \
+            "FEATURED CAROUSEL END (styles)" \
+            "FEATURED CAROUSEL BEGIN (logic" \
+            "FEATURED CAROUSEL END (logic)" \
+            "SCAN REVIEW BEGIN (styles" \
+            "SCAN REVIEW END (styles)" \
+            "SCAN REVIEW BEGIN (logic" \
+            "SCAN REVIEW END (logic)"; do
+            count=$(grep -c -F "$marker" src/paldeck.html || true); count=${count:-0}
+            if [ "$count" != "1" ]; then
+              echo "::error::src/paldeck.html must contain exactly one occurrence of: $marker (found ${count})"
+              fail=1
+            fi
+          done
+          exit $fail
 
       - name: Set up Node
         uses: actions/setup-node@v4

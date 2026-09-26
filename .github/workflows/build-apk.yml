@@ -2,6 +2,8 @@ name: Build Android APK
 
 # Builds a debug APK in the cloud so you never need Android Studio or a local SDK.
 # Runs on every push to main, and can be started by hand from the Actions tab.
+# Gated by the Tests workflow: the build job needs its tests job, so a failing carousel,
+# scan-review, editions or pipeline guard (or an unbuilt bundle) blocks the APK.
 
 on:
   push:
@@ -12,7 +14,13 @@ permissions:
   contents: read
 
 jobs:
+  # Gate: run the shared Tests workflow before building. It has no push trigger of its own -
+  # this call is the only path that runs the guards on a push to main.
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   build:
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
