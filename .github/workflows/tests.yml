@@ -14,11 +14,13 @@ name: Tests
 # Everything is stdlib-only on both runtimes: no dependency install step to rot.
 
 # No standalone push trigger: build-apk.yml calls this workflow as a gate on every push to
-# main, so the guards run exactly once per push AND block the APK build. If build-apk is ever
-# disabled, re-add "push: branches: [ main ]" here or the guards stop running.
+# main, so the guards run exactly once per push AND block the APK build. Pull requests run
+# the same guards (never blocked by, and never blocking, the main-branch gate). If build-apk
+# is ever disabled, re-add "push: branches: [ main ]" here or the guards stop running.
 on:
   workflow_dispatch:
   workflow_call:
+  pull_request:
 
 permissions:
   contents: read

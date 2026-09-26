@@ -1,0 +1,23 @@
+root = true
+
+# LF everywhere. Git only enforces this for the files pinned in .gitattributes (the canonical
+# source, the generated bundles, and *.sh) — this file is what keeps every OTHER file LF on
+# save, so the two mechanisms are complementary, not redundant.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# 2-space indent: the HTML/CSS/JS app source in src/ and docs/.
+[*.{html,css,js,cjs,json}]
+indent_style = space
+indent_size = 2
+
+# 4-space: Kotlin/KTS and Swift use their ecosystems' standard.
+[*.{kt,kts,swift,py}]
+indent_style = space
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
