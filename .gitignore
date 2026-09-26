@@ -13,6 +13,18 @@ local.properties
 .gradle/
 app/build/
 
+# Android Studio project state (same category as .gradle/): JDK names, Gradle
+# migrations, device-streaming sessions and run configs are per-machine, and CI
+# builds the APK without any of it. Untracked in the same pass as .gradle/.
+.idea/
+
+# Freebuff workspace metadata (local tool state).
+.freebuff/
+
+# Sieve/pipeline output. The scheduled workflow regenerates stage/ and POSTs it
+# to /api/news, and uploads runs as artifacts, so the working copy stays local.
+stage/
+
 # Python tooling cache (tools/*.py)
 __pycache__/
 
