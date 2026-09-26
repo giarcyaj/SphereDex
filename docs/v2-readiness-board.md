@@ -1,67 +1,65 @@
-# V2.0 readiness board — 26 September 2026
+# V2.0 readiness board — 26 September 2026 (end of session)
 
-Status snapshot for publishing 2.0. Everything marked ✅ was verified this session
-(tests run locally, CI observed green, live endpoints probed). ❌ blocks release.
-⚠️ needs a decision or a small fix before submission.
+Status snapshot for publishing 2.0. ✅ verified this session (tests, CI, live probes).
+❌ still blocks release. ⚠️ decision or small task left.
 
-## Done and verified this session
+## Done and verified
 
 | Item | Evidence |
 |---|---|
-| Carousel keyboard navigation (arrows, focus-follows-slide, autoplay parks on focus) | commit `7af6239`, browser-verified, CI green |
-| FEATURED CAROUSEL fence + `FEATURED_CAROUSEL` API seam | markers in src, 18-test guard suite green |
-| SCAN REVIEW fence + `SCAN_REVIEW` API seam | 12-test guard suite green |
-| Wishlist-undo data-loss quirk fixed (pre-existing wish survives undoing every capture) | `f9ff59f`, test asserts corrected behavior |
-| LF-only line endings, enforced in rebuild.py + .gitattributes; guards byte-exact | `fec1ee2` |
-| CI: Tests workflow (Node guards + Python pipeline tests + bundle-drift gate) | first run on real runner: both jobs ✅ (`ca0be29`) |
-| Bundle-sync discipline: src edit without rebuild fails CI | drift gate exit 0 in fresh worktree simulation |
-| APK build gated on Tests | `fe6e54d` (awaiting first gated push) |
-| Marker belt-and-braces grep in CI (fails if a fence vanishes/duplicates) | `fe6e54d` |
-| All 4 shipped copies in byte-identical sync (src/web/Android/iOS) | guard suites, run #last: 18+12+8 green |
-| Sieve feed publishing fix | 60/60 Python tool tests |
-| News pipeline live end to end | `GET /api/news` 200 with fresh items (probed 26 Sep) |
-| Shopify stock-alert sources reachable | The Card Vault `products.json` 200 with `available` flags; Universe TCG robots `Allow: /` |
-| Review docs committed | `b6b6574`: market data, privacy/sharing, store draft, X-reveal proposal, P1 previews |
+| Carousel keyboard navigation (arrows, focus-follows-slide, autoplay parks on focus) | `7af6239`, browser-verified |
+| FEATURED CAROUSEL fence + `FEATURED_CAROUSEL` API seam | 18-test guard suite |
+| SCAN REVIEW fence + `SCAN_REVIEW` API seam | 12-test guard suite |
+| Wishlist-undo fix: pre-existing wish survives undoing every capture | `f9ff59f` |
+| LF-only endings enforced (rebuild.py + .gitattributes); guards byte-exact | `fec1ee2` |
+| **Gated CI verified on the runner**: Tests run once inside Build Android APK, build waits on it | run `a611df6`: tests/Node ✅, tests/Python ✅, build ✅ |
+| Bundle-sync discipline: src edit without rebuild fails CI | drift gate, fresh-worktree simulation |
+| Marker belt-and-braces grep (8 markers, exactly-once) | `fe6e54d`, positive+negative tested |
+| Card-reveal source implemented (option A): official REST API → Sieve-style session | `c748497`, 11 tests, live run clean (0 reveal posts in current window — expected) |
+| Sieve feed publishing fix | 71/71 Python tool tests |
+| News pipeline live end to end | `/api/news` 200, fresh items |
+| Stock sources live (Shopify products.json with availability) | Card Vault 200; Universe TCG robots `Allow: /` |
+| **Stock-alert mirror corrected**: 8 markets × 9 products, verified against deployed stock.ts | `2e60e0b` (supersedes the `a611df6` trim — comments were stale, backend commit `85972bd` widened to 8 markets) |
+| Hygiene: `.idea/` untracked; `.idea/`, `.freebuff/`, `stage/` ignored; tree clean | `3a21bb5` |
+| Docs: reviews, X-reveal proposal, readiness board, push device checklist | `b6b6574` + working tree |
 
-## Release blockers (must close before 2.0 ships)
+## What remains before tagging 2.0
 
-1. ❌ **Push the 3 local commits** (`f9ff59f`, `fe6e54d`, `b6b6574`) and confirm the first
-   *gated* run: Tests once → APK builds only if green. Currently `main` is ahead 3.
-2. ❌ **Real-device push acceptance (iOS + Android)** — the single biggest open gate.
-   Per acceptance docs: permission denial path, APNs/FCM registration, opt-in/out cleanup,
-   push content, tapped routes. Backend + migrations 0017–0019 are deployed; devices are not tested.
-3. ❌ **Alert-checker telemetry evidence** — as of 23 Sep, `price_observations` and
-   `price_lookup_events` had zero rows. Gate #1 of the market-data doc: let scheduled passes run,
-   then confirm rows exist before trusting price-alert evaluation in production.
-4. ✅ **Stock-alert copy/map drift** — client reconciled (map trimmed to the polled UK/US/AU/DE
-   markets, comment now states the mirror rule, Settings copy matches). Remaining half: backend
-   `spheredex-backend/src/stock.ts` STOCK_SOURCES must equal the client map (see commit message);
-   no public endpoint exists to verify it from here.
+1. ❌ **Push `2e60e0b`** (market restore) and watch the gated run go green — minutes.
+2. ❌ **Device push acceptance, iOS + Android** — the only substantive open gate.
+   Checklist ready: `docs/push-device-acceptance-checklist.md` (2 × ~40 min + 10 min
+   next-morning pass). Covers denial path, registration, opt-in hygiene, milestone privacy,
+   availability transitions, APNs/FCM delivery, tapped routes, token cleanup.
+3. ❌ **Alert-checker telemetry confirmation** — crons are verified live (`1 1 * * *` and
+   `5 1 * * *` created Sep 24; pricing 01:00; weekly Mon 09:00; stock */30). Remaining: one
+   D1 read to confirm `price_observations` / `price_lookup_events` rows:
+   `npx wrangler d1 execute DB --remote --command "SELECT (SELECT COUNT(*) FROM price_observations), (SELECT COUNT(*) FROM price_lookup_events)"`
+   (or grant the Cloudflare connector D1 read scope). Also glance at `/api/movers` (empty
+   array today — may be normal, may be missing previous-day baseline).
+4. ❌ **Scheduled Sieve run verified for real** — the publishing fix and the card-reveal
+   fetcher are pushed and unit-tested, but no cron-triggered run (08:00/20:00 UTC) has yet
+   been recorded showing nonzero official count + HTTP 2xx POST. This is its own roadmap
+   line (`v2-todo.md`); check the next scheduled run's logs and record counts/POST status
+   in both trackers.
+5. ⚠️ **US pack alerts** — backend matches whatever its 3 US shops stock; packs appear only
+   if Flipside/Gamers Guild/Lumius list them. Check their products.json; if absent, add a US
+   shop that stocks packs (backend change, not a client gate).
+6. ⚠️ **Store disclosures** — Play Data safety / App Store privacy answers against the exact
+   release bundle (ML Kit 16.0.1, Barcode 17.3.0, FCM), per `store-listing-and-privacy-draft.md`.
+7. ⚠️ **Commit `docs/v2-readiness-board.md` + `docs/push-device-acceptance-checklist.md`** —
+   done in this docs commit; item closes with the next push.
 
-## Decide before submission
+## Deferred / not needed for 2.0
 
-5. ⚠️ **X card-reveal slide source** — blocked by robots.txt (verified). Options ranked in
-   `docs/x-reveal-source-proposal.md`: official cardlist (recommended), RSS backstop, paid X API
-   (~$0.15/mo), or ship 2.0 with the graceful fallback. Decision only, no code forced.
-6. ⚠️ **`.idea` machine-state churn** (modified gradle.xml/misc.xml/deviceStreaming.xml,
-   untracked *.iml/vcs.xml) — recommend gitignore + untrack; do not commit `ms-21` JDK rename.
-7. ⚠️ **`stage/` pipeline output** — decide: commit as seed feed or gitignore (workflow writes
-   it fresh and POSTs; artifact upload already covers runs).
-8. ⚠️ **Store disclosures** — Play Data safety / App Store privacy answers must match shipped
-   SDKs (ML Kit, FCM) per `store-listing-and-privacy-draft.md`; release-bundle dependency check
-   still pending.
+- X-reveal slide: implemented via the permitted official REST API (option A). If zero reveal
+  posts persist for weeks, option C (paid X API) remains available but is not required.
+- RSS news backstop (option B) — nice-to-have reliability, not a release gate.
 
-## Working-tree leftovers (not blocking, keep or clean)
+## Suggested order to the tag
 
-- Untracked: `.freebuff/` (ignore), `.idea/android.iml`, `.idea/runConfigurations.xml`, `.idea/vcs.xml`
-- Modified: `.idea/caches/deviceStreaming.xml`, `.idea/gradle.xml`, `.idea/misc.xml`
-- Untracked: `stage/news-feed.json`, `stage/pals/pal_art.json` (see #7)
-
-## Suggested order to 2.0
-
-1. Push → watch the gated run (minutes, closes #1).
-2. Reconcile stock-alert drift + commit (#4) — small code change, bundle rebuild.
-3. Choose X-reveal option (#5) — cardlist fetch is a half-day with tests.
-4. Device acceptance pass on iOS + Android (#2) using `docs/v2-acceptance.md`.
-5. Confirm alert telemetry accruing (#3) after a couple of scheduled passes.
-6. Store disclosures against the release bundle (#8), then tag/release via `release.yml`.
+1. Push `2e60e0b` + this docs commit → gated green (closes 1 and 7).
+2. Run the two device sessions (2) — record evidence into `docs/v2-acceptance.md`.
+3. Run the D1 count query (3); if rows exist, telemetry gate closes.
+4. Confirm the next scheduled Sieve run (4): nonzero official count, 2xx POST, feed/carousel update.
+5. Store disclosures against the release bundle (6).
+6. Tag 2.0 → `release.yml` builds the release APK/AAB from a guarded tree.

@@ -38,9 +38,8 @@ Updated 26 September 2026. This list distinguishes implementation from acceptanc
 - [x] 26 Sep run evidence: official source returned 21 items as delivered CSV/JSON in `stage/sieve/<session>/files/`.
 - [x] Old consolidator searched only `stage/sieve/*/result.json`, so it ignored those downloads. Old workflow also stopped before consolidation when X failed.
 - [x] Current X request is refused by Sieve Conservative policy: x.com robots.txt states `Disallow: /`. This is a compliance refusal, not an exhausted-credit error. Do not bypass it.
-- [~] Local feed consolidator and workflow fix now handle downloaded CSV/JSON, continue if either scrape fails, retain artifacts and log item counts/refusal details. Unit tests pass; workflow and live-post result still need confirmation.
-- [ ] Publish the local Sieve fix and verify official feed gets a successful backend POST despite X failure.
-- [ ] Choose a permitted/consented X reveal source and verify an image-bearing post reaches `/api/news` and Home carousel.
+- [~] Local feed consolidator and workflow fix now handle downloaded CSV/JSON, continue if either scrape fails, retain artifacts and log item counts/refusal details. Unit tests pass; a scheduled-run confirmation (nonzero official count, HTTP 2xx POST) is still needed.
+- [x] Permitted X-reveal source chosen and implemented (26 Sep): option A — the official site's robots-permitted WordPress REST API feeds reveal posts with cardlist art into the pipeline via `tools/fetch_card_reveals.py` (11 tests), wired into the scheduled workflow. Live run staged cleanly; the Home reveal slide shows a real card at the first genuine reveal post, with the existing graceful fallback until then.
 - [ ] Verify an actual scheduled event and measure Sieve credits per call; cost varies by compute.
 
 ## Acceptance and release — outstanding
