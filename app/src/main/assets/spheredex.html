@@ -98,7 +98,7 @@
     .mastutil { order:2; flex:0 1 auto; width:auto; max-width:100%; margin-left:auto; }
     header.mast .tbtn.login { order:3; margin-left:0; }
   }
-  /* One control height and one radius for every masthead control — toolbar and account button alike — so the
+  /* One control height and one radius for every masthead control · toolbar and account button alike · so the
      top of the page is optically even at any width. */
   header.mast .tbtn { height:36px; padding:0 11px; gap:6px; border-radius:10px; }
   header.mast select.tbtn { padding-right:24px; background-position:calc(100% - 12px) 55%,calc(100% - 8px) 55%; }
@@ -822,6 +822,20 @@
   .featpoints span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .featpoints span::before { content:"•  "; opacity:.9; }
   @media (min-width:760px){ .featpoints span{ white-space:normal; } }
+  .featmovers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:6px; }
+  .featmover { min-width:0; display:grid; grid-template-columns:38px minmax(0,1fr); grid-template-rows:auto auto; align-items:center; column-gap:7px; padding:5px 7px; border:1px solid rgba(255,255,255,.2); border-radius:10px; background:rgba(5,10,17,.72); }
+  .featmover img { grid-row:1 / 3; width:38px; height:50px; object-fit:cover; border-radius:4px; background:rgba(255,255,255,.08); }
+  .featmoverhead { display:flex; align-items:center; gap:4px; min-width:0; white-space:nowrap; }
+  .featmoverdir { font-size:.58rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+  .featmover.up .featmoverdir, .featmover.up .featmoverpct { color:#65e58a; }
+  .featmover.down .featmoverdir, .featmover.down .featmoverpct { color:#ff7777; }
+  .featmoverpct { margin-left:auto; font-family:var(--font-mono); font-size:.6rem; font-weight:850; }
+  .featmovername { display:block; min-width:0; overflow:hidden; color:#fff; font-size:.61rem; font-weight:750; line-height:1.15; white-space:nowrap; text-overflow:ellipsis; }
+  .featbody-movers { padding:10px 14px 12px; }
+  .featbody-movers .feattitle { margin:6px 0 0; font-size:.92rem; }
+  .featbody-movers .featbadge { font-size:.56rem; }
+  @media(max-width:390px){ .featmovers{gap:5px}.featmover{grid-template-columns:31px minmax(0,1fr);column-gap:5px;padding:4px}.featmover img{width:31px;height:43px}.featmovername{font-size:.56rem}.featmoverpct{font-size:.55rem} }
+  @media (min-width:760px){ .featmovername{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.featbody-movers .featmover{grid-template-columns:44px minmax(0,1fr)}.featbody-movers .featmover img{width:44px;height:58px} }
   .featdots { position:absolute; right:11px; top:11px; display:flex; gap:6px; }
   .featdot { width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer; background:rgba(255,255,255,.42); }
   .featdot[aria-current="true"] { background:#fff; transform:scale(1.25); }
@@ -1400,8 +1414,6 @@
   .effigy-img, .effigy-svg { position:relative; width:44px; height:44px; display:block; object-fit:contain; filter: grayscale(1) opacity(.42); transition: filter .25s; }
   .achievement.earned .effigy-img { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)) drop-shadow(0 1px 6px rgba(0,0,0,.18)); }
   .achievement.earned .effigy-svg { filter:none; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)); }
-  .effigy-pedestal { position:absolute; left:50%; bottom:1px; transform:translateX(-50%); width:42px; height:9px; background: linear-gradient(180deg, #ede9e0, #c2b8a6 58%, #8a8680); border-radius:2px 2px 3px 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.76), 0 2px 6px rgba(0,0,0,.22); }
-  .effigy-pedestal::after { content:""; position:absolute; left:4px; right:4px; top:2px; height:1px; background: rgba(255,255,255,.58); border-radius:1px; }
 
   /* Hero trophy row, earned Legendary Spheres */
   .trophyrow { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:16px; padding-top:15px; border-top:1.5px solid var(--line); }
@@ -1960,12 +1972,12 @@
 
   <section class="page" id="page-paldex">
     <div class="homecard">
-      <div class="hctop"><div><div class="hclabel">PalDex</div><div class="hcname" id="paldexCount">&mdash;</div></div><div class="hcvalue" id="paldexPct">&mdash;</div></div>
+      <div class="hctop"><div><div class="hclabel">PalDex</div><div class="hcname" id="paldexCount">·</div></div><div class="hcvalue" id="paldexPct">·</div></div>
       <div class="hctrack"><span id="paldexTrack" style="width:0%"></span></div>
       <div class="hcfoot"><span id="paldexFoot"></span></div>
     </div>
     <div class="palbar">
-      <div class="palsearchwrap" style="position:relative;flex:1 1 200px;"><input id="paldexSearch" class="qinput" placeholder="Search Pals\u2026" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="paldexSug" spellcheck="false" aria-label="Search Pals"><div class="qsug" id="paldexSug" role="listbox" hidden style="position:absolute;left:0;right:0;top:calc(100% + 6px);"></div></div>
+      <div class="palsearchwrap" style="position:relative;flex:1 1 200px;"><input id="paldexSearch" class="qinput" placeholder="Search Pals…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="paldexSug" spellcheck="false" aria-label="Search Pals"><div class="qsug" id="paldexSug" role="listbox" hidden style="position:absolute;left:0;right:0;top:calc(100% + 6px);"></div></div>
       <select class="sortsel" id="paldexSortSel" aria-label="Sort Pals">
         <option value="dex" selected>PalDex number</option>
         <option value="closest">Closest to complete</option>
@@ -2352,11 +2364,11 @@
           <label class="switch"><input type="checkbox" id="setNotifPrice"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Weekly collection recap</div><div class="sdesc">Once a week, get a push with your week: cards added, completion, collection value, and your next Sphere. Only those figures and your next Sphere set's name are sent—never card names, IDs, notes, or your collection list. Off until you opt in.</div></div>
+          <div class="setinfo"><div class="stitle">Weekly collection recap</div><div class="sdesc">Once a week, get a push with your week: cards added, completion, collection value, and your next Sphere. Only those figures and your next Sphere set's name are sent, never card names, IDs, notes, or your collection list. Off until you opt in.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifWeekly"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Collection milestone alerts</div><div class="sdesc">Celebrate collection milestones with a push. If enabled, SphereDex shares only the total number of unique cards in your active collection with the push service—never card names, IDs, notes, or a collection list. Past milestones are not sent when you first turn this on.</div></div>
+          <div class="setinfo"><div class="stitle">Collection milestone alerts</div><div class="sdesc">Celebrate collection milestones with a push. If enabled, SphereDex shares only the total number of unique cards in your active collection with the push service, never card names, IDs, notes, or a collection list. Past milestones are not sent when you first turn this on.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifMilestones"><span class="track"></span></label>
         </div>
         <div class="setrow">
@@ -6880,25 +6892,23 @@
       var need=0, haveN=0; ids.forEach(function(id){ var q=+d.cards[id]||0; need+=q; haveN+=Math.min(q,(activeCol().own[id]&&activeCol().own[id].qty)||0); });
       if(need&&haveN>=need) decksDone++; });
     var badges=[
-      {name:"Lifmunk Effigy",detail:"Capture power · first catch",ok:owned>=1, icon:"effigyLifmunk", eff:"#82c23f", sub:"offered at the Statue of Power · 15 ranks · +0.5 per rank"},
-      {name:"Lamball Effigy",detail:"Satiety duration · 25 cards",ok:owned>=25, icon:"effigyLamball", eff:"#f3c31c", sub:"slower hunger drain"},
-      {name:"Pengullet Effigy",detail:"Swimming ability · 50 cards",ok:owned>=50, icon:"effigyPengullet", eff:"#2f8fe0", sub:"faster swimming · less stamina"},
-      {name:"Munchill Effigy",detail:"Food preservation · 75 cards",ok:owned>=75, icon:"effigyMunchill", eff:"#d6a15e", sub:"food spoils slower"},
-      {name:"Rooby Effigy",detail:"Jump power · 100 cards",ok:owned>=100, icon:"effigyRooby", eff:"#e85d2a", sub:"higher jumps"},
-      {name:"Herbil Effigy",detail:"Flight capacity · reach 50% of the set",ok:half, icon:"effigyHerbil", eff:"#82c23f", sub:"faster gliding"},
-      {name:"Tanzee Effigy",detail:"Climbing proficiency · create a deck",ok:ds>=1, icon:"effigyTanzee", eff:"#5aa85a", sub:"faster climbing"},
-      {name:"Depresso Effigy",detail:"Status resistance · complete a deck",ok:decksDone>=1, icon:"effigyDepresso", eff:"#8a7fd6", sub:"fewer status conditions"},
-      {name:"Cattiva Effigy",detail:"Endurance · save a card to your wishlist",ok:wishCount()>=1, icon:"effigyCattiva", eff:"#b7ada3", sub:"mounted stamina"},
-      {name:"Lunaris Effigy",detail:"Sphere tracking · earn a Set Sphere",ok:completed>=1, icon:"effigyLunaris", eff:"#a0e0e8", sub:"4 effigies · spheres pursue · 25% per rank"},
-      {name:"Relaxaurus Effigy",detail:"EXP gain · earn every current Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0, icon:"effigyRelaxaurus", eff:"#4ec07a", sub:"4 effigies · +50% EXP"},
-      {name:"Yakumo Effigy",detail:"Rainbow fortune · own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"#c51f67", sub:"4 effigies · better wild passives"},
-      {name:"Mimog Effigy",detail:"Movement speed · 92 ranks · from capture bonuses",ok:owned>=150, icon:"effigyMimog", eff:"#c98a12", sub:"complete species capture bonuses · +50% at rank 92"}
+      {name:"Lifmunk Effigy",how:"Collect your first card",ok:owned>=1, icon:"effigyLifmunk", eff:"#82c23f"},
+      {name:"Lamball Effigy",how:"Collect 25 cards",ok:owned>=25, icon:"effigyLamball", eff:"#f3c31c"},
+      {name:"Pengullet Effigy",how:"Collect 50 cards",ok:owned>=50, icon:"effigyPengullet", eff:"#2f8fe0"},
+      {name:"Munchill Effigy",how:"Collect 75 cards",ok:owned>=75, icon:"effigyMunchill", eff:"#d6a15e"},
+      {name:"Rooby Effigy",how:"Collect 100 cards",ok:owned>=100, icon:"effigyRooby", eff:"#e85d2a"},
+      {name:"Herbil Effigy",how:"Collect 50% of all cards",ok:half, icon:"effigyHerbil", eff:"#82c23f"},
+      {name:"Tanzee Effigy",how:"Create a deck",ok:ds>=1, icon:"effigyTanzee", eff:"#5aa85a"},
+      {name:"Depresso Effigy",how:"Complete a deck",ok:decksDone>=1, icon:"effigyDepresso", eff:"#8a7fd6"},
+      {name:"Cattiva Effigy",how:"Add a card to your wishlist",ok:wishCount()>=1, icon:"effigyCattiva", eff:"#b7ada3"},
+      {name:"Lunaris Effigy",how:"Earn a Set Sphere",ok:completed>=1, icon:"effigyLunaris", eff:"#a0e0e8"},
+      {name:"Relaxaurus Effigy",how:"Earn every available Set Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0, icon:"effigyRelaxaurus", eff:"#4ec07a"},
+      {name:"Yakumo Effigy",how:"Own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"#c51f67"},
+      {name:"Mimog Effigy",how:"Collect 150 cards",ok:owned>=150, icon:"effigyMimog", eff:"#c98a12"}
     ];
     host.innerHTML=badges.map(function(b){
-      var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'<span class="effigy-pedestal"></span></div>';
-      var meta = esc(b.detail);
-      if(b.sub) meta += '<br><span style="opacity:.82">'+esc(b.sub)+'</span>';
-      return '<div class="achievement '+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'">'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+meta+(b.ok?' · offered':'')+'</span></div>';
+      var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'</div>';
+      return '<div class="achievement '+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'">'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+esc(b.how)+'</span></div>';
     }).join("");
   }
   function openSetSphere(id, earned){
@@ -7057,6 +7067,10 @@
             }
           }
         }catch(e){}
+        if(typeof pwPick==="function"){
+          if(!upM){ var weeklyUp=pwPick("up"); if(weeklyUp) upM={c:weeklyUp.c,pct:+weeklyUp.m.pct}; }
+          if(!downM){ var weeklyDown=pwPick("down"); if(weeklyDown) downM={c:weeklyDown.c,pct:+weeklyDown.m.pct}; }
+        }
         if(upM || downM){
           var notes=[];
           if(upM) notes.push("\u25B2 "+upM.c.name+" +"+Math.abs(upM.pct).toFixed(1)+"% \u00b7 "+money(upM.prev)+" \u2192 "+money(upM.cur));
@@ -7065,7 +7079,12 @@
           try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
           if(!mArt) mArt = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
           var mTitle = (upM && downM) ? "Movers in your collection" : (upM ? "Biggest riser today" : "Biggest faller today");
-          out.push({kind:"movers", badge:"Your collection", title:mTitle, meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, art:mArt});
+          var featuredMovers=[];
+          try{
+            if(upM) featuredMovers.push({dir:"up", name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct)});
+            if(downM) featuredMovers.push({dir:"down", name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct)});
+          }catch(e){}
+          out.push({kind:"movers", badge:"Your collection", title:mTitle, meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt});
         } else {
           var total=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP=0;
           try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
@@ -7185,12 +7204,20 @@
       var fgImg=s.art ? '<img class="'+fgClass+'" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async">' : "";
       var on=(i===_featIndex);
       var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="reveal"?"layers":(s.kind==="update"?"refresh":(s.kind==="ximage"?"camera":(s.kind==="movers"?"chart":(s.kind==="collection"?"grid":"news"))))));
-      var bodyMeta = ((s.kind==="update" || s.kind==="movers") && s.notes && s.notes.length)
-        ? '<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>'
-        : '<span class="featmeta">'+esc(s.meta)+'</span>';
+      var bodyMeta;
+      if(s.kind==="movers" && s.movers && s.movers.length){
+        bodyMeta='<span class="featmovers">'+s.movers.map(function(m){
+          var up=m.dir==="up", arrow=up?"↑":"↓", label=up?"Riser":"Faller", change=(up?"+":"−")+Math.abs(+m.pct).toFixed(1)+"%";
+          return '<span class="featmover '+(up?'up':'down')+'"><img src="'+esc(m.art)+'" alt="'+esc(m.name)+'" loading="lazy" decoding="async"><span class="featmoverhead"><span class="featmoverdir" aria-label="'+label+'">'+arrow+' '+label+'</span><span class="featmoverpct">'+change+'</span></span><span class="featmovername">'+esc(m.name)+'</span></span>';
+        }).join("")+'</span>';
+      } else if((s.kind==="update" || s.kind==="movers") && s.notes && s.notes.length){
+        bodyMeta='<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>';
+      } else {
+        bodyMeta='<span class="featmeta">'+esc(s.meta)+'</span>';
+      }
       return '<button class="featslide'+(on?" on":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
         '><span class="featimg '+(s.art? (isCard?'featimg--card':'featimg--banner') : 'featnoimg')+'">'+bgImg+fgImg+'</span><span class="featscrim"></span>'+
-        '<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
+        '<span class="featbody'+(s.kind==="movers"&&s.movers&&s.movers.length?' featbody-movers':'')+'"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
         '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span></button>';
     }).join("");
     var dots=slides.length>1 ? '<span class="featdots">'+slides.map(function(s,i){
