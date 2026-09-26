@@ -1,9 +1,9 @@
 name: Sieve Scheduled Refresh
 
-# Pulls News + Releases twice daily from the official Palworld TCG site + X
-# and updates the app's News/Releases + the featured carousel's 4th slot (daily card reveal).
-# Uses Infisical-sourced SIEVE_API_KEY via the Viewer-scoped github-spheredex-ci / Universal Auth.
-# Output: POST to https://spheredex-backend.craigjayedit.workers.dev/api/news → api("/api/news")
+# Pulls News + Releases twice daily from the official Palworld TCG site + X.
+# X is currently robots.txt-blocked under Sieve's compliant access modes, so that
+# optional source may refuse; official news must still consolidate and publish.
+# Output: POST to the SphereDex backend /api/news for the app's News and Home feed.
 
 on:
   schedule:
@@ -36,6 +36,8 @@ jobs:
           infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py doctor
 
       - name: Scrape official news + releases
+        id: scrape_official
+        continue-on-error: true
         run: |
           export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
           infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
@@ -44,7 +46,11 @@ jobs:
             --fields title,date,summary,link,image \
             --shape long
 
+      # Sieve refuses X under Conservative because x.com's robots.txt is Disallow: /.
+      # Retain this diagnostic run but never let it block the official-news feed.
       - name: Scrape X daily card reveals (image-forward)
+        id: scrape_x
+        continue-on-error: true
         run: |
           export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
           infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
@@ -54,40 +60,38 @@ jobs:
             --shape long \
             --compliance conservative
 
-      - name: Consolidate sieve results
-        run: |
-          python3 << 'PY'
-          import json, pathlib, glob
-          sessions = sorted(glob.glob("stage/sieve/*/result.json"))
-          if not sessions:
-              print("No sieve results found"); pathlib.Path("stage/news-feed.json").write_text("[]"); exit(0)
-          items=[]; seen=set()
-          for sess in sessions[-2:]:
-              try:
-                  data=json.loads(pathlib.Path(sess).read_text())
-                  arr=data if isinstance(data,list) else data.get("items", data.get("result", []))
-                  if isinstance(arr,dict): arr=[arr]
-                  for it in arr:
-                      key=(it.get("title",""),it.get("link",""))
-                      if key in seen or not it.get("title"): continue
-                      seen.add(key)
-                      items.append({"title":it.get("title",""),"date":it.get("date",""),"summary":it.get("summary",""),"link":it.get("link",""),"image":it.get("image",""),"source":"sieve"})
-              except Exception as e: print(f"skip {sess}: {e}")
-          pathlib.Path("stage/news-feed.json").write_text(json.dumps(items[:20], indent=2, ensure_ascii=False))
-          print(f"Consolidated {len(items)} -> stage/news-feed.json")
-          print(json.dumps(items[:2], indent=2) if items else "[]")
-          PY
-          cat stage/news-feed.json | head -n 80
+      - name: Consolidate Sieve results
+        id: consolidate
+        if: always()
+        run: python tools/news_feed.py --root stage/sieve --output stage/news-feed.json --github-output "$GITHUB_OUTPUT"
 
       - name: POST to backend (/api/news)
+        if: always() && steps.consolidate.outcome == 'success'
         env:
           BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
         run: |
-          if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST — skipping"; exit 0; fi
-          echo "POSTing $(jq length stage/news-feed.json 2>/dev/null || wc -c < stage/news-feed.json) items to $BACKEND_URL/api/news"
-          curl -sS -X POST "$BACKEND_URL/api/news" -H "Content-Type: application/json" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n" || echo "POST failed — check worker"
+          if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
+          echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/news"
+          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/news" -H "Content-Type: application/json" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n"
 
-      - name: Upload sieve sessions (artifact, no commit)
+      - name: Report scrape status
+        if: always()
+        run: |
+          if [ "${{ steps.scrape_official.outcome }}" = "failure" ]; then
+            echo "::warning::Official-news scrape failed. Inspect its session summary in the uploaded artifact."
+          elif [ "${{ steps.consolidate.outputs.official_items }}" = "0" ]; then
+            echo "::warning::Official scraper produced no usable items. Inspect its session result and summary in the uploaded artifact."
+          fi
+          if [ "${{ steps.scrape_x.outcome }}" = "failure" ]; then
+            echo "::warning::X scrape was refused or failed. Current known refusal: X robots.txt Disallow: /. Do not bypass the site policy."
+          elif [ "${{ steps.consolidate.outputs.x_items }}" = "0" ]; then
+            echo "::warning::X scraper completed without usable X items. Inspect its session result and summary in the uploaded artifact."
+          else
+            echo "X feed items published: ${{ steps.consolidate.outputs.x_items }}"
+          fi
+
+      - name: Upload Sieve sessions (artifact, no commit)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sieve-news-feed
