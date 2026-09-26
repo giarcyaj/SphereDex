@@ -2360,7 +2360,7 @@
           <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers the UK, US and Australia, plus a few products in Germany. Turn alerts on for a product from its page.</div></div>
+          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers shops in the UK, US, Canada, Australia, Germany, France, Italy and Spain. Turn alerts on for a product from its page.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
         </div>
         <div class="setrow">
@@ -3271,17 +3271,16 @@
     saveSettings(); syncPushPrefs();
     return i<0;   // true = now on
   }
-  // Sealed product ids the stock-alert checker tracks, per market. This map MUST mirror
-  // STOCK_SOURCES coverage in spheredex-backend/src/stock.ts: when a market or product is added
-  // or removed, change both sides in the same commit, or users see a "Stock alerts" button that
-  // can never fire (a market the backend does not poll) or miss one that can. The button only
-  // shows for a product listed here, so markets with no polled Shopify supplier (currently ca,
-  // fr, it, es) must stay absent on both sides until stock.ts gains shops for them.
+  // Markets and products the stock-alert checker can actually alert on. MUST mirror
+  // spheredex-backend/src/stock.ts: the regions listed in STOCK_SOURCES (40 shops across all
+  // 8 markets) and the ids in STOCK_PRODUCTS (9 sealed products). The backend matches every
+  // product against every market's shops and alerts per market, so the client gate is only
+  // "does my market have shops" - list ALL 9 ids for every market present here. Add a market
+  // to this map only after stock.ts has shops for it, and vice versa, in the same change.
+  var STOCK_ALL_IDS=["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"];
   var STOCK_TRACKED={
-    "co.uk":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"],
-    "com":["box-ebp01","td-rb","td-gp","ss-vol1","box-bp02","td-ea-rg","td-ea-bp"],
-    "com.au":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"],
-    "de":["box-ebp01","td-rb","td-gp"]
+    "co.uk":STOCK_ALL_IDS, "com":STOCK_ALL_IDS, "ca":STOCK_ALL_IDS, "com.au":STOCK_ALL_IDS,
+    "de":STOCK_ALL_IDS, "fr":STOCK_ALL_IDS, "it":STOCK_ALL_IDS, "es":STOCK_ALL_IDS
   };
   // A "Stock alerts on/off" button (bell) for the sealed detail sheet, sized to sit beside Refresh
   // prices in a flex row. Native push only, and only for products the user's market can poll.
