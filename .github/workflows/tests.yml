@@ -1,0 +1,68 @@
+name: Tests
+
+# Guards on every push to main:
+#   1. tools/test_carousel.cjs — the featured-carousel section (markers, four-copy sync,
+#      behaviour on a stub DOM) so edits to paldeck.html cannot silently regress it.
+#   2. tools/test_scan_review.cjs — the scan session/review sheet, same treatment.
+#   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
+#   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
+#      app bundle regeneration itself.
+#   5. A rebuild + git diff so a src/ edit without regenerated WEB/Android/iOS bundles
+#      fails the push instead of shipping stale bundles.
+# Everything is stdlib-only on both runtimes: no dependency install step to rot.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Carousel + editions guards (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Featured-carousel guard suite
+        run: node tools/test_carousel.cjs
+
+      - name: Scan-review guard suite
+        run: node tools/test_scan_review.cjs
+
+      - name: Editions / CSV guard suite
+        run: node tools/test_editions.cjs
+
+  python:
+    name: Pipeline tests + bundle sync (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run tool tests (news feed, Sieve, rebuild)
+        working-directory: tools
+        run: python -m unittest discover -p 'test_*.py' -v
+
+      # The canonical source and the three shipped bundles must move together (src/README.md).
+      # rebuild.py is deterministic — same inputs, same bytes — so any real drift shows as a diff.
+      - name: Regenerate bundles and fail on drift
+        run: |
+          python tools/rebuild.py
+          git diff --exit-code -- docs/app/index.html docs/app/sw.js \
+            app/src/main/assets/spheredex.html \
+            ios/SphereDex/SphereDex/Resources/spheredex.html \
+            || (echo "::error::src/paldeck.html changed but the WEB/Android/iOS bundles were not rebuilt. Run: python tools/rebuild.py" && exit 1)
