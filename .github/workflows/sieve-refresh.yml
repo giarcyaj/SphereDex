@@ -1,13 +1,13 @@
 name: Sieve Scheduled Refresh
 
-# Pulls News + Releases every 30 minutes from the official Palworld TCG site + X
+# Pulls News + Releases twice daily from the official Palworld TCG site + X
 # and updates the app's News/Releases + the featured carousel's 4th slot (daily card reveal).
 # Uses Infisical-sourced SIEVE_API_KEY via the Viewer-scoped github-spheredex-ci / Universal Auth.
 # Output: POST to https://spheredex-backend.craigjayedit.workers.dev/api/news → api("/api/news")
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "0 8,20 * * *"
   workflow_dispatch:
 
 permissions:
