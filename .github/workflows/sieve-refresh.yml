@@ -60,6 +60,13 @@ jobs:
             --shape long \
             --compliance conservative
 
+      # Option A for the Home card-reveal slide (docs/x-reveal-source-proposal.md): the official
+      # site's REST API is robots-permitted and carries reveal posts with cardlist art. Stages a
+      # Sieve-style session that consolidation picks up below; never blocks the official scrape.
+      - name: Fetch official card reveals (REST, robots-permitted)
+        if: always()
+        run: python tools/fetch_card_reveals.py --root stage/sieve
+
       - name: Consolidate Sieve results
         id: consolidate
         if: always()
