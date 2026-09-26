@@ -780,6 +780,7 @@
   .palprog { height:5px; border-radius:4px; overflow:hidden; background:var(--surface-2); margin:0 10px 5px; }
   .palprog span { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,var(--accent),var(--up)); transition:width .3s ease; }
   .palcount { margin:0 10px 9px; color:var(--ink-faint); font-size:.64rem; font-family:var(--font-mono); }
+  /* ==== FEATURED CAROUSEL BEGIN (styles; guarded by tools/test_carousel.cjs) ==== */
   /* Featured window: the top of Home. Four images that scroll themselves through the newest news,
      releases. A track of full-width slides, moved with one transform, so the animation is a genuine
      horizontal scroll rather than a cross-fade. */
@@ -842,6 +843,7 @@
   .featslide:focus-visible, .featdot:focus-visible { outline:2px solid #fff; outline-offset:2px; }
   @media (min-width:760px) { .featured { height:240px; } .featimg--card .featimg-fg { padding:12px 22px 16px; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featimg img.zoom { animation:none; } }
+  /* ==== FEATURED CAROUSEL END (styles) ==== */
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.67rem; }
   .pallegend i { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:-1px; }
   .missinglist { display:flex; flex-direction:column; }
@@ -6971,7 +6973,11 @@
   }
 
   // ---- Home ----
-  // ---- Featured window -------------------------------------------------------------------------------
+  // ==== FEATURED CAROUSEL BEGIN (logic; guarded by tools/test_carousel.cjs) ====
+  // Everything the Featured window needs lives between these markers: the styles above sit between
+  // the CSS markers, and all feat* logic sits between the logic markers below. tools/test_carousel.cjs
+  // asserts the markers exist, that no carousel definition sits outside them, that all four copies of
+  // the app carry an identical section, and that the behaviour still works against a stub DOM.
   // The first thing on Home: five images that scroll themselves through the newest news and releases.
   // Slides: 1) latest official news, 2) latest X post with an image, 3) app update (when behind),
   // 4) collection — biggest riser/faller when prices are shown, otherwise a summary — and 5) latest
@@ -7149,6 +7155,22 @@
   // Hovering, focusing or swiping parks the carousel; leaving it starts the scroll again. featStart
   // honours the flag, so a dot tap while the pointer is still over the window does not sneak past it.
   function featPause(on){ _featPaused=!!on; if(_featPaused) featStop(); else featStart(); }
+  // Left/Right on a focused slide or dot move the carousel, so keyboard users get the same path the
+  // mouse and touch users have. Focus itself parks the carousel (the focusin handler below), so no
+  // extra pause bookkeeping is needed here - Tabbing away resumes the scroll.
+  function featKeys(e){
+    if(e.key!=="ArrowLeft" && e.key!=="ArrowRight") return;
+    var hit=featTarget(e.target);
+    if(hit.kind!=="slide" && hit.kind!=="dot") return;
+    var host=$("homeFeatured"); if(!host) return;
+    var slides=host.querySelectorAll(".featslide"); var n=slides.length; if(n<2) return;
+    e.preventDefault();
+    _featIndex=(_featIndex+(e.key==="ArrowRight"?1:n-1))%n;
+    featPaint();
+    // Move focus with the slide, so keyboard and screen-reader users stay on the active slide.
+    var next=slides[_featIndex]; if(next) next.focus();
+  }
+
   function featStart(){
     featStop();
     var host=$("homeFeatured");
@@ -7258,6 +7280,7 @@
     host.addEventListener("mouseleave", function(){ featPause(false); });
     host.addEventListener("focusin", function(){ featPause(true); });
     host.addEventListener("focusout", function(){ featPause(false); });
+    host.addEventListener("keydown", featKeys);
     // Swipe. Nothing calls preventDefault: cancelling a touch move cancels the click that follows it,
     // which would break taps on the slides and dots.
     var x0=null, y0=null;
@@ -7274,6 +7297,20 @@
     }, {passive:true});
     host.addEventListener("touchcancel", function(){ x0=null; y0=null; featPause(false); }, {passive:true});
   }
+
+  // Stable seam for the guard suite and future callers. Anything outside the markers must go through
+  // this object, so the internal functions above can be renamed or reordered without breaking them.
+  var FEATURED_CAROUSEL = {
+    intervalMs: FEAT_MS,
+    snapshot: function(){ return { index:_featIndex, timerActive:!!_featTimer, paused:_featPaused, slideCount:_featSlides.length, sig:_featSig }; },
+    slides: featuredSlides, time: featTime, art: featArt, newsSet: featNewsSet,
+    target: featTarget, visible: featVisible,
+    paint: featPaint, start: featStart, stop: featStop, pause: featPause,
+    keys: featKeys, open: openFeatured, render: renderFeatured, bind: bindFeatured
+  };
+  if(typeof window!=="undefined") window.FEATURED_CAROUSEL = FEATURED_CAROUSEL;
+  // ==== FEATURED CAROUSEL END (logic) ====
+
   function renderHome(){
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=total?Math.round(ownedP/total*100):0;
