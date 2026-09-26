@@ -4852,6 +4852,32 @@
 
   var toastEl=$("toast"), toastT;
   function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove("show"); },2200); }
+  // Settings feedback: a change made silently is a change the user cannot trust stuck. One delegated
+  // listener covers every control on the Settings page (toggles, selects, text fields, colour chips):
+  // read the row's own title and say what changed. Runs after the row's own handler (bubbling), so
+  // the announcement reflects the state that actually saved. Immediate-save rows only; rows that
+  // open a dialog or save via a button (export, sign in, danger zone) are excluded by type.
+  (function(){
+    var page=$("page-settings"); if(!page) return;
+    var rowTitle=function(el){ var row=el.closest(".setrow"); var t=row&&row.querySelector(".stitle"); return t?t.textContent.trim():(row?row.textContent.trim().split("\n")[0].slice(0,40):""); };
+    page.addEventListener("change", function(ev){
+      var t=ev.target; if(!t) return;
+      var tag=t.tagName;
+      if(tag==="BUTTON" || t.closest("button")) return;                       // button flows announce themselves
+      var name=rowTitle(t); if(!name) return;
+      if(tag==="INPUT" && (t.type==="checkbox"||t.type==="radio")){
+        toast(name+": "+(t.checked?"on":"off"));
+      } else if(tag==="SELECT" || (tag==="INPUT" && t.type!=="checkbox" && t.type!=="radio")){
+        if(t.type==="range") toast(name+": "+t.value);
+        else if(t.value && t.value!==t.getAttribute("placeholder")) toast(name+" updated");
+      }
+    });
+    // Masthead selects live outside the Settings page but are settings too: currency and the
+    // active collection. Name them explicitly rather than guessing a row title.
+    var mast=function(el,label){ if(!el) return; el.addEventListener("change", function(){ toast(label+": "+(el.selectedOptions&&el.selectedOptions[0]?el.selectedOptions[0].textContent.trim():el.value)); }); };
+    mast($("curSel"), "Display currency");
+    mast($("colSel"), "Active collection");
+  })();
   function esc(s){ return String(s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];}); }
   // Consistent button loading state: disable the button + show a spinning refresh icon (via .spin) with an
   // optional label, so every async action across the app looks the same. Returns a done() that restores it.
