@@ -56,8 +56,8 @@ WEB_IMG = "docs/app/img"
 APP_IMG = [("ANDROID", "app/src/main/assets/img"), ("IOS", "ios/SphereDex/SphereDex/Resources/img")]
 
 def read(p):
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read()
+    with open(p, "r", encoding="utf-8", newline="") as f:
+        return f.read().replace("\r\n", "\n")   # LF-only contract: an editor that saves CRLF must not leak into the bundles
 
 def write(p, s):
     with open(p, "w", encoding="utf-8", newline="\n") as f:

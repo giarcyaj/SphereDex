@@ -18,3 +18,11 @@ leaks outside them, all four shipped copies (src + the three bundles) carry an i
 section (modulo line endings), and the real section is executed in a `vm` sandbox against a
 stub DOM covering slides, dedupe, autoplay, taps/swipes/keyboard and listener binding.
 Run `node tools/test_carousel.cjs` after touching anything carousel-related.
+
+The continuous-scan session and review sheet are fenced the same way, by `SCAN REVIEW
+BEGIN/END` markers (styles ~line 1543, logic ~line 7906) with a `SCAN_REVIEW` seam
+(`window.SCAN_REVIEW`), guarded by `tools/test_scan_review.cjs`. The same rules apply:
+nothing scan-session-related outside the markers, outside callers through the seam,
+run the guard suite after touching the section. The suite pins one known quirk: undoing
+every wishlist capture of a card that was wished before scanning also removes the
+pre-existing wish (scanRestore downgrades the remaining capture's wasWished flag).

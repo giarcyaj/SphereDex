@@ -51,11 +51,11 @@ test('carousel definitions never leak outside the marked section', () => {
   assert.equal(defs(whole), defs(logic), 'every carousel definition lives inside the markers');
 });
 
-test('all four shipped copies carry an identical carousel section (modulo line endings)', () => {
-  // rebuild.py writes the bundles with LF while src/paldeck.html is CRLF, so compare normalized.
-  const norm = (s) => s.replace(/\r\n/g, '\n');
+test('all four shipped copies carry a byte-identical carousel section', () => {
+  // rebuild.py enforces LF-only output and src/paldeck.html is LF (pinned in .gitattributes),
+  // so this comparison is exact: any real drift, including line-ending drift, fails here.
   for (const kind of ['style', 'logic']) {
-    const sections = Object.values(FILES).map((f) => norm(readSection(f, kind)));
+    const sections = Object.values(FILES).map((f) => readSection(f, kind));
     for (let i = 1; i < sections.length; i++) {
       assert.equal(sections[i], sections[0], `${kind} section matches the canonical source`);
     }

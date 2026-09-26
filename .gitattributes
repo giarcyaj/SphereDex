@@ -1,1 +1,8 @@
 *.sh text eol=lf
+# Canonical app source and the generated bundles are LF-only, enforced by tools/rebuild.py and
+# asserted byte-exactly by tools/test_carousel.cjs / tools/test_scan_review.cjs.
+src/paldeck.html text eol=lf
+docs/app/index.html text eol=lf
+docs/app/sw.js text eol=lf
+app/src/main/assets/spheredex.html text eol=lf
+ios/SphereDex/SphereDex/Resources/spheredex.html text eol=lf

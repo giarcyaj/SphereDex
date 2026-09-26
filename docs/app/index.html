@@ -1540,6 +1540,7 @@
   .scanprice{ margin:8px 0 20px; text-align:center; }
   .scanprice .sealprices{ justify-content:center; font-size:1.12rem; gap:8px 28px; color:var(--ink); font-weight:600; }
   .scanprice .sealprices .spdot{ width:11px; height:11px; }
+  /* ==== SCAN REVIEW BEGIN (styles; guarded by tools/test_scan_review.cjs) ==== */
   .scansess{ text-align:center; font-size:.78rem; font-weight:700; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,var(--surface-2)); border:1px solid var(--line-strong); border-radius:999px; padding:5px 14px; margin:0 auto 12px; width:fit-content; }
   .scanreviewtop{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
   .scanreviewtop h3{ margin:0; font-family:var(--font-display); font-size:1.16rem; }
@@ -1552,6 +1553,7 @@
   .scanreviewrow button[data-action="undo"]{ border:1px solid var(--el-Fire); border-radius:8px; background:transparent; color:var(--el-Fire); padding:6px 7px; font:700 .68rem var(--font-body); cursor:pointer; }
   @media (max-width:500px){ .scanreviewrow{ grid-template-columns:34px minmax(0,1fr); }.scanreviewactions{ grid-column:1/-1; justify-content:flex-end; padding-top:2px; } }
   .scanreviewempty{ padding:22px 5px; color:var(--ink-faint); text-align:center; font-size:.84rem; }
+  /* ==== SCAN REVIEW END (styles) ==== */
   .scanhint{ text-align:center; font-size:.82rem; font-weight:600; color:var(--gold-deep); background:color-mix(in srgb,var(--gold) 13%,var(--surface-2)); border:1px solid color-mix(in srgb,var(--gold) 38%,var(--line-strong)); border-radius:11px; padding:8px 12px; margin:0 0 12px; }
   /* Scan popup duplicate check: gold when the target collection already holds this printing, accent when it is new. Plain token colours here; the color-mix tints live in the @supports block below
      (a var() inside color-mix is accepted at parse time, so a same-rule plain fallback would be discarded, not used, on WebViews without color-mix). */
@@ -7903,6 +7905,12 @@
   var scanScrim=$("scanScrim");
   var scanState={card:null,dest:"collection",type:"raw",edition:"1"};
   var scanBusy=false;   // one press per sheet; cleared by openScanModal and closeScanModal
+  // ==== SCAN REVIEW BEGIN (logic; guarded by tools/test_scan_review.cjs) ====
+  // The continuous-scan session and its review sheet: the running tally, undo, printing correction
+  // and the review UI. Everything the wider scan modal needs from here goes through the SCAN_REVIEW
+  // seam at the end of the section (also window.SCAN_REVIEW); tools/test_scan_review.cjs asserts the
+  // markers exist once, nothing leaks outside them, all four shipped copies match, and the behaviour
+  // still works against a stub DOM. Collection mutation helpers (changeRaw, save) stay outside.
   var scanSession={count:0,value:0,ts:0,items:[]};  // local-only, undoable running tally across a continuous-scan burst
   var scanReviewScrim=$("scanReviewScrim");
   function resetScanSession(){ scanSession.count=0; scanSession.value=0; scanSession.ts=0; scanSession.items=[]; }
@@ -7961,6 +7969,19 @@
     if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
     if(review) review.hidden=!scanSession.items.length;
   }
+
+  // Stable seam for the guard suite and outside callers (the capture flow records scans; the modal
+  // paints the session pill). Internal functions may be renamed freely behind this object.
+  var SCAN_REVIEW = {
+    session: scanSession,
+    total: scanSessionTotal, record: recordScan, reset: resetScanSession,
+    restore: scanRestore, moveVariant: scanMoveVariant,
+    render: renderScanReview, open: openScanReview, close: closeScanReview,
+    refresh: refreshScanSessionUI
+  };
+  if(typeof window!=="undefined") window.SCAN_REVIEW = SCAN_REVIEW;
+  // ==== SCAN REVIEW END (logic) ====
+
   function paintSeg(rowId,attr,val){
     var row=$(rowId); if(!row) return;
     Array.prototype.forEach.call(row.querySelectorAll(".seg"), function(b){
