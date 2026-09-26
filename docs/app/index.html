@@ -2360,7 +2360,7 @@
           <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers the UK, US and Australia, plus the two trial decks in Germany. Turn alerts on for a product from its page.</div></div>
+          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers the UK, US and Australia, plus a few products in Germany. Turn alerts on for a product from its page.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
         </div>
         <div class="setrow">
@@ -3271,19 +3271,17 @@
     saveSettings(); syncPushPrefs();
     return i<0;   // true = now on
   }
-  // Sealed product ids the stock-alert checker tracks, per market (mirror of STOCK_SOURCES coverage in
-  // spheredex-backend/src/stock.ts). The "Stock alerts" button only shows for a product the user's
-  // market can actually poll, so we never offer an alert that can't fire. Markets with no Shopify JSON
-  // supplier (ca, fr, it, es) are absent, so the button is hidden there.
+  // Sealed product ids the stock-alert checker tracks, per market. This map MUST mirror
+  // STOCK_SOURCES coverage in spheredex-backend/src/stock.ts: when a market or product is added
+  // or removed, change both sides in the same commit, or users see a "Stock alerts" button that
+  // can never fire (a market the backend does not poll) or miss one that can. The button only
+  // shows for a product listed here, so markets with no polled Shopify supplier (currently ca,
+  // fr, it, es) must stay absent on both sides until stock.ts gains shops for them.
   var STOCK_TRACKED={
     "co.uk":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"],
     "com":["box-ebp01","td-rb","td-gp","ss-vol1","box-bp02","td-ea-rg","td-ea-bp"],
-    "ca":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","td-ea-rg","td-ea-bp"],
     "com.au":["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"],
-    "de":["box-ebp01","td-rb","td-gp"],
-    "fr":["box-ebp01","td-rb","td-gp","box-bp02"],
-    "it":["box-ebp01","td-rb","td-gp"],
-    "es":["box-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"]
+    "de":["box-ebp01","td-rb","td-gp"]
   };
   // A "Stock alerts on/off" button (bell) for the sealed detail sheet, sized to sit beside Refresh
   // prices in a flex row. Native push only, and only for products the user's market can poll.
