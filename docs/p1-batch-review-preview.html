@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SphereDex · Batch review preview</title>
+<style>
+  :root{--bg:#0d1518;--surface:#152125;--surface-2:#1d2c31;--line:#395158;--ink:#eef7f6;--soft:#a9c0c2;--faint:#789397;--accent:#53d3cb;--accent-ink:#8eeae3;--fire:#ef6a63}
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0,#1c3739 0,var(--bg) 52%);color:var(--ink);font:16px Inter,system-ui,sans-serif;display:grid;place-items:center;padding:24px}
+  .phone{width:min(100%,430px);border:1px solid #49656a;border-radius:28px;background:linear-gradient(180deg,#1b2a2f,var(--bg));padding:11px;box-shadow:0 28px 72px #0009}.sheet{background:var(--surface);border-radius:21px;padding:20px}
+  .eyebrow{font-size:.68rem;letter-spacing:.12em;font-weight:800;color:var(--accent);text-transform:uppercase}.head{display:flex;justify-content:space-between;gap:12px;align-items:start}.head h1{font-size:1.3rem;margin:3px 0 0}.close{width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--soft);font-size:1.25rem}.intro{font-size:.84rem;line-height:1.45;color:var(--soft);margin:13px 0 15px}.list{display:flex;flex-direction:column;gap:8px}.row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:9px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:8px}.row img{width:34px;height:47px;object-fit:cover;border-radius:5px}.name{font-size:.79rem;font-weight:760}.meta{display:block;margin-top:3px;font:700 .64rem ui-monospace,monospace;color:var(--faint)}.actions{display:flex;align-items:center;gap:6px}.variant{max-width:88px;border:1px solid #517076;border-radius:7px;background:var(--surface);color:var(--soft);padding:5px 4px;font:700 .61rem ui-monospace,monospace}.qty{display:flex;align-items:center;gap:3px;color:var(--soft);font:700 .68rem ui-monospace,monospace}.qty button{min-width:24px;padding:5px 4px;border:1px solid #517076;border-radius:7px;background:transparent;color:var(--accent-ink);font-weight:800}.undo{border:1px solid var(--fire);border-radius:8px;background:transparent;color:var(--fire);padding:6px 7px;font:700 .68rem system-ui}.done{width:100%;margin-top:16px;border:0;border-radius:11px;padding:12px;background:var(--accent);color:#082426;font-weight:850;font-size:.9rem}.caption{text-align:center;color:var(--soft);font-size:.72rem;margin-top:18px}.caption b{color:var(--accent-ink)}
+  @media(max-width:500px){body{padding:10px}.row{grid-template-columns:34px minmax(0,1fr)}.actions{grid-column:1/-1;justify-content:flex-end;padding-top:2px}}
+</style>
+<main class="phone"><section class="sheet" aria-label="Batch scan review preview">
+  <div class="head"><div><div class="eyebrow">Continuous scan</div><h1>Review this session</h1></div><button class="close" aria-label="Close">×</button></div>
+  <p class="intro">Every capture stays here until you finish. Raw cards can have extra copies or the exact printing corrected; every capture can be undone.</p>
+  <div class="list">
+    <article class="row"><img src="app/img/EBP01-007.jpg" alt="Lamball card"><div><div class="name">Lamball</div><span class="meta">EBP01-007 · My Collection · raw copies</span></div><div class="actions"><select class="variant" aria-label="Correct printing"><option>EBP01-007 · C</option><option>EBP01-007SR · SR</option></select><div class="qty"><span>Qty 2</span><button aria-label="Add another copy">+</button></div><button class="undo">Undo</button></div></article>
+    <article class="row"><img src="app/img/EBP01-006.jpg" alt="Chikipi card"><div><div class="name">Chikipi</div><span class="meta">EBP01-006 · My Collection · raw copies</span></div><div class="actions"><div class="qty"><span>Qty 1</span><button aria-label="Add another copy">+</button></div><button class="undo">Undo</button></div></article>
+    <article class="row"><img src="app/img/EBP01-005.jpg" alt="Foxparks card"><div><div class="name">Foxparks</div><span class="meta">EBP01-005 · My Collection · graded</span></div><div class="actions"><button class="undo">Undo</button></div></article>
+  </div>
+  <button class="done">Done</button>
+</section></main>
+<div class="caption"><b>Preview only</b> · controls mirror the P1 batch-review sheet</div>
+</html>

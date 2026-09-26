@@ -1,0 +1,21 @@
+# Privacy and sharing review
+
+Updated 23 September 2026. This review is for the remaining proposals from the TCG-app comparison; it is not a promise that a public sharing service already exists.
+
+## Decisions
+
+- **Private by default:** collections, wishlist, decks, notes, account email, and sync data remain private. There is no public profile, binder, or trade-list endpoint today.
+- **Weekly push recap: approved with minimisation.** It is optional and off by default. The device calculates a rolling-seven-day count of distinct cards added to the active collection and includes only that number in its per-device push preferences. The server sends one weekly push, stores only token + UTC week to deduplicate (90-day retention), and does not receive card identities, names, notes, deck data, or a collection export. Turning the setting off removes the count from the next preference update.
+- **Collection milestone push: approved with minimisation.** It is separately opt-in and off by default. The device shares only the aggregate number of unique cards in the active collection; the server tracks threshold milestones per push token and never receives card identities or a collection snapshot. First-time opt-in seeds already-reached milestones silently, and turning the setting off deletes the per-token milestone records. Deck-need push alerts remain deferred pending a separate explicit choice to share needed card IDs and quantities.
+- **Wishlist-card availability: approved with explicit opt-in and a verified source.** The daily `prices_live` refresh identifies actual eBay Browse results (`source='ebay-active'`) separately from Palworld/TCGplayer fallback estimates. Only fresh, exact-source rows count. The setting tells users wishlist IDs and market go to the server; no IDs/names appear in the push. First observation seeds silently, and subsequent unavailable→available transitions notify. Existing sealed-product restock alerts remain separate.
+- **Read-only sharing: design gate before implementation.** If revisited after P1 validation, use an explicit, separate share action, an unguessable revocable token, expiry, a preview of exact fields before publishing, and a read-only view. Exclude notes, costs, account identity, and private deck contents by default. Never make account sync itself public.
+- **Product measurement: excluded from V2 collection flows.** Do not add event uploads, a third-party analytics SDK, or a stable installation identifier in this release. Existing store install reports and price-service operational telemetry are not a product-funnel dataset. If funnel counts are reconsidered, first get a dedicated opt-in (separate from push and account sync), send only coarse weekly event totals, and never include card/collection/deck/account IDs, names, prices, or event-level timestamps. Without a stable identifier these totals cannot reliably measure unique-user retention; use store install reports instead of adding an identifier just to calculate cohorts. Before any endpoint ships, document what Cloudflare request logs retain, set an explicit purge period, and add strict event/size limits.
+- **Scanner correction feedback: not enabled in V2.** Never upload camera frames or raw recognition output. A future, separately opted-in aggregate could count only scan accepted/corrected outcomes, but it would measure correction rate rather than teach the recognizer which card was missed. Sending corrected card IDs or images would be a separate, more sensitive feature requiring its own purpose, disclosure, retention, and abuse review.
+
+## Release checks still needed
+
+1. Apply backend migrations `0017_weekly_digest.sql`, `0018_wishlist_availability.sql`, and `0019_collection_milestones.sql` before deploying the weekly cron and daily listing check.
+2. Confirm APNs/FCM credentials and permission behavior on actual iOS and Android builds; web remains push-free.
+3. Review final store disclosures against the release binaries and actual retention configuration.
+4. Treat public binder/trade-list sharing as a separate future release with revocation and deletion tests.
+5. Keep funnel and scanner-feedback uploads disabled unless the separate opt-in, endpoint logging/retention, and data-minimisation gates above are approved and tested.
