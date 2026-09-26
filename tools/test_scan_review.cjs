@@ -217,16 +217,17 @@ test('undoing wishlist captures follows the review sheet: newest first, splice b
   a.sandbox.STATE.wishlist['EBP01-002'] = true;
   a.api.record({ id: 'EBP01-002', dest: 'wishlist', wasWished: true, value: 2.5 });   // items[0]
   a.api.record({ id: 'EBP01-002', dest: 'wishlist', value: 2.5 });                    // items[1]
-  // Undo the newest (the scan-added wish). The older wasWished capture still holds the wish,
-  // BUT scanRestore also downgrades the remaining capture's wasWished flag to false - a known
-  // quirk: the second undo then treats the pre-existing wish as scan-added and removes it.
+  // Undo the newest (the scan-added wish): the older wasWished capture still holds the wish, so
+  // the wish stays - and the remaining capture's history is never rewritten.
   a.api.restore(a.api.session.items[1]);
   a.api.session.items.splice(1, 1);
   assert.equal(a.sandbox.STATE.wishlist['EBP01-002'], true, 'the pre-existing wish still stands after the first undo');
-  // Undo the remaining capture: wasWished was downgraded by the first undo, so the wish goes too.
+  assert.equal(a.api.session.items[0].wasWished, true, 'undo does not rewrite the other capture\'s wasWished history');
+  // Undo the remaining capture: it was pre-existing, so it never owned the wish. Wish survives.
   a.api.restore(a.api.session.items[0]);
   a.api.session.items.splice(0, 1);
-  assert.equal(a.sandbox.STATE.wishlist['EBP01-002'], undefined, 'pinned quirk: the pre-existing wish is lost after undoing both');
+  assert.equal(a.sandbox.STATE.wishlist['EBP01-002'], true, 'a pre-existing wish survives undoing every capture');
+  // Contrast: a lone scan-added capture removes the wish on undo.
   // Contrast: a lone scan-added capture removes the wish on undo.
   a.sandbox.STATE.wishlist['EBP01-003'] = true;
   a.api.record({ id: 'EBP01-003', dest: 'wishlist', value: 2.5 });

@@ -7918,7 +7918,12 @@
   function recordScan(item){ scanSession.items.push(item); scanSession.count=scanSession.items.length; scanSession.value=scanSessionTotal(); scanSession.ts=Date.now(); }
   function scanRestore(item){
     if(item.dest==="wishlist"){
-      if(!item.wasWished){ var remaining=scanSession.items.filter(function(x){return x!==item && x.dest==="wishlist" && x.id===item.id;})[0]; if(remaining) remaining.wasWished=false; else delete STATE.wishlist[item.id]; }
+      // wasWished is per-capture history: THIS capture either added the wish or found it already
+      // there. Undo must never rewrite another capture's history (an older bug downgraded the
+      // remaining capture's wasWished, so undoing every capture of a pre-wished card deleted the
+      // original wish). Remove the wish only when this capture added it and nothing else in the
+      // session still holds it - a remaining capture of either kind keeps the wish.
+      if(!item.wasWished){ var remaining=scanSession.items.some(function(x){return x!==item && x.dest==="wishlist" && x.id===item.id;}); if(!remaining) delete STATE.wishlist[item.id]; }
       return;
     }
     var col=scanColById(item.colId); if(!col) return;

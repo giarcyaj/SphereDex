@@ -23,6 +23,6 @@ The continuous-scan session and review sheet are fenced the same way, by `SCAN R
 BEGIN/END` markers (styles ~line 1543, logic ~line 7906) with a `SCAN_REVIEW` seam
 (`window.SCAN_REVIEW`), guarded by `tools/test_scan_review.cjs`. The same rules apply:
 nothing scan-session-related outside the markers, outside callers through the seam,
-run the guard suite after touching the section. The suite pins one known quirk: undoing
-every wishlist capture of a card that was wished before scanning also removes the
-pre-existing wish (scanRestore downgrades the remaining capture's wasWished flag).
+run the guard suite after touching the section. Wishlist undo keeps per-capture history:
+wasWished is never rewritten by an undo, and a pre-existing wish survives undoing every
+capture of that card (a scan-added wish is removed once no wishlist capture remains).
