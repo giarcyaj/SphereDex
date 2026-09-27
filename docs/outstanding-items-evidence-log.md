@@ -30,11 +30,38 @@ Run forensics from the Actions API (not assumptions):
   also explains the Home carousel showing only news + collection slides on live data.
 - Artifact `sieve-news-feed` (7-day retention) is on run 4 for comparison with the 03:18
   and 10:58 artifacts.
-- **Next action (needs a decision):** either add an admin-keyed ingest route in
-  spheredex-backend (e.g. `POST /api/news/ingest`) that stores the Sieve feed with source
-  priority, or drop the POST step and keep Sieve as the staging/inspection pipeline while
-  the Worker's RSS collection stays the source of truth. Until then the nightly cron keeps
-  "failing" on POST while all collection work succeeds.
+- **Decided & implemented (2026-09-27):** the admin-keyed ingest route now exists —
+  `POST /api/admin/news` in spheredex-backend, behind the existing `/api/admin/*`
+  X-Admin-Key gate (`ADMIN_KEY` secret). It accepts the Sieve feed as a bare array or
+  `{items:[…]}` of `{title,date,summary,link,image}`, sanitises each item (title + http(s)
+  link required, lengths capped, image/link scheme-checked, dates normalised to `YYYY-MM-DD`),
+  relabels sources to the RSS labels (`x:PalworldOCG_EN` → `X · @PalworldOCG_EN`,
+  `official` → `Official site`), and **merges by link** into `app_meta["news:sieved"]`
+  (cap 50 items / 180 days) rather than replacing — so a run where the X scrape was
+  refused cannot wipe previously published X items, and a fresh copy never loses art
+  scraped earlier. `collectNews` merges the blob into `GET /api/news` with an optional
+  `image` field (cross-pipeline de-dupe prefers the copy carrying art); `image` is exactly
+  what the Home carousel's X-image and card-reveal slides read. The workflow's POST step
+  now targets `/api/admin/news` with `X-Admin-Key: ${{ secrets.BACKEND_ADMIN_KEY }}` and
+  warns-and-skips when that secret is unset. Verified: backend `tsc --noEmit` clean,
+  app-repo python suite green (71 tests).
+  **Activated & verified (2026-09-27 morning):** Worker deployed (Version `ae82f8c2`);
+  `BACKEND_ADMIN_KEY` set as a GitHub secret via sealed-box API call (value = the
+  `ADMIN_KEY` from `.admin_key.local`, verified against the live admin gate: 200 with the
+  key, 403 without). Route smoke test on the new deployment: no key → 403, malformed body
+  with key → 400, old-dated item → 200 `{accepted:1,stored:0}` (age pruning drops it, so
+  the probe never entered the feed). Workflow fix pushed (`9be4bf5`) and verified
+  end-to-end via dispatch run **36308470126 — all 12 steps success, including step 10
+  "POST to backend (/api/admin/news)"** — the first successful Sieve publish ever.
+  `GET /api/news` now serves 18 items with **12 carrying images** (the Sieve copies win
+  the cross-pipeline de-dupe and bring the art RSS never had). X items = 0 this cycle —
+  the X scrape is still robots-refused, so X/reveal art appears only in cycles where that
+  scrape yields content; the pipeline itself is proven. The 08:00 UTC slot was dropped
+  again (checked 09:03 UTC, no run), so dispatch stood in; **20:00 UTC tonight is the
+  first *scheduled* run of the fixed pipeline** — confirm it publishes too.
+  Housekeeping: the deploy shipped the spheredex-backend working tree as-is, including
+  the still-uncommitted weekly-recap work (`src/push.ts`, `wrangler.jsonc`, RELEASE_NOTES
+  in `src/index.ts`); those changes remain uncommitted in that repo.
 
 ## 2. Web acceptance — PASS (executed live this session)
 
@@ -112,7 +139,9 @@ scheduled run (22:37 UTC), disclosure target-identification (release AAB workflo
 telemetry deployment proof, and the 1,189-asset deletion incident (restored, CI green,
 live artwork verified).
 Waiting on hardware: Android/iOS sessions (item 3).
-Waiting on a decision: backend news-ingest route vs. dropping the Sieve POST step (item 1).
+Activated & verified: news-ingest pipeline (item 1) — deployed, `BACKEND_ADMIN_KEY` set,
+dispatch run 36308470126 green through the POST step. Only the first *scheduled* run
+(20:00 UTC tonight) remains to observe.
 Waiting on the clock: nightly 01:00/01:01 passes (item 5).
 Waiting on one command: D1 count (item 5).
 Waiting on one dashboard number: Sieve credits per cycle (item 6).
