@@ -198,3 +198,87 @@ test('colourless cards do not spend one of the two colour slots', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(report.colors)).sort(), ['Blue', 'Red']);
   assert.equal(report.issues.some(issue => /two colours/.test(issue)), false);
 });
+
+function paidApp() {
+  const lamball = { id: 'EBP01-001', name: 'Lamball', set: 'EBP01', rare: 'C', base: 'EBP01-001' };
+  const box = { id: 'BOX1', name: 'Booster Box', set: 'Dawn of Palpagos', pre: false };
+  const col = { id: 'test', name: 'Test collection', own: {}, sealed: {} };
+  const sandbox = {
+    STATE: { cols: [col], active: col.id }, own: col.own, CARDS: [lamball], SEALED: [box],
+    byNumberIdx: { [lamball.id]: lamball },
+    SETS: { EBP01: { name: 'Dawn of Palpagos' } }, RARE_NAME: { C: 'Common' },
+    SETTINGS: { defaultGrader: 'PSA' }, CUR: { code: 'GBP', dec: 2 },
+    activeCol: () => col, priceMode: () => 'sold', unitOf: () => 4, unitOfEntry: () => 4,
+    sealUnit: () => 20
+  };
+  const names = [
+    'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts', 'changeRaw',
+    'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
+    'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
+  ];
+  const code = names.map(appFunction).join('\n') + '\n' + ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
+  vm.runInContext(code, vm.createContext(sandbox));
+  sandbox.col = col;
+  sandbox.box = box;
+  sandbox.lamball = lamball;
+  return sandbox;
+}
+
+test('a paid amount round-trips through CSV, including an explicit zero, and old files stay unset', () => {
+  const a = paidApp();
+  assert.equal(a.paidNumber(''), null);
+  assert.equal(a.paidNumber('  '), null);
+  assert.equal(a.paidNumber('0'), 0);
+  assert.equal(a.paidNumber('0.00'), 0);
+  assert.equal(a.paidNumber('1,25'), 1.25);
+  assert.equal(a.csvPaid(0), '0.00');
+  assert.equal(a.csvPaid(null), '');
+  const entry = {
+    qty: 3,
+    rawEditions: { '1': 2, unknown: 1 },
+    cond: 'Near Mint',
+    notes: 'Kept',
+    paidRaw: { '1': 1.5, unknown: 0 },
+    graded: [{ grader: 'PSA', grade: '10', value: 40, paid: 25, edition: '1' }]
+  };
+  a.col.own[a.lamball.id] = entry;
+  a.col.sealed[a.box.id] = { qty: 1, rrp: 0, mkt: 0, last: 0, avg: 0, paid: 0 };
+  const before = JSON.stringify(a.col);
+  const csv = a.collectionCsv(a.col);
+  assert.equal(JSON.stringify(a.col), before);
+  assert.match(csv.split(/\r\n/)[0], /Paid$/);
+  assert.match(csv, /,1\.50/);
+  assert.match(csv, /,0\.00/);
+  assert.match(csv, /,25\.00/);
+  const imported = a.parseCsvCollection(csv);
+  assert.equal(imported.own[a.lamball.id].paidRaw['1'], 1.5);
+  assert.equal(imported.own[a.lamball.id].paidRaw.unknown, 0);
+  assert.equal(imported.own[a.lamball.id].graded[0].paid, 25);
+  assert.equal(imported.own[a.lamball.id].notes, 'Kept');
+  assert.equal(imported.sealed[a.box.id].paid, 0);
+  assert.equal(imported.sealed[a.box.id].qty, 1);
+  const legacy = 'Number,Quantity,Name,Type\nEBP01-001,2,Lamball,Card\n';
+  const old = a.parseCsvCollection(legacy);
+  assert.equal(old.own[a.lamball.id].paidRaw, undefined);
+  assert.equal(old.cards, 2);
+});
+
+test('cost basis ignores copies with no paid amount and keeps an explicit zero', () => {
+  const a = paidApp();
+  a.own[a.lamball.id] = {
+    qty: 3,
+    rawEditions: { '1': 2, unknown: 1 },
+    paidRaw: { '1': 1.5 },
+    graded: [{ grader: 'PSA', grade: '10', value: 40, paid: 0 }]
+  };
+  a.col.sealed[a.box.id] = { qty: 2, paid: 12 };
+  const basis = a.collectionCostBasis();
+  assert.equal(basis.copies, 2 + 1 + 2);
+  assert.equal(basis.cost, 2 * 1.5 + 0 + 2 * 12);
+  assert.equal(basis.value, 2 * 4 + 40 + 2 * 20);
+  assert.equal(basis.gain, basis.value - basis.cost);
+  const none = paidApp();
+  none.own[none.lamball.id] = { qty: 4, edition: '1', graded: [{ grader: 'PSA', grade: '9', value: 10 }] };
+  assert.equal(none.collectionCostBasis().copies, 0);
+  assert.equal(none.collectionCostBasis().cost, 0);
+});
