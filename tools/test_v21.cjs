@@ -372,5 +372,8 @@ test('the home catch-up is only what this person missed since their last visit',
 
   assert.equal(source.includes('Welcome back'), false);
   assert.equal(source.includes('Next set:'), false);
+  assert.equal(source.includes('Find next card'), false);
+  assert.equal(source.includes('View recent'), false);
+  assert.match(source, /View those cards/);
   assert.match(source, /t>PREVIOUS_VISIT && t<APP_OPENED_AT/);
 });

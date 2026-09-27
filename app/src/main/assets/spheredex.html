@@ -3115,6 +3115,11 @@
     return set; }
   // The Show chip applies on the cards grid and Collected only; Wishlist, Favourites and Graded ignore Show chips.
   function recentFilterOn(){ var m=colMode(); return filters.view==="recent" && (m==="col" || m==="collected"); }
+  // The home catch-up's list: printings added after the previous open and before this one.
+  // Separate from Recently added, which is only the latest 30-minute burst.
+  var SINCE_VISIT=null;
+  function sinceVisitOn(){ return !!SINCE_VISIT && colMode()==="col"; }
+  function clearSinceVisit(){ SINCE_VISIT=null; }
   function recentOn(){ return filters.sort==="recent" || recentFilterOn(); }
   // Count line for the Recently added filter, from the ids on screen (render() and patchCard() both use it).
   function recentCountLine(ids){ var t=Math.max.apply(null, ids.map(function(id){ return addedAt(id); }));
@@ -3648,6 +3653,7 @@
     [["all","All"],["owned","Owned"],["partial","Playset incomplete"],["missing","Missing"],["wish","Wishlist"],["recent","Recently added"]].forEach(function(v){
       var b = chip(v[1], "", "var(--accent)", v[0]==="all"); b.classList.add("solid");
       b.onclick = function(){
+        clearSinceVisit();
         filters.view=v[0];
         Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(c){ c.setAttribute("aria-pressed","false"); });
         b.setAttribute("aria-pressed","true"); render();
@@ -3773,6 +3779,7 @@
       }
       if (mode==="col" && filters.view==="wish" && !isWished(c.id)) return false;
       if (recentFilterOn() && !RECENT[c.id]) return false;   // only cards from the latest adding session
+      if (sinceVisitOn() && !SINCE_VISIT[c.id]) return false;   // only the printings the home catch-up counted
       return true;
     });
     var s = filters.sort;
@@ -3844,6 +3851,7 @@
     if(m==="wish") $("countLine").textContent = cards.length + " on your wishlist · est. " + money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
+    else if(sinceVisitOn()) $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " added since your last visit";
     else if(recentFilterOn() && cards.length) recentCountLine(cards.map(function(c){ return c.id; }));
     else if((m==="col" || m==="collected") && filters.view==="partial") $("countLine").textContent = cards.length + (cards.length===1?" printing":" printings") + " with 1–3 copies in this collection";
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
@@ -7484,11 +7492,13 @@
     }).join("");
   }
   function openSetSphere(id, earned){
+    clearSinceVisit();
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={};
     filters.sets[id]=true; filters.view=earned?"all":"missing"; syncSetChips(); showPage("collection"); showCollGrid(true); render();
   }
   function openRarity(r, view){
     view=view||"all";
+    clearSinceVisit();
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
@@ -7949,16 +7959,12 @@
     if(away){
       if(missed.show){
         var bulletHtml=missed.bullets.length ? '<ul class="awaylist">'+missed.bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>' : '';
-        var actions=(missed.addedSince?'<button class="homeaction" type="button" data-act="recent">View recent</button>':'')+
-          '<button class="homeaction" type="button" data-act="next">Find next card</button>';
+        var actions=missed.addedSince?'<div class="hcfoot"><span></span><div class="homeupdate-actions"><button class="homeaction" type="button" data-act="since">View those cards</button></div></div>':'';
         away.hidden=false;
         away.innerHTML='<div class="hclabel">'+icon('refresh')+'Your collection update</div><div class="hcname">'+esc(missed.title)+'</div>'+
-          (missed.meta?'<div class="hcmeta">'+esc(missed.meta)+'</div>':'')+bulletHtml+
-          '<div class="hcfoot"><span></span><div class="homeupdate-actions">'+actions+'</div></div>';
-        var recentBtn=away.querySelector('[data-act="recent"]');
-        if(recentBtn) recentBtn.onclick=function(ev){ ev.stopPropagation(); openRecentCollection(); };
-        var nextBtn=away.querySelector('[data-act="next"]');
-        if(nextBtn) nextBtn.onclick=function(ev){ ev.stopPropagation(); if(closest){ missingGoal="set"; showPage("missing"); } else openMissingCollection(); };
+          (missed.meta?'<div class="hcmeta">'+esc(missed.meta)+'</div>':'')+bulletHtml+actions;
+        var sinceBtn=away.querySelector('[data-act="since"]');
+        if(sinceBtn) sinceBtn.onclick=function(ev){ ev.stopPropagation(); openSinceVisit(); };
       } else { away.hidden=true; away.innerHTML=""; }
     }
     document.documentElement.style.setProperty("--logo-c", rk.c);
@@ -8075,6 +8081,7 @@
   function showCollGrid(show){ var s=$("collSets"), g=$("collGrid"); if(s) s.hidden=!!show; if(g) g.hidden=!show; }
   // Enter the binder with the Missing filter already selected. Optional text narrows the result to one Pal.
   function openMissingCollection(query){
+    clearSinceVisit();
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="missing";
     var input=$("search"); if(input) input.value=query||"";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -8082,17 +8089,20 @@
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed",ch.textContent==="Missing"?"true":"false"); });
     showPage("collection"); showCollGrid(true); render();
   }
-  // Cards added after the previous open, for the home catch-up's View recent action.
-  function openRecentCollection(){
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="recent";
+  // The printings named in "N cards added since your last visit". Not the Recently added filter.
+  function openSinceVisit(){
+    var set={};
+    CARDS.forEach(function(c){ var t=addedAt(c.id); if(PREVIOUS_VISIT && t>PREVIOUS_VISIT && t<APP_OPENED_AT) set[c.id]=true; });
+    SINCE_VISIT=set;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="all";
     var input=$("search"); if(input) input.value="";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
-    Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed",ch.textContent==="Recently added"?"true":"false"); });
     showPage("collection"); showCollGrid(true); render();
   }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
+    clearSinceVisit();
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
@@ -8104,6 +8114,7 @@
   }
   function openSet(k, view){
     view=view||"all";
+    clearSinceVisit();
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view=view;
     var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
@@ -8118,6 +8129,7 @@
   // Open several sets at once (a Browse expansion that groups multiple products, e.g. Dawn of Palpagos).
   function openSetGroup(sets, view){
     view=view||"all";
+    clearSinceVisit();
     filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view=view;
     FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
       var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
