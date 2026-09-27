@@ -1271,6 +1271,17 @@
   .newsitem .ndate { font-family:var(--font-mono); font-size:.72rem; color:var(--accent-ink); font-weight:600; }
   .newsitem .ntitle { font-family:var(--font-display); font-weight:750; font-size:1rem; margin-top:3px; }
   .newsitem .nsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  /* Palworld TCG digest (docs/news/palworld-tcg.json). Margins, not flex gap, so the badges stay apart on older WebViews. */
+  .tcgnewshead { margin-top:28px; }
+  .nmeta { display:flex; flex-wrap:wrap; align-items:center; margin:0 0 2px; }
+  .nmeta > * { margin:0 6px 4px 0; }
+  .nmeta .ndate { display:inline; }
+  .ncat, .nunconfirmed { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  .ncat { border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); }
+  .nunconfirmed { border:1px solid color-mix(in srgb, var(--c-Red) 55%, var(--line)); color:var(--c-Red); background:color-mix(in srgb, var(--c-Red) 12%, var(--surface)); }
+  .nsrc { font-family:var(--font-mono); font-size:.66rem; font-weight:650; color:var(--ink-faint); }
+  .tcgempty { color:var(--ink-faint); font-size:.9rem; padding:4px 2px 18px; }
+  .tcgempty b { font-family:var(--font-display); font-size:1.05rem; color:var(--ink-soft); display:block; margin-bottom:4px; }
   .editioncounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex-basis:100%;width:100%;margin-top:8px}
   .editioncounts p{grid-column:1/-1;margin:0;color:var(--ink-soft);font-size:.78rem}
   .editioncounts .field{min-width:0}.editioncounts label{font-size:.75rem}.editioncounts input{width:100%;min-width:0}
@@ -2185,6 +2196,9 @@
     <h2 class="sech">News</h2>
     <p class="qsub" id="newsNote"></p>
     <div class="newslist" id="newsList"></div>
+    <h2 class="sech tcgnewshead">Palworld TCG</h2>
+    <p class="qsub" id="tcgNewsNote">Announcements, releases, reveals and community threads.</p>
+    <div class="newslist" id="tcgNewsList"></div>
   </section>
 
   <section class="page" id="page-scan">
@@ -4383,7 +4397,7 @@
       if(!active) return; active=false; ind.classList.remove("pulling");
       if(dist>THRESH){
         busy=true; ind.classList.add("spinning"); ind.style.transform="translateY(12px)";
-        try{ if(_curPage==="news") renderNews(); else if(_curPage==="releases") renderReleases(); }catch(_){}
+        try{ if(_curPage==="news"){ renderNews(); renderTcgNews(); } else if(_curPage==="releases") renderReleases(); }catch(_){}
         setTimeout(function(){ busy=false; ind.classList.remove("spinning","ready","show"); ind.style.transform=""; }, 900);
       } else { ind.classList.remove("ready","show"); ind.style.transform=""; }
     });
@@ -6155,7 +6169,7 @@
     if (p==="sealed") renderSealed();
     if (p==="decks") renderDecks();
     if (p==="account") renderAccount();
-    if (p==="news") renderNews();
+    if (p==="news") { renderNews(); renderTcgNews(); }
     if (p==="key") renderKey();
     if (p==="contact") renderContact();
     if (p==="portfolio") renderPortfolioDetail();
@@ -6312,6 +6326,7 @@
     decks().forEach(function(d){ var s=globalTextScore(q,d.name); if(s) add("Deck",d.name,"Your deck","layers",s,function(){STATE.activeDeck=d.id;save();showPage("decks");}); });
     (STATE.cols||[]).forEach(function(c){ var s=globalTextScore(q,c.name); if(s) add("Collection",c.name,"This device","grid",s,function(){switchCol(c.id);showPage("collection");}); });
     (typeof _newsList!=="undefined"?_newsList:[]).forEach(function(n){ var title=decodeEntities(n.title||""), s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,n.date||n.source||"Palworld TCG news","news",s,function(){showPage("news");}); });
+    (_tcgNewsList||[]).forEach(function(n){ var title=n.title||"", s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,tcgNewsDateLabel(n.published_at)||"Palworld TCG","news",s,function(){showPage("news");}); });
     rows.sort(function(a,b){return b.score-a.score||a.type.localeCompare(b.type)||a.title.localeCompare(b.title);}); return rows.slice(0,18);
   }
   function renderGlobalSearch(q){
@@ -7696,6 +7711,134 @@
     if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; saveNewsCache(r.body.items); _newsList=r.body.items; updateBell(); refreshReleaseDates(r.body.items); if(typeof renderFeatured==="function" && _curPage==="home") renderFeatured(); } }).catch(function(){}); }
   }
 
+  // Palworld TCG digest. Live file docs/news/palworld-tcg.json is fetched from
+  // TCG_NEWS_URL. Field contract: docs/news/README.md. TCG_NEWS_FALLBACK is the
+  // copy shipped in the app for when that fetch fails.
+  /* TCG NEWS BEGIN */
+  var TCG_NEWS_URL = "https://spheredex.app/news/palworld-tcg.json";
+  var TCG_NEWS_LS = "palvault-tcg-news";
+  var TCG_NEWS_TTL = 30*24*60*60*1000;
+  var TCG_NEWS_FALLBACK = { updated_at:"2026-09-27T00:00:00Z", items:[] };
+  var TCG_NEWS_SOURCES = { reddit:1, x:1, news:1 };
+  var TCG_NEWS_CATEGORIES = { official:"Official", release:"Release", reveal:"Reveal", preorder:"Pre-order", pricing:"Pricing", tournament:"Tournament", community:"Community", leak:"Leak" };
+  var _tcgNewsList = [];
+  var _tcgNewsReq = 0;
+  function tcgNewsIso(value){
+    var raw=String(value||"").trim();
+    var m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.exec(raw);
+    if(!m) return NaN;
+    return Date.parse(m[4] ? raw : (m[1]+"-"+m[2]+"-"+m[3]+"T00:00:00Z"));
+  }
+  function tcgNewsDateLabel(iso){
+    var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||""));
+    if(!m) return "";
+    var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var mo=months[(+m[2])-1];
+    if(!mo || +m[3]<1 || +m[3]>31) return "";
+    return (+m[3])+" "+mo+" "+m[1];
+  }
+  function tcgNewsSourceLabel(item){
+    var name=String(item.source_name||"").trim();
+    if(item.source==="reddit"){
+      if(!name) return "Reddit";
+      return "Reddit · "+(/^(?:r\/)/i.test(name) ? name : "r/"+name.replace(/^@/,""));
+    }
+    if(item.source==="x"){
+      if(!name) return "X";
+      return "X · @"+name.replace(/^@/,"");
+    }
+    return name ? "News · "+name : "News";
+  }
+  function tcgNewsNormalise(feed){
+    if(!feed || typeof feed!=="object" || !Array.isArray(feed.items)) return null;
+    var items=[], seen=Object.create(null);
+    for(var i=0;i<feed.items.length;i++){
+      var raw=feed.items[i];
+      if(!raw || typeof raw!=="object") continue;
+      var id=String(raw.id||"").trim();
+      var title=String(raw.title||"").replace(/\s+/g," ").trim();
+      var url=String(raw.url||"").trim();
+      var source=String(raw.source||"").trim();
+      var category=String(raw.category||"").trim();
+      var published=String(raw.published_at||"").trim();
+      var sourceName=String(raw.source_name||"").replace(/\s+/g," ").trim();
+      var summary=String(raw.summary||"").replace(/\s+/g," ").trim();
+      if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || id.length>96) continue;
+      if(!title || title.length>300 || !sourceName || sourceName.length>120) continue;
+      if(!summary || summary.length>400) continue;
+      if(!TCG_NEWS_SOURCES[source] || !TCG_NEWS_CATEGORIES[category]) continue;
+      if(!/^https:\/\/[^\s]+$/i.test(url)) continue;
+      if(isNaN(tcgNewsIso(published))) continue;
+      if(seen[id]) continue;
+      seen[id]=1;
+      items.push({
+        id:id, title:title, url:url, source:source, source_name:sourceName,
+        published_at:published, category:category, summary:summary,
+        unconfirmed: raw.unconfirmed===true
+      });
+    }
+    items.sort(function(a,b){ return tcgNewsIso(b.published_at)-tcgNewsIso(a.published_at); });
+    var updated=String(feed.updated_at||"").trim();
+    return { updated_at: isNaN(tcgNewsIso(updated))?"":updated, items:items };
+  }
+  function tcgNewsItemHtml(n){
+    var date=tcgNewsDateLabel(n.published_at);
+    var meta="";
+    if(date) meta+='<span class="ndate">'+esc(date)+'</span>';
+    meta+='<span class="ncat">'+esc(TCG_NEWS_CATEGORIES[n.category]||n.category)+'</span>';
+    if(n.unconfirmed) meta+='<span class="nunconfirmed">Unconfirmed</span>';
+    meta+='<span class="nsrc">'+esc(tcgNewsSourceLabel(n))+'</span>';
+    return '<a class="newsitem" href="'+esc(n.url)+'" target="_blank" rel="noopener">'+
+      '<div class="nmeta">'+meta+'</div>'+
+      '<div class="ntitle">'+esc(n.title)+'</div>'+
+      (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':'')+
+      '</a>';
+  }
+  function tcgNewsListHtml(feed){
+    var norm=tcgNewsNormalise(feed);
+    var items=norm?norm.items:[];
+    if(!items.length) return '<div class="tcgempty"><b>No Palworld TCG news yet</b>Headlines, releases and reveals will show up here.</div>';
+    return items.map(tcgNewsItemHtml).join("");
+  }
+  function tcgNewsReadCache(){
+    try{
+      var d=JSON.parse(lsGet(TCG_NEWS_LS)||"null");
+      if(!d || !d.feed || (Date.now()-(+d.at||0))>=TCG_NEWS_TTL) return null;
+      return tcgNewsNormalise(d.feed) ? d.feed : null;
+    }catch(e){ return null; }
+  }
+  function tcgNewsWriteCache(feed){
+    try{ lsSet(TCG_NEWS_LS, JSON.stringify({at:Date.now(), feed:feed})); }catch(e){}
+  }
+  function renderTcgNews(){
+    var el=$("tcgNewsList"); if(!el) return;
+    var note=$("tcgNewsNote");
+    var req=++_tcgNewsReq;
+    function paint(feed, mode){
+      var norm=tcgNewsNormalise(feed) || {updated_at:"", items:[]};
+      _tcgNewsList=norm.items;
+      el.innerHTML=tcgNewsListHtml(norm);
+      if(note) note.textContent = mode==="saved"
+        ? "Showing the last update saved on this device."
+        : "Announcements, releases, reveals and community threads.";
+    }
+    var cached=tcgNewsReadCache();
+    paint(cached || TCG_NEWS_FALLBACK, "bundled");
+    fetch(TCG_NEWS_URL, {cache:"no-store"}).then(function(res){
+      if(!res || !res.ok) throw new Error("tcg news");
+      return res.json();
+    }).then(function(feed){
+      if(req!==_tcgNewsReq || !tcgNewsNormalise(feed)) return;
+      tcgNewsWriteCache(feed);
+      if(!$("tcgNewsList")) return;
+      paint(feed, "live");
+    }).catch(function(){
+      if(req!==_tcgNewsReq || !cached) return;
+      paint(cached, "saved");
+    });
+  }
+  /* TCG NEWS END */
+
   // ---- Quick Add ----
   var qRecent=[];
   function renderQuick(){
@@ -9055,7 +9198,7 @@
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   (function(){ var sb=$("setsBack"); if(sb) sb.onclick=function(){ renderSetBrowse(); showCollGrid(false); window.scrollTo(0,0); }; })();
-  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); })();
+  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); renderTcgNews(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
