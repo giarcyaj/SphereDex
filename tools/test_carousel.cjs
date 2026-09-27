@@ -224,54 +224,84 @@ test('official news becomes slide 1 and maps its set art by title', () => {
   assert.equal(slides[0].art, 'https://example.test/o.png');
 });
 
-test('an X post with an image becomes its own slide and feeds the reveal slide', () => {
-  const a = app({ visibleNews: () => [
-    news({ title: 'Official update' }),
-    news({ title: 'New from the official account', source: 'x:PalworldOCG_EN', image: 'https://pbs.twimg.com/media/a.jpg' }),
-    news({ title: 'Card reveal: new pal', source: 'x:PalworldOCG_EN', image: 'https://pbs.twimg.com/media/b.jpg' }),
-  ] });
-  // kinds arrays are built inside the sandbox, so compare realm-safely.
-  assert.equal(String(a.api.slides().map((s) => s.kind)), 'news,ximage,collection,reveal');
-  assert.match(a.api.slides()[3].meta, /@PalworldOCG_EN/);
+test('home headliners are news, update features, collection movers, a card reveal, and the next release', () => {
+  const a = app({
+    visibleNews: () => [
+      news({ title: 'Eternal Ascent preorders', date: '2026-09-11', source: 'Official site' }),
+      news({ title: 'Card Reveal', date: '2026-09-25', source: 'X · @PalworldOCG_EN', image: 'https://pbs.twimg.com/media/reveal.jpg' }),
+    ],
+    moverCard: (dir, scope) => {
+      if (scope !== 'collection' || dir !== 'up') return null;
+      return { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 3.2, prev: 1, cur: 2 };
+    },
+    SEALED: [
+      { id: 'late', set: 'Dawn reprint', pre: true, date: 'late Oct 2026' },
+      { id: 'ss', set: 'Sleeve & Card Set Vol. 1', pre: true, date: 'Oct 16, 2026', banner: 'BOX_BANNER_SS01' },
+    ],
+    sealDate: (p) => p.date,
+  });
+  const slides = a.api.slides();
+  assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,reveal,soon');
+  assert.equal(slides[0].title, 'Eternal Ascent preorders');
+  assert.equal(slides[1].badge, 'Latest update');
+  assert.match(slides[1].title, /1\.11/);
+  assert.equal(slides[2].title, 'Movers in your collection');
+  assert.equal(slides[2].movers[0].name, 'Lamball');
+  assert.equal(slides[3].title, 'Card Reveal');
+  assert.match(slides[3].meta, /@PalworldOCG_EN/);
+  assert.equal(slides[4].title, 'Sleeve & Card Set Vol. 1');
+  assert.equal(slides[4].meta, 'Oct 16, 2026');
+  assert.equal(slides.some((s) => s.kind === 'ximage'), false);
 });
 
-test('the reveal slide deduplicates against the news slide it would repeat', () => {
+test('a card reveal that is already the news slide is not repeated', () => {
   const dup = news({ title: 'Card reveal: new pal', image: 'https://pbs.twimg.com/media/x.jpg' });
-  const a = app({ visibleNews: () => [dup] });
-  assert.equal(String(a.api.slides().map((s) => s.kind)), 'news,collection');
+  const a = app({ visibleNews: () => [dup], SET_ORDER: [] });
+  assert.equal(String(a.api.slides().map((s) => s.kind)), 'news,features,collection');
+  assert.equal(a.api.slides().filter((s) => s.kind === 'reveal').length, 0);
 });
 
-test('an update slide appears only when the app is behind the store build', () => {
+test('latest update features stay on screen, and a newer store build says an update is ready', () => {
   const behind = app({ _latestAppVersion: '1.12' });
   const up = behind.api.slides().find((s) => s.kind === 'update');
   assert.ok(up, 'behind build shows the update slide');
-  assert.deepEqual(up.notes, ['Note A for 1.12', 'Note B']);
+  assert.deepEqual(JSON.parse(JSON.stringify(up.notes)), ['Note A for 1.12', 'Note B']);
+  assert.equal(behind.api.slides().some((s) => s.kind === 'features'), false);
 
   const current = app();
-  assert.ok(!current.api.slides().some((s) => s.kind === 'update'));
+  const feat = current.api.slides().find((s) => s.kind === 'features');
+  assert.ok(feat, 'current build still shows its own features');
+  assert.equal(feat.badge, 'Latest update');
+  assert.match(feat.title, /1\.11/);
+  assert.deepEqual(JSON.parse(JSON.stringify(feat.notes)), ['Note A for 1.11', 'Note B']);
+  assert.equal(current.api.slides().some((s) => s.kind === 'update'), false);
 });
 
 test('the collection slide falls back from movers to a summary', () => {
   const summary = app();
   const s = summary.api.slides().find((x) => x.kind === 'collection');
-  assert.match(s.title, /0 \/ 277 cards · 0%/);
+  assert.equal(s.title, 'Movers in your collection');
+  assert.match(s.meta, /0 \/ 277 cards/);
+  assert.match(s.meta, /No price moves in your collection yet/);
 
-  const rising = app({ moverCard: (dir) => (dir === 'up'
+  const rising = app({ moverCard: (dir, scope) => (dir === 'up' && scope === 'collection'
     ? { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 12.3, prev: 1, cur: 2 } : null) });
   const m = rising.api.slides().find((x) => x.kind === 'movers');
-  assert.match(m.title, /Biggest riser today/);
+  assert.equal(m.title, 'Movers in your collection');
   assert.equal(m.movers[0].name, 'Lamball');
+  assert.equal(rising.api.slides().some((x) => x.kind === 'collection'), false);
 });
 
-test('the movers slide pairs a riser and a faller even when they come from different scopes', () => {
+test('movers in your collection ignore the wider market', () => {
   const a = app({ moverCard: (dir, scope) => {
-    if (dir === 'up' && scope === 'collection') return { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 12.3 };
-    if (dir === 'down' && scope === 'all') return { c: { id: 'EBP01-002', name: 'Cattiva' }, pct: -4.5 };
+    if (scope !== 'collection') return { c: { id: 'NO', name: 'MarketOnly' }, pct: 99 };
+    if (dir === 'up') return { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 12.3 };
+    if (dir === 'down') return { c: { id: 'EBP01-002', name: 'Cattiva' }, pct: -4.5 };
     return null;
   } });
   const m = a.api.slides().find((x) => x.kind === 'movers');
   assert.equal(String(m.movers.map((x) => x.dir + ':' + x.name)), 'up:Lamball,down:Cattiva');
-  assert.match(m.title, /Market movers today/);
+  assert.equal(m.title, 'Movers in your collection');
   a.api.render();
   const html = a.host.innerHTML;
   assert.match(html, /class="featslide[^"]*\bpair\b/, 'two cards get the wide image panel');
@@ -302,15 +332,16 @@ test('renderFeatured paints slides, dots and wires autoplay through the API', ()
   a.api.render();
   assert.equal(a.host.hidden, false);
   assert.match(a.host.innerHTML, /class="feattrack"/);
-  assert.equal(a.host.querySelectorAll('.featslide').length, 2);
-  assert.equal(a.host.querySelectorAll('.featdot').length, 2);
-  assert.equal(a.api.snapshot().slideCount, 2);
+  const n = a.host.querySelectorAll('.featslide').length;
+  assert.equal(n, 4, 'news, update features, collection, next release');
+  assert.equal(a.host.querySelectorAll('.featdot').length, 4);
+  assert.equal(a.api.snapshot().slideCount, 4);
   assert.equal(a.api.snapshot().timerActive, true, 'autoplay armed');
   assert.equal(a.registry.sets.length, 1, 'exactly one interval');
 
-  a.tick(); // manual autoplay tick
-  assert.equal(a.api.snapshot().index, 1, 'tick advances the slide');
   a.tick();
+  assert.equal(a.api.snapshot().index, 1, 'tick advances the slide');
+  for (let i = 0; i < n - 1; i++) a.tick();
   assert.equal(a.api.snapshot().index, 0, 'autoplay wraps');
 });
 
@@ -323,13 +354,15 @@ test('re-rendering identical slides keeps the DOM and restarts nothing but the t
   assert.equal(a.api.snapshot().timerActive, true);
 });
 
-test('with no news and no sets, the collection summary is the lone slide (hide path stays defensive)', () => {
+test('with no news and no sets, update features and the collection slide still show', () => {
   const a = app({ SET_ORDER: [], visibleNews: () => [] });
   a.api.render();
   assert.equal(a.host.hidden, false);
-  assert.equal(a.api.snapshot().slideCount, 1);
-  assert.equal(a.host.querySelectorAll('.featdot').length, 0, 'a single slide renders no dots');
-  assert.match(a.host.innerHTML, /Your collection/);
+  assert.equal(String(a.api.slides().map((s) => s.kind)), 'features,collection');
+  assert.equal(a.api.snapshot().slideCount, 2);
+  assert.equal(a.host.querySelectorAll('.featdot').length, 2);
+  assert.match(a.host.innerHTML, /Latest update/);
+  assert.match(a.host.innerHTML, /Movers in your collection/);
 });
 
 test('dot taps, slide taps and arrows all steer the carousel', () => {
@@ -344,22 +377,30 @@ test('dot taps, slide taps and arrows all steer the carousel', () => {
   a.dispatch(a.host, 'click', { target: a.host.querySelectorAll('.featslide')[0] });
   assert.deepEqual(a.shown, ['news'], 'news slide opens the news page');
 
-  // keyboard arrows with focus tracking; the dot tap left the index on 1, so Right wraps to 0
+  // keyboard arrows with focus tracking; the dot tap left the index on 1
   const slide = a.host.querySelectorAll('.featslide')[0];
+  const last = a.host.querySelectorAll('.featdot').length - 1;
+  a.dispatch(a.host, 'keydown', { key: 'ArrowRight', target: slide, preventDefault() {} });
+  assert.equal(a.api.snapshot().index, 2, 'ArrowRight advances');
+  assert.ok(a.host.querySelectorAll('.featslide')[2].focused > 0, 'focus follows the slide');
+  a.dispatch(a.host, 'click', { target: a.host.querySelectorAll('.featdot')[last] });
   a.dispatch(a.host, 'keydown', { key: 'ArrowRight', target: slide, preventDefault() {} });
   assert.equal(a.api.snapshot().index, 0, 'ArrowRight wraps from the last slide');
-  assert.ok(a.host.querySelectorAll('.featslide')[0].focused > 0, 'focus follows the slide');
   a.dispatch(a.host, 'keydown', { key: 'ArrowLeft', target: slide, preventDefault() {} });
-  assert.equal(a.api.snapshot().index, 1, 'ArrowLeft wraps backwards');
+  assert.equal(a.api.snapshot().index, last, 'ArrowLeft wraps backwards');
   a.dispatch(a.host, 'keydown', { key: 'ArrowDown', target: slide, preventDefault() {} });
-  assert.equal(a.api.snapshot().index, 1, 'other keys are ignored');
+  assert.equal(a.api.snapshot().index, last, 'other keys are ignored');
 });
 
 test('openFeatured routes each slide kind to its destination', () => {
   const a = app();
   a.api.open({ kind: 'release', set: 'EBP01' });
   a.api.open({ kind: 'collection' });
-  assert.deepEqual(a.shown, ['set:EBP01', 'collection']);
+  a.api.open({ kind: 'soon' });
+  a.api.open({ kind: 'features', version: '1.11' });
+  assert.deepEqual(a.shown, ['set:EBP01', 'collection', 'releases']);
+  assert.equal(a.toasts.length, 1);
+  assert.match(a.toasts[0], /1\.11/);
 });
 
 test('swiping horizontally changes the slide without breaking taps', () => {

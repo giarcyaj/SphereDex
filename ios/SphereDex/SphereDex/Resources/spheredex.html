@@ -2901,8 +2901,8 @@
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.0.
   var APP_VERSION = "2.0";
-  // Highlights shown in the Home headliner when this build is behind the store build.
-  // Keep 3 short lines per version; the headliner shows them as bullets.
+  // Three short lines per version for the Home "latest update" headliner.
+  // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
   // same number, and add the next version's 3 lines here so the *following* update is ready.
   var RELEASE_HIGHLIGHTS = {
@@ -7541,12 +7541,11 @@
   // the CSS markers, and all feat* logic sits between the logic markers below. tools/test_carousel.cjs
   // asserts the markers exist, that no carousel definition sits outside them, that all four copies of
   // the app carry an identical section, and that the behaviour still works against a stub DOM.
-  // The first thing on Home: five images that scroll themselves through the newest news and releases.
-  // Slides: 1) latest official news, 2) latest X post with an image, 3) app update (when behind),
-  // 4) collection — biggest riser/faller when prices are shown, otherwise a summary — and 5) latest
-  // card reveal from X. Every slide is built from data the app already holds - the news feed it caches,
-  // SET_META's bundled set art, sealed pre-order art and price movers - so it renders offline, needs
-  // no extra request, and follows each new set automatically.
+  // The first thing on Home: five headliners, in this order.
+  // 1) latest official news, 2) latest update features (or "update available" when this install is
+  // behind the store), 3) movers in your collection, 4) latest card reveal, 5) the next release date.
+  // Every slide is built from data the app already holds - the news feed it caches, this build's
+  // release lines, collection price moves, and the sealed pre-order list - so it renders offline.
   var FEAT_MS = 5200, _featIndex = 0, _featTimer = null, _featSig = "", _featPaused = false;
   function featTime(str){ return monDateTime(str); }
   // Bundled set art first (a data URL, so it cannot fail to load), then the box/banner the catalogue
@@ -7554,7 +7553,8 @@
   function featArt(setKey){
     var m=SET_META[setKey]||{};
     if(m.art) return m.art;
-    var box=boxSrc(setKey); if(box) return box;
+    var box=""; try{ if(typeof boxSrc==="function") box=boxSrc(setKey)||""; }catch(e){}
+    if(box) return box;
     var c=CARDS.filter(function(x){ return x.set===setKey; })[0];
     return c ? imgSrc(c) : "";
   }
@@ -7601,111 +7601,126 @@
     for(var i=0;i<list.length;i++){ if(featOfficial(list[i])){ official=list[i]; break; } }
     if(!official) for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; official=n; break; }
     if(!official && list.length) official=list[0];
-    // 2 - latest X post that carries an image
-    var xImage=null;
-    for(var j=0;j<list.length;j++){ var x=list[j]; if(x && x.image && featIsX(x)){ xImage=x; break; } }
-    // 5 - latest card reveal (computed first so we can deduplicate against 1/2, but pushed last)
+    // Latest card reveal, skipping the item already used as the news slide.
     var reveal=null;
-    for(var r=0;r<list.length;r++){ if(featIsReveal(list[r])){ reveal=list[r]; break; } }
+    for(var r=0;r<list.length;r++){ if(featIsReveal(list[r]) && list[r]!==official){ reveal=list[r]; break; } }
     var out=[];
-    // 1 - official
+    // 1 - latest news
     if(official){
       var newsSet=featNewsSet(official)||liveArt[0]||live[0]||"";
       var oArt = official.image || featArt(newsSet);
       out.push({ kind:"news", badge:"Latest news", title:decodeEntities(official.title||"What\u2019s new"), meta:(dayLabel(official.date)||"Latest update")+" \u00b7 Official site", art:oArt, set:newsSet, image:official.image||"", link:official.link||OFFICIAL_NEWS });
     }
-    // 2 - X image
-    if(xImage){
-      var isDupOfficial = official && xImage===official;
-      if(!isDupOfficial){
-        out.push({ kind:"ximage", badge:"Latest on X", title:decodeEntities(xImage.title||"New from @PalworldOCG_EN"), meta:(dayLabel(xImage.date)||"Today")+" \u00b7 @PalworldOCG_EN", art:xImage.image, set:featNewsSet(xImage), image:xImage.image, link:xImage.link||"https://x.com/PalworldOCG_EN" });
-      }
-    }
-    // 3 - app update, only for behind users (three bullets from ko-fi / RELEASE_HIGHLIGHTS / server notes)
-    if(typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION)){
-      var _upNotes = (typeof updateNotesFor==="function" ? updateNotesFor(_latestAppVersion) : (typeof RELEASE_HIGHLIGHTS!=="undefined" ? (RELEASE_HIGHLIGHTS[_latestAppVersion]||[]) : []));
-      if(!_upNotes || !_upNotes.length) _upNotes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
-      _upNotes=_upNotes.slice(0,3);
-      var _upArt = liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : "");
-      out.push({kind:"update", badge:"Update available", title:"SphereDex "+_latestAppVersion+" is here", meta:_upNotes.join(" \u00b7 "), notes:_upNotes, art:_upArt, version:_latestAppVersion});
-    }
-    // 4 - collection: riser/faller when prices are on, otherwise a summary
+    // 2 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
+    (function(){
+      var behind=typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION);
+      var ver=behind ? _latestAppVersion : (typeof APP_VERSION==="string" ? APP_VERSION : "");
+      var notes=[];
+      try{
+        if(typeof updateNotesFor==="function" && ver) notes=updateNotesFor(ver)||[];
+        else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[ver]) notes=RELEASE_HIGHLIGHTS[ver];
+      }catch(e){}
+      if(behind && (!notes || !notes.length)) notes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
+      notes=(notes||[]).slice(0,3);
+      if(!notes.length) return;
+      var art = liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : "");
+      if(behind) out.push({kind:"update", badge:"Update available", title:"SphereDex "+ver+" is here", meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
+      else out.push({kind:"features", badge:"Latest update", title:"What\u2019s new in "+ver, meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
+    })();
+    // 3 - movers among cards this collection owns. Prices stay off this slide in collector mode.
     (function(){
       var showPrices = (typeof SETTINGS!=="undefined" && SETTINGS.mode!=="collector");
+      var art = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
       if(showPrices){
-        // Each side falls back on its own (collection, then the whole market, then this week's picks),
-        // so the slide shows a riser and a faller together whenever both exist anywhere.
-        var upM=null, downM=null, upScope="", downScope="";
+        var upM=null, downM=null;
         try{
           if(typeof moverCard==="function"){
-            upM=moverCard("up", "collection"); if(upM) upScope="collection";
-            downM=moverCard("down", "collection"); if(downM) downScope="collection";
-            if(!upM){ upM=moverCard("up","all"); if(upM) upScope="all"; }
-            if(!downM){ downM=moverCard("down","all"); if(downM) downScope="all"; }
+            upM=moverCard("up", "collection");
+            downM=moverCard("down", "collection");
           }
         }catch(e){}
-        if(typeof pwPick==="function"){
-          if(!upM){ var weeklyUp=pwPick("up"); if(weeklyUp){ upM={c:weeklyUp.c,pct:+weeklyUp.m.pct}; upScope="week"; } }
-          if(!downM){ var weeklyDown=pwPick("down"); if(weeklyDown){ downM={c:weeklyDown.c,pct:+weeklyDown.m.pct}; downScope="week"; } }
-        }
-        var scopes=[upScope,downScope].filter(Boolean);
-        var mScope = scopes.indexOf("week")>=0 ? "week" : (scopes.every(function(x){ return x==="collection"; }) ? "collection" : "all");
         if(upM || downM){
           var notes=[];
-          // Weekly picks carry only a percentage, no before/after price.
           var mvPrice=function(m){ return (m.prev!=null && m.cur!=null) ? " \u00b7 "+money(m.prev)+" \u2192 "+money(m.cur) : ""; };
           if(upM) notes.push("\u25B2 "+upM.c.name+" +"+Math.abs(upM.pct).toFixed(1)+"%"+mvPrice(upM));
           if(downM) notes.push("\u25BC "+downM.c.name+" \u2212"+Math.abs(downM.pct).toFixed(1)+"%"+mvPrice(downM));
           var mArt="";
           try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
-          if(!mArt) mArt = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
-          var mWhen = mScope==="week" ? "this week" : "today";
-          var mTitle = (upM && downM) ? (mScope==="collection" ? "Movers in your collection" : (mScope==="all" ? "Market movers today" : "Market movers this week"))
-            : (upM ? "Biggest riser "+mWhen : "Biggest faller "+mWhen);
           var featuredMovers=[];
           try{
             if(upM) featuredMovers.push({dir:"up", name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct)});
             if(downM) featuredMovers.push({dir:"down", name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct)});
           }catch(e){}
-          out.push({kind:"movers", badge:(mScope==="collection"?"Your collection":"Market"), title:mTitle, meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt});
-        } else {
-          var total=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP=0;
-          try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
-          var pct=pctOf(ownedP,total);
-          var art2 = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
-          out.push({kind:"collection", badge:"Your collection", title:ownedP+" / "+total+" cards \u00b7 "+pct+"%", meta:(Object.keys((typeof setProgress==="function"?setProgress().tot:{})).length||0)+" sets tracked \u00b7 movers building baseline", art:art2});
+          out.push({kind:"movers", badge:"Your collection", title:"Movers in your collection", meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt||art});
+          return;
         }
-      } else {
-        var total2=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP2=0;
-        try{ ownedP2=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
-        var pct2=pctOf(ownedP2,total2);
-        var sp=null; try{ sp=(typeof setProgress==="function"?setProgress():null); }catch(e){}
-        var tracked = sp ? Object.keys(sp.tot||{}).length : 0;
-        var art3 = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
-        var collMeta = tracked+" sets tracked";
-        try{ var sph=(typeof nextSphereMissingGoal==="function"?nextSphereMissingGoal():null); if(sph && sph.track) collMeta += " \u00b7 Next Sphere: "+sph.track.name+" ("+sph.remaining+" left)"; }catch(e){}
-        out.push({kind:"collection", badge:"Your collection", title:ownedP2+" / "+total2+" cards \u00b7 "+pct2+"%", meta:collMeta, art:art3});
       }
+      var total=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP=0;
+      try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
+      var pct=pctOf(ownedP,total);
+      var meta;
+      if(showPrices) meta="No price moves in your collection yet";
+      else {
+        var sp=null; try{ sp=(typeof setProgress==="function"?setProgress():null); }catch(e){}
+        meta=(sp ? Object.keys(sp.tot||{}).length : 0)+" sets tracked";
+        try{ var sph=(typeof nextSphereMissingGoal==="function"?nextSphereMissingGoal():null); if(sph && sph.track) meta += " \u00b7 Next Sphere: "+sph.track.name+" ("+sph.remaining+" left)"; }catch(e){}
+      }
+      out.push({kind:"collection", badge:"Your collection", title:showPrices?"Movers in your collection":(ownedP+" / "+total+" cards \u00b7 "+pct+"%"), meta:showPrices?(ownedP+" / "+total+" cards \u00b7 "+meta):meta, art:art});
     })();
-    // 5 - card reveal from X
+    // 4 - latest card reveal that is not the news slide
     if(reveal){
       var dup=false;
       for(var d=0; d<out.length; d++){ if(out[d].image && reveal.image && out[d].image===reveal.image){ dup=true; break; } }
-      if(official===reveal || xImage===reveal) dup=true;
       if(dup){
         var alt=null;
-        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && featIsReveal(cand)){ alt=cand; break; } }
-        if(alt) { reveal=alt; dup=false; for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } } else { reveal=null; dup=false; }
+        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && cand!==official && featIsReveal(cand)){ alt=cand; break; } }
+        reveal=alt; dup=false;
+        if(reveal){ for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } }
       }
       if(reveal && !dup){
         var revealX=featIsX(reveal);
         out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(dayLabel(reveal.date)||"Today")+" \u00b7 "+(revealX?"from @PalworldOCG_EN":"Official site"), art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||(revealX?"https://x.com/PalworldOCG_EN":OFFICIAL_NEWS) });
       }
     }
-    if(out.length<2 && live.length){
-      var k=live[0], sp2=setProgress(), owned=sp2.owned[k]||0, tot=sp2.tot[k]||0, pct3=pctOf(owned,tot), rel=(SET_META[k]||{}).release||"";
-      out.push({ kind:"release", badge:"Available now", title:(SETS[k]||{}).name||k, meta:(rel?rel+" \u00b7 ":"")+owned+"/"+tot+" collected \u00b7 "+pct3+"%", art:featArt(k), set:k });
-    }
+    // 5 - the soonest upcoming release. Pre-orders first, then a future set that is already in the catalogue.
+    (function(){
+      var now=Date.now(), best=null;
+      function consider(title, date, art){
+        var t=featTime(date);
+        if(!title || t===Infinity || t<=now) return;
+        if(!best || t<best.t) best={title:title, date:date, t:t, art:art||""};
+      }
+      if(typeof SEALED!=="undefined" && SEALED){
+        var seen={};
+        SEALED.forEach(function(p){
+          if(!p || !p.pre) return;
+          var pd=""; try{ pd=(typeof sealDate==="function")?sealDate(p):(p.date||""); }catch(e){ pd=p.date||""; }
+          var key=(p.set||p.name)+"|"+pd;
+          if(seen[key]) return; seen[key]=true;
+          var img="";
+          try{ if(window.CARD_IMG) img=window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; }catch(e){}
+          consider(p.set||p.name, pd, img);
+        });
+      }
+      if(!best && typeof BROWSE_EXPANSIONS!=="undefined" && BROWSE_EXPANSIONS){
+        BROWSE_EXPANSIONS.forEach(function(x){
+          if(!x || !x.upcoming) return;
+          var img="";
+          try{ if(window.CARD_IMG && x.logo) img=window.CARD_IMG[x.logo]||""; }catch(e){}
+          consider(x.name, x.release, img);
+        });
+      }
+      if(!best && typeof SET_ORDER!=="undefined"){
+        SET_ORDER.forEach(function(k){
+          var m=SET_META[k]||{};
+          var t=featTime(m.release);
+          if(t===Infinity || t<=now) return;
+          var name=(typeof SETS!=="undefined" && SETS[k] && SETS[k].name) || m.name || k;
+          consider(name, m.release, featArt(k));
+        });
+      }
+      if(best) out.push({ kind:"soon", badge:"Next release", title:best.title, meta:best.date, art:best.art, date:best.date });
+    })();
     return out.slice(0,5);
   }
 
@@ -7766,6 +7781,8 @@
   }
   function openFeatured(s){
     if(!s) return;
+    if(s.kind==="features"){ toast("You\u2019re on SphereDex "+(s.version||APP_VERSION)+"."); return; }
+    if(s.kind==="soon"){ showPage("releases"); return; }
     if(s.kind==="update"){
       var v = s.version || _latestAppVersion || "";
       if(window.IS_NATIVE || window.IS_IOS){
@@ -7810,14 +7827,14 @@
       } else if(s.art){
         art='<span class="featart'+(isCardArt(s)?' featart--card':'')+'"><img class="featart-img zoom" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>';
       }
-      var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="reveal"?"layers":(s.kind==="update"?"refresh":(s.kind==="ximage"?"camera":(s.kind==="movers"?"chart":(s.kind==="collection"?"grid":"news"))))));
+      var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="reveal"?"layers":(s.kind==="update"||s.kind==="features"?"refresh":(s.kind==="movers"?"chart":(s.kind==="collection"?"grid":"news")))));
       var bodyMeta;
       if(movers){
         bodyMeta='<span class="featmovelist">'+movers.map(function(m){
           var up=m.dir==="up";
           return '<span class="featmove '+(up?'up':'down')+'"><b>'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</b><span>'+esc(String(m.name).split(" \u2013 ")[0])+'</span></span>';
         }).join("")+'</span>';
-      } else if(s.kind==="update" && s.notes && s.notes.length){
+      } else if((s.kind==="update" || s.kind==="features") && s.notes && s.notes.length){
         bodyMeta='<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>';
       } else {
         bodyMeta='<span class="featmeta">'+esc(s.meta)+'</span>';
