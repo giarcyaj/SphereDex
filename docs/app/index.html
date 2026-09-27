@@ -487,20 +487,26 @@
   .navq span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
   .navq:hover { color:var(--ink); border-color:var(--line-strong); }
   .navq.active { color:#04222f; background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 90%,#fff),var(--accent)); border-color:var(--accent); box-shadow:0 0 18px -5px var(--accent), inset 0 1px 0 rgba(255,255,255,.4); }
-  /* Slim HUD tab strip (concept-style primary nav) */
-  .hudtabs { gap:4px; margin-bottom:6px; }
-  .hudtabs .htab { flex:1; flex-direction:row; justify-content:center; gap:0; min-width:0; padding:11px 4px; border:1px solid transparent; background:transparent; color:var(--ink-faint); font-family:var(--font-display); font-weight:700; font-size:.78rem; letter-spacing:.03em; text-transform:uppercase; border-radius:9px; box-shadow:none; white-space:nowrap; }
-  .hudtabs .htab span { overflow:hidden; text-overflow:ellipsis; }
-  .hudtabs .htab:hover { color:var(--ink-soft); background:color-mix(in srgb,var(--accent) 9%,transparent); }
-  .hudtabs .htab.active { background:linear-gradient(180deg,color-mix(in srgb,var(--azure) 82%,#fff),var(--azure)); color:#fff; border-color:transparent; box-shadow:0 5px 15px -5px var(--azure), inset 0 1px 0 rgba(255,255,255,.3); }
-  .hudtabs .htmenu { flex:0 0 auto; width:42px; padding:11px 0; color:var(--ink-soft); border:1px solid var(--line); background:var(--surface); border-radius:9px; }
-  .hudtabs .htmenu.active { color:var(--accent); border-color:var(--accent); }
-  .navlist { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:6px; box-shadow:var(--shadow); max-height:66vh; overflow:auto; }
+  /* Floating glass dock: icon + label tabs, the active one marked by a soft accent pill behind its icon */
+  .hudtabs { gap:2px; }
+  .hudtabs .htab { flex:1 1 0; flex-direction:column; justify-content:center; gap:3px; min-width:0; padding:5px 2px 4px; border:0; background:transparent; color:var(--ink-faint); font-family:var(--font-display); font-weight:600; font-size:.66rem; letter-spacing:0; text-transform:none; border-radius:16px; box-shadow:none; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+  .hudtabs .htab .ic { width:1.3rem; height:1.3rem; box-sizing:content-box; padding:4px 13px; border-radius:999px; transition:background .18s ease, box-shadow .18s ease, color .18s ease; }
+  .hudtabs .htab span { overflow:hidden; text-overflow:ellipsis; line-height:1.15; }
+  .hudtabs .htab:hover { color:var(--ink-soft); }
+  .hudtabs .htab:hover .ic { background:color-mix(in srgb,var(--accent) 8%,transparent); }
+  .hudtabs .htab.active, .hudtabs .navmore[aria-expanded="true"] { color:var(--accent-ink); background:transparent; box-shadow:none; }
+  .hudtabs .htab.active .ic, .hudtabs .navmore[aria-expanded="true"] .ic { background:color-mix(in srgb,var(--accent) 20%,transparent); box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent) 70%,transparent); }
   .navlist[hidden] { display:none; }
   .navbar2 { margin-top:6px; }
   .navbar2:empty { display:none; }
   .setrow.qmrow { flex-direction:column; align-items:stretch; gap:10px; }
   .qmslots { display:flex; flex-direction:column; gap:7px; width:100%; }
+  .qmpreview { display:flex; padding:6px; border-radius:22px; background:var(--surface-2); border:1px solid var(--line); pointer-events:none; }
+  .qmpreview .htab { display:flex; align-items:center; }
+  .qmpreview .htab .ic { padding:4px 10px; }
+  .qmpreview .htab.qmslot { color:var(--accent-ink); }
+  .qmpreview .htab.qmslot .ic { background:color-mix(in srgb,var(--accent) 16%,transparent); }
+  .qmreset { align-self:flex-start; }
   .ordrow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); }
   .ordrow.navprimary { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface-2)); }
   .ordlab { display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:.9rem; color:var(--ink); flex:1; min-width:0; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
@@ -522,10 +528,32 @@
   /* V2 app navigation lives at the bottom, like a native tab bar. The hidden top tabs remain in the DOM
      only as the source for More's destination list and page-routing compatibility. */
   .tabs { display:none; }
-  .navmenu { display:block; position:fixed; z-index:70; left:0; right:0; bottom:0; margin:0; padding:8px calc(12px + var(--sal, env(safe-area-inset-left, 0px))) calc(8px + var(--sab, env(safe-area-inset-bottom, 0px))) calc(12px + var(--sar, env(safe-area-inset-right, 0px))); background:color-mix(in srgb,var(--surface) 94%,transparent); border-top:1px solid var(--line-strong); box-shadow:0 -8px 26px color-mix(in srgb,#081721 12%,transparent); backdrop-filter:blur(14px); }
-  .navmenu .navbar { display:flex; max-width:680px; margin:0 auto; }
+  /* The strip itself is click-through and unfiltered: only the dock, sheet and scrim take input, and a
+     backdrop-filter here would become the containing block for the fixed sheet and scrim. */
+  .navmenu { display:block; position:fixed; z-index:70; left:0; right:0; bottom:0; margin:0; padding:0 calc(12px + var(--sar, env(safe-area-inset-right, 0px))) calc(10px + var(--sab, env(safe-area-inset-bottom, 0px))) calc(12px + var(--sal, env(safe-area-inset-left, 0px))); background:none; border:0; box-shadow:none; pointer-events:none; }
+  .navmenu > * { pointer-events:auto; }
+  .navmenu .navbar { position:relative; z-index:2; display:flex; max-width:520px; margin:0 auto; padding:6px; border-radius:24px; background:color-mix(in srgb,var(--surface) 74%,transparent); border:1px solid color-mix(in srgb,var(--line-strong) 85%,transparent); box-shadow:0 12px 32px -10px rgba(4,14,22,.6), inset 0 1px 0 color-mix(in srgb,#fff 7%,transparent); -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4); }
   .navprimaryslots { display:contents; }
-  .navmenu .navlist { top:auto; bottom:calc(100% + 6px); left:12px; right:12px; max-width:640px; margin:auto; }
+  /* More: a sheet that rises from behind the dock (bottom padding clears it) over a dimmed page */
+  .navmenu .navlist { position:fixed; z-index:1; top:auto; left:0; right:0; bottom:0; max-width:560px; margin:0 auto; max-height:80vh; overflow:auto; overscroll-behavior:contain; padding:10px calc(14px + var(--sar, env(safe-area-inset-right, 0px))) calc(98px + var(--sab, env(safe-area-inset-bottom, 0px))) calc(14px + var(--sal, env(safe-area-inset-left, 0px))); background:var(--surface); border:1px solid var(--line-strong); border-bottom:0; border-radius:26px 26px 0 0; box-shadow:0 -18px 44px -12px rgba(4,14,22,.6); animation:navsheet .24s cubic-bezier(.2,.8,.2,1); }
+  @keyframes navsheet { from{ opacity:0; transform:translateY(28px);} to{ opacity:1; transform:none;} }
+  .navscrim { display:none; position:fixed; inset:0; z-index:0; background:rgba(3,10,16,.5); animation:navfade .2s ease; }
+  .navlist:not([hidden]) + .navscrim { display:block; }
+  @keyframes navfade { from{ opacity:0;} to{ opacity:1;} }
+  .navgrab { width:40px; height:4px; border-radius:4px; background:var(--line-strong); margin:0 auto 14px; }
+  .navsearch { display:flex; align-items:center; gap:10px; width:100%; margin-bottom:14px; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); color:var(--ink-faint); font-family:inherit; font-size:.9rem; text-align:left; cursor:pointer; }
+  .navsearch .ic { width:1.1rem; height:1.1rem; margin:0; }
+  .navsearch:hover { border-color:var(--line-strong); color:var(--ink-soft); }
+  .navgrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+  .navgrid .navitem { flex-direction:column; justify-content:center; gap:7px; min-width:0; padding:13px 4px 11px; text-align:center; font-weight:600; font-size:.72rem; color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line); border-radius:16px; }
+  .navgrid .navitem .ic { width:1.5rem; height:1.5rem; color:var(--accent-ink); }
+  .navgrid .navitem span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .navgrid .navitem.active { color:var(--ink); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,var(--surface-2)); }
+  .navutil { display:flex; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .navutil:empty { display:none; }
+  .navutil .navitem { flex:1 1 0; justify-content:center; gap:7px; min-width:0; padding:10px 6px; font-weight:600; font-size:.8rem; border:1px solid var(--line); border-radius:12px; }
+  .navutil .navitem span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .navutil .navitem.active { border-color:var(--accent); }
   .page { display:none; }
   .page.active { display:block; animation:fade .2s ease; }
   @keyframes fade { from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
@@ -563,7 +591,7 @@
   .homecard .hctop { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
   .homecard .hclabel { display:flex; align-items:center; gap:7px; font-family:var(--font-display); font-size:.64rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); }
   .homecard .hclabel .ic { width:1rem; height:1rem; margin:0; }
-  .homecard.sphere .hclabel { color:var(--r-SSP); } .homecard.deck .hclabel { color:var(--gold-deep); } .homecard.wishlist .hclabel { color:var(--r-SSP); }
+  .homecard.sphere .hclabel { color:var(--r-SSP); } .homecard.deck .hclabel { color:color-mix(in srgb,var(--r-PR) 80%,var(--ink)); } .homecard.wishlist .hclabel { color:color-mix(in srgb,var(--el-Electric) 72%,var(--ink)); }
   .homecard .hcname { font-family:var(--font-display); font-size:1.22rem; font-weight:850; letter-spacing:-.015em; margin-top:3px; line-height:1.08; }
   .homecard .hcvalue { font-family:var(--font-display); font-size:1.65rem; font-weight:850; line-height:1; text-align:right; white-space:nowrap; }
   .homecard .hcvalue small { display:block; color:var(--ink-faint); font-family:var(--font-body); font-size:.62rem; font-weight:650; margin-top:4px; }
@@ -597,10 +625,10 @@
   .homegrid.uniform #homeCollection { border-color:color-mix(in srgb,var(--accent) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 20%,var(--surface)),var(--surface)); }
   .homegrid.uniform #homeSphere { border-color:color-mix(in srgb,var(--r-SSP) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--r-SSP) 17%,var(--surface)),var(--surface)); }
   .homegrid.uniform #homeClosest { border-color:color-mix(in srgb,var(--el-Grass) 56%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--el-Grass) 17%,var(--surface)),var(--surface)); }
-  .homegrid.uniform #homeDeck { border-color:color-mix(in srgb,var(--gold) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 16%,var(--surface)),var(--surface)); }
-  .homegrid.uniform #homeWishlist { border-color:color-mix(in srgb,var(--el-Fire) 52%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--el-Fire) 15%,var(--surface)),var(--surface)); }
+  .homegrid.uniform #homeDeck { border-color:color-mix(in srgb,var(--r-PR) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--r-PR) 16%,var(--surface)),var(--surface)); }
+  .homegrid.uniform #homeWishlist { border-color:color-mix(in srgb,var(--el-Electric) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--el-Electric) 15%,var(--surface)),var(--surface)); }
   .homegrid.uniform #homeMarket { border-color:color-mix(in srgb,var(--el-Ice) 58%,var(--line-strong)); background:linear-gradient(145deg,color-mix(in srgb,var(--el-Ice) 17%,var(--surface)),var(--surface)); }
-  .homegrid.uniform #homeClosest .hclabel { color:var(--el-Grass); }.homegrid.uniform #homeDeck .hclabel { color:var(--gold-deep); }.homegrid.uniform #homeWishlist .hclabel { color:var(--el-Fire); }.homegrid.uniform #homeMarket .hclabel { color:var(--el-Ice); }
+  .homegrid.uniform #homeClosest .hclabel { color:var(--el-Grass); }.homegrid.uniform #homeDeck .hclabel { color:color-mix(in srgb,var(--r-PR) 80%,var(--ink)); }.homegrid.uniform #homeWishlist .hclabel { color:color-mix(in srgb,var(--el-Electric) 72%,var(--ink)); }.homegrid.uniform #homeMarket .hclabel { color:var(--el-Ice); }
   @media (min-width:760px){ .homegrid.uniform { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:190px; }.homegrid.uniform .homecard { height:190px; } }
   @media (max-width:600px){
     .homegrid.uniform { grid-template-columns:minmax(0,1fr); grid-auto-rows:auto; gap:11px; }
@@ -1107,12 +1135,13 @@
     .brand .sub { font-size:.68rem; letter-spacing:.02em; }
     .sigil { width:44px; height:44px; }
     header.mast .tbtn.login { padding:0 10px; }
-    /* Give the tab labels room so "Settings" no longer clips. */
-    .hudtabs .htab { font-size:.72rem; letter-spacing:.01em; padding:11px 3px; }
   }
-  @media (max-width:640px){
-    .hudtabs .htab { flex-direction:column; gap:3px; padding:7px 2px; font-size:.62rem; letter-spacing:0; }
-    .hudtabs .htab span { font-size:.58rem; line-height:1.1; }
+  @media (max-width:360px){
+    /* Six dock tabs on a 320px screen: narrow the icon pill so the labels keep their room. */
+    .hudtabs .htab { font-size:.6rem; }
+    .hudtabs .htab .ic { padding:4px 8px; }
+    .navgrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .navutil .navitem { flex-direction:column; gap:4px; font-size:.72rem; }
   }
   .setinfo { flex:1; min-width:0; }
   .stitle { font-weight:700; font-size:.95rem; }
@@ -1932,9 +1961,10 @@
   <div class="navmenu" id="navMenu">
     <div class="navbar hudtabs">
       <div class="navprimaryslots" id="navPrimarySlots"></div>
-      <button class="navq navmore htmenu" id="navTrigger" data-icon="menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More menu" title="More"></button>
+      <button class="navq htab navmore" id="navTrigger" data-icon="dots" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More menu" title="More"><span>More</span></button>
     </div>
     <div class="navlist" id="navList" hidden></div>
+    <div class="navscrim" aria-hidden="true"></div>
   </div>
 
   <section class="page active" id="page-home">
@@ -2340,8 +2370,10 @@
         <label class="switch"><input type="checkbox" id="setColorDash"><span class="track"></span></label>
       </div>
       <div class="setrow qmrow">
-        <div class="setinfo"><div class="stitle">Customise navigation</div><div class="sdesc">Home and Add stay fixed. Drag only the six-dot handle to reorder this list: the top three are your bottom navigation, and every item after that appears in More.</div></div>
+        <div class="setinfo"><div class="stitle">Customise navigation</div><div class="sdesc">Home, Add and Cards always stay in the bottom bar. Drag the six-dot handle to reorder this list: the top two fill the highlighted slots in the bar, and everything after them appears in More.</div></div>
+        <div class="qmpreview hudtabs" id="qmPreview" aria-hidden="true"></div>
         <div class="qmslots" id="qmSlots"></div>
+        <button class="btn sec qmreset" id="qmReset" type="button" hidden>Reset to default</button>
       </div>
 
       <div id="notifGroup" style="display:none;flex-direction:column;gap:14px">
@@ -3212,6 +3244,9 @@
     // deliberate: that would pin the app on "Prices are unavailable right now" with no way back.
     if(!s.serverUrlCustom || !s.serverUrl) s.serverUrl=SERVER_URL_DEFAULT;
     if(!Array.isArray(s.menuOrder)){ s.menuOrder=(Array.isArray(s.mainNav)?s.mainNav:[]).concat(["collection","missing","wishlist","decks"]); }
+    // Installs from before this flag: only a reorder (or an old custom mainNav) ever wrote keys outside the
+    // seeded default above, so anything else is still the default and follows the onboarding interests.
+    if(typeof s.menuOrderCustom!=="boolean") s.menuOrderCustom=s.menuOrder.some(function(k){ return ["collection","missing","wishlist","decks"].indexOf(k)===-1; });
     return s; })();
   valueBasis=basisOf();   // keep the sold/list basis in sync with the saved collection price mode
   var APP_OPENED_AT=Date.now(), PREVIOUS_VISIT=(function(){ try{return +localStorage.getItem("palvault-last-visit")||0;}catch(e){return 0;} })();
@@ -4771,6 +4806,7 @@
       if(typeof syncPushPrefs==="function") syncPushPrefs();
     }
     SETTINGS.onboarded=true; saveSettings(); applyMode();
+    buildNavMenu(); buildQuickMenuSettings();   // the interests just picked decide the bottom bar's two open slots
     var ob=$("onboard"); if(ob) ob.hidden=true;
     render();
     toast(!LS_OK ? LS_WARN : hasMarket ? "Market tracking is ready" : "Your collection is ready");
@@ -4815,10 +4851,10 @@
     sel.onchange=function(){
       var code=sel.value, reg=CUR_REGION[code];
       if(!reg){ sel.value=CUR.code; return; }
-      if(REGION_CUR[SETTINGS.ebayRegion||"co.uk"]===code){ applyCurrency(code); return; }   // already on a market that quotes it
+      if(REGION_CUR[SETTINGS.ebayRegion||"co.uk"]===code){ applyCurrency(code); toast("Display currency: "+CUR.code+" "+CUR.sym); return; }   // already on a market that quotes it
       var er=$("setEbayRegion");
       if(er && typeof er.onchange==="function"){ er.value=reg; er.onchange(); toast("Market set to "+reg+" so prices match "+code); return; }
-      SETTINGS.ebayRegion=reg; saveSettings(); applyCurrency(code);
+      SETTINGS.ebayRegion=reg; saveSettings(); applyCurrency(code); toast("Market set to "+reg+" so prices match "+code);
     };
   })();
   $("search").addEventListener("input", function(e){ filters.q=e.target.value; render(); });
@@ -4872,11 +4908,16 @@
         else if(t.value && t.value!==t.getAttribute("placeholder")) toast(name+" updated");
       }
     });
-    // Masthead selects live outside the Settings page but are settings too: currency and the
-    // active collection. Name them explicitly rather than guessing a row title.
-    var mast=function(el,label){ if(!el) return; el.addEventListener("change", function(){ toast(label+": "+(el.selectedOptions&&el.selectedOptions[0]?el.selectedOptions[0].textContent.trim():el.value)); }); };
-    mast($("curSel"), "Display currency");
-    mast($("colSel"), "Active collection");
+    // The active-collection select lives outside the Settings page but is a setting too, so name it
+    // explicitly. This listener runs before the select's own onchange; the "__wishlist__" and
+    // "__manage__" entries navigate rather than switch, so they must not announce a switch. The
+    // currency select announces itself, because it may also move the market.
+    var cs=$("colSel");
+    if(cs) cs.addEventListener("change", function(){
+      if(cs.value.indexOf("__")===0) return;
+      var op=cs.selectedOptions&&cs.selectedOptions[0];
+      toast("Active collection: "+(op?op.textContent.trim():cs.value));
+    });
   })();
   function esc(s){ return String(s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m];}); }
   // Consistent button loading state: disable the button + show a spinning refresh icon (via .spin) with an
@@ -4928,6 +4969,7 @@
     layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
     chev:'<path d="M6 9l6 6 6-6"/>',
     menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+    dots:'<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
     effigy:'<path d="M12 3l2 7h-2l-1 9 1-9H8l2-7z" stroke-width="1.8"/><path d="M12 12v2"/><path d="M9 16h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLifmunk:'<path d="M12 3c1.2 1.2 2 2.2 2 3.5 0 1.8-1.2 3.2-2.8 3.6l.8 5.2H9l.8-5.2C8.1 9.7 7 8.3 7 6.5c0-1.3.8-2.3 2-3.5h3z" fill="none"/><circle cx="12" cy="7.2" r="1.2" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLamball:'<circle cx="12" cy="8" r="3.2" fill="none"/><path d="M9 7l-2-1M15 7l2-1"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
@@ -6211,8 +6253,14 @@
   // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
   function closeNavMenu(){ var l=$("navList"); if(l) l.hidden=true; [$("navTrigger"),$("desktopNavTrigger")].forEach(function(t){ if(t) t.setAttribute("aria-expanded","false"); }); }
   function navPages(){ var all=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){ var p=tab.getAttribute("data-page"); if(!p || p==="account") return; all.push({key:p,icon:tab.getAttribute("data-icon"),label:(tab.querySelector(".tablabel")||{}).textContent||p}); }); return all; }
-  function orderedNavPages(){ var all=navPages().filter(function(pg){return pg.key!=="home"&&pg.key!=="scan";}), order=[]; (SETTINGS.menuOrder||[]).forEach(function(k){if(all.some(function(x){return x.key===k;})&&order.indexOf(k)===-1)order.push(k);}); all.forEach(function(pg){if(order.indexOf(pg.key)===-1)order.push(pg.key);}); return order.map(function(k){return all.filter(function(x){return x.key===k;})[0];}).filter(Boolean); }
-  function primaryNavKeys(){ return ["home","scan"].concat(orderedNavPages().slice(0,3).map(function(pg){return pg.key;})); }
+  // Home, Add and Cards are always in the bottom bar. The two slots after them default to the first interest
+  // picked at onboarding (tap order) until the user reorders them in Settings.
+  // Settings, Account and Contact are pinned to the row under More's grid, so they are not reorderable.
+  var FIXED_NAV=["home","scan","collection"], MORE_UTIL=["settings","account","contact"];
+  var NAV_SLOTS_BY_INTENT={ collector:["missing","wishlist"], player:["decks","wishlist"], market:["portfolio","sealed"] };
+  function defaultNavSlots(){ var first=(SETTINGS.onboardIntents||[]).filter(function(k){ return NAV_SLOTS_BY_INTENT[k]; })[0]; return NAV_SLOTS_BY_INTENT[first||"collector"]; }
+  function orderedNavPages(){ var all=navPages().filter(function(pg){return FIXED_NAV.indexOf(pg.key)===-1 && MORE_UTIL.indexOf(pg.key)===-1;}), order=[]; (SETTINGS.menuOrderCustom?(SETTINGS.menuOrder||[]):defaultNavSlots()).forEach(function(k){if(all.some(function(x){return x.key===k;})&&order.indexOf(k)===-1)order.push(k);}); all.forEach(function(pg){if(order.indexOf(pg.key)===-1)order.push(pg.key);}); return order.map(function(k){return all.filter(function(x){return x.key===k;})[0];}).filter(Boolean); }
+  function primaryNavKeys(){ return FIXED_NAV.concat(orderedNavPages().slice(0,2).map(function(pg){return pg.key;})); }
   // ---- Back buttons ----------------------------------------------------------------------------------
   // Every page reached from the More menu, a card, or the header gets a back button as its first element,
   // so it lands on the title instead of below it. Primary tabs are skipped: they are permanently in the
@@ -6253,22 +6301,40 @@
       pg.insertBefore(b, pg.firstChild);
     });
   }
-  // The first three user-ordered destinations are bottom-nav slots; every later destination appears in More.
+  // The first two user-ordered destinations are bottom-nav slots; every later destination appears in More.
   function dropdownPages(){
-    return orderedNavPages().slice(3);
+    return orderedNavPages().slice(2);
   }
   function buildNavMenu(){
     installBackButtons();   // the bottom bar's contents decide which pages still need a back button
-    var list=$("navList"); if(!list) return; list.innerHTML="";
-    var primary=$("navPrimarySlots"); if(primary){ primary.innerHTML=""; primaryNavKeys().forEach(function(key){ var pg=navPages().filter(function(x){return x.key===key;})[0]; if(!pg) return; var label=key==="scan"?"Add":(key==="collection"?"Cards":pg.label); var b=document.createElement("button"); b.className="navq htab"+(key===_curPage?" active":""); b.setAttribute("data-page",key); b.title=pg.label; b.innerHTML=icon(pg.icon)+"<span>"+esc(label)+"</span>"; b.onclick=function(){showPage(key);closeNavMenu();}; primary.appendChild(b); }); }
-    dropdownPages().forEach(function(pg){
-      var b=document.createElement("button"); b.className="navitem"; b.setAttribute("data-page",pg.key);
-      b.innerHTML=icon(pg.icon)+"<span>"+esc(pg.label)+"</span>";
-      b.onclick=function(){ showPage(pg.key); closeNavMenu(); };
-      list.appendChild(b);
+    var list=$("navList"); if(!list) return; list.innerHTML='<div class="navgrab" aria-hidden="true"></div>';
+    // The Settings preview is drawn from the same keys here so it can never disagree with the real bar.
+    var primary=$("navPrimarySlots"), preview=$("qmPreview"), previewHtml="";
+    if(primary) primary.innerHTML="";
+    primaryNavKeys().forEach(function(key){
+      var pg=navPages().filter(function(x){return x.key===key;})[0]; if(!pg) return;
+      var label=key==="scan"?"Add":(key==="collection"?"Cards":pg.label);
+      previewHtml+='<span class="htab'+(FIXED_NAV.indexOf(key)===-1?' qmslot':'')+'">'+icon(pg.icon)+'<span>'+esc(label)+'</span></span>';
+      if(!primary) return;
+      var b=document.createElement("button"); b.className="navq htab"+(key===_curPage?" active":""); b.setAttribute("data-page",key); b.title=pg.label; b.innerHTML=icon(pg.icon)+"<span>"+esc(label)+"</span>"; b.onclick=function(){showPage(key);closeNavMenu();}; primary.appendChild(b);
     });
-    var gs=document.createElement("button"); gs.className="navitem"; gs.type="button"; gs.innerHTML=icon("search")+"<span>Search all</span>";
+    if(preview) preview.innerHTML=previewHtml+'<span class="htab">'+icon("dots")+'<span>More</span></span>';
+    var gs=document.createElement("button"); gs.className="navsearch"; gs.type="button"; gs.innerHTML=icon("search")+"<span>Search all of SphereDex</span>";
     gs.onclick=function(){ closeNavMenu(); openGlobalSearch(); }; list.appendChild(gs);
+    var tile=function(key, ic, label){
+      var b=document.createElement("button"); b.type="button"; b.className="navitem"; b.setAttribute("data-page",key);
+      b.innerHTML=icon(ic)+"<span>"+esc(label)+"</span>";
+      b.onclick=function(){ showPage(key); closeNavMenu(); };
+      return b;
+    };
+    var grid=document.createElement("div"); grid.className="navgrid";
+    dropdownPages().forEach(function(pg){ grid.appendChild(tile(pg.key, pg.icon, pg.label)); });
+    var util=document.createElement("div"), pages=navPages(); util.className="navutil";
+    MORE_UTIL.forEach(function(key){
+      if(key==="account"){ util.appendChild(tile("account","user","Account")); return; }
+      var pg=pages.filter(function(x){ return x.key===key; })[0]; if(pg) util.appendChild(tile(pg.key, pg.icon, pg.label));
+    });
+    list.appendChild(grid); list.appendChild(util);
     [$("navTrigger"),$("desktopNavTrigger")].forEach(function(trig){ if(trig) trig.onclick=function(e){ e.stopPropagation(); var l=$("navList"), open=l.hidden; l.hidden=!open; [$("navTrigger"),$("desktopNavTrigger")].forEach(function(t){if(t)t.setAttribute("aria-expanded",open?"true":"false");}); }; });
     var nl=$("navList"); if(nl) nl.addEventListener("click", function(e){ e.stopPropagation(); });
     document.addEventListener("click", closeNavMenu);
@@ -6335,13 +6401,15 @@
     document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openGlobalSearch();}});
   })();
 
-  // ---- One drag list controls the three bottom destinations and the More ordering. ----
+  // ---- One drag list controls the two open bottom slots and the More ordering. ----
   function buildQuickMenuSettings(){
     var host=$("qmSlots"); if(!host) return; host.innerHTML="";
+    var reset=$("qmReset");
+    if(reset){ reset.hidden=!SETTINGS.menuOrderCustom; reset.onclick=function(){ SETTINGS.menuOrderCustom=false; saveSettings(); buildNavMenu(); buildQuickMenuSettings(); updateNavMenu(_curPage); toast("Navigation reset to default"); }; }
     var pages=orderedNavPages();
     pages.forEach(function(pg, i){
-      var row=document.createElement("div"); row.className="ordrow"+(i<3?" navprimary":""); row.setAttribute("data-key", pg.key);
-      row.innerHTML='<span class="ordlab"><span class="ordgrip" title="Drag this item to reorder" aria-label="Drag '+esc(pg.label)+' to reorder" role="img">⠿</span>'+icon(pg.icon)+'<span>'+esc(pg.label)+(i<3?' <small>Bottom navigation</small>':' <small>More</small>')+'</span></span>'+
+      var row=document.createElement("div"); row.className="ordrow"+(i<2?" navprimary":""); row.setAttribute("data-key", pg.key);
+      row.innerHTML='<span class="ordlab"><span class="ordgrip" title="Drag this item to reorder" aria-label="Drag '+esc(pg.label)+' to reorder" role="img">⠿</span>'+icon(pg.icon)+'<span>'+esc(pg.label)+(i<2?' <small>Bottom navigation</small>':' <small>More</small>')+'</span></span>'+
         '<span class="ordbtns"><button class="ordbtn" type="button" data-dir="-1" aria-label="Move '+esc(pg.label)+' up"'+(i===0?' disabled':'')+'>▲</button>'+
         '<button class="ordbtn" type="button" data-dir="1" aria-label="Move '+esc(pg.label)+' down"'+(i===pages.length-1?' disabled':'')+'>▼</button></span>';
       Array.prototype.forEach.call(row.querySelectorAll(".ordbtn"), function(btn){
@@ -6395,13 +6463,13 @@
   function commitMenuOrder(host){
     var keys=Array.prototype.slice.call(host.children).map(function(r){ return r.getAttribute("data-key"); }).filter(Boolean);
     if(!keys.length) return;
-    SETTINGS.menuOrder=keys; saveSettings(); buildNavMenu(); buildQuickMenuSettings(); updateNavMenu(_curPage);
+    SETTINGS.menuOrder=keys; SETTINGS.menuOrderCustom=true; saveSettings(); buildNavMenu(); buildQuickMenuSettings(); updateNavMenu(_curPage);
   }
   function moveMenuItem(key, dir){
     var keys=orderedNavPages().map(function(p){return p.key;});
     var i=keys.indexOf(key); if(i<0) return; var j=i+dir; if(j<0||j>=keys.length) return;
     keys.splice(i,1); keys.splice(j,0,key);
-    SETTINGS.menuOrder=keys; saveSettings(); buildNavMenu(); buildQuickMenuSettings(); updateNavMenu(_curPage);
+    SETTINGS.menuOrder=keys; SETTINGS.menuOrderCustom=true; saveSettings(); buildNavMenu(); buildQuickMenuSettings(); updateNavMenu(_curPage);
   }
   // ---- Contact / feedback (sends via the backend; no email address exposed) ----
   // Fixed endpoint for messages to the developer. Leave blank to use the user's own
@@ -7037,6 +7105,15 @@
     for(var i=0;i<map.length;i++){ if(text.indexOf(map[i][0])>=0) return map[i][1]; }
     return "";
   }
+  // The backend relabels "x:PalworldOCG_EN" to "X · @PalworldOCG_EN", so both spellings mean X.
+  function featIsX(n){
+    return !!n && (/^x:|^x\b/i.test(String(n.source||"")) || /^https?:\/\/(www\.)?(x|twitter)\.com\//i.test(String(n.link||"")) || /pbs\.twimg\.com/i.test(String(n.image||"")));
+  }
+  // A reveal must say so or carry card-list art. Every official-site image lives on a
+  // palworld-official-cardgame host, so the host name alone proves nothing.
+  function featIsReveal(n){
+    return !!(n && n.image) && (/card reveal|\breveal|new card/i.test((n.title||"")+" "+(n.summary||"")) || /\/cardlist\//i.test(String(n.image)));
+  }
   function featuredSlides(){
     function liveRank(k){ var t=featTime((SET_META[k]||{}).release); return t===Infinity ? 0 : t; }
     var live=[];
@@ -7049,18 +7126,14 @@
     var list=(typeof visibleNews==="function"?visibleNews():[]);
     // 1 - latest official news (source "official"; seed items have no source and count as official)
     var official=null;
-    for(var i=0;i<list.length;i++){ var n=list[i]; if(!n) continue; var src=String(n.source||""); if(src.indexOf("x:")===0) continue; official=n; break; }
+    for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; official=n; break; }
     if(!official && list.length) official=list[0];
     // 2 - latest X post that carries an image
     var xImage=null;
-    for(var j=0;j<list.length;j++){ var x=list[j]; if(x && x.image && String(x.source||"").indexOf("x:")===0){ xImage=x; break; } }
-    if(!xImage){ for(var kk=0; kk<list.length; kk++){ var y=list[kk]; if(y && y.image && /pbs\.twimg\.com/i.test(String(y.image))){ xImage=y; break; } } }
+    for(var j=0;j<list.length;j++){ var x=list[j]; if(x && x.image && featIsX(x)){ xImage=x; break; } }
     // 5 - latest card reveal (computed first so we can deduplicate against 1/2, but pushed last)
     var reveal=null;
-    try{
-      for(var r=0;r<list.length;r++){ var rn=list[r]; if(rn&&rn.image && (/card reveal|reveal|new card/i.test((rn.title||"")+" "+(rn.summary||"")) || /cardlist|palworld.*card/i.test(String(rn.image)))){ reveal=rn; break; } }
-      if(!reveal) for(var r2=0;r2<list.length;r2++){ var rn2=list[r2]; if(rn2&&rn2.image && /cardlist|pbs\.twimg\.com/i.test(String(rn2.image))){ reveal=rn2; break; } }
-    }catch(e){}
+    for(var r=0;r<list.length;r++){ if(featIsReveal(list[r])){ reveal=list[r]; break; } }
     var out=[];
     // 1 - official
     if(official){
@@ -7142,11 +7215,12 @@
       if(official===reveal || xImage===reveal) dup=true;
       if(dup){
         var alt=null;
-        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand && cand!==reveal && cand.image && (/card reveal|reveal|new card/i.test((cand.title||"")+" "+(cand.summary||"")) || /cardlist|palworld.*card/i.test(String(cand.image)))){ alt=cand; break; } }
+        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && featIsReveal(cand)){ alt=cand; break; } }
         if(alt) { reveal=alt; dup=false; for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } } else { reveal=null; dup=false; }
       }
       if(reveal && !dup){
-        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(reveal.date||"Today")+" \u00b7 from @PalworldOCG_EN", art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||"https://x.com/PalworldOCG_EN" });
+        var revealX=featIsX(reveal);
+        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(reveal.date||"Today")+" \u00b7 "+(revealX?"from @PalworldOCG_EN":"Official site"), art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||(revealX?"https://x.com/PalworldOCG_EN":OFFICIAL_NEWS) });
       }
     }
     if(out.length<2 && live.length){
