@@ -275,6 +275,17 @@ test('latest update features stay on screen, and a newer store build says an upd
   assert.match(feat.title, /1\.11/);
   assert.deepEqual(JSON.parse(JSON.stringify(feat.notes)), ['Note A for 1.11', 'Note B']);
   assert.equal(current.api.slides().some((s) => s.kind === 'update'), false);
+
+  const ahead = app({
+    APP_VERSION: '2.0',
+    _latestAppVersion: '1.10',
+    RELEASE_HIGHLIGHTS: { '2.0': ['Home headliners', 'Pal pages', 'Deck tools'] },
+    updateNotesFor: () => ['Price alerts', 'Sort', 'Filter'],
+  });
+  const own = ahead.api.slides().find((s) => s.kind === 'features');
+  assert.ok(own, 'a build ahead of the store record still shows a features slide');
+  assert.deepEqual(JSON.parse(JSON.stringify(own.notes)), ['Home headliners', 'Pal pages', 'Deck tools']);
+  assert.equal(ahead.api.slides().some((s) => s.kind === 'update'), false);
 });
 
 test('the collection slide falls back from movers to a summary', () => {

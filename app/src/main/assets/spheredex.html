@@ -7617,8 +7617,13 @@
       var ver=behind ? _latestAppVersion : (typeof APP_VERSION==="string" ? APP_VERSION : "");
       var notes=[];
       try{
-        if(typeof updateNotesFor==="function" && ver) notes=updateNotesFor(ver)||[];
-        else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[ver]) notes=RELEASE_HIGHLIGHTS[ver];
+        // Server notes describe the store build. Use them only when that build is newer.
+        // This install shows its own lines, including when the store record is an older number.
+        if(behind){
+          if(typeof updateNotesFor==="function") notes=updateNotesFor(ver)||[];
+          else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[ver]) notes=RELEASE_HIGHLIGHTS[ver];
+        } else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[ver]) notes=RELEASE_HIGHLIGHTS[ver];
+        else if(typeof updateNotesFor==="function" && ver) notes=updateNotesFor(ver)||[];
       }catch(e){}
       if(behind && (!notes || !notes.length)) notes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
       notes=(notes||[]).slice(0,3);
