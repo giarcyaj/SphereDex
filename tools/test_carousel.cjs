@@ -252,6 +252,32 @@ test('the collection slide falls back from movers to a summary', () => {
   assert.equal(m.movers[0].name, 'Lamball');
 });
 
+test('the movers slide pairs a riser and a faller even when they come from different scopes', () => {
+  const a = app({ moverCard: (dir, scope) => {
+    if (dir === 'up' && scope === 'collection') return { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 12.3 };
+    if (dir === 'down' && scope === 'all') return { c: { id: 'EBP01-002', name: 'Cattiva' }, pct: -4.5 };
+    return null;
+  } });
+  const m = a.api.slides().find((x) => x.kind === 'movers');
+  assert.equal(String(m.movers.map((x) => x.dir + ':' + x.name)), 'up:Lamball,down:Cattiva');
+  assert.match(m.title, /Market movers today/);
+  a.api.render();
+  const html = a.host.innerHTML;
+  assert.match(html, /class="featslide[^"]*\bpair\b/, 'two cards get the wide image panel');
+  assert.equal((html.match(/class="featpaircard /g) || []).length, 2, 'both cards shown side by side');
+  assert.match(html, /↑ \+12\.3%/);
+  assert.match(html, /↓ −4\.5%/);
+});
+
+test('slides put text and the sharp image in separate columns over a blurred backdrop', () => {
+  const a = app({ visibleNews: () => [news({ title: 'Official update', image: 'https://example.test/o.png' })] });
+  a.api.render();
+  const slide = a.host.innerHTML.split('<button class="featslide')[1];
+  assert.match(slide, /<span class="featbg"><img src="https:\/\/example\.test\/o\.png"/);
+  assert.match(slide, /<span class="featart"><img class="featart-img zoom" src="https:\/\/example\.test\/o\.png"/);
+  assert.ok(slide.indexOf('class="featart') < slide.indexOf('class="featbody"'), 'image panel is its own element, not under the text');
+});
+
 test('slides cap at five', () => {
   const a = app({ visibleNews: () => Array.from({ length: 9 }, (_, i) => news({
     title: 'Card reveal ' + i, source: i % 2 ? 'x:PalworldOCG_EN' : 'official',
