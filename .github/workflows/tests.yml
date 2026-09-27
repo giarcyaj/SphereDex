@@ -71,6 +71,9 @@ jobs:
       - name: Editions / CSV guard suite
         run: node tools/test_editions.cjs
 
+      - name: Deck legality, stats, effect search and purchase price
+        run: node tools/test_v21.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 

@@ -1265,6 +1265,7 @@
   .decklegality .dlhead { display:flex; justify-content:space-between; gap:10px; font-weight:750; }
   .decklegality .dlstate { color:var(--el-Grass); } .decklegality.bad .dlstate { color:var(--el-Fire); }
   .decklegality ul { margin:7px 0 0; padding-left:18px; color:var(--ink-soft); }
+  .decklegality .dlsum { margin-top:4px; color:var(--ink-soft); }
   .deckadd { max-width:520px; margin-bottom:6px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
@@ -5859,20 +5860,48 @@
       }});
     };
   }
-  function renderDeckLegality(d){
-    var host=$("deckLegality"); if(!host) return;
-    if(!d){ host.hidden=true; host.innerHTML=""; return; }
-    var main=0, souls=0, colors={}, names={}, issues=[];
-    Object.keys(d.cards||{}).forEach(function(id){ var qty=+d.cards[id]||0, c=byNumberIdx[id.toUpperCase()]; if(!c||!qty) return;
+  // Comprehensive Rules 6.1.1: 50 main, 10 Soul, two colours, four of a name, and at most 8 Lucky Pals.
+  // A printed "any number of cards with the same card name" line (Beegarde, EBP01-061) lifts the four-copy cap
+  // for that name. The exception is the sentence, not a hardcoded card id, so a later set with the same line is covered.
+  var LUCKY_CAP = 8;
+  function textAllowsAnyNumber(text){
+    return /any number of cards with the same card name/i.test(String(text||""));
+  }
+  function deckCardOf(id, byId){
+    if(typeof byId==="function") return byId(id);
+    if(!byId) return null;
+    return byId[String(id).toUpperCase()] || byId[id] || null;
+  }
+  function deckLegalityReport(qtyMap, byId){
+    qtyMap=qtyMap||{};
+    var main=0, souls=0, lucky=0, colors={}, names={}, anyName={}, issues=[];
+    Object.keys(qtyMap).forEach(function(id){
+      var qty=+qtyMap[id]||0, c=deckCardOf(id, byId);
+      if(!c || !(qty>0)) return;
       if(c.kind==="Soul"){ souls+=qty; return; }
-      main+=qty; if(c.color&&c.color!=="Colorless") colors[c.color]=true; names[c.name]=(names[c.name]||0)+qty;
+      main+=qty;
+      if(c.sub==="Lucky Pal") lucky+=qty;
+      if(c.color && c.color!=="Colorless") colors[c.color]=true;
+      names[c.name]=(names[c.name]||0)+qty;
+      if(textAllowsAnyNumber(c.rules)) anyName[c.name]=true;
     });
     if(main!==50) issues.push("Main deck needs "+Math.abs(50-main)+" "+(main<50?"more":"fewer")+" card"+(Math.abs(50-main)===1?"":"s")+" (currently "+main+" / 50).");
     if(souls!==10) issues.push("Soul deck needs "+Math.abs(10-souls)+" "+(souls<10?"more":"fewer")+" Soul card"+(Math.abs(10-souls)===1?"":"s")+" (currently "+souls+" / 10).");
-    var chosen=Object.keys(colors); if(chosen.length>2) issues.push("Choose no more than two colours; this deck uses "+chosen.join(", ")+".");
-    Object.keys(names).filter(function(name){return names[name]>4;}).forEach(function(name){ issues.push(esc(name)+" has "+names[name]+" copies; the limit is four cards with the same name."); });
+    var chosen=Object.keys(colors);
+    if(chosen.length>2) issues.push("Choose no more than two colours; this deck uses "+chosen.join(", ")+".");
+    if(lucky>LUCKY_CAP) issues.push("Lucky Pals are over the limit ("+lucky+" / "+LUCKY_CAP+"). A main deck may include at most "+LUCKY_CAP+".");
+    Object.keys(names).forEach(function(name){
+      if(names[name]>4 && !anyName[name]) issues.push(name+" has "+names[name]+" copies; the limit is four cards with the same name.");
+    });
+    return {main:main, souls:souls, lucky:lucky, luckyCap:LUCKY_CAP, colors:chosen, names:names, unlimited:Object.keys(anyName), issues:issues};
+  }
+  function renderDeckLegality(d){
+    var host=$("deckLegality"); if(!host) return;
+    if(!d){ host.hidden=true; host.innerHTML=""; return; }
+    var rep=deckLegalityReport(d.cards||{}, byNumberIdx), issues=rep.issues.map(esc);
     host.hidden=false; host.className="decklegality "+(issues.length?"bad":"ok");
-    host.innerHTML='<div class="dlhead"><span>Deck legality</span><span class="dlstate">'+(issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"Ready to play")+'</span></div>'+(issues.length?'<ul><li>'+issues.join("</li><li>")+'</li></ul>':'<div style="margin-top:4px;color:var(--ink-soft)">50-card main deck · 10 Soul cards · '+(chosen.length?chosen.join(" + "):"no colours selected")+'</div>');
+    var summary="50-card main deck · 10 Soul cards · Lucky Pals "+rep.lucky+"/"+rep.luckyCap+" · "+(rep.colors.length?rep.colors.join(" + "):"no colours selected");
+    host.innerHTML='<div class="dlhead"><span>Deck legality</span><span class="dlstate">'+(issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"Ready to play")+'</span></div>'+(issues.length?'<ul><li>'+issues.join("</li><li>")+'</li></ul>':'')+'<div class="dlsum">'+summary+'</div>';
   }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
