@@ -30,7 +30,7 @@ function appConstant(name) {
 const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(
-  ['textAllowsAnyNumber', 'deckCardOf', 'deckLegalityReport'].map(appFunction).join('\n') + '\n' +
+  ['textAllowsAnyNumber', 'deckCardOf', 'deckLegalityReport', 'deckStatsReport'].map(appFunction).join('\n') + '\n' +
     appConstant('LUCKY_CAP'),
   sandbox
 );
@@ -100,6 +100,27 @@ test('the any-number exception follows the printed sentence, not a single card i
   );
   assert.deepEqual(JSON.parse(JSON.stringify(other.unlimited)), ['Future Pal']);
   assert.equal(other.issues.some(issue => /four cards/.test(issue)), false);
+});
+
+test('the main-deck curve counts cost, type, Lucky Pals and colour, and leaves Souls out', () => {
+  const report = sandbox.deckStatsReport(
+    { A: 3, B: 2, C: 1, D: 4, S: 10 },
+    {
+      A: card({ id: 'A', cost: '1', kind: 'Pal', color: 'Red', sub: 'Lucky Pal' }),
+      B: card({ id: 'B', cost: '1', kind: 'Event', color: 'Red' }),
+      C: card({ id: 'C', cost: '4', kind: 'Gear', color: 'Blue' }),
+      D: card({ id: 'D', cost: '3', kind: 'Structure', color: 'Colorless' }),
+      S: card({ id: 'S', name: 'Soul', kind: 'Soul', cost: '9', sub: 'Lucky Pal' })
+    }
+  );
+  const plain = value => JSON.parse(JSON.stringify(value));
+  assert.equal(report.total, 20);
+  assert.equal(report.unique, 5);
+  assert.equal(report.main, 10);
+  assert.equal(report.lucky, 3);
+  assert.deepEqual(plain(report.curve), { '1': 5, '3': 4, '4': 1 });
+  assert.deepEqual(plain(report.kinds), { Pal: 3, Event: 2, Gear: 1, Structure: 4 });
+  assert.deepEqual(plain(report.colors), { Red: 5, Blue: 1, Colorless: 4 });
 });
 
 test('colourless cards do not spend one of the two colour slots', () => {

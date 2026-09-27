@@ -1250,6 +1250,7 @@
   .deckctrls { display:flex; gap:8px; align-items:center; }
   #deckSel { max-width:200px; }
   .deckstats { display:flex; gap:22px; flex-wrap:wrap; margin:14px 0 16px; }
+  .deckstats .deckbreak { flex:1 0 100%; }
   .deckstats .hs { display:flex; flex-direction:column; gap:2px; }
   .deckstats .hs .n { font-family:var(--font-display); font-size:1.5rem; font-weight:850; }
   .deckstats .hs .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -1266,6 +1267,16 @@
   .decklegality .dlstate { color:var(--el-Grass); } .decklegality.bad .dlstate { color:var(--el-Fire); }
   .decklegality ul { margin:7px 0 0; padding-left:18px; color:var(--ink-soft); }
   .decklegality .dlsum { margin-top:4px; color:var(--ink-soft); }
+  .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
+  .deckcurve, .deckkinds, .deckcolors { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
+  .dbar, .dchip { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:10px; padding:6px 8px; min-width:44px; cursor:pointer; font:inherit; text-align:center; }
+  .dbar { display:flex; flex-direction:column; justify-content:flex-end; gap:4px; min-height:72px; }
+  .dbar .dtrack { display:block; width:100%; border-radius:4px; background:color-mix(in srgb,var(--accent) 70%,var(--line)); min-height:4px; }
+  .dbar.on, .dchip.on { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 16%,var(--surface)); }
+  .dbar .dn, .dchip .dn { font-family:var(--font-display); font-weight:800; font-size:.95rem; }
+  .dbar .dl, .dchip .dl { font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .deckfocus { margin:0 0 8px; color:var(--ink-soft); font-size:.8rem; }
+  .deckfocus button { margin-left:8px; }
   .deckadd { max-width:520px; margin-bottom:6px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
@@ -5895,6 +5906,40 @@
     });
     return {main:main, souls:souls, lucky:lucky, luckyCap:LUCKY_CAP, colors:chosen, names:names, unlimited:Object.keys(anyName), issues:issues};
   }
+  // Main-deck curve and splits. Souls stay out of the curve, the type counts and the colour split.
+  function deckStatsReport(qtyMap, byId){
+    qtyMap=qtyMap||{};
+    var total=0, unique=0, main=0, lucky=0, curve={}, kinds={Pal:0,Event:0,Gear:0,Structure:0}, colors={};
+    Object.keys(qtyMap).forEach(function(id){
+      var qty=+qtyMap[id]||0, c=deckCardOf(id, byId);
+      if(!c || !(qty>0)) return;
+      total+=qty; unique++;
+      if(c.kind==="Soul") return;
+      main+=qty;
+      var cost=(c.cost==null || c.cost==="") ? "?" : String(c.cost);
+      curve[cost]=(curve[cost]||0)+qty;
+      if(kinds[c.kind]==null) kinds[c.kind]=0;
+      kinds[c.kind]+=qty;
+      var col=c.color||"Colorless";
+      colors[col]=(colors[col]||0)+qty;
+      if(c.sub==="Lucky Pal") lucky+=qty;
+    });
+    return {total:total, unique:unique, main:main, lucky:lucky, curve:curve, kinds:kinds, colors:colors};
+  }
+  var deckFocus=null, deckFocusDeck=null;
+  function deckFocusOn(kind, value){
+    if(deckFocus && deckFocus.k===kind && String(deckFocus.v)===String(value)) deckFocus=null;
+    else deckFocus={k:kind, v:value};
+    renderDecks();
+  }
+  function deckRowVisible(c){
+    if(!deckFocus || !c) return true;
+    if(deckFocus.k==="cost") return c.kind!=="Soul" && String(c.cost==null?"":c.cost)===String(deckFocus.v);
+    if(deckFocus.k==="kind") return c.kind===deckFocus.v;
+    if(deckFocus.k==="color") return (c.color||"Colorless")===deckFocus.v;
+    if(deckFocus.k==="lucky") return c.sub==="Lucky Pal";
+    return true;
+  }
   function renderDeckLegality(d){
     var host=$("deckLegality"); if(!host) return;
     if(!d){ host.hidden=true; host.innerHTML=""; return; }
@@ -5909,20 +5954,51 @@
     var d=activeDeck();
     ["deckSel","deckRename","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
+    if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
     var totalCards=0, needed=0, ownedNeeded=0;
     ids.forEach(function(id){ var q=d.cards[id]; totalCards+=q; needed+=q; var own=(activeCol().own[id]&&activeCol().own[id].qty)||0; ownedNeeded+=Math.min(q,own); });
     var pct=pctOf(ownedNeeded,needed);
+    var rep=deckStatsReport(d.cards||{}, byNumberIdx);
+    var costs=Object.keys(rep.curve).sort(function(a,b){ return ((+a||0)-(+b||0)) || (a<b?-1:1); });
+    var peak=costs.reduce(function(m,k){ return Math.max(m, rep.curve[k]); }, 1);
+    var bars=costs.map(function(k){
+      var h=Math.max(8, Math.round(rep.curve[k]/peak*48));
+      var on=deckFocus&&deckFocus.k==="cost"&&String(deckFocus.v)===String(k);
+      return '<button type="button" class="dbar'+(on?' on':'')+'" data-k="cost" data-v="'+esc(k)+'" aria-pressed="'+(on?'true':'false')+'"><span class="dtrack" style="height:'+h+'px"></span><span class="dn">'+rep.curve[k]+'</span><span class="dl">◇'+esc(k)+'</span></button>';
+    }).join("");
+    var kindOrder=["Pal","Event","Gear","Structure"];
+    var kindChips=kindOrder.map(function(k){
+      var on=deckFocus&&deckFocus.k==="kind"&&deckFocus.v===k;
+      return '<button type="button" class="dchip'+(on?' on':'')+'" data-k="kind" data-v="'+k+'" aria-pressed="'+(on?'true':'false')+'"><span class="dn">'+(rep.kinds[k]||0)+'</span><span class="dl">'+k+'</span></button>';
+    }).join("");
+    var luckyOn=deckFocus&&deckFocus.k==="lucky";
+    kindChips+='<button type="button" class="dchip'+(luckyOn?' on':'')+'" data-k="lucky" data-v="1" aria-pressed="'+(luckyOn?'true':'false')+'"><span class="dn">'+rep.lucky+'</span><span class="dl">Lucky</span></button>';
+    var colOrder=["Red","Blue","Green","Purple","Colorless"].filter(function(c){ return rep.colors[c]; });
+    Object.keys(rep.colors).forEach(function(c){ if(colOrder.indexOf(c)===-1) colOrder.push(c); });
+    var colChips=colOrder.map(function(c){
+      var on=deckFocus&&deckFocus.k==="color"&&deckFocus.v===c;
+      return '<button type="button" class="dchip'+(on?' on':'')+'" data-k="color" data-v="'+esc(c)+'" aria-pressed="'+(on?'true':'false')+'" style="--_c:'+colVar(c)+'"><span class="dn">'+rep.colors[c]+'</span><span class="dl">'+esc(c)+'</span></button>';
+    }).join("");
+    var focusNote=deckFocus?'<div class="deckfocus">Showing '+esc(deckFocus.k==="cost"?"cost "+deckFocus.v:deckFocus.k==="lucky"?"Lucky Pals":deckFocus.v)+'.<button class="tbtn ghost" type="button" id="deckFocusClear">Show all</button></div>':'';
     $("deckStats").innerHTML=
       '<div class="hs"><span class="n">'+totalCards+'</span><span class="l">Cards</span></div>'+
       '<div class="hs"><span class="n">'+ids.length+'</span><span class="l">Unique</span></div>'+
-      '<div class="hs"><span class="n">'+pct+'%</span><span class="l">You own</span></div>';
+      '<div class="hs"><span class="n">'+pct+'%</span><span class="l">You own</span></div>'+
+      '<div class="deckbreak"><div class="deckcurve" aria-label="Main deck cost curve">'+bars+'</div><div class="deckkinds">'+kindChips+'</div><div class="deckcolors">'+colChips+'</div></div>'+
+      focusNote;
     renderDeckLegality(d);
     renderDeckCompletion(d);
+    $("deckStats").querySelectorAll(".dbar,.dchip").forEach(function(b){
+      b.onclick=function(){ deckFocusOn(b.getAttribute("data-k"), b.getAttribute("data-v")); };
+    });
+    var clear=$("deckFocusClear"); if(clear) clear.onclick=function(){ deckFocus=null; renderDecks(); };
+    var shown=ids.filter(function(id){ return deckRowVisible(byNumberIdx[id.toUpperCase()]); });
     if(!ids.length){ wrap.innerHTML='<div class="empty"><b>This deck is empty</b>Search above to add cards.</div>'; return; }
+    if(!shown.length){ wrap.innerHTML='<div class="empty"><b>Nothing in this slice</b>Tap the same stat again to show the whole deck.</div>'; return; }
     wrap.innerHTML="";
-    ids.forEach(function(id){
+    shown.forEach(function(id){
       var c=byNumberIdx[id.toUpperCase()]; if(!c) return; var q=d.cards[id];
       var own=(activeCol().own[id]&&activeCol().own[id].qty)||0, enough=own>=q;
       var row=document.createElement("div"); row.className="deckrow";
