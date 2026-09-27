@@ -1277,6 +1277,26 @@
   .dbar .dl, .dchip .dl { font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
   .deckfocus { margin:0 0 8px; color:var(--ink-soft); font-size:.8rem; }
   .deckfocus button { margin-left:8px; }
+  .matchboard { max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:10px; min-height:calc(100dvh - 168px); }
+  .matchhalf { flex:1; display:flex; flex-direction:column; justify-content:center; gap:10px; padding:12px; border-radius:16px; background:var(--surface); border:1.5px solid var(--line); }
+  .matchhalf.foe { transform:rotate(180deg); }
+  .matchname { display:block; }
+  .matchname input { width:100%; border:0; background:transparent; color:var(--ink); font:700 1rem var(--font-display); text-align:center; }
+  .matchlife { display:flex; align-items:center; gap:8px; }
+  .matchlife button, .matchstep button { min-width:56px; min-height:52px; border-radius:14px; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font:800 1.6rem var(--font-display); cursor:pointer; }
+  .matchlife .mlnum { flex:1; text-align:center; }
+  .matchlife .mlnum b { display:block; font:800 3.2rem/1 var(--font-display); }
+  .matchlife .mlnum span, .matchstep span { display:block; font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .matchres { display:flex; gap:8px; }
+  .matchstep { flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); }
+  .matchstep b { font:800 1.3rem var(--font-display); }
+  .matchstep button { min-width:44px; min-height:44px; font-size:1.3rem; }
+  .matchmid { display:flex; flex-direction:column; gap:8px; padding:10px 12px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line); }
+  .matchrow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
+  .matchclock { font:800 1.8rem var(--font-mono); }
+  .matchclock.done { color:var(--el-Fire); }
+  .matchnote { margin:0; color:var(--ink-faint); font-size:.75rem; }
+  @media (min-width:900px){ .matchboard { min-height:0; } .matchlife .mlnum b { font-size:4rem; } }
   .deckadd { max-width:520px; margin-bottom:6px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
@@ -1950,6 +1970,7 @@
     <button class="tab" data-page="collection" data-icon="grid" title="Collection"><span class="tablabel">Collection</span></button>
     <button class="tab" data-page="missing" data-icon="sphere" title="Missing Cards"><span class="tablabel">Missing</span></button>
     <button class="tab" data-page="decks" data-icon="layers" title="Decks"><span class="tablabel">Decks</span></button>
+    <button class="tab menuonly" data-page="match" data-icon="life" title="Match"><span class="tablabel">Match</span></button>
     <button class="tab" id="desktopNavTrigger" data-icon="menu" type="button" aria-haspopup="true" aria-expanded="false" title="More"><span class="tablabel">More</span></button>
     <button class="tab menuonly" data-page="scan" data-icon="camera" title="Scan"><span class="tablabel">Scan</span></button>
     <button class="tab menuonly" data-page="wishlist" data-icon="star" title="Wishlist"><span class="tablabel">Wishlist</span></button>
@@ -2158,6 +2179,7 @@
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
+        <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
       </div>
     </div>
     <p class="qsub">Build a deck from the whole card pool. SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
@@ -2167,6 +2189,12 @@
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards, search by name or number…" autocomplete="off" /></label>
     <div class="decksug" id="deckSug" hidden></div>
     <div class="decklist" id="deckList"></div>
+  </section>
+
+  <section class="page" id="page-match">
+    <h2 class="sech">Match</h2>
+    <p class="qsub">For a game at the table. Life starts at 10. Material and Ingredient start at 0 and cannot go below 0. Night is shared. Everything stays on this device, so it works with no connection.</p>
+    <div class="matchboard" id="matchBoard"></div>
   </section>
 
   <section class="page" id="page-sealed">
@@ -6302,6 +6330,7 @@
     $("deckDelete").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Delete this deck?", message:"“"+d.name+"” will be removed.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.decks=decks().filter(function(x){return x.id!==d.id;}); STATE.activeDeck=(STATE.decks[0]||{}).id; save(); renderDecks(); }}); };
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
+    var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
     var si=$("deckSearch"), sug=$("deckSug");
     function closeSug(){ sug.hidden=true; sug.innerHTML=""; }
     si.addEventListener("input", function(){
@@ -6316,6 +6345,134 @@
     });
     document.addEventListener("click", function(e){ if(!e.target.closest(".deckadd") && !e.target.closest(".decksug")) closeSug(); });
   })();
+
+  // ---- Tabletop match tracker (offline, on this device) ----
+  var MATCH_KEY = "palvault-match";
+  var MATCH_CLOCK_MS = 30*60*1000;
+  var _matchTimer = null;
+  function matchClamp(n, lo, hi, fb){
+    n = Math.round(+n);
+    if(!isFinite(n)) n = fb;
+    if(n<lo) n=lo;
+    if(n>hi) n=hi;
+    return n;
+  }
+  function defaultMatch(){
+    return {
+      p1:{name:"You", life:10, material:0, ingredient:0},
+      p2:{name:"Opponent", life:10, material:0, ingredient:0},
+      night:false, round:1,
+      clockOn:false, clockRunning:false, clockLeft:MATCH_CLOCK_MS, clockEnd:0
+    };
+  }
+  function loadMatch(){
+    var d=defaultMatch(), raw=null;
+    try{ raw=lsGet(MATCH_KEY); }catch(e){ raw=null; }
+    if(!raw) return d;
+    try{
+      var o=JSON.parse(raw)||{};
+      ["p1","p2"].forEach(function(k){
+        var s=o[k]||{};
+        d[k].name=String(s.name!=null?s.name:d[k].name).slice(0,24);
+        d[k].life=matchClamp(s.life,0,99,10);
+        d[k].material=matchClamp(s.material,0,99,0);
+        d[k].ingredient=matchClamp(s.ingredient,0,99,0);
+      });
+      d.night=!!o.night;
+      d.round=matchClamp(o.round,1,99,1);
+      d.clockOn=!!o.clockOn;
+      d.clockRunning=!!o.clockRunning;
+      d.clockLeft=matchClamp(o.clockLeft,0,MATCH_CLOCK_MS,MATCH_CLOCK_MS);
+      d.clockEnd=+o.clockEnd||0;
+      if(d.clockRunning){
+        d.clockLeft=Math.max(0, (d.clockEnd||0)-Date.now());
+        if(d.clockLeft<=0){ d.clockRunning=false; d.clockEnd=0; d.clockLeft=0; }
+      }
+    }catch(e){ return defaultMatch(); }
+    return d;
+  }
+  function saveMatch(m){ try{ lsSet(MATCH_KEY, JSON.stringify(m)); }catch(e){} }
+  function fmtMatchClock(ms){
+    var sec=Math.max(0, Math.ceil((+ms||0)/1000));
+    var m=Math.floor(sec/60), s=sec%60;
+    return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+  }
+  function stopMatchTimer(){ if(_matchTimer){ clearInterval(_matchTimer); _matchTimer=null; } }
+  function paintMatchClock(){
+    var m=loadMatch(), el=$("matchClock"), go=$("matchClockGo");
+    if(m.clockRunning && m.clockLeft<=0){ m.clockRunning=false; m.clockEnd=0; saveMatch(m); }
+    if(el){ el.textContent=fmtMatchClock(m.clockLeft); el.classList.toggle("done", !!(m.clockOn && !m.clockRunning && m.clockLeft<=0)); }
+    if(go) go.textContent=m.clockRunning?"Pause":"Start";
+  }
+  function startMatchTimer(){ stopMatchTimer(); _matchTimer=setInterval(paintMatchClock, 250); }
+  function matchHalf(m, who, cls){
+    var p=m[who];
+    function step(act, label){
+      return '<div class="matchstep"><button type="button" data-act="'+act+'" data-who="'+who+'" data-d="-1" aria-label="Remove one '+label+'">−</button><div><b>'+p[act]+'</b><span>'+label+'</span></div><button type="button" data-act="'+act+'" data-who="'+who+'" data-d="1" aria-label="Add one '+label+'">+</button></div>';
+    }
+    return '<div class="matchhalf'+(cls?" "+cls:"")+'">'+
+      '<label class="matchname"><input data-who="'+who+'" value="'+esc(p.name)+'" maxlength="24" aria-label="'+(who==="p1"?"Your name":"Opponent name")+'" autocomplete="off"></label>'+
+      '<div class="matchlife"><button type="button" data-act="life" data-who="'+who+'" data-d="-1" aria-label="Lose a life">−</button><div class="mlnum"><b>'+p.life+'</b><span>Life</span></div><button type="button" data-act="life" data-who="'+who+'" data-d="1" aria-label="Gain a life">+</button></div>'+
+      '<div class="matchres">'+step("material","Material")+step("ingredient","Ingredient")+'</div>'+
+    '</div>';
+  }
+  function renderMatch(){
+    var board=$("matchBoard"); if(!board) return;
+    var m=loadMatch();
+    if(m.clockRunning && m.clockLeft<=0){ m.clockRunning=false; m.clockEnd=0; saveMatch(m); }
+    var clock = m.clockOn
+      ? '<span class="matchclock'+( !m.clockRunning && m.clockLeft<=0 ? " done":"")+'" id="matchClock">'+fmtMatchClock(m.clockLeft)+'</span><button type="button" class="tbtn" id="matchClockGo" data-act="clock-go">'+(m.clockRunning?"Pause":"Start")+'</button><button type="button" class="tbtn ghost" data-act="clock-reset">Reset clock</button>'
+      : '<span class="matchnote">Off until you need a round timer.</span>';
+    board.innerHTML =
+      matchHalf(m,"p2","foe")+
+      '<div class="matchmid">'+
+        '<div class="matchrow"><button type="button" class="tbtn" data-act="phase" aria-pressed="'+(m.night?"true":"false")+'">'+(m.night?"Night":"Day")+'</button>'+
+          '<div class="matchstep"><button type="button" data-act="round" data-d="-1" aria-label="Previous round">−</button><div><b>'+m.round+'</b><span>Round</span></div><button type="button" data-act="round" data-d="1" aria-label="Next round">+</button></div>'+
+          '<button type="button" class="tbtn ghost" data-act="reset">Reset</button></div>'+
+        '<div class="matchrow"><button type="button" class="tbtn'+(m.clockOn?"":" ghost")+'" data-act="clock-toggle" aria-pressed="'+(m.clockOn?"true":"false")+'">30-minute clock</button>'+clock+'</div>'+
+        '<p class="matchnote">Life starts at 10. Material and Ingredient start at 0 and stay at 0 or above. Day and night are shared. The clock is an optional 30-minute timer.</p>'+
+      '</div>'+
+      matchHalf(m,"p1","");
+    board.onclick=function(ev){
+      var t=ev.target.closest ? ev.target.closest("button") : null;
+      if(!t || !board.contains(t)) return;
+      var act=t.getAttribute("data-act"); if(!act) return;
+      var cur=loadMatch();
+      if(act==="life" || act==="material" || act==="ingredient"){
+        var who=t.getAttribute("data-who"), d=parseInt(t.getAttribute("data-d"),10)||0, pl=cur[who]; if(!pl) return;
+        if(act==="life") pl.life=matchClamp(pl.life+d,0,99,10);
+        else pl[act]=matchClamp(pl[act]+d,0,99,0);
+        saveMatch(cur); renderMatch(); return;
+      }
+      if(act==="phase"){ cur.night=!cur.night; saveMatch(cur); renderMatch(); return; }
+      if(act==="round"){ cur.round=matchClamp(cur.round+(parseInt(t.getAttribute("data-d"),10)||0),1,99,1); saveMatch(cur); renderMatch(); return; }
+      if(act==="clock-toggle"){
+        cur.clockOn=!cur.clockOn;
+        if(!cur.clockOn){ cur.clockRunning=false; cur.clockEnd=0; cur.clockLeft=MATCH_CLOCK_MS; }
+        saveMatch(cur); renderMatch(); return;
+      }
+      if(act==="clock-go"){
+        if(!cur.clockOn) return;
+        if(cur.clockRunning){ cur.clockLeft=Math.max(0, (cur.clockEnd||Date.now())-Date.now()); cur.clockRunning=false; cur.clockEnd=0; }
+        else { if(cur.clockLeft<=0) cur.clockLeft=MATCH_CLOCK_MS; cur.clockEnd=Date.now()+cur.clockLeft; cur.clockRunning=true; }
+        saveMatch(cur); renderMatch(); return;
+      }
+      if(act==="clock-reset"){ cur.clockRunning=false; cur.clockEnd=0; cur.clockLeft=MATCH_CLOCK_MS; saveMatch(cur); renderMatch(); return; }
+      if(act==="reset"){
+        openAsk({title:"Reset this match?", message:"Life goes back to 10, Material and Ingredient to 0, the round to 1 and the clock to 30:00. Names stay as they are.", confirmOnly:true, okText:"Reset", onOk:function(){
+          var fresh=defaultMatch(); fresh.p1.name=cur.p1.name; fresh.p2.name=cur.p2.name; saveMatch(fresh); renderMatch();
+        }});
+      }
+    };
+    Array.prototype.forEach.call(board.querySelectorAll(".matchname input"), function(inp){
+      inp.addEventListener("input", function(){
+        var cur=loadMatch(), who=inp.getAttribute("data-who");
+        if(cur[who]) cur[who].name=inp.value.slice(0,24);
+        saveMatch(cur);
+      });
+    });
+    if(m.clockOn && m.clockRunning) startMatchTimer(); else stopMatchTimer();
+  }
 
   // ---- Navigation ----
   function applyColMode(){
@@ -6362,6 +6519,8 @@
     if (p==="releases") renderReleases();
     if (p==="sealed") renderSealed();
     if (p==="decks") renderDecks();
+    if (p==="match") renderMatch();
+    else if(typeof stopMatchTimer==="function") stopMatchTimer();
     if (p==="account") renderAccount();
     if (p==="news") { renderNews(); renderTcgNews(); }
     if (p==="key") renderKey();
@@ -6423,7 +6582,7 @@
   // picked at onboarding (tap order) until the user reorders them in Settings.
   // Settings, Account and Contact are pinned to the row under More's grid, so they are not reorderable.
   var FIXED_NAV=["home","scan","collection"], MORE_UTIL=["settings","account","contact"];
-  var NAV_SLOTS_BY_INTENT={ collector:["missing","wishlist"], player:["decks","wishlist"], market:["portfolio","sealed"] };
+  var NAV_SLOTS_BY_INTENT={ collector:["missing","wishlist"], player:["decks","match"], market:["portfolio","sealed"] };
   function defaultNavSlots(){ var first=(SETTINGS.onboardIntents||[]).filter(function(k){ return NAV_SLOTS_BY_INTENT[k]; })[0]; return NAV_SLOTS_BY_INTENT[first||"collector"]; }
   function orderedNavPages(){ var all=navPages().filter(function(pg){return FIXED_NAV.indexOf(pg.key)===-1 && MORE_UTIL.indexOf(pg.key)===-1;}), order=[]; (SETTINGS.menuOrderCustom?(SETTINGS.menuOrder||[]):defaultNavSlots()).forEach(function(k){if(all.some(function(x){return x.key===k;})&&order.indexOf(k)===-1)order.push(k);}); all.forEach(function(pg){if(order.indexOf(pg.key)===-1)order.push(pg.key);}); return order.map(function(k){return all.filter(function(x){return x.key===k;})[0];}).filter(Boolean); }
   function primaryNavKeys(){ return FIXED_NAV.concat(orderedNavPages().slice(0,2).map(function(pg){return pg.key;})); }
