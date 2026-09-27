@@ -285,6 +285,12 @@ test('deck tools and paid amounts follow Play and Track value unless Settings ov
   box.SETTINGS.onboardIntents = [];
   assert.equal(box.playerToolsOn(), true);
   assert.equal(box.trackPaidOn(), true);
+  const decks = source.indexOf('>Decks</div>');
+  const prices = source.indexOf('Prices &amp; markets');
+  const display = source.indexOf('Display &amp; theme');
+  assert.ok(decks > 0 && decks < prices, 'Deck tools have their own section, above Prices & markets');
+  assert.ok(source.indexOf('id="setPlayerTools"') > decks && source.indexOf('id="setPlayerTools"') < prices);
+  assert.ok(source.indexOf('id="setTrackPaid"') > prices && source.indexOf('id="setTrackPaid"') < display);
 });
 
 test('a chosen Pal lists every printing, including ones already collected', () => {
