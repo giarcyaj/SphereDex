@@ -196,11 +196,22 @@ const news = (over) => ({ title: 'T', date: 'Sep 25, 2026', link: 'https://x.tes
 
 // ---- behaviour ----------------------------------------------------------------------------
 
-test('featTime parses full dates, month-years, and rejects junk', () => {
+test('featTime parses full dates, month-years, ISO dates, and rejects junk', () => {
   const a = app();
   assert.equal(a.api.time('Oct 30, 2026'), new Date(2026, 9, 30).getTime());
   assert.equal(a.api.time('Dec 2026'), new Date(2026, 11, 28).getTime());
+  assert.equal(a.api.time('2026-09-11'), new Date(2026, 8, 11).getTime());
   assert.equal(a.api.time('nonsense'), Infinity);
+});
+
+test('the news slide is the newest official post, not an older item listed first', () => {
+  const a = app({ visibleNews: () => [
+    news({ title: 'Sleeve date', date: 'Aug 28, 2026', source: 'Official site' }),
+    news({ title: 'Eternal Ascent preorders', date: '2026-09-11', source: 'Official site' }),
+    news({ title: 'A newer video', date: '2026-09-12', source: 'YouTube' }),
+  ] });
+  assert.equal(a.api.slides()[0].kind, 'news');
+  assert.equal(a.api.slides()[0].title, 'Eternal Ascent preorders');
 });
 
 test('official news becomes slide 1 and maps its set art by title', () => {

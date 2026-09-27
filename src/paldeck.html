@@ -1763,6 +1763,9 @@
 
   /* Collector mode, hide every price / value surface */
   .collector .priceui{ display:none !important; }
+  /* Deck tools follow Play. Paid amounts follow Track value. Both start off until that choice, or a Settings switch, turns them on. */
+  html:not(.playertools) .deckui{ display:none !important; }
+  html:not(.trackpaid) .paidui{ display:none !important; }
   .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval, .collector #curSel{ display:none !important; }
   /* Graded / PSA slab tracking is a value feature, so it follows the prices toggle: hidden in the no-prices collector mode. */
   .collector .tab[data-page="graded"], .collector .navitem[data-page="graded"],
@@ -1980,8 +1983,8 @@
     <button class="tab active" data-page="home" data-icon="home" title="Home"><span class="tablabel">Home</span></button>
     <button class="tab" data-page="collection" data-icon="grid" title="Collection"><span class="tablabel">Collection</span></button>
     <button class="tab" data-page="missing" data-icon="sphere" title="Missing Cards"><span class="tablabel">Missing</span></button>
-    <button class="tab" data-page="decks" data-icon="layers" title="Decks"><span class="tablabel">Decks</span></button>
-    <button class="tab menuonly" data-page="match" data-icon="life" title="Match"><span class="tablabel">Match</span></button>
+    <button class="tab deckui" data-page="decks" data-icon="layers" title="Decks"><span class="tablabel">Decks</span></button>
+    <button class="tab menuonly deckui" data-page="match" data-icon="life" title="Match"><span class="tablabel">Match</span></button>
     <button class="tab" id="desktopNavTrigger" data-icon="menu" type="button" aria-haspopup="true" aria-expanded="false" title="More"><span class="tablabel">More</span></button>
     <button class="tab menuonly" data-page="scan" data-icon="camera" title="Scan"><span class="tablabel">Scan</span></button>
     <button class="tab menuonly" data-page="wishlist" data-icon="star" title="Wishlist"><span class="tablabel">Wishlist</span></button>
@@ -2015,7 +2018,7 @@
       <section class="homecard priceui" id="homeMarket"></section>
       <section class="homecard sphere" id="homeSphere"></section>
       <section class="homecard" id="homeClosest"></section>
-      <section class="homecard deck" id="homeDeck"></section>
+      <section class="homecard deck deckui" id="homeDeck"></section>
       <section class="homecard wishlist" id="homeWishlist"></section>
     </div>
   </section>
@@ -2029,7 +2032,7 @@
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="set">Closest set</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="rarity">Rarity</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="pal">Pal</button>
-      <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="deck">Deck</button>
+      <button class="missingtab deckui" type="button" role="tab" aria-selected="false" data-goal="deck">Deck</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="wishlist">Wishlist</button>
     </div>
     <div class="missingsort"><select id="missingSort" aria-label="Sort missing cards"><option value="priority">Sort: goal priority</option><option value="number">Sort: card number</option><option value="price">Sort: market estimate</option><option value="wish">Sort: wishlist first</option></select></div>
@@ -2352,6 +2355,14 @@
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Show prices &amp; values</div><div class="sdesc">On: values, market prices and eBay listings appear next to your cards. Off: a clean binder with no prices anywhere. To look up prices, SphereDex sends card names and numbers (including the cards you own) and your market to its server. Lookups are not linked to your account.</div></div>
         <label class="switch"><input type="checkbox" id="setPrices"><span class="track"></span></label>
+      </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Deck tools</div><div class="sdesc">Decks, legality, deck stats and the match tracker. On when you choose Play. Off for everyone else until you turn it on here.</div></div>
+        <label class="switch"><input type="checkbox" id="setPlayerTools"><span class="track"></span></label>
+      </div>
+      <div class="setrow">
+        <div class="setinfo"><div class="stitle">Paid amount</div><div class="sdesc">Remember what you paid for a copy, a slab or a sealed item, and show the cost and the gain or loss. On when you choose Track value. Off for everyone else until you turn it on here.</div></div>
+        <label class="switch"><input type="checkbox" id="setTrackPaid"><span class="track"></span></label>
       </div>
       <div class="setrow priceui">
         <div class="setinfo"><div class="stitle">Collection price mode</div><div class="sdesc">Which price your collection is valued at. <b>Live listings</b> is the average of the lowest current listings, refreshed automatically every day. <b>Last sold</b> is the average of recent sold prices, refreshed when you open the app and whenever you tap Refresh last sold on Home. A <b>≈</b> beside a price means it is a converted estimate, not a native market observation.</div></div>
@@ -2708,7 +2719,7 @@
           <input id="scanCert" type="text" inputmode="numeric" autocomplete="off" placeholder="Optional" aria-label="Certificate number">
         </div>
       </div>
-      <div class="scanfield priceui" id="scanPaidField">
+      <div class="scanfield paidui" id="scanPaidField">
         <div class="scanlab">Paid each</div>
         <input id="scanPaid" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="Optional" aria-label="Amount paid per copy">
       </div>
@@ -3221,6 +3232,7 @@
   var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   // "Oct 30, 2026" -> that day; "Dec 2026" -> late that month; anything else sorts last.
   function monDateTime(str){ var s=String(str||""), mi=function(m){ var i="janfebmaraprmayjunjulaugsepoctnovdec".indexOf(m.toLowerCase()); return (i>=0 && i%3===0)?i/3:-1; };
+    var iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s); if(iso){ var id=new Date(+iso[1], +iso[2]-1, +iso[3]); if(!isNaN(id.getTime())) return id.getTime(); }
     var m=/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/.exec(s); if(m && mi(m[1])>=0) return new Date(+m[3], mi(m[1]), +m[2]).getTime();
     var mo=/([A-Za-z]{3})[a-z]*\s+(\d{4})/.exec(s); if(mo && mi(mo[1])>=0) return new Date(+mo[2], mi(mo[1]), 28).getTime(); return Infinity; }
   function _pillDate(s){ if(!s) return null; var d=new Date(String(s).length<=10?(s+"T00:00:00Z"):s); return isNaN(d.getTime())?null:d; }
@@ -4146,14 +4158,14 @@
             [["Near Mint","NM"],["Lightly Played","LP"],["Moderately Played","MP"],["Heavily Played","HP"],["Damaged","D"]].map(function(p){return '<option value="'+p[0]+'"'+(p[0]===s.cond?' selected':'')+'>'+p[1]+' · '+p[0]+'</option>';}).join("")+
           '</select></div>'+
           '<div class="field qtyf"><label>Copies</label><input id="addQty" type="number" min="1" value="1"></div>'+
-          '<div class="field priceui"><label for="addPaid">Paid each</label><input id="addPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
+          '<div class="field paidui"><label for="addPaid">Paid each</label><input id="addPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
           '<button class="btn primary addbtn" id="addRawBtn" type="button">'+icon('plus')+' Add</button>'+
         '</div>'+
         '<div class="addgrid" id="gradedAdd" hidden>'+
           '<div class="field"><label>Grader</label><select id="fGrader">'+GRADERS.map(function(x){return '<option'+(x===(SETTINGS.defaultGrader||"PSA")?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
           '<div class="field"><label>Grade</label><select id="fGradeSel">'+GRADES.map(function(x){return '<option'+(x==="10"?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
           '<div class="field qtyf"><label>Copies</label><input id="addGQty" type="number" min="1" value="1"></div>'+
-          '<div class="field priceui"><label for="addGPaid">Paid</label><input id="addGPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
+          '<div class="field paidui"><label for="addGPaid">Paid</label><input id="addGPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
           '<button class="btn primary addbtn" id="addGradedBtn" type="button">'+icon('plus')+' Add</button>'+
         '</div>'+
         '<div class="ownline" id="ownLine" hidden></div>'+
@@ -4223,12 +4235,12 @@
         host.innerHTML+='<div class="editioncounts"><p>Edit your raw-copy totals by edition. Older unlabelled copies are kept under Not specified.</p>'+["1","2","unknown"].map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+counts[ed]+'"></div>';}).join('')+'</div>';
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
       }
-      if(SETTINGS.mode!=="collector"){
+      if(trackPaidOn()){
         var paidBits=["1","2","unknown"].filter(function(ed){ return counts[ed]; }).map(function(ed){
           var cur=(s.paidRaw && s.paidRaw[ed]!=null && s.paidRaw[ed]!=="") ? s.paidRaw[ed] : "";
           return '<div class="field"><label for="paidEdition'+ed+'">Paid each · '+rawEditionLabel(ed)+'</label><input id="paidEdition'+ed+'" data-paid-edition="'+ed+'" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+esc(String(cur))+'"></div>';
         }).join("");
-        if(paidBits) host.insertAdjacentHTML("beforeend", '<div class="editioncounts priceui"><p>Optional amount paid per copy. Leave it blank when you did not record a price. Zero means the copy was free.</p>'+paidBits+'</div>');
+        if(paidBits) host.insertAdjacentHTML("beforeend", '<div class="editioncounts paidui"><p>Optional amount paid per copy. Leave it blank when you did not record a price. Zero means the copy was free.</p>'+paidBits+'</div>');
         Array.prototype.forEach.call(host.querySelectorAll("[data-paid-edition]"), function(input){
           input.onchange=function(){
             var key=input.getAttribute("data-paid-edition"), n=paidNumber(input.value);
@@ -4279,7 +4291,7 @@
     $("addRawBtn").onclick=function(){
       var n=Math.max(1,parseInt($("addQty").value,10)||1), cond=$("fCond").value, colId=addTargetCol();
       var paid=paidNumber(($("addPaid")||{}).value);
-      function applyPaid(e){ if(paid==null || SETTINGS.mode==="collector") return; if(!e.paidRaw || typeof e.paidRaw!=="object") e.paidRaw={}; e.paidRaw[rawEditionKey(detailEdition())]=paid; }
+      function applyPaid(e){ if(paid==null || !trackPaidOn()) return; if(!e.paidRaw || typeof e.paidRaw!=="object") e.paidRaw={}; e.paidRaw[rawEditionKey(detailEdition())]=paid; }
       if(colId===STATE.active){ changeRaw(s,n,detailEdition()); applyPaid(s); $("fQty").value=s.qty; s.cond=cond; updateSum(); persist(); paintBubbles(); paintOwn(); }
       else { var e=colOwnEntry(colId); changeRaw(e,n,detailEdition()); applyPaid(e); e.cond=cond; save(); render(); buildColSel(); }
       toast(multiAsk ? ("Added "+n+" to "+colNameOf(colId)) : ("Added "+n+" raw cop"+(n>1?"ies":"y")));
@@ -4287,7 +4299,7 @@
     $("addGradedBtn").onclick=function(){
       var n=Math.max(1,parseInt($("addGQty").value,10)||1), gr=$("fGrader").value, gd=$("fGradeSel").value, colId=addTargetCol();
       var guess=(s.gradeGuide&&s.gradeGuide[gd])||0;
-      function newSlab(){ var g={grader:gr,grade:gd,value:guess}, ed=detailEdition(); if(ed!=="unknown") g.edition=ed; var paid=paidNumber(($("addGPaid")||{}).value); if(paid!=null && SETTINGS.mode!=="collector") g.paid=paid; return g; }
+      function newSlab(){ var g={grader:gr,grade:gd,value:guess}, ed=detailEdition(); if(ed!=="unknown") g.edition=ed; var paid=paidNumber(($("addGPaid")||{}).value); if(paid!=null && trackPaidOn()) g.paid=paid; return g; }
       if(colId===STATE.active){ for(var i=0;i<n;i++) gwork.push(newSlab()); renderGrades(); updateSum(); persist(); paintBubbles(); paintOwn(); }
       else { var e=colOwnEntry(colId); for(var j=0;j<n;j++) e.graded.push(newSlab()); save(); render(); buildColSel(); }
       toast("Added "+n+" "+gr+" "+gd+(multiAsk?(" to "+colNameOf(colId)):""));
@@ -4311,7 +4323,7 @@
           '<select class="gg gGrade">'+GRADES.map(function(x){return '<option'+(x===g.grade?' selected':'')+'>'+x+'</option>';}).join("")+'</select>'+
           (canEdition(c)?'<select class="gEdition" aria-label="Slab edition">'+["unknown","1","2"].map(function(ed){return '<option value="'+ed+'"'+(rawEditionKey(g.edition)===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>';}).join('')+'</select>':'')+
           '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="Value '+esc(CUR.sym)+'" value="'+(g.value||0)+'">'+
-          '<input class="gv gPaid priceui" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Paid" aria-label="Amount paid" value="'+(g.paid!=null && g.paid!=="" ? g.paid : "")+'">'+
+          '<input class="gv gPaid paidui" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Paid" aria-label="Amount paid" value="'+(g.paid!=null && g.paid!=="" ? g.paid : "")+'">'+
           '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>';
         row.querySelector(".gGrader").onchange=function(){ g.grader=this.value; };
         row.querySelector(".gGrade").onchange=function(){ g.grade=this.value; };
@@ -4986,13 +4998,30 @@
     });
   }
   // ---- Collector / Trader mode ----
+  function playerToolsOn(){
+    if(typeof SETTINGS.playerTools==="boolean") return SETTINGS.playerTools;
+    return (SETTINGS.onboardIntents||[]).indexOf("player")!==-1;
+  }
+  function trackPaidOn(){
+    if(typeof SETTINGS.trackPaid==="boolean") return SETTINGS.trackPaid;
+    return (SETTINGS.onboardIntents||[]).indexOf("market")!==-1;
+  }
+  function applyFeatureFlags(){
+    document.documentElement.classList.toggle("playertools", playerToolsOn());
+    document.documentElement.classList.toggle("trackpaid", trackPaidOn());
+    var pt=$("setPlayerTools"); if(pt) pt.checked=playerToolsOn();
+    var tp=$("setTrackPaid"); if(tp) tp.checked=trackPaidOn();
+  }
   function applyMode(){
     document.documentElement.classList.toggle("collector", SETTINGS.mode==="collector");
     var pc=$("setPrices"); if(pc) pc.checked=(SETTINGS.mode!=="collector");
+    applyFeatureFlags();
   }
   function finishOnboard(intents, firstAction){
     var hasMarket=intents.indexOf("market")!==-1;
     SETTINGS.mode=hasMarket?"trader":"collector";
+    SETTINGS.playerTools=intents.indexOf("player")!==-1;
+    SETTINGS.trackPaid=hasMarket;
     SETTINGS.onboardIntents=intents.slice(); SETTINGS.onboardFirstAction=firstAction||"home";
     var reg=$("obRegion"), cur=$("obCurrency");
     if(hasMarket && reg && reg.value){
@@ -5481,13 +5510,13 @@
     var b=collectionCostBasis();
     function sgn(n){ return n>0.005?"+":(n<-0.005?"−":""); }
     function dir(n){ return n>0.005?"up":(n<-0.005?"down":"flat"); }
-    if(!b.copies) return '<div class="pcost priceui"><div class="prow"><span>Cost basis</span><b>Not recorded</b></div><p class="matchnote">Add an optional paid amount on a raw copy, a slab or a sealed item. A blank stays unset, so it is not counted as zero.</p></div>';
+    if(!b.copies) return '<div class="pcost paidui"><div class="prow"><span>Cost basis</span><b>Not recorded</b></div><p class="matchnote">Add an optional paid amount on a raw copy, a slab or a sealed item. A blank stays unset, so it is not counted as zero.</p></div>';
     var extra="";
     if(b.best && b.worst && b.copies>1 && b.best.label!==b.worst.label){
       extra='<div class="prow"><span>Best</span><b>'+esc(b.best.label)+' '+sgn(b.best.gain)+money(Math.abs(b.best.gain))+'</b></div>'+
             '<div class="prow"><span>Worst</span><b>'+esc(b.worst.label)+' '+sgn(b.worst.gain)+money(Math.abs(b.worst.gain))+'</b></div>';
     }
-    return '<div class="pcost priceui"><div class="prow"><span>Cost basis · '+b.copies+' priced</span><b>'+money(b.cost)+'</b></div>'+
+    return '<div class="pcost paidui"><div class="prow"><span>Cost basis · '+b.copies+' priced</span><b>'+money(b.cost)+'</b></div>'+
       '<div class="prow"><span>Value of those</span><b>'+money(b.value)+'</b></div>'+
       '<div class="prow"><span>Gain / loss</span><b class="gain '+dir(b.gain)+'">'+sgn(b.gain)+money(Math.abs(b.gain))+'</b></div>'+extra+'</div>';
   }
@@ -5706,7 +5735,7 @@
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
-          '<div class="field priceui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
+          '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
           '<div class="sdbtnrow" style="display:flex;gap:8px;flex-wrap:wrap">'+
             (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button" style="flex:1 1 auto">'+icon('refresh')+' Refresh prices</button>':'')+
             stockAlertBtn(p)+
@@ -6305,8 +6334,11 @@
   }
   function selectedPalMissingGoal(){
     var name=missingChoice.pal; if(!name) return closestPalMissingGoal();
-    var cards=CARDS.filter(function(c){ return c.kind==="Pal"&&palKey(c)===name; }), items=missingItems(cards), total=cards.length, owned=total-items.length;
-    return {name:name,cards:cards,total:total,owned:owned,remaining:items.length,percent:pctOf(owned,total),items:items};
+    // Every printing stays on the page, owned or not, so the variants of that Pal are all visible.
+    var cards=CARDS.filter(function(c){ return c.kind==="Pal"&&palKey(c)===name; });
+    var items=cards.map(function(c){ return {card:c, need:1}; });
+    var owned=cards.filter(ownsForCompletion).length;
+    return {name:name,cards:cards,total:cards.length,owned:owned,remaining:cards.length-owned,percent:pctOf(owned,cards.length),items:items};
   }
   function deckMissingGoal(){
     var d=activeDeck(); if(!d) return null;
@@ -6357,6 +6389,7 @@
     }});
   }
   function renderMissing(){
+    if(missingGoal==="deck" && !playerToolsOn()) missingGoal="sphere";
     var hero=$("missingHero"), list=$("missingList"); if(!hero||!list) return;
     var data=activeMissingGoal(), copy=missingCopy(missingGoal,data), items=(data&&data.items)||[];
     var sort=$("missingSort"); if(sort) sort.value=missingSort;
@@ -6388,11 +6421,13 @@
       if(missingSort==="wish") return (isWished(b.card.id)?1:0)-(isWished(a.card.id)?1:0) || a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
       return (isWished(b.card.id)?1:0)-(isWished(a.card.id)?1:0) || mktOf(b.card.id)-mktOf(a.card.id) || a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
     }).forEach(function(item){
-      var c=item.card, wished=isWished(c.id), row=document.createElement("article"); row.className="missingrow";
-      var tag=missingGoal==="deck"?"NEED "+item.need:(wished?"WISHLISTED":(missingGoal==="sphere"?"NEXT SPHERE":(missingGoal==="set"?"SET GOAL":(missingGoal==="rarity"?"RARITY GOAL":(missingGoal==="pal"?"PAL GOAL":(missingGoal==="master"?"MISSING":"WISHLIST"))))));
+      var c=item.card, wished=isWished(c.id), row=document.createElement("article"); row.className="missingrow"; row.setAttribute("data-cid", c.id);
       var ownedH = (typeof ownsForCompletion==="function" ? ownsForCompletion(c) : false);
-      var deckOn = !!(activeDeck() && activeDeck().cards && activeDeck().cards[c.id]);
-      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button><button class="missact '+(deckOn?"on":"")+'" type="button" aria-label="'+(deckOn?"In deck · open deck":"Add to deck")+'" title="'+(deckOn?"In deck · open deck":"Add to deck")+'">'+icon("layers")+'</button></div></div>';
+      var tag=missingGoal==="deck"?"NEED "+item.need:(missingGoal==="pal" && ownedH?"COLLECTED":(wished?"WISHLISTED":(missingGoal==="sphere"?"NEXT SPHERE":(missingGoal==="set"?"SET GOAL":(missingGoal==="rarity"?"RARITY GOAL":(missingGoal==="pal"?"PAL GOAL":(missingGoal==="master"?"MISSING":"WISHLIST")))))));
+      if(missingGoal==="pal" && ownedH) row.classList.add("collected");
+      var deckOn = playerToolsOn() && !!(activeDeck() && activeDeck().cards && activeDeck().cards[c.id]);
+      var deckBtn = playerToolsOn() ? '<button class="missact '+(deckOn?"on":"")+'" type="button" aria-label="'+(deckOn?"In deck · open deck":"Add to deck")+'" title="'+(deckOn?"In deck · open deck":"Add to deck")+'">'+icon("layers")+'</button>' : '';
+      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+(tag==="COLLECTED"?" collected":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button>'+deckBtn+'</div></div>';
       row.querySelector("img").onclick=function(){ openDetail(c); }; row.querySelector(".mn").onclick=function(){ openDetail(c); };
       var acts=row.querySelectorAll(".missact"); var collBtn=acts[0], wish=acts[1], deckAdd=acts[2];
       if(collBtn) collBtn.onclick=function(){
@@ -6405,7 +6440,7 @@
         try{
           var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,pctOf(data2.owned,data2.total)):0;
           var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
-          var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+          var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
           var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
         }catch(_e){}
         try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
@@ -6671,6 +6706,7 @@
   function showPage(p, _pop){
     // Graded is a value feature; in the no-prices collector mode fall back to the plain collection view.
     if(p==="graded" && SETTINGS.mode==="collector") p="collection";
+    if((p==="decks" || p==="match") && !playerToolsOn()) p="home";
     // Wishlist, Favourites & Graded are modes of the collection page, so they inherit its search / sort / filters.
     var virtual = (p==="favourites" || p==="graded" || p==="wishlist" || p==="owned");
     var real = virtual ? "collection" : p;
@@ -6757,7 +6793,7 @@
   });
   // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
   function closeNavMenu(){ var l=$("navList"); if(l) l.hidden=true; [$("navTrigger"),$("desktopNavTrigger")].forEach(function(t){ if(t) t.setAttribute("aria-expanded","false"); }); }
-  function navPages(){ var all=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){ var p=tab.getAttribute("data-page"); if(!p || p==="account") return; all.push({key:p,icon:tab.getAttribute("data-icon"),label:(tab.querySelector(".tablabel")||{}).textContent||p}); }); return all; }
+  function navPages(){ var all=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){ var p=tab.getAttribute("data-page"); if(!p || p==="account") return; if(!playerToolsOn() && (p==="decks" || p==="match")) return; all.push({key:p,icon:tab.getAttribute("data-icon"),label:(tab.querySelector(".tablabel")||{}).textContent||p}); }); return all; }
   // Home, Add and Cards are always in the bottom bar. The two slots after them default to the first interest
   // picked at onboarding (tap order) until the user reorders them in Settings.
   // Settings, Account and Contact are pinned to the row under More's grid, so they are not reorderable.
@@ -6880,7 +6916,7 @@
     (BROWSE_EXPANSIONS||[]).forEach(function(g){ var s=globalTextScore(q,g.name+" "+g.release); if(s) add("Set",g.name,"Set progress and missing cards","calendar",s+3,function(){openSetGroup(g.sets,"all");}); });
     SET_ORDER.forEach(function(k){ var nm=(SETS[k]||{}).name||k, s=globalTextScore(q,nm+" "+k); if(s) add("Set",nm,k,"calendar",s,function(){openSet(k,"all");}); });
     SEALED.forEach(function(p){ var s=globalTextScore(q,p.name+" "+p.sub+" "+p.set); if(s) add("Sealed",p.name,p.sub||p.set||"Sealed product","box",s,function(){openSealedDetail(p);}); });
-    decks().forEach(function(d){ var s=globalTextScore(q,d.name); if(s) add("Deck",d.name,"Your deck","layers",s,function(){STATE.activeDeck=d.id;save();showPage("decks");}); });
+    if(playerToolsOn()) decks().forEach(function(d){ var s=globalTextScore(q,d.name); if(s) add("Deck",d.name,"Your deck","layers",s,function(){STATE.activeDeck=d.id;save();showPage("decks");}); });
     (STATE.cols||[]).forEach(function(c){ var s=globalTextScore(q,c.name); if(s) add("Collection",c.name,"This device","grid",s,function(){switchCol(c.id);showPage("collection");}); });
     (typeof _newsList!=="undefined"?_newsList:[]).forEach(function(n){ var title=decodeEntities(n.title||""), s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,(n.date&&dayLabel(n.date))||n.source||"Palworld TCG news","news",s,function(){showPage("news");}); });
     (_tcgNewsList||[]).forEach(function(n){ var title=n.title||"", s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,tcgNewsDateLabel(n.published_at)||"Palworld TCG","news",s,function(){showPage("news");}); });
@@ -7293,7 +7329,7 @@
       var tint = (g.hero && g.hero.els && g.hero.els.length) ? artTint(g.hero) : null;
       var haveArt = !!PAL_ART[g.name];
       el.innerHTML = '<span class="palart palart-pal"'+(tint ? ' style="--_pal:'+elVar(tint)+'"' : "")+'>' +
-          (palImgSrc(g) ? '<img src="'+palImgSrc(g)+'" alt="'+esc(g.name)+'" loading="lazy">' : '<span style="display:grid;place-items:center;width:100%;height:100%;color:var(--ink-faint);font-size:.72rem">No art yet</span>') +
+          (palImgSrc(g) ? '<img src="'+palImgSrc(g)+'" alt="'+esc(g.name)+'" loading="lazy">' : '<span style="display:grid;place-items:center;width:100%;height:100%;color:var(--ink-faint);font-size:.72rem">no cards yet</span>') +
           '<span class="palpct">'+g.owned+"/"+g.total+'</span>' +
           (g.total && g.owned >= g.total ? '<span class="paldone">'+icon('check')+'</span>' : '') + '</span>' +
         '<div class="palname">'+esc(g.name)+'</div>' +
@@ -7340,7 +7376,7 @@
         var hasArt=!!PAL_ART[g.name];
         var sub=(paldexLabel(g.name)?paldexLabel(g.name)+" · ":"")+ (g.total? (g.owned+"/"+g.total+" printings"):"no printings");
         var img=palImgSrc(g)|| (g.hero?imgSrc(g.hero):"");
-        return '<div class="palsugrow" role="option" data-pal="'+esc(g.name)+'"><img src="'+esc(img)+'" alt=""><div style="min-width:0"><div class="palsugname">'+hiName(g.name, qi.value.trim())+'</div><div class="palsugmeta">'+esc(sub)+'</div></div><span class="palsugno">'+(hasArt?"":"no art")+'</span></div>';
+        return '<div class="palsugrow" role="option" data-pal="'+esc(g.name)+'"><img src="'+esc(img)+'" alt=""><div style="min-width:0"><div class="palsugname">'+hiName(g.name, qi.value.trim())+'</div><div class="palsugmeta">'+esc(sub)+'</div></div><span class="palsugno">'+(hasArt?"":"no cards yet")+'</span></div>';
       }).join("");
       Array.prototype.forEach.call(box.querySelectorAll(".palsugrow"), function(el){
         el.addEventListener("mousedown", function(e){ e.preventDefault(); var name=el.getAttribute("data-pal"); qi.value=name; paldexQuery=name; renderPaldex(); palSugClose(); qi.focus(); });
@@ -7523,6 +7559,8 @@
   function featIsX(n){
     return !!n && (/^x:|^x\b/i.test(String(n.source||"")) || /^https?:\/\/(www\.)?(x|twitter)\.com\//i.test(String(n.link||"")) || /pbs\.twimg\.com/i.test(String(n.image||"")));
   }
+  // Seed items have no source and count as official. YouTube and X do not.
+  function featOfficial(n){ if(!n || featIsX(n)) return false; var src=String(n.source||""); return !src || /official/i.test(src); }
   // A reveal must say so or carry card-list art. Every official-site image lives on a
   // palworld-official-cardgame host, so the host name alone proves nothing.
   function featIsReveal(n){
@@ -7538,9 +7576,18 @@
     live.sort(function(a,b){ return liveRank(b)-liveRank(a) || SET_ORDER.indexOf(a)-SET_ORDER.indexOf(b); });
     var liveArt=live.filter(function(k){ return !!((SET_META[k]||{}).art); });
     var list=(typeof visibleNews==="function"?visibleNews():[]);
+    // Newest first. ISO dates and "Sep 11, 2026" both count; an unreadable date stays in its original place.
+    list=list.slice().sort(function(a,b){
+      var ta=featTime(a&&a.date), tb=featTime(b&&b.date);
+      if(ta===tb) return 0;
+      if(ta===Infinity) return 1;
+      if(tb===Infinity) return -1;
+      return tb-ta;
+    });
     // 1 - latest official news (source "official"; seed items have no source and count as official)
     var official=null;
-    for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; official=n; break; }
+    for(var i=0;i<list.length;i++){ if(featOfficial(list[i])){ official=list[i]; break; } }
+    if(!official) for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; official=n; break; }
     if(!official && list.length) official=list[0];
     // 2 - latest X post that carries an image
     var xImage=null;
@@ -7882,7 +7929,7 @@
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
     var ownedN=CARDS.filter(function(c){ return has(o(c.id)); }).length, pricedPct=pctOf(ownedN-estimateCount, ownedN);
     var marketDetail=marketBasis+(estimateCount?" · "+estimateCount+" estimated":" · native market data");
-    try{ var spent=collectionCostBasis(); if(spent.copies){ var cg=spent.gain; marketDetail+=" · "+(cg>0.005?"+":(cg<-0.005?"−":""))+money(Math.abs(cg))+" vs cost"; } }catch(e){}
+    try{ if(trackPaidOn()){ var spent=collectionCostBasis(); if(spent.copies){ var cg=spent.gain; marketDetail+=" · "+(cg>0.005?"+":(cg<-0.005?"−":""))+money(Math.abs(cg))+" vs cost"; } } }catch(e){}
     $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">Collection value</div></div><div class="hcvalue">'+money(value)+'<small>'+esc(marketDetail)+'</small></div></div><div class="hctrack" title="'+pricedPct+'% of your cards priced from market data"><span style="width:'+pricedPct+'%"></span></div><div class="hcfoot"><span>'+esc(moveText)+'</span><button class="homeaction" type="button">View market</button></div>';
     $("homeCollection").onclick=openAllCards; $("homeCollection").style.cursor="pointer"; $("homeCollection").querySelector("button").onclick=function(e){ e.stopPropagation(); openAllCards(); };
     $("homeSphere").onclick=function(){ showPage("rewards"); }; $("homeSphere").style.cursor="pointer"; (function(){ var b=$("homeSphere").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); showPage("rewards"); }; })();
@@ -8112,9 +8159,19 @@
     { date:"2026", title:"Booster 02 & Starter Set 01 announced", summary:"The next products are confirmed with preorders open, they'll appear in SphereDex once the card list is published.", link:OFFICIAL_NEWS },
     { date:"2026", title:"Event promos in circulation", summary:"Promo cards like Lamball “My First Pal” and Soul promos are handed out at demos, shops and conventions.", link:OFFICIAL_NEWS }
   ];
+  function newsByDate(list){
+    return (list||[]).slice().sort(function(a,b){
+      var ta=monDateTime(a&&a.date), tb=monDateTime(b&&b.date);
+      if(ta===tb) return 0;
+      if(ta===Infinity) return 1;
+      if(tb===Infinity) return -1;
+      return tb-ta;
+    });
+  }
   function renderNews(){
     var el=$("newsList"); if(!el) return;
     function paint(list, live){
+      list=newsByDate(list);
       $("newsNote").innerHTML = live
         ? 'The latest Palworld TCG headlines, refreshed automatically.'
         : 'A curated shortlist of Palworld TCG highlights.';
@@ -8144,7 +8201,7 @@
   var _newsCache = (function(){ try{ var d=JSON.parse(lsGet(NEWS_LS)||"null");
     if(d && d.items && d.items.length && (Date.now()-(+d.at||0))<NEWS_TTL) return d.items; }catch(e){} return null; })();
   function saveNewsCache(items){ try{ lsSet(NEWS_LS, JSON.stringify({at:Date.now(), items:items.slice(0,20)})); }catch(e){} }
-  var _newsList = (_newsCache||NEWS_SEED).slice();
+  var _newsList = newsByDate(_newsCache||NEWS_SEED);
   // Feed titles/summaries arrive HTML-entity-encoded (e.g. &#038; , &#8230;); decode before we re-escape for display.
   function decodeEntities(s){ var t=document.createElement("textarea"); t.innerHTML=String(s==null?"":s); return t.value; }
   // Per-item dismiss: a stable id + a persisted dismissed-list so the user can clear old notifications.
@@ -8186,7 +8243,7 @@
   function primeNewsBell(){
     updateBell();
     refreshReleaseDates(_newsList);   // the stored feed's dates apply at startup, not only once News is opened
-    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ _newsCache=r.body.items; saveNewsCache(r.body.items); _newsList=r.body.items; updateBell(); refreshReleaseDates(r.body.items); if(typeof renderFeatured==="function" && _curPage==="home") renderFeatured(); } }).catch(function(){}); }
+    if(apiBase()){ api("/api/news","GET").then(function(r){ if(r.ok && r.body.items && r.body.items.length){ var sorted=newsByDate(r.body.items); _newsCache=sorted; saveNewsCache(sorted); _newsList=sorted; updateBell(); refreshReleaseDates(sorted); if(typeof renderFeatured==="function" && _curPage==="home") renderFeatured(); } }).catch(function(){}); }
   }
 
   // Palworld TCG digest. Live file docs/news/palworld-tcg.json is fetched from
@@ -8506,7 +8563,7 @@
           if($("page-missing") && !$("page-missing").hidden){
             var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,pctOf(data2.owned,data2.total)):0;
             var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
-            var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+            var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
             var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
           }
         }catch(_e){}
@@ -8533,11 +8590,11 @@
       if($("page-missing") && !$("page-missing").hidden){
         var data2=activeMissingGoal(), prog2=data2&&data2.total?Math.min(100,pctOf(data2.owned,data2.total)):0;
         var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
-        var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2) foot.textContent=(missingGoal==="sphere"? (data2.owned+" / "+data2.total+" official set cards collected") : foot.textContent);
+        var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
         var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
         if(card){
           Array.prototype.forEach.call(document.querySelectorAll("#missingList .missingrow"), function(row){
-            var img=row.querySelector("img"), alt=img?img.getAttribute("alt"):""; if(alt===card.name){
+            if(row.getAttribute("data-cid")===card.id){
               row.classList.add("collected"); var b=row.querySelector(".missact"); if(b){ b.classList.add("on"); b.innerHTML=icon("check"); b.setAttribute("aria-label","Collected \u00b7 open"); b.title="Collected \u00b7 open"; }
               var tagEl=row.querySelector(".mtag"); if(tagEl){ tagEl.textContent="COLLECTED"; tagEl.classList.add("collected"); }
             }
@@ -8901,7 +8958,7 @@
             var sv=scanSlabValue(card, e, gr, gd), gp=ensureGradedPrice(card, gr, gd);
             slabId="scan"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
             var gobj={grader:gr, grade:gd, value:sv.value,scanId:slabId}; if(sv.est) gobj.est=sv.est; if(ed) gobj.edition=ed; if(cert) gobj.cert=cert;
-            var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && SETTINGS.mode!=="collector") gobj.paid=scanPaid;
+            var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && trackPaidOn()) gobj.paid=scanPaid;
             if(gp && !gp.done){ gobj.gpTok="g"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); scanWatchSlab(gp, colId, card.id, gobj.gpTok, gobj.value); }
             scanLinkPrices(rec, colId, e);
             e.graded.push(gobj); added=gobj.value;
@@ -8910,7 +8967,7 @@
           }
         } else {
           var te=null;
-          addToCollection(colId, card.id, function(x){ te=x; scanLinkPrices(rec, colId, x); var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && SETTINGS.mode!=="collector"){ if(!x.paidRaw || typeof x.paidRaw!=="object") x.paidRaw={}; x.paidRaw[rawEditionKey(ed)]=scanPaid; } },ed);
+          addToCollection(colId, card.id, function(x){ te=x; scanLinkPrices(rec, colId, x); var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && trackPaidOn()){ if(!x.paidRaw || typeof x.paidRaw!=="object") x.paidRaw={}; x.paidRaw[rawEditionKey(ed)]=scanPaid; } },ed);
           if(te) added=unitOfEntry(card.id, null, te);
           toast(card.name+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
         }
@@ -9024,6 +9081,19 @@
     // reveals it, so it shipped unreachable.
     var cd=$("setColorDash"); if(cd){ cd.checked=!!SETTINGS.showColorCompletion; cd.onchange=function(){ SETTINGS.showColorCompletion=!!cd.checked; saveSettings(); if(typeof stats==="function") stats(); render(); }; }
     var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
+    var spt=$("setPlayerTools"); if(spt){ spt.checked=playerToolsOn(); spt.onchange=function(){
+      SETTINGS.playerTools=!!spt.checked; saveSettings(); applyFeatureFlags();
+      if(!playerToolsOn() && missingGoal==="deck") missingGoal="sphere";
+      buildNavMenu(); buildQuickMenuSettings();
+      if(!playerToolsOn() && (_curPage==="decks" || _curPage==="match")) showPage("home");
+      else { renderHome(); if(_curPage==="missing") renderMissing(); updateNavMenu(_curPage); }
+    }; }
+    var stp=$("setTrackPaid"); if(stp){ stp.checked=trackPaidOn(); stp.onchange=function(){
+      SETTINGS.trackPaid=!!stp.checked; saveSettings(); applyFeatureFlags();
+      render(); if(typeof renderHome==="function") renderHome();
+      if(_curPage==="portfolio" && typeof renderPortfolioDetail==="function") renderPortfolioDetail();
+      if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed();
+    }; }
     var pm=$("setPriceMode"); if(pm){ pm.value=SETTINGS.priceMode||"live"; pm.onchange=function(){ SETTINGS.priceMode=(pm.value==="sold")?"sold":"live"; valueBasis=basisOf(); saveSettings(); updateRefreshLabel(); render(); }; }
     var er=$("setEbayRegion"); if(er){ er.value=ebayReg(); er.onchange=function(){
       SETTINGS.ebayRegion=er.value; saveSettings();

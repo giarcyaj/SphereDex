@@ -263,6 +263,42 @@ test('a paid amount round-trips through CSV, including an explicit zero, and old
   assert.equal(old.cards, 2);
 });
 
+test('deck tools and paid amounts follow Play and Track value unless Settings overrides them', () => {
+  const box = { SETTINGS: { onboardIntents: [] } };
+  vm.createContext(box);
+  vm.runInContext(appFunction('playerToolsOn') + '\n' + appFunction('trackPaidOn'), box);
+  assert.equal(box.playerToolsOn(), false);
+  assert.equal(box.trackPaidOn(), false);
+  box.SETTINGS.onboardIntents = ['player'];
+  assert.equal(box.playerToolsOn(), true);
+  assert.equal(box.trackPaidOn(), false);
+  box.SETTINGS.onboardIntents = ['collector', 'market'];
+  assert.equal(box.playerToolsOn(), false);
+  assert.equal(box.trackPaidOn(), true);
+  box.SETTINGS.playerTools = false;
+  box.SETTINGS.trackPaid = false;
+  box.SETTINGS.onboardIntents = ['player', 'market'];
+  assert.equal(box.playerToolsOn(), false);
+  assert.equal(box.trackPaidOn(), false);
+  box.SETTINGS.playerTools = true;
+  box.SETTINGS.trackPaid = true;
+  box.SETTINGS.onboardIntents = [];
+  assert.equal(box.playerToolsOn(), true);
+  assert.equal(box.trackPaidOn(), true);
+});
+
+test('a chosen Pal lists every printing, including ones already collected', () => {
+  const fn = appFunction('selectedPalMissingGoal');
+  assert.match(fn, /cards\.map/);
+  assert.doesNotMatch(fn, /missingItems\(cards\)/);
+});
+
+test('a Pal tile with nothing to show says no cards yet', () => {
+  assert.match(source, /no cards yet/);
+  assert.equal(source.includes('No art yet'), false);
+  assert.equal(source.includes('no art'), false);
+});
+
 test('cost basis ignores copies with no paid amount and keeps an explicit zero', () => {
   const a = paidApp();
   a.own[a.lamball.id] = {
