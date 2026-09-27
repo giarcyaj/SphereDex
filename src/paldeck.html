@@ -7481,7 +7481,7 @@
 
       else if(addedThisWeek.length) bullets.push(addedThisWeek.length+' card'+(addedThisWeek.length===1?'':'s')+' added this week');
 
-      try{ var prevTotal=(function(){try{return +localStorage.getItem("palvault-last-total")||0;}catch(e){return 0;}})(); if(prevTotal && TOTAL>prevTotal){ var d=TOTAL-prevTotal; bullets.push(d+' new card'+(d===1?'':'s')+' in the app · '+TOTAL+' total'); } }catch(e){}
+      try{ var prevTotal=LAST_TOTAL_SEEN; if(prevTotal && TOTAL>prevTotal){ var d=TOTAL-prevTotal; bullets.push(d+' new card'+(d===1?'':'s')+' in the app · '+TOTAL+' total'); } }catch(e){}
 
       try{ var up=null; SEALED.filter(function(p){return p.pre;}).forEach(function(p){ var tt=featTime(sealDate(p)); if(tt===Infinity) return; if(!up||tt<up.t) up={t:tt,name:p.set||p.name,date:sealDate(p)}; }); if(up) bullets.push('Next set: '+up.name+' · '+(up.date||'coming soon')); else if(closest) bullets.push('Closest set: '+SETS[closest.set].name+' · '+closest.remaining+' left'); }catch(e){}
 
@@ -9192,6 +9192,8 @@
   buildChips();
   applyTheme();
   applyTextScale();
+  // Read before this launch overwrites it, so every Home repaint this session compares against the last visit.
+  var LAST_TOTAL_SEEN=(function(){ try{ return +localStorage.getItem("palvault-last-total")||0; }catch(e){ return 0; } })();
   applySphere();
   applyMode();
   applySettings();
