@@ -123,6 +123,69 @@ test('the main-deck curve counts cost, type, Lucky Pals and colour, and leaves S
   assert.deepEqual(plain(report.colors), { Red: 5, Blue: 1, Colorless: 4 });
 });
 
+const textData = JSON.parse(fs.readFileSync(path.join(root, 'src', 'card-text.json'), 'utf8'));
+const searchSandbox = {};
+vm.createContext(searchSandbox);
+vm.runInContext(
+  ['fold', 'palKey', 'attachCardText', 'cardSearchText', 'cardMatchesQuery'].map(appFunction).join('\n'),
+  searchSandbox
+);
+
+test('effect text and keywords match search, and a card with no text does not match a guess', () => {
+  const interrupt = { name: 'Lamball', id: 'EBP01-001', rules: 'ACT Interrupt Nullify the opponent attack.', keywords: ['Interrupt', 'Quick'] };
+  assert.equal(searchSandbox.cardMatchesQuery(interrupt, 'nullify'), true);
+  assert.equal(searchSandbox.cardMatchesQuery(interrupt, 'Interrupt'), true);
+  assert.equal(searchSandbox.cardMatchesQuery(interrupt, 'quick'), true);
+  const vanilla = { name: 'Pyrin', id: 'EBP01-013', rules: '', keywords: [] };
+  assert.equal(searchSandbox.cardMatchesQuery(vanilla, 'draw a card'), false);
+  assert.equal(searchSandbox.cardMatchesQuery(vanilla, 'pyrin'), true);
+  const beegarde = textData.cards['EBP01-061'];
+  assert.equal(searchSandbox.cardMatchesQuery(
+    { name: 'Beegarde – Knight of the Flower Garden', id: 'EBP01-061', rules: beegarde.text, keywords: beegarde.keywords },
+    'any number of cards'
+  ), true);
+});
+
+test('stored rules text attaches by base number and leaves an unknown printing blank', () => {
+  const cards = [
+    { id: 'EBP01-061', base: 'EBP01-061', name: 'Beegarde' },
+    { id: 'EBP01-061SP', base: 'EBP01-061', name: 'Beegarde' },
+    { id: 'ESOUL-014', base: 'ESOUL-014', name: 'Lamball, Cattiva & Chikipi' }
+  ];
+  searchSandbox.CARDS = cards;
+  searchSandbox.CARD_TEXT = textData;
+  assert.equal(searchSandbox.attachCardText(), 2);
+  assert.equal(cards[0].rulesKnown, true);
+  assert.equal(cards[1].rules, cards[0].rules);
+  assert.match(cards[0].rules, /any number of cards with the same card name/i);
+  assert.equal(cards[2].rulesKnown, false);
+  assert.equal(cards[2].rules, '');
+  assert.deepEqual(JSON.parse(JSON.stringify(cards[2].keywords)), []);
+});
+
+test('verified card text covers the cached set and does not invent the missing souls', () => {
+  assert.equal(textData.cards['EBP01-061'].anyNumber, true);
+  assert.ok(textData.glossary.Interrupt && textData.glossary.Interrupt.text);
+  const ids = [...source.matchAll(/"(E(?:BP01|TD01|TD02|PR|SOUL)-\d+[A-Z]*)"/g)].map(m => m[1]);
+  const printings = [...new Set(ids)];
+  const bases = [...new Set(printings.map(id => id.replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/, '')))];
+  let withText = 0, empty = 0, unknown = 0;
+  const unknownIds = [];
+  bases.forEach(base => {
+    const row = textData.cards[base];
+    const copies = printings.filter(id => id.replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/, '') === base).length;
+    if (!row) { unknown += copies; unknownIds.push(base); return; }
+    if (row.text) withText += copies; else empty += copies;
+  });
+  assert.equal(printings.length, 277);
+  assert.equal(withText, 248);
+  assert.equal(empty, 26);
+  assert.equal(unknown, 3);
+  assert.equal(withText + empty + unknown, printings.length);
+  assert.deepEqual(unknownIds.sort(), ['ESOUL-014', 'ESOUL-015', 'ESOUL-016']);
+  assert.equal(Object.keys(textData.cards).length, bases.length - unknownIds.length);
+});
+
 test('colourless cards do not spend one of the two colour slots', () => {
   const report = sandbox.deckLegalityReport(
     { A: 1, B: 1, C: 1 },
