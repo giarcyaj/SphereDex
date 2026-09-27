@@ -3,7 +3,7 @@ name: Sieve Scheduled Refresh
 # Pulls News + Releases twice daily from the official Palworld TCG site + X.
 # X is currently robots.txt-blocked under Sieve's compliant access modes, so that
 # optional source may refuse; official news must still consolidate and publish.
-# Output: POST to the SphereDex backend /api/news for the app's News and Home feed.
+# Output: POST to the SphereDex backend /api/admin/news (X-Admin-Key) for the app's News and Home feed.
 
 on:
   schedule:
@@ -72,14 +72,16 @@ jobs:
         if: always()
         run: python tools/news_feed.py --root stage/sieve --output stage/news-feed.json --github-output "$GITHUB_OUTPUT"
 
-      - name: POST to backend (/api/news)
+      - name: POST to backend (/api/admin/news)
         if: always() && steps.consolidate.outcome == 'success'
         env:
           BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
+          INGEST_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
         run: |
           if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
-          echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/news"
-          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/news" -H "Content-Type: application/json" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n"
+          if [ -z "$INGEST_KEY" ]; then echo "::warning::BACKEND_ADMIN_KEY secret is not set - feed not published. Set it to the Worker's ADMIN_KEY value (wrangler secret put ADMIN_KEY)."; exit 0; fi
+          echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news"
+          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n"
 
       - name: Report scrape status
         if: always()
