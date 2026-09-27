@@ -16,6 +16,8 @@ back to `.env`, so wrapping the command is the entire change.
 | --- | --- | --- |
 | `SIEVE_API_KEY` | `tools/sieve.py`, `tools/sieve_run.py` | `android/.env` (gitignored) |
 | `SIEVE_BASE_URL` | `tools/sieve.py` | unset — defaults to the production host |
+| `X_BEARER_TOKEN` | `tools/fetch_x_posts.py` (Sieve refresh workflow) | Infisical `dev` only — see [X API token](#x-api-token) |
+| `X_USER_ID` | `tools/fetch_x_posts.py` | optional, Infisical `dev` — not secret, saves a lookup call per run |
 | `KEYSTORE_*`, `KEY_ALIAS`, `GOOGLE_SERVICES_JSON_BASE64` | `.github/workflows/*.yml` | GitHub's encrypted repo secrets, never a file |
 
 Only the first row is on your disk. The Android signing and Firebase secrets in row
@@ -143,6 +145,32 @@ Two things make the migration stick for the whole team rather than just for you:
 - `sieve_run.py doctor` reports the source, so "which one answered?" is never a guess.
 - Every other command **warns on stderr** when it had to fall back to `.env`. A
   half-finished migration still runs, but it cannot pass for a finished one.
+
+## X API token
+
+The Home carousel and News feed show @PalworldOCG_EN posts. x.com's robots.txt is
+`Disallow: /`, so Sieve refuses to scrape it; the official X API v2 is the only
+sanctioned source. `.github/workflows/sieve-refresh.yml` runs `tools/fetch_x_posts.py`
+through `infisical run`, and the tool skips cleanly (the run still publishes official
+news) until the token exists.
+
+1. Create an app in the X developer console (<https://console.x.com>) and generate its
+   **Bearer Token** (app-only auth; read access is enough). The API is billed per use:
+   the workflow reads at most 10 posts twice a day, plus one username lookup per run
+   unless `X_USER_ID` is set.
+2. In Infisical, open the project's **Development** environment and add
+   `X_BEARER_TOKEN` with that value. Paste it into Infisical directly; never put it in
+   `.env`, a workflow file or a GitHub secret.
+3. Optional: add `X_USER_ID` (the numeric id of @PalworldOCG_EN). The first run with a
+   token looks it up, and you can copy it from any `/2/users/by/username/PalworldOCG_EN`
+   response.
+4. Check it locally without printing the value:
+
+```bash
+infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-check --print
+```
+
+Rotate the token from the developer console if it ever reaches a log or a file.
 
 ## CI, staging and production
 

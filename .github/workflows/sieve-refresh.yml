@@ -1,8 +1,7 @@
 name: Sieve Scheduled Refresh
 
-# Pulls News + Releases twice daily from the official Palworld TCG site + X.
-# X is currently robots.txt-blocked under Sieve's compliant access modes, so that
-# optional source may refuse; official news must still consolidate and publish.
+# Pulls News + Releases twice daily from the official Palworld TCG site (Sieve) and
+# @PalworldOCG_EN (official X API). X is optional; official news must still consolidate and publish.
 # Output: POST to the SphereDex backend /api/admin/news (X-Admin-Key) for the app's News and Home feed.
 
 on:
@@ -46,19 +45,15 @@ jobs:
             --fields title,date,summary,link,image \
             --shape long
 
-      # Sieve refuses X under Conservative because x.com's robots.txt is Disallow: /.
-      # Retain this diagnostic run but never let it block the official-news feed.
-      - name: Scrape X daily card reveals (image-forward)
+      # x.com's robots.txt is Disallow: /, so Sieve refuses to scrape it; posts come from the
+      # official X API v2 instead (pay-per-use, at most 10 posts per run). Needs X_BEARER_TOKEN
+      # (optionally X_USER_ID) in Infisical; without it the step skips and the feed still publishes.
+      - name: Fetch X posts (official X API)
         id: scrape_x
         continue-on-error: true
         run: |
           export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
-          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
-            "Extract the latest Palworld TCG card reveal posts: for each post extract title/text, date, link, and the card image URL if present. Return as JSON array with fields title, date, summary, link, image." \
-            --url https://x.com/PalworldOCG_EN \
-            --fields title,date,summary,link,image \
-            --shape long \
-            --compliance conservative
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/fetch_x_posts.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
 
       # Option A for the Home card-reveal slide (docs/x-reveal-source-proposal.md): the official
       # site's REST API is robots-permitted and carries reveal posts with cardlist art. Stages a
@@ -77,11 +72,15 @@ jobs:
         env:
           BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
           INGEST_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+          X_STATUS: ${{ steps.scrape_x.outputs.status }}
         run: |
           if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
           if [ -z "$INGEST_KEY" ]; then echo "::warning::BACKEND_ADMIN_KEY secret is not set - feed not published. Set it to the Worker's ADMIN_KEY value (wrangler secret put ADMIN_KEY)."; exit 0; fi
-          echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news"
-          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n"
+          # x_complete tells the backend this batch holds the current X posts, so it drops stored
+          # X posts that are missing (deleted on X). Only sent when the X API fetch succeeded.
+          if [ "$X_STATUS" = "ok" ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
+          echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news (X status: ${X_STATUS:-none})"
+          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-post.json -w "\nHTTP %{http_code}\n"
 
       - name: Report scrape status
         if: always()
@@ -91,10 +90,12 @@ jobs:
           elif [ "${{ steps.consolidate.outputs.official_items }}" = "0" ]; then
             echo "::warning::Official scraper produced no usable items. Inspect its session result and summary in the uploaded artifact."
           fi
-          if [ "${{ steps.scrape_x.outcome }}" = "failure" ]; then
-            echo "::warning::X scrape was refused or failed. Current known refusal: X robots.txt Disallow: /. Do not bypass the site policy."
+          if [ "${{ steps.scrape_x.outputs.status }}" = "skipped" ]; then
+            echo "::warning::X posts skipped: X_BEARER_TOKEN is not set in Infisical (dev). See SECRETS.md."
+          elif [ "${{ steps.scrape_x.outcome }}" = "failure" ]; then
+            echo "::warning::X API fetch failed. Its error (HTTP status and API detail) is in the step log. Do not fall back to scraping x.com; its robots.txt is Disallow: /."
           elif [ "${{ steps.consolidate.outputs.x_items }}" = "0" ]; then
-            echo "::warning::X scraper completed without usable X items. Inspect its session result and summary in the uploaded artifact."
+            echo "::warning::X API returned no usable posts. Inspect the x-api session in the uploaded artifact."
           else
             echo "X feed items published: ${{ steps.consolidate.outputs.x_items }}"
           fi

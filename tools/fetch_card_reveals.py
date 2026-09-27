@@ -30,8 +30,8 @@ from pathlib import Path
 API = "https://en.palworld-official-cardgame.com/wp-json/wp/v2/posts"
 PER_PAGE = 20
 # Reveal heuristics, kept in step with the app's reveal slide matching
-# (featuredSlides in src/paldeck.html: /card reveal|reveal|new card/i on text,
-# /cardlist|palworld.*card/i on the image URL).
+# (featIsReveal in src/paldeck.html: /card reveal|reveal|new card/i on text,
+# or /cardlist/ in the image URL).
 REVEAL_TEXT = re.compile(r"\bcard reveal\b|\breveal\b|\bnew card\b", re.IGNORECASE)
 IMG_TAG = re.compile(r"<img[^>]+src=[\"']([^\"']+)[\"']", re.IGNORECASE)
 WP_UPLOADS = re.compile(r"/wordpress/wp-content/uploads/", re.IGNORECASE)
