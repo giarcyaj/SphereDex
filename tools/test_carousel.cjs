@@ -72,6 +72,20 @@ test('the FEATURED_CAROUSEL API seam stays intact', () => {
   assert.equal(a.window.FEATURED_CAROUSEL.intervalMs, 5200);
 });
 
+test('pctOf (stubbed in the sandbox) never shows 100% while missing or 0% once owned', () => {
+  const whole = fs.readFileSync(FILES.src, 'utf8');
+  const m = whole.match(/function pctOf\(n, t\)\{[^\n]*\}/);
+  assert.ok(m, 'pctOf is defined on one line');
+  const pctOf = vm.runInNewContext('(' + m[0] + ')');
+  assert.equal(pctOf(0, 0), 0);
+  assert.equal(pctOf(0, 10), 0);
+  assert.equal(pctOf(1, 1000), 1);
+  assert.equal(pctOf(999, 1000), 99);
+  assert.equal(pctOf(5, 10), 50);
+  assert.equal(pctOf(10, 10), 100);
+  assert.equal(pctOf(12, 10), 100);
+});
+
 // ---- sandbox: run the real section against a stub DOM -------------------------------------
 
 function parseButtons(html, cls) {
@@ -138,7 +152,7 @@ function app(opts) {
     clearInterval() { registry.cleared++; registry.sets.length = 0; },
     setTimeout() { return 0; }, clearTimeout() {},
     $: (id) => document_.getElementById(id),
-    esc: (s) => String(s), icon: () => '<i></i>', decodeEntities: (s) => s, money: (v) => '$' + v,
+    esc: (s) => String(s), icon: () => '<i></i>', decodeEntities: (s) => s, dayLabel: (s) => s, pctOf: (n, t) => (t ? Math.round(n / t * 100) : 0), money: (v) => '$' + v,
     imgSrc: (c) => 'img:' + c.id,
     showPage: (p) => shown.push(p), openSet: (k) => shown.push('set:' + k), toast: (m) => toasts.push(m),
     OFFICIAL_NEWS: 'https://example.test/news',

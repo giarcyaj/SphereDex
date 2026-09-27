@@ -30,10 +30,11 @@ const functionNames = [
   'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts',
   'changeRaw', 'mergeRawCounts', 'csvNum', 'csvCell', 'csvEdition', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
-  'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore'
+  'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
+  'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
 ];
 const appCode = functionNames.map(appFunction).join('\n') + '\n' +
-  ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
+  ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX'].map(appConstant).join('\n');
 const card = { id: 'EBP01-001', name: 'Lamball', set: 'EBP01', rare: 'C', base: 'EBP01-001' };
 const variant = { ...card, id: 'EBP01-001-SR', rare: 'SR' };
 function app() {
@@ -169,4 +170,38 @@ test('global search tolerates a one-character typo without returning unrelated c
   assert.ok(a.globalTextScore('Lambll', 'Lamball EBP01-001') > 0);
   assert.ok(a.globalTextScore('Dawn of Palpagos', 'Dawn of Palpagos') > 0);
   assert.equal(a.globalTextScore('Pineapple', 'Lamball EBP01-001'), 0);
+});
+
+test('search ignores accents and case', () => {
+  const a = app();
+  assert.equal(a.fold('Jörmuntide'), 'jormuntide');
+  assert.ok(a.globalTextScore('Jörmuntide', 'Jormuntide EBP01-001') > 0);
+});
+
+test('a backup keeps only object card entries and rejects non-object maps', () => {
+  const a = app();
+  assert.deepEqual(plain(a.cardMap({ foo: 'bar', 'EBP01-001': 'x' })), {});
+  assert.deepEqual(plain(a.cardMap({ 'EBP01-001': { qty: 2 }, 'EBP01-002': null, 'EBP01-003': [1] })), { 'EBP01-001': { qty: 2 } });
+  assert.equal(a.cardMap([1, 2, 3]), null);
+  assert.equal(a.cardMap('x'), null);
+});
+
+test('deck import skips negative or zero quantities and caps a line at a full deck', () => {
+  const a = app();
+  const res = a.parseDeckList('-3 EBP01-001\n0 EBP01-001\n999999 EBP01-001-SR\n2x EBP01-001');
+  assert.deepEqual(plain(res.cards), { 'EBP01-001-SR': 60, 'EBP01-001': 2 });
+  assert.equal(res.added, 2);
+  assert.equal(res.skipped, 2);
+});
+
+test('untouched card entries count as empty; anything the user or a price wrote does not', () => {
+  const a = app();
+  const blank = { qty: 0, wish: false, cond: 'Near Mint', notes: '', mkt: 0, last: 0, avg: 0, graded: [], sold: 0, list: 0, pAt: 0 };
+  assert.equal(a.isEmptyOwn(blank), true);
+  assert.equal(a.isEmptyOwn({ ...blank, qty: 1 }), false);
+  assert.equal(a.isEmptyOwn({ ...blank, graded: [{ grader: 'PSA', grade: '10' }] }), false);
+  assert.equal(a.isEmptyOwn({ ...blank, cond: 'Played' }), false);
+  assert.equal(a.isEmptyOwn({ ...blank, notes: 'trade' }), false);
+  assert.equal(a.isEmptyOwn({ ...blank, sold: 3.2 }), false);
+  assert.equal(a.isEmptyOwn({ ...blank, rawEditions: { '1': 0, '2': 0, unknown: 0 } }), false);
 });
