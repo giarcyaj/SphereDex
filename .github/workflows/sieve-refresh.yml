@@ -1,7 +1,8 @@
 name: Sieve Scheduled Refresh
 
-# Pulls News + Releases twice daily from the official Palworld TCG site (Sieve) and
-# @PalworldOCG_EN (official X API). X is optional; official news must still consolidate and publish.
+# Pulls News + Releases twice daily from the official Palworld TCG site (its WordPress REST API) and
+# @PalworldOCG_EN (official X API). No Sieve credits are spent: tools/sieve_run.py stays available
+# for one-off scrapes. X is optional; official news must still consolidate and publish.
 # Output: POST to the SphereDex backend /api/admin/news (X-Admin-Key) for the app's News and Home feed.
 
 on:
@@ -29,21 +30,12 @@ jobs:
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
-      - name: Verify secrets source
-        run: |
-          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
-          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py doctor
-
-      - name: Scrape official news + releases
+      # The official site's WordPress REST API (robots-permitted) carries every news post with its
+      # title, date, excerpt, link and featured image, so the news page needs no AI scrape.
+      - name: Fetch official news (REST, robots-permitted)
         id: scrape_official
         continue-on-error: true
-        run: |
-          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
-          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py run \
-            "Extract Palworld TCG news: for each item on this official news page extract title, date, summary, link, and the main image URL if present (card art). Return as JSON array with fields title, date, summary, link, image." \
-            --url https://en.palworld-official-cardgame.com/news/ \
-            --fields title,date,summary,link,image \
-            --shape long
+        run: python tools/fetch_official_news.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
 
       # x.com's robots.txt is Disallow: /, so Sieve refuses to scrape it; posts come from the
       # official X API v2 instead (pay-per-use, at most 10 posts per run). Needs X_BEARER_TOKEN
@@ -61,6 +53,21 @@ jobs:
       - name: Fetch official card reveals (REST, robots-permitted)
         if: always()
         run: python tools/fetch_card_reveals.py --root stage/sieve
+
+      # Official product announcements -> app release data: new sealed products, release dates, banner
+      # thumbnails and set logos, published to the backend's /api/releases, which every app merges at
+      # launch (no build needed). Dates are read by Tesseract OCR of the banner, then the post text.
+      # Posts already processed are skipped.
+      - name: Release sweep (products, dates, banners, logos)
+        id: releases
+        if: always()
+        continue-on-error: true
+        env:
+          BACKEND_ADMIN_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          sudo apt-get install -y -qq tesseract-ocr > /dev/null
+          pip install --quiet numpy pillow
+          python tools/release_sweep.py --github-output "$GITHUB_OUTPUT"
 
       - name: Consolidate Sieve results
         id: consolidate
@@ -86,9 +93,11 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.scrape_official.outcome }}" = "failure" ]; then
-            echo "::warning::Official-news scrape failed. Inspect its session summary in the uploaded artifact."
+            echo "::warning::Official-news fetch failed. Its error (the site's REST API response) is in the step log."
           elif [ "${{ steps.consolidate.outputs.official_items }}" = "0" ]; then
-            echo "::warning::Official scraper produced no usable items. Inspect its session result and summary in the uploaded artifact."
+            echo "::warning::Official news produced no usable items. Inspect the official-news session in the uploaded artifact."
+          else
+            echo "Official news items published: ${{ steps.consolidate.outputs.official_items }}"
           fi
           if [ "${{ steps.scrape_x.outputs.status }}" = "skipped" ]; then
             echo "::warning::X posts skipped: X_BEARER_TOKEN is not set in Infisical (dev). See SECRETS.md."
@@ -98,6 +107,13 @@ jobs:
             echo "::warning::X API returned no usable posts. Inspect the x-api session in the uploaded artifact."
           else
             echo "X feed items published: ${{ steps.consolidate.outputs.x_items }}"
+          fi
+          if [ "${{ steps.releases.outcome }}" = "failure" ]; then
+            echo "::warning::Release sweep failed. Its error is in the step log; app release data was not updated."
+          elif [ "${{ steps.releases.outputs.status }}" = "skipped" ]; then
+            echo "::warning::Release sweep skipped: BACKEND_ADMIN_KEY secret is not set."
+          else
+            echo "Release sweep: ${{ steps.releases.outputs.products || 0 }} product(s) published from new announcements"
           fi
 
       - name: Upload Sieve sessions (artifact, no commit)

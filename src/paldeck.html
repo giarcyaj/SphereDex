@@ -5055,7 +5055,7 @@
   var BROWSE_EXPANSIONS = [
     { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"July 30, 2026", logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
     { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", logo:"LOGO_BP02" },
-    { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026" }
+    { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", logo:"LOGO_BP03" }
   ];
   // "Sets" counts released EXPANSIONS (Dawn of Palpagos = booster + both trial decks as one set), not
   // the individual products; promos and unreleased sets don't count. sp = {owned:{},tot:{}} per set key.
@@ -5141,6 +5141,56 @@
       if(RELEASE_OVERRIDES[p.id]) out[p.id]={ d:RELEASE_OVERRIDES[p.id], base:p.date }; });
     try{ lsSet(RO_KEY, JSON.stringify(out)); }catch(e){}
   }
+  // ---- Release data from the news sweep ----
+  // tools/release_sweep.py reads official announcement posts (banner text included) and publishes new
+  // sealed products, dates, banners and set logos to /api/releases, so a new product or a moved date
+  // reaches this install without a build. Baked data wins where both exist, except a date for an
+  // upcoming product: the sweep's is newer. Images are served by the backend (/api/release-img/...).
+  var REL_KEY = "palvault-releases";
+  function storedReleases(){ try{ return JSON.parse(lsGet(REL_KEY)||"null"); }catch(e){ return null; } }
+  function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
+  function applyReleases(pay){
+    if(!pay || !pay.version) return false;
+    var base=apiBase(), changed=false;
+    if(base && pay.img){ window.CARD_IMG=window.CARD_IMG||{}; for(var k in pay.img){
+      if(/^REL_[A-Z0-9_]+$/.test(k) && /^\/api\/release-img\//.test(pay.img[k]) && !window.CARD_IMG[k]){ window.CARD_IMG[k]=base+pay.img[k]; changed=true; } } }
+    (pay.products||[]).forEach(function(r){
+      if(!r || !r.id || !r.set) return;
+      var p=SEALED.filter(function(x){ return x.id===r.id; })[0]
+        || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null);
+      if(p){
+        if(p.pre && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; }
+        if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
+        return;
+      }
+      SEALED.push({ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
+        q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:true });
+      changed=true;
+    });
+    Object.keys(pay.sets||{}).forEach(function(name){
+      var s=pay.sets[name]||{}, x=BROWSE_EXPANSIONS.filter(function(b){ return b.name===name; })[0];
+      if(x){ if(!x.logo && s.logo){ x.logo=s.logo; changed=true; } return; }
+      // Only a set with a booster or trial deck is an expansion; a sleeve or card set announcement is not.
+      var isSet=(pay.products||[]).some(function(r){ return r && r.set===name && /booster|trial deck/i.test(r.name||""); });
+      if(isSet){ BROWSE_EXPANSIONS.push({ name:name, upcoming:true, release:s.release||"Date TBA", logo:s.logo||"", srv:true }); changed=true; }
+    });
+    return changed;
+  }
+  function fetchReleases(){
+    if(!apiBase()) return;
+    var have=(storedReleases()||{}).version||0;
+    fetch(apiBase()+"/api/releases?have="+have,{cache:"no-store"})
+      .then(function(r){ return r.ok? r.json() : null; })
+      .then(function(j){
+        if(!j || j.uptodate || !j.version) return;
+        try{ lsSet(REL_KEY, JSON.stringify(j)); }catch(e){}
+        if(!applyReleases(j)) return;
+        try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
+        try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
+        try{ if(typeof renderSetBrowse==="function") renderSetBrowse(); }catch(e){}
+      }).catch(function(){});
+  }
+  applyReleases(storedReleases());
   loadReleaseOverrides();
   function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
   var _SHORTM=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -5161,7 +5211,8 @@
     if(!items||!items.length) return false;
     var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
     var changed=false;
-    SEALED.forEach(function(p){ if(!p.pre) return;
+    // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
+    SEALED.forEach(function(p){ if(!p.pre || (p.srv && p.date)) return;
       var keys=(p.nk&&p.nk.length)?p.nk:[p.set||p.name];
       for(var i=0;i<items.length;i++){ var it=items[i]||{};
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
@@ -9117,11 +9168,13 @@
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
+    fetchReleases();
   }
   document.addEventListener("visibilitychange", onWake);
   window.addEventListener("pageshow", function(e){ if(e && e.persisted) onWake(); });   // bfcache restore
   setTimeout(checkAppVersion, 4000);   // and once shortly after a cold start
   setTimeout(fetchCatalogue, 2500);    // new cards matter sooner than a version notice
+  setTimeout(fetchReleases, 3000);
   if(!IS_NATIVE){ Array.prototype.forEach.call(document.querySelectorAll('[data-page="scan"][data-icon="camera"]'), function(el){ el.setAttribute("data-icon","search"); }); }
   // Inside the native app the "get the app" store buttons are pointless (and their fallback
   // toast wrongly says "you're on the web app"), so hide them when running natively.
