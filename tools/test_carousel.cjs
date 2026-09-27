@@ -33,6 +33,18 @@ function readSection(file, kind) {
   return text.slice(text.lastIndexOf('\n', begin) + 1, end);
 }
 const srcSection = (kind) => readSection(FILES.src, kind);
+// A real app function from outside the section, for helpers the section calls whose behaviour the tests rely on.
+function appFunction(name) {
+  const source = fs.readFileSync(FILES.src, 'utf8');
+  const match = new RegExp('\\bfunction\\s+' + name + '\\s*\\(').exec(source);
+  assert.ok(match, 'App function exists: ' + name);
+  for (let end = source.indexOf('}', match.index); end >= 0; end = source.indexOf('}', end + 1)) {
+    const declaration = source.slice(match.index, end + 1);
+    try { new vm.Script('(' + declaration + ')'); } catch (_) { continue; }
+    return vm.runInNewContext('(' + declaration + ')');
+  }
+  throw new Error('Could not extract ' + name);
+}
 
 // ---- structural guards -------------------------------------------------------------------
 
@@ -152,7 +164,7 @@ function app(opts) {
     clearInterval() { registry.cleared++; registry.sets.length = 0; },
     setTimeout() { return 0; }, clearTimeout() {},
     $: (id) => document_.getElementById(id),
-    esc: (s) => String(s), icon: () => '<i></i>', decodeEntities: (s) => s, dayLabel: (s) => s, pctOf: (n, t) => (t ? Math.round(n / t * 100) : 0), money: (v) => '$' + v,
+    esc: (s) => String(s), icon: () => '<i></i>', decodeEntities: (s) => s, dayLabel: (s) => s, monDateTime: appFunction('monDateTime'), pctOf: (n, t) => (t ? Math.round(n / t * 100) : 0), money: (v) => '$' + v,
     imgSrc: (c) => 'img:' + c.id,
     showPage: (p) => shown.push(p), openSet: (k) => shown.push('set:' + k), toast: (m) => toasts.push(m),
     OFFICIAL_NEWS: 'https://example.test/news',
