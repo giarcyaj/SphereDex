@@ -324,3 +324,53 @@ test('cost basis ignores copies with no paid amount and keeps an explicit zero',
   assert.equal(none.collectionCostBasis().copies, 0);
   assert.equal(none.collectionCostBasis().cost, 0);
 });
+
+test('the home catch-up is only what this person missed since their last visit', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
+  const H = 60 * 60 * 1000;
+  const opened = 1_700_000_000_000;
+  const back = box.missedUpdate({
+    now: opened, openedAt: opened, previousVisit: opened - 18 * H,
+    addedSince: 3, addedThisWeek: 5, lastTotal: 270, total: 277,
+    appVersion: '2.0', latestVersion: '2.0', updateNotes: ['A more useful Home']
+  });
+  assert.equal(back.show, true);
+  assert.equal(back.title, '3 cards added since your last visit');
+  assert.match(back.meta, /18 hours since your last visit/);
+  assert.match(back.meta, /5 added this week/);
+  assert.equal(back.bullets.includes('A more useful Home'), false);
+  assert.equal(back.bullets.some((b) => b.indexOf('7 new card') === 0), true);
+
+  assert.equal(box.missedUpdate({
+    now: opened, openedAt: opened, previousVisit: opened - 10 * 60 * 1000,
+    addedSince: 0, addedThisWeek: 4, lastTotal: 277, total: 277
+  }).show, false, 'a short return does not repeat cards already seen last visit');
+
+  assert.equal(box.missedUpdate({
+    now: opened, openedAt: opened, previousVisit: 0,
+    addedSince: 0, addedThisWeek: 4, lastTotal: 0, total: 277
+  }).show, false, 'the first open has nothing missed, and the whole catalogue is not new');
+
+  const fresh = box.missedUpdate({
+    now: opened, openedAt: opened, previousVisit: opened - 20 * 60 * 1000,
+    addedSince: 1, addedThisWeek: 1, lastTotal: 277, total: 277
+  });
+  assert.equal(fresh.title, '1 card added since your last visit');
+  assert.match(fresh.meta, /20 minutes since your last visit/);
+  assert.equal(fresh.meta.includes('1 hour'), false);
+
+  const days = box.missedUpdate({
+    now: opened, openedAt: opened, previousVisit: opened - 50 * H,
+    addedSince: 0, addedThisWeek: 0, lastTotal: 270, total: 274,
+    appVersion: '2.0', latestVersion: '2.1', updateNotes: ['Deck tools when you choose Play']
+  });
+  assert.equal(days.title, '4 new cards in the app · 274 total');
+  assert.match(days.meta, /2 days since your last visit/);
+  assert.deepEqual(JSON.parse(JSON.stringify(days.bullets)), ['Deck tools when you choose Play']);
+
+  assert.equal(source.includes('Welcome back'), false);
+  assert.equal(source.includes('Next set:'), false);
+  assert.match(source, /t>PREVIOUS_VISIT && t<APP_OPENED_AT/);
+});

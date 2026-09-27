@@ -7885,35 +7885,82 @@
   if(typeof window!=="undefined") window.FEATURED_CAROUSEL = FEATURED_CAROUSEL;
   // ==== FEATURED CAROUSEL END (logic) ====
 
+  // Home catch-up for this person. A card counts as missed only when its add time falls after the
+  // previous open and before this one, so a card added during this visit is not "missed", and a card
+  // already on screen last visit is not repeated just because it is still inside the last seven days.
+  // Catalogue growth and a newer store build count. The next sealed product and this build's own
+  // release lines do not: those are the same for everyone and already live elsewhere on Home.
+  function missedVisitPhrase(gap){
+    if(gap<60*1000) return "Since your last visit";
+    if(gap<60*60*1000){ var m=Math.max(1, Math.round(gap/60000)); return m+" minute"+(m===1?"":"s")+" since your last visit"; }
+    if(gap<48*60*60*1000){ var h=Math.max(1, Math.round(gap/36e5)); return h+" hour"+(h===1?"":"s")+" since your last visit"; }
+    var d=Math.max(2, Math.round(gap/864e5)); return d+" day"+(d===1?"":"s")+" since your last visit";
+  }
+  function missedUpdate(o){
+    o=o||{};
+    var now=+o.now||0, prev=+o.previousVisit||0, opened=+o.openedAt||now;
+    var since=+o.addedSince||0, week=+o.addedThisWeek||0;
+    var lastTotal=+o.lastTotal||0, total=+o.total||0;
+    var newCards=(lastTotal>0 && total>lastTotal) ? (total-lastTotal) : 0;
+    var behind=(typeof verNum==="function") && verNum(o.latestVersion)>verNum(o.appVersion);
+    var notes=behind && o.updateNotes && o.updateNotes.length ? o.updateNotes.slice(0,2) : [];
+    var gap=prev ? Math.max(0, (opened||now)-prev) : 0;
+    var show=!!(prev && (since || newCards || notes.length));
+    if(!show) return {show:false, title:"", meta:"", bullets:[], addedSince:0};
+    var sinceLine=since ? (since+" card"+(since===1?"":"s")+" added since your last visit") : "";
+    var newLine=newCards ? (newCards+" new card"+(newCards===1?"":"s")+" in the app · "+total+" total") : "";
+    var title=sinceLine || newLine || "An update is ready";
+    var meta=missedVisitPhrase(gap);
+    if(week && week!==since) meta+=" · "+week+" added this week";
+    var bullets=[];
+    if(sinceLine && title!==sinceLine) bullets.push(sinceLine);
+    if(newLine && title!==newLine) bullets.push(newLine);
+    notes.forEach(function(f){ if(f && bullets.indexOf(f)===-1 && f!==title) bullets.push(f); });
+    return {show:true, title:title, meta:meta, bullets:bullets.slice(0,4), addedSince:since};
+  }
   function renderHome(){
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=pctOf(ownedP,total);
     var rk=sphereRank(pct), sphere=nextSphereMissingGoal(), closest=closestSetMissingGoal(), deck=deckMissingGoal(), wish=wishlistMissingGoal(), value=binderValue(), closestIsSphere=!!(closest&&(SET_SPHERE_TRACKS||[]).some(function(t){return t.available&&t.id===closest.set;}));
     var wishCards=CARDS.filter(function(c){ return isWished(c.id)&&!has(o(c.id)); }), deckWish=deck?wishCards.filter(function(c){ return deck.items.some(function(item){return item.card.id===c.id;}); }).length:0, sphereWish=sphere?wishCards.filter(function(c){ return sphere.items.some(function(item){return item.card.id===c.id;}); }).length:0, drops=wishCards.filter(function(c){ var now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; return now>0&&before>0&&now<before*.99; }).length;
     var marketMove=0, marketMoveCount=0; CARDS.forEach(function(c){ var e=o(c.id), now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; if((+e.qty||0)>0&&now>0&&before>0){ marketMove+=(+e.qty||0)*(now-before); marketMoveCount++; } });
-    var away=$("homeAway"), addedSince=PREVIOUS_VISIT?CARDS.filter(function(c){return addedAt(c.id)>PREVIOUS_VISIT;}):[], weekCutoff=APP_OPENED_AT-7*24*60*60*1000, addedThisWeek=CARDS.filter(function(c){return addedAt(c.id)>=weekCutoff;});
-
-    if(away){ if((PREVIOUS_VISIT && (addedSince.length || APP_OPENED_AT-PREVIOUS_VISIT>6*60*60*1000)) || addedThisWeek.length){ var hrs=PREVIOUS_VISIT?Math.max(1,Math.round((APP_OPENED_AT-PREVIOUS_VISIT)/36e5)):0;
-
-      var timeLine = hrs ? hrs+' hour'+(hrs===1?'':'s')+' since your last visit' : 'Welcome back';
-
-      var bullets=[];
-
-      if(addedSince.length) bullets.push(addedSince.length+' card'+(addedSince.length===1?'':'s')+' added to your collection since last visit');
-
-      else if(addedThisWeek.length) bullets.push(addedThisWeek.length+' card'+(addedThisWeek.length===1?'':'s')+' added this week');
-
-      try{ var prevTotal=LAST_TOTAL_SEEN; if(prevTotal && TOTAL>prevTotal){ var d=TOTAL-prevTotal; bullets.push(d+' new card'+(d===1?'':'s')+' in the app · '+TOTAL+' total'); } }catch(e){}
-
-      try{ var up=null; SEALED.filter(function(p){return p.pre;}).forEach(function(p){ var tt=featTime(sealDate(p)); if(tt===Infinity) return; if(!up||tt<up.t) up={t:tt,name:p.set||p.name,date:sealDate(p)}; }); if(up) bullets.push('Next set: '+up.name+' · '+(up.date||'coming soon')); else if(closest) bullets.push('Closest set: '+SETS[closest.set].name+' · '+closest.remaining+' left'); }catch(e){}
-
-      try{ var feats=(typeof updateNotesFor==="function"?updateNotesFor(_latestAppVersion):null); if(!feats||!feats.length) feats=(typeof RELEASE_HIGHLIGHTS!=="undefined"?(RELEASE_HIGHLIGHTS[APP_VERSION]||[]):[]); feats.slice(0,2).forEach(function(f){ bullets.push(f); }); }catch(e){}
-
-      bullets=bullets.slice(0,4);
-
-      var bulletHtml = bullets.length ? '<ul class="awaylist">'+bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>' : '';
-
-      away.hidden=false; away.innerHTML='<div class="hclabel">'+icon('refresh')+'Your collection update</div><div class="hcname">'+esc(timeLine)+'</div>'+bulletHtml; } else { away.hidden=true; away.innerHTML=""; } }
+    var away=$("homeAway");
+    var addedSinceN=0, addedWeekN=0, weekCutoff=APP_OPENED_AT-7*24*60*60*1000;
+    if(PREVIOUS_VISIT){
+      CARDS.forEach(function(c){
+        var t=addedAt(c.id);
+        if(t>PREVIOUS_VISIT && t<APP_OPENED_AT) addedSinceN++;
+        if(t>=weekCutoff && t<APP_OPENED_AT) addedWeekN++;
+      });
+    }
+    var missedNotes=[];
+    try{
+      if(typeof verNum==="function" && verNum(_latestAppVersion)>verNum(APP_VERSION)){
+        var feats=(typeof updateNotesFor==="function") ? updateNotesFor(_latestAppVersion) : [];
+        missedNotes=(feats||[]).slice(0,2);
+      }
+    }catch(e){}
+    var missed=missedUpdate({
+      now:APP_OPENED_AT, previousVisit:PREVIOUS_VISIT, openedAt:APP_OPENED_AT,
+      addedSince:addedSinceN, addedThisWeek:addedWeekN,
+      lastTotal:(typeof LAST_TOTAL_SEEN==="number"?LAST_TOTAL_SEEN:0), total:TOTAL,
+      appVersion:APP_VERSION, latestVersion:_latestAppVersion, updateNotes:missedNotes
+    });
+    if(away){
+      if(missed.show){
+        var bulletHtml=missed.bullets.length ? '<ul class="awaylist">'+missed.bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>' : '';
+        var actions=(missed.addedSince?'<button class="homeaction" type="button" data-act="recent">View recent</button>':'')+
+          '<button class="homeaction" type="button" data-act="next">Find next card</button>';
+        away.hidden=false;
+        away.innerHTML='<div class="hclabel">'+icon('refresh')+'Your collection update</div><div class="hcname">'+esc(missed.title)+'</div>'+
+          (missed.meta?'<div class="hcmeta">'+esc(missed.meta)+'</div>':'')+bulletHtml+
+          '<div class="hcfoot"><span></span><div class="homeupdate-actions">'+actions+'</div></div>';
+        var recentBtn=away.querySelector('[data-act="recent"]');
+        if(recentBtn) recentBtn.onclick=function(ev){ ev.stopPropagation(); openRecentCollection(); };
+        var nextBtn=away.querySelector('[data-act="next"]');
+        if(nextBtn) nextBtn.onclick=function(ev){ ev.stopPropagation(); if(closest){ missingGoal="set"; showPage("missing"); } else openMissingCollection(); };
+      } else { away.hidden=true; away.innerHTML=""; }
+    }
     document.documentElement.style.setProperty("--logo-c", rk.c);
     $("homeCollection").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('grid')+'Your collection</div><div class="hcname">'+ownedP+' / '+total+' cards</div></div><div class="hcvalue">'+pct+'%<small>complete</small></div></div><div class="hctrack"><span style="width:'+pct+'%"></span></div><div class="hcfoot"><span>'+Object.keys(setProgress().tot).length+' sets tracked</span><button class="homeaction" type="button">View collection</button></div>';
         if(sphere){ $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Next Set Sphere</div><div class="hcname">'+esc(sphere.track.name)+'</div></div><div class="hcvalue">'+sphere.remaining+'<small>'+(sphere.remaining===1?'card':'cards')+' left</small></div></div><div class="hctrack"><span style="width:'+sphere.percent+'%"></span></div><div class="hcfoot"><span>'+esc(sphere.track.sphere.name)+'</span><button class="homeaction" type="button">View rewards</button></div>'; }
@@ -8033,6 +8080,15 @@
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed",ch.textContent==="Missing"?"true":"false"); });
+    showPage("collection"); showCollGrid(true); render();
+  }
+  // Cards added after the previous open, for the home catch-up's View recent action.
+  function openRecentCollection(){
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="recent";
+    var input=$("search"); if(input) input.value="";
+    document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
+    syncSetChips();
+    Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed",ch.textContent==="Recently added"?"true":"false"); });
     showPage("collection"); showCollGrid(true); render();
   }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
@@ -9691,6 +9747,7 @@
         try{ if(typeof syncSetChips==="function") syncSetChips(); }catch(e){}
         try{ if(typeof renderReleases==="function") renderReleases(); }catch(e){}
         try{ if(typeof fetchServerPrices==="function") fetchServerPrices(true); }catch(e){}   // price the new cards
+        try{ localStorage.setItem("palvault-last-total", String(TOTAL)); }catch(e){}   // next launch compares against the list this person has now seen arrive
         toast(n+" new card"+(n===1?"":"s")+" added to your app");
       }).catch(function(){});
   }
