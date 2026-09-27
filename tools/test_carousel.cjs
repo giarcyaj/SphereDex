@@ -288,6 +288,26 @@ test('latest update features stay on screen, and a newer store build says an upd
   assert.equal(ahead.api.slides().some((s) => s.kind === 'update'), false);
 });
 
+test('the movers slide is hidden when prices are off', () => {
+  const hidden = app({
+    SETTINGS: { mode: 'collector' },
+    moverCard: (dir, scope) => (scope === 'collection' && dir === 'up'
+      ? { c: { id: 'EBP01-001', name: 'Lamball' }, pct: 12.3 } : null),
+  });
+  const kinds = hidden.api.slides().map((s) => s.kind);
+  assert.equal(kinds.includes('movers'), false);
+  assert.equal(kinds.includes('collection'), false);
+  assert.equal(String(kinds), 'features,soon');
+
+  const shown = app({
+    SETTINGS: { mode: 'trader' },
+    moverCard: () => null,
+    SET_ORDER: [],
+    visibleNews: () => [],
+  });
+  assert.equal(shown.api.slides().some((s) => s.title === 'Movers in your collection'), true);
+});
+
 test('the collection slide falls back from movers to a summary', () => {
   const summary = app();
   const s = summary.api.slides().find((x) => x.kind === 'collection');

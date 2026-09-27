@@ -7543,7 +7543,8 @@
   // the app carry an identical section, and that the behaviour still works against a stub DOM.
   // The first thing on Home: five headliners, in this order.
   // 1) latest official news, 2) latest update features (or "update available" when this install is
-  // behind the store), 3) movers in your collection, 4) latest card reveal, 5) the next release date.
+  // behind the store), 3) movers in your collection, unless prices are off, 4) latest card reveal,
+  // 5) the next release date.
   // Every slide is built from data the app already holds - the news feed it caches, this build's
   // release lines, collection price moves, and the sealed pre-order list - so it renders offline.
   var FEAT_MS = 5200, _featIndex = 0, _featTimer = null, _featSig = "", _featPaused = false;
@@ -7632,45 +7633,35 @@
       if(behind) out.push({kind:"update", badge:"Update available", title:"SphereDex "+ver+" is here", meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
       else out.push({kind:"features", badge:"Latest update", title:"What\u2019s new in "+ver, meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
     })();
-    // 3 - movers among cards this collection owns. Prices stay off this slide in collector mode.
+    // 3 - movers among cards this collection owns. Hidden entirely when prices are off.
     (function(){
-      var showPrices = (typeof SETTINGS!=="undefined" && SETTINGS.mode!=="collector");
+      if(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector") return;
       var art = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
-      if(showPrices){
-        var upM=null, downM=null;
-        try{
-          if(typeof moverCard==="function"){
-            upM=moverCard("up", "collection");
-            downM=moverCard("down", "collection");
-          }
-        }catch(e){}
-        if(upM || downM){
-          var notes=[];
-          var mvPrice=function(m){ return (m.prev!=null && m.cur!=null) ? " \u00b7 "+money(m.prev)+" \u2192 "+money(m.cur) : ""; };
-          if(upM) notes.push("\u25B2 "+upM.c.name+" +"+Math.abs(upM.pct).toFixed(1)+"%"+mvPrice(upM));
-          if(downM) notes.push("\u25BC "+downM.c.name+" \u2212"+Math.abs(downM.pct).toFixed(1)+"%"+mvPrice(downM));
-          var mArt="";
-          try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
-          var featuredMovers=[];
-          try{
-            if(upM) featuredMovers.push({dir:"up", name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct)});
-            if(downM) featuredMovers.push({dir:"down", name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct)});
-          }catch(e){}
-          out.push({kind:"movers", badge:"Your collection", title:"Movers in your collection", meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt||art});
-          return;
+      var upM=null, downM=null;
+      try{
+        if(typeof moverCard==="function"){
+          upM=moverCard("up", "collection");
+          downM=moverCard("down", "collection");
         }
+      }catch(e){}
+      if(upM || downM){
+        var notes=[];
+        var mvPrice=function(m){ return (m.prev!=null && m.cur!=null) ? " \u00b7 "+money(m.prev)+" \u2192 "+money(m.cur) : ""; };
+        if(upM) notes.push("\u25B2 "+upM.c.name+" +"+Math.abs(upM.pct).toFixed(1)+"%"+mvPrice(upM));
+        if(downM) notes.push("\u25BC "+downM.c.name+" \u2212"+Math.abs(downM.pct).toFixed(1)+"%"+mvPrice(downM));
+        var mArt="";
+        try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
+        var featuredMovers=[];
+        try{
+          if(upM) featuredMovers.push({dir:"up", name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct)});
+          if(downM) featuredMovers.push({dir:"down", name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct)});
+        }catch(e){}
+        out.push({kind:"movers", badge:"Your collection", title:"Movers in your collection", meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt||art});
+        return;
       }
       var total=(typeof TOTAL!=="undefined"?TOTAL:0), ownedP=0;
       try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
-      var pct=pctOf(ownedP,total);
-      var meta;
-      if(showPrices) meta="No price moves in your collection yet";
-      else {
-        var sp=null; try{ sp=(typeof setProgress==="function"?setProgress():null); }catch(e){}
-        meta=(sp ? Object.keys(sp.tot||{}).length : 0)+" sets tracked";
-        try{ var sph=(typeof nextSphereMissingGoal==="function"?nextSphereMissingGoal():null); if(sph && sph.track) meta += " \u00b7 Next Sphere: "+sph.track.name+" ("+sph.remaining+" left)"; }catch(e){}
-      }
-      out.push({kind:"collection", badge:"Your collection", title:showPrices?"Movers in your collection":(ownedP+" / "+total+" cards \u00b7 "+pct+"%"), meta:showPrices?(ownedP+" / "+total+" cards \u00b7 "+meta):meta, art:art});
+      out.push({kind:"collection", badge:"Your collection", title:"Movers in your collection", meta:ownedP+" / "+total+" cards \u00b7 No price moves in your collection yet", art:art});
     })();
     // 4 - latest card reveal that is not the news slide
     if(reveal){
@@ -9178,7 +9169,7 @@
     // The colour completion panel was built, styled and rendered, but nothing could set the flag that
     // reveals it, so it shipped unreachable.
     var cd=$("setColorDash"); if(cd){ cd.checked=!!SETTINGS.showColorCompletion; cd.onchange=function(){ SETTINGS.showColorCompletion=!!cd.checked; saveSettings(); if(typeof stats==="function") stats(); render(); }; }
-    var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); }; }
+    var pc=$("setPrices"); if(pc){ pc.checked=(SETTINGS.mode!=="collector"); pc.onchange=function(){ SETTINGS.mode=pc.checked?"trader":"collector"; saveSettings(); applyMode(); render(); if(typeof renderHome==="function") renderHome(); }; }
     var spt=$("setPlayerTools"); if(spt){ spt.checked=playerToolsOn(); spt.onchange=function(){
       SETTINGS.playerTools=!!spt.checked; saveSettings(); applyFeatureFlags();
       if(!playerToolsOn() && missingGoal==="deck") missingGoal="sphere";
