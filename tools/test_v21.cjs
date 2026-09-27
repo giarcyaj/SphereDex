@@ -377,3 +377,24 @@ test('the home catch-up is only what this person missed since their last visit',
   assert.match(source, /View those cards/);
   assert.match(source, /t>PREVIOUS_VISIT && t<APP_OPENED_AT/);
 });
+
+test('home bars only measure a goal that has a total', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(appFunction('homeTrack'), box);
+  assert.equal(box.homeTrack(0, false), '');
+  assert.equal(box.homeTrack(40, false), '');
+  assert.match(box.homeTrack(0, true), /class="hctrack"/);
+  assert.match(box.homeTrack(0, true), /width:0%/);
+  assert.match(box.homeTrack(140, true), /width:100%/);
+  assert.match(box.homeTrack(-5, true), /width:0%/);
+  assert.match(source, /homeTrack\(pct, total>0\)/);
+  assert.match(source, /homeTrack\(sphere\.percent, sphere\.total>0\)/);
+  assert.match(source, /homeTrack\(closest\.percent, closest\.total>0\)/);
+  assert.match(source, /homeTrack\(deck\.percent, deck\.total>0\)/);
+  assert.match(source, /homeTrack\(0, false\)/);
+  assert.match(source, /homeTrack\(wishPct, wishCount\(\)>0\)/);
+  const market = source.slice(source.indexOf('$("homeMarket").innerHTML'), source.indexOf('$("homeCollection").onclick'));
+  assert.equal(market.includes('hctrack'), false);
+  assert.equal(market.includes('pricedPct'), false);
+});
