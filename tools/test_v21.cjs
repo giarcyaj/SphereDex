@@ -463,3 +463,163 @@ test('TCGplayer Mass Entry uses quantity, name, and a set code only when one is 
   assert.equal(box.tcgplayerMassEntry([]), '');
   assert.match(box.tcgplayerMassEntry([{ qty: 1, name: 'Lightning Bolt', set: 'SLD', number: '84' }]), /^1 Lightning Bolt \[SLD\] 84$/);
 });
+
+test('JSON import clamps bad quantities and never records a negative value', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(['plainObj', 'rawCount', 'cardMap', 'sealedMap', 'cardValue', 'clampMoney', 'snapshot'].map(appFunction).join('\n'), box);
+  const src = { 'EBP01-002': { qty: -4, mkt: 2.84, addAt: 5 } };
+  const mapped = JSON.parse(JSON.stringify(box.cardMap(src)));
+  assert.equal(src['EBP01-002'].qty, -4);
+  assert.deepEqual(mapped, { 'EBP01-002': { qty: 0, mkt: 2.84, addAt: 5 } });
+
+  const mixed = JSON.parse(JSON.stringify(box.cardMap({
+    'EBP01-001': { qty: 'lots' },
+    'EBP01-002': { qty: -4 },
+    'EBP01-003': null,
+    'EBP01-004': { qty: 2.9 },
+    'EBP01-005': { qty: 0 },
+    'EBP01-006': { qty: 2, rawEditions: { '1': -3, '2': 1.8 } }
+  })));
+  assert.equal(mixed['EBP01-001'].qty, 0);
+  assert.equal(mixed['EBP01-002'].qty, 0);
+  assert.equal(Object.prototype.hasOwnProperty.call(mixed, 'EBP01-003'), false);
+  assert.equal(mixed['EBP01-004'].qty, 2);
+  assert.equal(mixed['EBP01-005'].qty, 0);
+  assert.deepEqual(mixed['EBP01-006'], { qty: 2, rawEditions: { '1': 0, '2': 1 } });
+  assert.equal(box.cardMap([1, 2, 3]), null);
+  assert.deepEqual(JSON.parse(JSON.stringify(box.cardMap({ 'EBP01-001': { qty: 2 } }))), { 'EBP01-001': { qty: 2 } });
+
+  const sealed = JSON.parse(JSON.stringify(box.sealedMap({ box: { qty: -2, mkt: 9 }, bad: null })));
+  assert.deepEqual(sealed, { box: { qty: 0, mkt: 9 } });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.sealedMap(null))), {});
+  assert.match(appFunction('doImport'), /sealed:sealedMap\(d&&d\.sealed\)/);
+
+  assert.equal(box.cardValue({ qty: -4, mkt: 2.84 }), 0);
+  assert.equal(box.cardValue({ qty: 'lots', mkt: 5 }), 0);
+  assert.equal(box.cardValue({ qty: 2.9, mkt: 1 }), 2);
+  assert.equal(box.cardValue({ qty: 0, mkt: 5 }), 0);
+  assert.equal(box.cardValue({ qty: 4, mkt: 2.84 }), 11.36);
+
+  const col = { hist: {} };
+  box.activeCol = () => col;
+  box.todayKey = () => '2026-09-28';
+  box.cardsValue = () => -11.36;
+  box.sealedValue = () => 0;
+  box.cardsValueMode = () => -11.36;
+  box.sealedValueMode = () => -1;
+  box.collCounts = () => ({ cards: -4, graded: 0, sealed: -2 });
+  box.snapshot();
+  assert.equal(col.hist['2026-09-28'], undefined);
+
+  box.cardsValue = () => 10.5;
+  box.sealedValue = () => 0;
+  box.cardsValueMode = (mode) => (mode === 'sold' ? 0 : 10.5);
+  box.sealedValueMode = () => 0;
+  box.collCounts = () => ({ cards: 2, graded: 0, sealed: 0 });
+  box.snapshot();
+  const point = col.hist['2026-09-28'];
+  assert.equal(point.v, 10.5);
+  assert.equal(point.vLive, 10.5);
+  assert.equal(point.cards, 2);
+  assert.ok(point.v >= 0 && point.cards >= 0 && point.sealed >= 0);
+});
+
+test('PalDex status and variant filters combine', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(appFunction('paldexGroupVisible'), box);
+  const variants = [
+    { id: 'normal', rares: ['C', 'U', 'R', 'RR'] },
+    { id: 'rare', rares: ['SR'] },
+    { id: 'promo', rares: ['PR'] }
+  ];
+  function group(name, owned, rares) {
+    return { name, owned, total: rares.length, cards: rares.map((rare) => ({ rare })) };
+  }
+  const groups = [
+    group('Lamball', 0, ['C', 'SR']),
+    group('Fuack', 0, ['C', 'U']),
+    group('Cattiva', 1, ['SR', 'C', 'C']),
+    group('Promo Pal', 0, ['PR'])
+  ];
+  function names(status, variant) {
+    return groups.filter((g) => box.paldexGroupVisible(g, '', status, variant, variants)).map((g) => g.name);
+  }
+  assert.deepEqual(names('missing', 'rare'), ['Lamball']);
+  assert.deepEqual(names('all', 'rare'), ['Lamball', 'Cattiva']);
+  assert.deepEqual(names('started', 'rare'), ['Cattiva']);
+  assert.deepEqual(names('missing', 'normal'), ['Lamball', 'Fuack']);
+  assert.deepEqual(names('missing', 'promo'), ['Promo Pal']);
+  assert.deepEqual(names('complete', 'rare'), []);
+  assert.equal(appFunction('paldexFiltered').includes('return paldexGroupVisible('), true);
+});
+
+test('sign-in column forms do not use the 180px flex basis as height', () => {
+  assert.match(source, /\.acctform input, \.acctform \.pwwrap \{ flex:1 1 180px; min-width:0; max-width:100%; \}/);
+  assert.match(source, /\.acctform\.stack input, \.acctform\.stack \.pwwrap \{ flex:0 0 auto; width:100%; \}/);
+  assert.equal((source.match(/class="acctform stack"/g) || []).length, 3);
+  assert.equal(source.includes('acctform" style="flex-direction:column'), false);
+});
+
+function cssBlock(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(escaped + '\\s*\\{[^}]*\\}').exec(source);
+  assert.ok(match, 'CSS rule exists: ' + selector);
+  return match[0];
+}
+
+const chromeBin = '/usr/local/bin/google-chrome';
+const puppeteerPkg = '/tmp/pw/package.json';
+const canMeasureSignIn = fs.existsSync(chromeBin) && fs.existsSync(puppeteerPkg);
+
+test('sign-in inputs stay a single line at 1280, 390 and 320px', { skip: !canMeasureSignIn }, async () => {
+  const { createRequire } = require('node:module');
+  const puppeteer = createRequire(puppeteerPkg)('puppeteer-core');
+  const css = [
+    '* { box-sizing: border-box; }',
+    'body { margin: 0; }',
+    cssBlock('.acctcard'),
+    cssBlock('.sortsel'),
+    cssBlock('input.sortsel'),
+    cssBlock('.acctform'),
+    cssBlock('.acctform input, .acctform .pwwrap'),
+    cssBlock('.acctform.stack'),
+    cssBlock('.acctform.stack input, .acctform.stack .pwwrap'),
+    cssBlock('.pwwrap'),
+    cssBlock('.pwwrap input'),
+    cssBlock('.pweye'),
+    cssBlock('.acctform.stack > * + *')
+  ].join('\n');
+  const html = '<!doctype html><meta charset="utf-8"><style>' + css + '</style><div class="acctcard"><div class="acctform stack">' +
+    '<input class="sortsel" id="acctEmail" type="email" placeholder="you@email.com">' +
+    '<div class="pwwrap"><input class="sortsel" id="acctPw" type="password" placeholder="Password (8+ characters)"><button type="button" class="pweye">show</button></div>' +
+    '</div></div>';
+  const browser = await puppeteer.launch({ executablePath: chromeBin, headless: 'new', args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  try {
+    const page = await browser.newPage();
+    for (const width of [1280, 390, 320]) {
+      await page.setViewport({ width, height: 800, deviceScaleFactor: 1 });
+      await page.setContent(html, { waitUntil: 'load' });
+      const measured = await page.evaluate(() => {
+        const rect = (el) => el.getBoundingClientRect();
+        const email = document.getElementById('acctEmail');
+        const wrap = document.querySelector('.pwwrap');
+        const pw = document.getElementById('acctPw');
+        return {
+          email: rect(email).height,
+          wrap: rect(wrap).height,
+          pw: rect(pw).height,
+          scroll: document.documentElement.scrollWidth,
+          client: document.documentElement.clientWidth
+        };
+      });
+      assert.ok(measured.email >= 36 && measured.email <= 64, width + ' email height ' + measured.email);
+      assert.ok(measured.wrap >= 36 && measured.wrap <= 64, width + ' password row height ' + measured.wrap);
+      assert.ok(measured.pw >= 36 && measured.pw <= 64, width + ' password height ' + measured.pw);
+      if (width === 320) assert.ok(measured.scroll <= measured.client + 1, 'overflow ' + measured.scroll + ' > ' + measured.client);
+    }
+  } finally {
+    await browser.close();
+  }
+});
