@@ -1,4 +1,27 @@
 {
-  "updated_at": "2026-09-27T00:00:00Z",
-  "items": []
+  "updated_at": "2026-09-28T06:03:33Z",
+  "items": [
+    {
+      "id": "x-com-palworldocg-en-status-2104390642336137721",
+      "title": "Card reveal: Selyne – Saya's Moonlit Beacon (Legends Awaken)",
+      "url": "https://x.com/PalworldOCG_EN/status/2104390642336137721",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-09-28T02:00:01Z",
+      "category": "reveal",
+      "summary": "Official English account reveals Selyne – Saya's Moonlit Beacon for Legends Awaken, on sale October 30, 2026.",
+      "unconfirmed": false
+    },
+    {
+      "id": "www-reddit-com-r-palworldtcg-comments-1wra707-eternal-ascent-logo-reveal",
+      "title": "r/PalworldTCG discusses Eternal Ascent (set 3) logo reveal",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1wra707/eternal_ascent_logo_reveal/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-09-27T04:00:21Z",
+      "category": "community",
+      "summary": "Community thread on a quiet logo reveal for set 3 Eternal Ascent, with comments on preorder/allocation timing.",
+      "unconfirmed": false
+    }
+  ]
 }
