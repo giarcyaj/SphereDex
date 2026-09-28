@@ -30,7 +30,7 @@ function appConstant(name) {
 const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(
-  ['textAllowsAnyNumber', 'deckCardOf', 'deckLegalityReport', 'deckStatsReport'].map(appFunction).join('\n') + '\n' +
+  ['textAllowsAnyNumber', 'deckCardOf', 'deckLegalityReport', 'deckStatsReport', 'deckLegalitySummary'].map(appFunction).join('\n') + '\n' +
     appConstant('LUCKY_CAP'),
   sandbox
 );
@@ -555,6 +555,27 @@ test('PalDex status and variant filters combine', () => {
   assert.equal(appFunction('paldexFiltered').includes('return paldexGroupVisible('), true);
 });
 
+test('the legality summary uses the deck counts, not only the 50 and 10 requirements', () => {
+  const report = sandbox.deckLegalityReport(
+    { 'S-1': 3, 'P-1': 50 },
+    {
+      'S-1': card({ id: 'S-1', name: 'Soul', kind: 'Soul', color: '' }),
+      'P-1': card({ id: 'P-1', name: 'Pal', color: 'Red' })
+    }
+  );
+  assert.equal(report.main, 50);
+  assert.equal(report.souls, 3);
+  assert.equal(sandbox.deckLegalitySummary(report), '50 / 50 main · 3 / 10 Souls · Lucky Pals 0/8 · Red');
+  assert.equal(source.includes('50-card main deck · 10 Soul cards'), false);
+});
+
+test('an upcoming PalDex tile names its set once', () => {
+  const fn = appFunction('renderPaldex');
+  assert.match(fn, /soon \|\| "no printings yet/);
+  assert.match(fn, /soon \? "" : "not printed yet"/);
+  assert.equal(fn.includes('soon || "not printed yet"'), false);
+});
+
 test('sign-in column forms do not use the 180px flex basis as height', () => {
   assert.match(source, /\.acctform input, \.acctform \.pwwrap \{ flex:1 1 180px; min-width:0; max-width:100%; \}/);
   assert.match(source, /\.acctform\.stack input, \.acctform\.stack \.pwwrap \{ flex:0 0 auto; width:100%; \}/);
@@ -621,5 +642,129 @@ test('sign-in inputs stay a single line at 1280, 390 and 320px', { skip: !canMea
     }
   } finally {
     await browser.close();
+  }
+});
+
+test('Match and Portfolio stay on the phone screen', { skip: !canMeasureSignIn }, async () => {
+  const { createRequire } = require('node:module');
+  const http = require('node:http');
+  const puppeteer = createRequire(puppeteerPkg)('puppeteer-core');
+  const server = http.createServer((req, res) => {
+    if (req.url === '/' || req.url === '/index.html') {
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+      res.end(source);
+      return;
+    }
+    res.statusCode = 404;
+    res.end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const browser = await puppeteer.launch({ executablePath: chromeBin, headless: 'new', args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  try {
+    const page = await browser.newPage();
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('palvault-settings', JSON.stringify({
+        theme: 'dark', onboarded: true, playerTools: true, mode: 'trader', ebayRegion: 'com', trackPaid: true
+      }));
+      localStorage.setItem('palvault-v1', JSON.stringify({
+        cols: [{
+          id: 'c1', name: 'My Collection', own: {},
+          hist: {
+            '2026-09-27': { v: 10, vLive: 10, cards: 1, graded: 0, sealed: 0 },
+            '2026-09-28': { v: 12.5, vLive: 12.5, cards: 2, graded: 0, sealed: 0 }
+          }
+        }],
+        active: 'c1', wishlist: {}, decks: []
+      }));
+    });
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      if (req.url().startsWith('http://127.0.0.1:' + port + '/')) req.continue();
+      else req.abort();
+    });
+    await page.goto('http://127.0.0.1:' + port + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForFunction(() => {
+      const onboard = document.querySelector('#onboard');
+      return onboard && onboard.hidden && document.querySelector('#matchBoard');
+    });
+    async function openPage(name) {
+      await page.evaluate((pageName) => {
+        document.querySelector('.tab[data-page="' + pageName + '"]').click();
+      }, name);
+      await page.waitForFunction((pageName) => {
+        const active = document.querySelector('section.page.active');
+        return active && active.id === 'page-' + pageName;
+      }, {}, name);
+    }
+    async function layout() {
+      return page.evaluate(() => {
+        const buttons = Array.prototype.map.call(document.querySelectorAll('#matchBoard button'), (el) => {
+          const r = el.getBoundingClientRect();
+          return { w: r.width, h: r.height, label: el.getAttribute('aria-label') || el.textContent.trim() };
+        });
+        const nav = document.querySelector('.navmenu .navbar');
+        const home = document.querySelector('#navPrimarySlots [data-page="home"]');
+        const nr = nav.getBoundingClientRect();
+        const hr = home.getBoundingClientRect();
+        const hit = document.elementFromPoint(hr.left + hr.width / 2, hr.top + hr.height / 2);
+        return {
+          scroll: document.documentElement.scrollWidth,
+          client: document.documentElement.clientWidth,
+          height: document.documentElement.clientHeight,
+          buttons,
+          nav: { left: nr.left, right: nr.right, top: nr.top, bottom: nr.bottom },
+          homeHit: !!(hit && home.contains(hit))
+        };
+      });
+    }
+    for (const width of [320, 360, 375, 390]) {
+      await page.setViewport({ width, height: width === 320 ? 640 : 800, deviceScaleFactor: 1 });
+      await openPage('match');
+      let measured = await layout();
+      assert.ok(measured.scroll <= measured.client + 1, width + ' match overflow ' + measured.scroll + ' > ' + measured.client);
+      assert.ok(measured.nav.left >= -1 && measured.nav.right <= measured.client + 1, width + ' nav ' + JSON.stringify(measured.nav));
+      assert.ok(measured.nav.bottom <= measured.height + 1, width + ' nav below the screen');
+      assert.equal(measured.homeHit, true, width + ' Home is not tappable');
+      assert.ok(measured.buttons.length >= 8, width + ' missing match controls');
+      measured.buttons.forEach((button) => {
+        assert.ok(button.w + 0.5 >= 40 && button.h + 0.5 >= 40, width + ' ' + button.label + ' is ' + button.w + 'x' + button.h);
+      });
+      await page.evaluate(() => document.querySelector('#navPrimarySlots [data-page="home"]').click());
+      await page.waitForFunction(() => document.querySelector('section.page.active').id === 'page-home');
+      await openPage('match');
+      await page.evaluate(() => document.querySelector('#matchBoard [data-act="reset"]').click());
+      await page.waitForSelector('#askScrim:not([hidden])');
+      const confirm = await page.evaluate(() => {
+        const ok = document.getElementById('askOk');
+        const r = ok.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return {
+          w: r.width, h: r.height, text: ok.textContent,
+          scroll: document.documentElement.scrollWidth,
+          client: document.documentElement.clientWidth,
+          hit: !!(hit && (hit === ok || ok.contains(hit)))
+        };
+      });
+      assert.equal(confirm.text, 'Reset');
+      assert.ok(confirm.w + 0.5 >= 40 && confirm.h + 0.5 >= 40, width + ' reset confirm ' + confirm.w + 'x' + confirm.h);
+      assert.equal(confirm.hit, true, width + ' reset confirm is not tappable');
+      assert.ok(confirm.scroll <= confirm.client + 1, width + ' confirm overflow');
+      await page.evaluate(() => document.getElementById('askCancel').click());
+    }
+    for (const width of [320, 360]) {
+      await page.setViewport({ width, height: 640, deviceScaleFactor: 1 });
+      await openPage('portfolio');
+      const measured = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+        rows: document.querySelectorAll('#pdHost .pdrow').length
+      }));
+      assert.ok(measured.rows >= 1, width + ' portfolio has no history rows');
+      assert.ok(measured.scroll <= measured.client + 1, width + ' portfolio overflow ' + measured.scroll + ' > ' + measured.client);
+    }
+  } finally {
+    await browser.close();
+    await new Promise((resolve) => server.close(resolve));
   }
 });

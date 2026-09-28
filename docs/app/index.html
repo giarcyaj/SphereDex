@@ -1229,9 +1229,9 @@
   .pdstats .hs .n { display:block; font-family:var(--font-display); font-weight:850; font-size:1.1rem; }
   .pdstats .hs .l { display:block; font-size:.72rem; color:var(--ink-faint); margin-top:3px; }
   .pdlist { display:flex; flex-direction:column; }
-  .pdrow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
+  .pdrow { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); min-width:0; }
   .pdrow .pdd { font-weight:600; min-width:88px; font-size:.9rem; }
-  .pdrow .pdc { color:var(--ink-soft); font-size:.8rem; flex:1; }
+  .pdrow .pdc { color:var(--ink-soft); font-size:.8rem; flex:1; min-width:0; }
   .pdrow .pdchg { font-family:var(--font-mono); font-size:.76rem; font-weight:700; white-space:nowrap; text-align:right; min-width:70px; font-variant-numeric:tabular-nums; }
   .pdrow .pdup { color:var(--el-Grass); } .pdrow .pddown { color:var(--el-Fire); } .pdrow .pdflat { color:var(--ink-faint); }
   .pdrow .pdv { font-family:var(--font-mono); font-weight:700; min-width:62px; text-align:right; }
@@ -1319,8 +1319,9 @@
   .matchlife .mlnum { flex:1; text-align:center; }
   .matchlife .mlnum b { display:block; font:800 2.4rem/1 var(--font-display); }
   .matchlife .mlnum span, .matchstep span { display:block; font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
-  .matchres { display:flex; gap:8px; }
-  .matchstep { flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); }
+  .matchres { display:flex; gap:8px; min-width:0; }
+  .matchstep { flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); }
+  .matchstep > div { min-width:0; flex:1; text-align:center; }
   .matchstep b { font:800 1.3rem var(--font-display); }
   .matchstep button { min-width:44px; min-height:44px; font-size:1.3rem; }
   .matchmid { display:flex; flex-direction:column; gap:8px; padding:10px 12px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line); }
@@ -1340,6 +1341,19 @@
   .pcost .prow b { text-align:right; }
   .pcost .gain.up { color:var(--up); } .pcost .gain.down { color:var(--down); } .pcost .gain.flat { color:var(--ink-faint); }
   @media (min-width:900px){ .matchhalf { padding:16px; gap:12px; } .matchlife .mlnum b { font-size:3.6rem; } .matchlife button, .matchstep button { min-width:56px; min-height:52px; font-size:1.6rem; } }
+  /* Two resource steppers side by side, each with a 44px button on both ends, are wider than a phone.
+     Stack them so 320–390px keeps the page, the bottom nav and the reset confirm on screen. */
+  @media (max-width:520px){
+    .matchboard { width:100%; }
+    .matchhalf { padding:8px; gap:6px; }
+    .matchres { flex-direction:column; gap:6px; }
+    .matchlife button, .matchstep button, .matchmid .tbtn { min-width:40px; min-height:40px; }
+    .matchstep { padding:4px 6px; gap:4px; }
+    .matchrow { min-width:0; }
+    .pdrow { flex-wrap:wrap; column-gap:8px; row-gap:2px; }
+    .pdrow .pdd, .pdrow .pdchg, .pdrow .pdv { min-width:0; }
+    .pdrow .pdc { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  }
   .deckadd { max-width:520px; margin-bottom:6px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
@@ -1589,7 +1603,7 @@
   .askbox.wide{ max-width:560px; }
   .askbox.wide .askbtns{ flex-wrap:wrap; }
   .askbtns{ display:flex; gap:9px; justify-content:flex-end; }
-  .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; }
+  .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; min-width:40px; min-height:40px; }
   @media(max-width:440px){ .askbtns{ flex-wrap:wrap; } }
   .askbtns .ok{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .askbtns .ok.danger{ background:var(--el-Fire); border-color:var(--el-Fire); }
@@ -6384,12 +6398,16 @@
     if(deckFocus.k==="lucky") return c.sub==="Lucky Pal";
     return true;
   }
+  function deckLegalitySummary(rep){
+    var colors=(rep.colors&&rep.colors.length)?rep.colors.join(" + "):"no colours selected";
+    return rep.main+" / 50 main · "+rep.souls+" / 10 Souls · Lucky Pals "+rep.lucky+"/"+rep.luckyCap+" · "+colors;
+  }
   function renderDeckLegality(d){
     var host=$("deckLegality"); if(!host) return;
     if(!d){ host.hidden=true; host.innerHTML=""; return; }
     var rep=deckLegalityReport(d.cards||{}, byNumberIdx), issues=rep.issues.map(esc);
     host.hidden=false; host.className="decklegality "+(issues.length?"bad":"ok");
-    var summary="50-card main deck · 10 Soul cards · Lucky Pals "+rep.lucky+"/"+rep.luckyCap+" · "+(rep.colors.length?rep.colors.join(" + "):"no colours selected");
+    var summary=deckLegalitySummary(rep);
     host.innerHTML='<div class="dlhead"><span>Deck legality</span><span class="dlstate">'+(issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"Ready to play")+'</span></div>'+(issues.length?'<ul><li>'+issues.join("</li><li>")+'</li></ul>':'')+'<div class="dlsum">'+summary+'</div>';
   }
   // Practice state stays in memory for the open deck. A new deck starts with no hand dealt.
@@ -7802,7 +7820,8 @@
         return '<button class="palpip '+state+'" type="button" data-cid="'+esc(x.cards[0].id)+'" style="color:'+x.v.color+'" title="'+esc(tip)+'" aria-label="'+esc(tip)+'"></button>';
       }).join("");
       var countText = (g.total ? g.owned+" of "+g.total+((g.total===1)?" printing":" printings") : (soon || "no printings yet \u00b7 future set"));
-      var subText = (paldexLabel(g.name) ? paldexLabel(g.name)+" \u00b7 " : "")+ (g.total ? g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "") : (soon || "not printed yet"));
+      var subRest = g.total ? g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "") : (soon ? "" : "not printed yet");
+      var subText = [paldexLabel(g.name), subRest].filter(Boolean).join(" \u00b7 ");
       var tint = (g.hero && g.hero.els && g.hero.els.length) ? artTint(g.hero) : null;
       var haveArt = !!PAL_ART[g.name];
       el.innerHTML = '<span class="palart palart-pal"'+(tint ? ' style="--_pal:'+elVar(tint)+'"' : "")+'>' +
