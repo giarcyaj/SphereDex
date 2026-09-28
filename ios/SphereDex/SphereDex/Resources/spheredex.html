@@ -1325,6 +1325,7 @@
   .matchstep b { font:800 1.3rem var(--font-display); }
   .matchstep button { min-width:44px; min-height:44px; font-size:1.3rem; }
   .matchmid { display:flex; flex-direction:column; gap:8px; padding:10px 12px; border-radius:14px; background:var(--surface-2); border:1px solid var(--line); }
+  .matchmid .tbtn { min-height:40px; }
   .matchrow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
   .matchclock { font:800 1.8rem var(--font-mono); }
   .matchclock.done { color:var(--el-Fire); }
@@ -1350,6 +1351,10 @@
     .matchlife button, .matchstep button, .matchmid .tbtn { min-width:40px; min-height:40px; }
     .matchstep { padding:4px 6px; gap:4px; }
     .matchrow { min-width:0; }
+    /* Day and Reset leave the round stepper about 21px for its label, so ROUND is covered by +.
+       Give that stepper the whole row; the word needs about 41px and the buttons stay 40px. */
+    .matchrow > .matchstep { flex:1 1 100%; }
+    .matchrow > .matchstep > div { min-width:max-content; flex:0 1 auto; }
     .pdrow { flex-wrap:wrap; column-gap:8px; row-gap:2px; }
     .pdrow .pdd, .pdrow .pdchg, .pdrow .pdv { min-width:0; }
     .pdrow .pdc { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -2956,8 +2961,8 @@
   var LS_OK=(function(){ try{ localStorage.setItem("palvault-probe","1"); localStorage.removeItem("palvault-probe"); return true; }catch(e){ return false; } })();
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
-  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.0.
-  var APP_VERSION = "2.0";
+  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.1.
+  var APP_VERSION = "2.1";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -2977,6 +2982,11 @@
       "A more useful Home \u00b7 next steps for collection, market, Spheres, decks & wishlist",
       "Headliner \u00b7 news, X posts, card reveals & today\u2019s riser and faller",
       "PalDex \u00b7 every printing of a Pal in one place, by Paldex number"
+    ],
+    "2.1": [
+      "Deck check \u00b7 8 Lucky Pal cap, stats, opening hand and Damage Check",
+      "Match tracker for the table \u00b7 life, Material, Ingredient, day and night",
+      "Rules text and keyword search \u00b7 upcoming PalDex cards name their set"
     ]
   };
   // The store build the version check learns about ("" until the first check completes).

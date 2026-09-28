@@ -576,6 +576,48 @@ test('an upcoming PalDex tile names its set once', () => {
   assert.equal(fn.includes('soon || "not printed yet"'), false);
 });
 
+test('2.1 is this build, and a store record of 2.0 is not an update', () => {
+  assert.match(source, /var APP_VERSION = "2\.1";/);
+  const highlights = source.match(/var RELEASE_HIGHLIGHTS = \{[\s\S]*?\n  \};/);
+  assert.ok(highlights, 'RELEASE_HIGHLIGHTS is in the source');
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
+  assert.equal(box.RELEASE_HIGHLIGHTS['2.1'].length, 3);
+  assert.match(box.RELEASE_HIGHLIGHTS['2.1'][1], /Match tracker/);
+  assert.ok(box.verNum('2.1') > box.verNum('2.0'));
+  assert.equal(box.verNum('2.0') > box.verNum('2.1'), false);
+  const caught = box.missedUpdate({
+    now: 1_700_000_000_000,
+    openedAt: 1_700_000_000_000,
+    previousVisit: 1_700_000_000_000 - 50 * 60 * 60 * 1000,
+    addedSince: 0,
+    addedThisWeek: 0,
+    lastTotal: 270,
+    total: 274,
+    appVersion: '2.1',
+    latestVersion: '2.0',
+    updateNotes: ['Old store note']
+  });
+  assert.equal(caught.bullets.includes('Old store note'), false);
+  assert.match(source, /if\(latest && verNum\(latest\) > verNum\(APP_VERSION\)\) offerUpdate\(latest\);/);
+  const ver = box.verNum('2.1');
+  const latest = box.verNum('2.0');
+  const behind = latest > ver;
+  const notes = behind ? ['Old store note'] : box.RELEASE_HIGHLIGHTS['2.1'];
+  assert.equal(behind, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(notes)), JSON.parse(JSON.stringify(box.RELEASE_HIGHLIGHTS['2.1'])));
+  const gradle = fs.readFileSync(path.join(__dirname, '../app/build.gradle.kts'), 'utf8');
+  assert.match(gradle, /versionName = "2\.1"/);
+  assert.match(gradle, /versionCode = System\.getenv\("VERSION_CODE"\)\?\.toIntOrNull\(\) \?: 13/);
+  const spec = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/project.yml'), 'utf8');
+  assert.match(spec, /MARKETING_VERSION: "2\.1"/);
+  assert.match(spec, /CURRENT_PROJECT_VERSION: "17"/);
+  const project = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/SphereDex.xcodeproj/project.pbxproj'), 'utf8');
+  assert.equal((project.match(/MARKETING_VERSION = 2\.1;/g) || []).length, 2);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 17;/g) || []).length, 2);
+});
+
 test('sign-in column forms do not use the 180px flex basis as height', () => {
   assert.match(source, /\.acctform input, \.acctform \.pwwrap \{ flex:1 1 180px; min-width:0; max-width:100%; \}/);
   assert.match(source, /\.acctform\.stack input, \.acctform\.stack \.pwwrap \{ flex:0 0 auto; width:100%; \}/);
@@ -730,6 +772,33 @@ test('Match and Portfolio stay on the phone screen', { skip: !canMeasureSignIn }
       measured.buttons.forEach((button) => {
         assert.ok(button.w + 0.5 >= 40 && button.h + 0.5 >= 40, width + ' ' + button.label + ' is ' + button.w + 'x' + button.h);
       });
+      if (width === 320) {
+        const round = await page.evaluate(() => {
+          const step = document.querySelector('#matchBoard .matchrow .matchstep');
+          const label = step.querySelector('span');
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          const text = range.getBoundingClientRect();
+          const box = label.getBoundingClientRect();
+          const plus = step.querySelector('button[data-d="1"]');
+          const midX = text.left + text.width / 2;
+          const midY = text.top + text.height / 2;
+          const hit = document.elementFromPoint(midX, midY);
+          return {
+            word: label.textContent,
+            textW: text.width,
+            boxW: box.width,
+            covered: !!(hit && plus.contains(hit)),
+            scroll: document.documentElement.scrollWidth,
+            client: document.documentElement.clientWidth
+          };
+        });
+        assert.equal(round.word, 'Round');
+        assert.ok(round.boxW + 1 >= round.textW, 'ROUND is clipped ' + round.boxW + ' < ' + round.textW);
+        assert.ok(round.textW >= 40, 'ROUND text is only ' + round.textW);
+        assert.equal(round.covered, false, 'the round + button covers ROUND');
+        assert.ok(round.scroll <= round.client + 1, '320 round row overflow ' + round.scroll);
+      }
       await page.evaluate(() => document.querySelector('#navPrimarySlots [data-page="home"]').click());
       await page.waitForFunction(() => document.querySelector('section.page.active').id === 'page-home');
       await openPage('match');
@@ -752,6 +821,18 @@ test('Match and Portfolio stay on the phone screen', { skip: !canMeasureSignIn }
       assert.ok(confirm.scroll <= confirm.client + 1, width + ' confirm overflow');
       await page.evaluate(() => document.getElementById('askCancel').click());
     }
+    await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+    await openPage('match');
+    const wideButtons = await page.evaluate(() => {
+      return Array.prototype.map.call(document.querySelectorAll('#matchBoard .matchmid .tbtn'), (el) => {
+        const r = el.getBoundingClientRect();
+        return { h: r.height, label: el.textContent.trim() };
+      });
+    });
+    assert.ok(wideButtons.length >= 3, 'missing match text buttons at 1280');
+    wideButtons.forEach((button) => {
+      assert.ok(button.h + 0.5 >= 40, '1280 ' + button.label + ' is ' + button.h + 'px tall');
+    });
     for (const width of [320, 360]) {
       await page.setViewport({ width, height: 640, deviceScaleFactor: 1 });
       await openPage('portfolio');
