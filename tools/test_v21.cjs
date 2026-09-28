@@ -398,3 +398,68 @@ test('home bars only measure a goal that has a total', () => {
   assert.equal(market.includes('hctrack'), false);
   assert.equal(market.includes('pricedPct'), false);
 });
+
+function binom(n, k) {
+  if (k < 0 || k > n) return 0;
+  if (k === 0 || k === n) return 1;
+  k = Math.min(k, n - k);
+  let r = 1;
+  for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+  return r;
+}
+function atLeastOne(deck, copies, drawn) {
+  const N = Math.floor(+deck), K = Math.min(Math.floor(+copies), N), n = Math.min(Math.floor(+drawn), N);
+  if (!(N > 0) || !(K > 0) || !(n > 0)) return 0;
+  if (n > N - K) return 1;
+  return 1 - binom(N - K, n) / binom(N, n);
+}
+
+test('opening-hand and Damage Check odds are hypergeometric', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(['hyperAtLeastOne', 'openingHandOdds', 'damageCheckOdds'].map(appFunction).join('\n'), box);
+  [ [50, 4, 5], [50, 4, 6], [50, 4, 8], [50, 8, 1], [50, 8, 4], [10, 8, 3], [50, 0, 5], [0, 4, 5], [50, 1, 80], [5, 1, 5] ].forEach((args) => {
+    const got = box.hyperAtLeastOne(args[0], args[1], args[2]);
+    const want = atLeastOne(args[0], args[1], args[2]);
+    assert.ok(Math.abs(got - want) < 1e-12, args.join(',') + ' got ' + got + ' want ' + want);
+  });
+  const hand = box.openingHandOdds(50, 4);
+  assert.equal(hand.handSize, 5);
+  assert.equal(hand.opening, box.hyperAtLeastOne(50, 4, 5));
+  assert.equal(hand.after1, box.hyperAtLeastOne(50, 4, 6));
+  assert.equal(hand.after3, box.hyperAtLeastOne(50, 4, 8));
+  assert.ok(hand.opening < hand.after1 && hand.after1 < hand.after3);
+  const dmg = box.damageCheckOdds(50, 8);
+  assert.equal(dmg[1], box.hyperAtLeastOne(50, 8, 1));
+  assert.equal(dmg[4], box.hyperAtLeastOne(50, 8, 4));
+  assert.ok(dmg[1] < dmg[2] && dmg[2] < dmg[3] && dmg[3] < dmg[4]);
+  assert.equal(box.damageCheckOdds(50, 0)[4], 0);
+  assert.equal(box.hyperAtLeastOne(12, 12, 1), 1);
+});
+
+test('TCGplayer Mass Entry uses quantity, name, and a set code only when one is known', () => {
+  const box = {};
+  vm.createContext(box);
+  vm.runInContext(['tcgplayerPlainName', 'tcgplayerSetNumber', 'tcgplayerMassEntry'].map(appFunction).join('\n'), box);
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('EBP01', 'EBP01-023'))), { set: 'BP01', number: '23' });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('EBP01', 'EBP01-001OSR'))), { set: 'BP01', number: '1' });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('BP01', 'BP01-084'))), { set: 'BP01', number: '84' });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('ETD01', 'ETD01-005'))), { set: '', number: '' });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('ETD01', 'ESOUL-001'))), { set: '', number: '' });
+  assert.deepEqual(JSON.parse(JSON.stringify(box.tcgplayerSetNumber('PR2026', 'PR-014'))), { set: '', number: '' });
+  const text = box.tcgplayerMassEntry([
+    { qty: 1, name: 'Lamball – My First Pal', set: 'BP01', number: '023' },
+    { qty: 2, name: 'Lamball - My First Pal', set: 'bp01', number: '23' },
+    { qty: 1, name: 'Grizzbolt – Rumbling Tank', set: '', number: '' },
+    { qty: 0, name: 'Dropped', set: 'BP01', number: '1' },
+    { qty: 4, name: '  Soul  ', set: '', number: '' }
+  ]);
+  assert.equal(text, [
+    '3 Lamball - My First Pal [BP01] 23',
+    '1 Grizzbolt - Rumbling Tank',
+    '4 Soul'
+  ].join('\n'));
+  assert.equal(text.includes('\n\n'), false);
+  assert.equal(box.tcgplayerMassEntry([]), '');
+  assert.match(box.tcgplayerMassEntry([{ qty: 1, name: 'Lightning Bolt', set: 'SLD', number: '84' }]), /^1 Lightning Bolt \[SLD\] 84$/);
+});

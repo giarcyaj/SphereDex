@@ -739,7 +739,8 @@
   .missingfoot { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; color:var(--ink-soft); font-size:.8rem; }
   .missingcontrols { display:flex; align-items:center; gap:9px; margin-top:13px; padding-top:12px; border-top:1px solid var(--line); color:var(--ink-soft); font-size:.76rem; font-weight:700; }
   .missingcontrols select { min-width:0; flex:1; border:1.5px solid var(--line-strong); background:var(--bg); color:var(--ink); border-radius:8px; padding:7px 9px; font:inherit; }
-  .missingactions { display:flex; gap:8px; align-items:center; }
+  .missingactions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .missingactions .btn { white-space:nowrap; }
   .spherebreakdown { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
   .spherebreakdown span { border:1px solid var(--line); border-radius:999px; padding:4px 7px; color:var(--ink-soft); font-size:.68rem; font-weight:700; }
   .spherebreakdown b { color:var(--ink); }
@@ -1267,6 +1268,27 @@
   .decklegality .dlstate { color:var(--el-Grass); } .decklegality.bad .dlstate { color:var(--el-Fire); }
   .decklegality ul { margin:7px 0 0; padding-left:18px; color:var(--ink-soft); }
   .decklegality .dlsum { margin-top:4px; color:var(--ink-soft); }
+  .decklab { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
+  .decklab[hidden] { display:none; }
+  .deckpanel { border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); padding:12px 13px; }
+  .deckpanel h3 { margin:0 0 4px; font:800 .98rem var(--font-display); }
+  .deckpanel .dlnote { margin:0 0 8px; color:var(--ink-soft); font-size:.78rem; line-height:1.4; }
+  .deckkey { display:block; width:100%; margin:0 0 8px; }
+  .dodds { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .dstrikes { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+  .dodd { border:1px solid var(--line); border-radius:10px; padding:8px 6px; background:var(--surface); text-align:center; }
+  .dodd b { display:block; font:800 1rem var(--font-display); }
+  .dodd span { display:block; margin-top:2px; font-size:.6rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .dhand { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; }
+  .dhand .dcard { flex:0 0 64px; width:64px; }
+  .dhand img { width:64px; height:88px; object-fit:cover; border-radius:6px; background:var(--surface); display:block; }
+  .dhand .dnm { font-size:.62rem; line-height:1.25; margin-top:3px; }
+  .dlabacts { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .dlabacts .btn { min-height:44px; }
+  .dlabacts .btn:disabled { opacity:.45; cursor:default; }
+  .dflip { margin-top:8px; font-size:.8rem; color:var(--ink); }
+  .modeexport { margin:-6px 0 12px; }
+  .modeexport[hidden] { display:none; }
   .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   .deckcurve, .deckkinds, .deckcolors { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
   .dbar, .dchip { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:10px; padding:6px 8px; min-width:44px; cursor:pointer; font:inherit; text-align:center; }
@@ -2097,6 +2119,7 @@
   <div id="collGrid" hidden>
   <button class="backbtn" type="button" id="setsBack">&lsaquo; Browse by set</button>
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
+  <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button></div>
   <div class="collectedbar" id="collectedBar" hidden>
     <span class="cbsub" id="collectedSub"></span>
     <span class="cbtogs">
@@ -2200,6 +2223,7 @@
     <p class="qsub">Build a deck from the whole card pool. SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
     <div class="deckstats" id="deckStats"></div>
     <div class="decklegality" id="deckLegality" hidden></div>
+    <div class="decklab" id="deckLab" hidden></div>
     <div class="deckcomplete" id="deckCompletion" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
     <div class="decksug" id="deckSug" hidden></div>
@@ -6106,8 +6130,10 @@
     if(goal.remaining && pending.length===0) detail+=' · all missing cards are already wishlisted';
     else if(goal.remaining && pending.length) detail+=' · '+pending.length+' '+(pending.length===1?'card':'cards')+' ready to add to wishlist';
     host.innerHTML='<div class="dc-copy"><div class="dc-title">'+esc(d.name)+' completion</div><div class="dc-detail">'+detail+'<span class="priceui"> · est. '+money(estimate)+'</span></div></div>'+
-      (goal.remaining?'<button class="btn pri" type="button" id="deckWishBtn">Review wishlist</button>':'');
+      (goal.remaining?'<button class="btn sec" type="button" id="deckTcgBtn">Copy for TCGplayer</button><button class="btn pri" type="button" id="deckWishBtn">Review wishlist</button>':'');
     host.hidden=false;
+    var tcgBtn=$("deckTcgBtn");
+    if(tcgBtn) tcgBtn.onclick=function(){ copyTcgplayerRows(deckTcgRows(goal)); };
     var btn=$("deckWishBtn"); if(!btn) return;
     btn.onclick=function(){
       if(!pending.length){ openAsk({title:"Already on your wishlist",message:"Every missing card for "+d.name+" is already on your wishlist.",okText:"Done",confirmOnly:true}); return; }
@@ -6173,6 +6199,125 @@
     });
     return {total:total, unique:unique, main:main, lucky:lucky, curve:curve, kinds:kinds, colors:colors};
   }
+  // P(at least one) for a hypergeometric draw: population deck, successes copies, sample drawn.
+  // Used for the opening hand and for a Damage Check. N stays at or below 50, so the product is exact
+  // enough in JS numbers for a percentage to one decimal place.
+  function hyperAtLeastOne(deck, copies, drawn){
+    var N=Math.floor(+deck), K=Math.floor(+copies), n=Math.floor(+drawn);
+    if(!(N>0) || !(K>0) || !(n>0)) return 0;
+    if(K>N) K=N;
+    if(n>N) n=N;
+    if(n>N-K) return 1;
+    var miss=1, i;
+    for(i=0;i<n;i++) miss*=(N-K-i)/(N-i);
+    var p=1-miss;
+    if(p<0) return 0;
+    if(p>1) return 1;
+    return p;
+  }
+  // Opening hand is 5 from the main deck (palmods.gg/tcg/rules). "After 1 draw" and "after 3 draws"
+  // are that hand kept, then 1 or 3 more cards: 6 and 8 cards seen. A mulligan reshuffles the whole
+  // main deck, so it does not change these odds.
+  function openingHandOdds(deck, copies){
+    return { opening:hyperAtLeastOne(deck, copies, 5), after1:hyperAtLeastOne(deck, copies, 6), after3:hyperAtLeastOne(deck, copies, 8), handSize:5, deckSize:Math.floor(+deck)||0, copies:Math.max(0, Math.floor(+copies)||0) };
+  }
+  // Damage Check mills the main deck one card at a time up to the Strike. A Lucky Pal cancels the
+  // whole damage (CR 11.2.2, palworldtcg.gg/rules; palmods.gg/tcg/rules). Life is saved iff at least
+  // one of those cards is Lucky, which is the same hypergeometric. Modeled on the full main deck.
+  function damageCheckOdds(deck, lucky){
+    return { 1:hyperAtLeastOne(deck, lucky, 1), 2:hyperAtLeastOne(deck, lucky, 2), 3:hyperAtLeastOne(deck, lucky, 3), 4:hyperAtLeastOne(deck, lucky, 4) };
+  }
+  function oddsPct(p){
+    var n=(+p||0)*100;
+    if(n<0) n=0;
+    if(n>100) n=100;
+    if(n===0) return "0%";
+    if(n===100) return "100%";
+    return n.toFixed(1)+"%";
+  }
+  function shuffleCards(list){
+    var a=(list||[]).slice(), i, j, t;
+    for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function mainDeckList(qtyMap, byId){
+    var out=[];
+    Object.keys(qtyMap||{}).forEach(function(id){
+      var qty=+qtyMap[id]||0, c=deckCardOf(id, byId), i;
+      if(!c || !(qty>0) || c.kind==="Soul") return;
+      for(i=0;i<qty;i++) out.push(c);
+    });
+    return out;
+  }
+  // TCGplayer Mass Entry reads one item per line: Quantity, Card Name, then optional [Set Code] and
+  // number (help.tcgplayer.com article 360055768913, example "1 Lightning Bolt [SLD] 84").
+  // Quantity and name alone are documented as valid. Dawn of Palpagos is the only Palworld set whose
+  // code is published on TCGplayer (product URLs use bp01-dawn-of-palpagos). English ids are EBP01
+  // and Japanese ids are BP01, so those cards use [BP01] and an unpadded number. Trial decks, promos
+  // and souls have no set code we can cite, so they stay quantity and name.
+  function tcgplayerPlainName(name){
+    return String(name||"").replace(/\u2013|\u2014|\u2212/g, "-").replace(/\s+/g, " ").trim();
+  }
+  function tcgplayerSetNumber(set, id){
+    var code=String(id||"").toUpperCase().replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,"");
+    var bp=/^(?:E?BP01)-0*(\d+)$/.exec(code);
+    if(!bp) return {set:"", number:""};
+    if(set && set!=="EBP01" && set!=="BP01") return {set:"", number:""};
+    return {set:"BP01", number:String(+bp[1])};
+  }
+  function tcgplayerMassEntry(rows){
+    var merged=[], index={};
+    (rows||[]).forEach(function(row){
+      var qty=Math.floor(+row.qty||0), name=tcgplayerPlainName(row.name);
+      if(!(qty>0) || !name) return;
+      var set=String(row.set||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+      var number=String(row.number==null?"":row.number).replace(/^0+(?=\d)/,"").replace(/[^0-9]/g,"");
+      var key=name.toLowerCase()+"\n"+set+"\n"+number;
+      if(index[key]!=null){ merged[index[key]].qty+=qty; return; }
+      index[key]=merged.length;
+      merged.push({qty:qty, name:name, set:set, number:number});
+    });
+    return merged.map(function(r){
+      var line=r.qty+" "+r.name;
+      if(r.set && r.number) line+=" ["+r.set+"] "+r.number;
+      return line;
+    }).join("\n");
+  }
+  function copyTcgplayerRows(rows){
+    var text=tcgplayerMassEntry(rows);
+    if(!text){ toast("Nothing to copy for TCGplayer"); return; }
+    copyPlainText(text, "Copied for TCGplayer");
+  }
+  function deckTcgRows(goal){
+    var rows=[];
+    ((goal&&goal.items)||[]).forEach(function(item){
+      if(!item||!item.card) return;
+      var need=+item.need||0; if(!(need>0)) return;
+      var p=tcgplayerSetNumber(item.card.set, item.card.id);
+      rows.push({qty:need, name:item.card.name, set:p.set, number:p.number});
+    });
+    return rows;
+  }
+  function missingTcgRows(goal, data){
+    var rows=[];
+    ((data&&data.items)||[]).forEach(function(item){
+      if(!item||!item.card) return;
+      var need=+item.need||0; if(!(need>0)) return;
+      if(goal!=="deck" && ownsForCompletion(item.card)) return;
+      var p=tcgplayerSetNumber(item.card.set, item.card.id);
+      rows.push({qty:need, name:item.card.name, set:p.set, number:p.number});
+    });
+    return rows;
+  }
+  function wishlistTcgRows(){
+    var rows=[];
+    CARDS.forEach(function(c){
+      if(!isWished(c.id)) return;
+      var p=tcgplayerSetNumber(c.set, c.id);
+      rows.push({qty:1, name:c.name, set:p.set, number:p.number});
+    });
+    return rows;
+  }
   var deckFocus=null, deckFocusDeck=null;
   function deckFocusOn(kind, value){
     if(deckFocus && deckFocus.k===kind && String(deckFocus.v)===String(value)) deckFocus=null;
@@ -6195,12 +6340,96 @@
     var summary="50-card main deck · 10 Soul cards · Lucky Pals "+rep.lucky+"/"+rep.luckyCap+" · "+(rep.colors.length?rep.colors.join(" + "):"no colours selected");
     host.innerHTML='<div class="dlhead"><span>Deck legality</span><span class="dlstate">'+(issues.length?issues.length+" issue"+(issues.length===1?"":"s"):"Ready to play")+'</span></div>'+(issues.length?'<ul><li>'+issues.join("</li><li>")+'</li></ul>':'')+'<div class="dlsum">'+summary+'</div>';
   }
+  // Practice state stays in memory for the open deck. A new deck starts with no hand dealt.
+  var deckPractice={id:null, hand:[], pile:[], dealt:false, mulligan:false, key:"", flip:null};
+  function renderDeckLab(d){
+    var host=$("deckLab"); if(!host) return;
+    if(!d){ host.hidden=true; host.innerHTML=""; return; }
+    if(deckPractice.id!==d.id) deckPractice={id:d.id, hand:[], pile:[], dealt:false, mulligan:false, key:"", flip:null};
+    var list=mainDeckList(d.cards||{}, byNumberIdx);
+    var lucky=0, names={}, nameList=[];
+    list.forEach(function(c){ if(c.sub==="Lucky Pal") lucky++; names[c.name]=(names[c.name]||0)+1; });
+    Object.keys(names).sort().forEach(function(name){ nameList.push({name:name, copies:names[name]}); });
+    if(!nameList.some(function(n){ return n.name===deckPractice.key; })){
+      var best=nameList.slice().sort(function(a,b){ return b.copies-a.copies || (a.name<b.name?-1:1); })[0];
+      deckPractice.key=best?best.name:"";
+    }
+    var copies=names[deckPractice.key]||0;
+    var odds=openingHandOdds(list.length, copies);
+    var dmg=damageCheckOdds(list.length, lucky);
+    var sizeNote=list.length===50?"A legal main deck is 50 cards.":"This list has "+list.length+" main-deck card"+(list.length===1?"":"s")+". A legal main deck is 50, so these odds use the list as built.";
+    var keyOpts=nameList.map(function(n){
+      return '<option value="'+esc(n.name)+'"'+(n.name===deckPractice.key?' selected':'')+'>'+esc(n.name)+' · '+n.copies+'</option>';
+    }).join("");
+    var handHtml=deckPractice.dealt?(deckPractice.hand.length?('<div class="dhand">'+deckPractice.hand.map(function(c){
+      return '<div class="dcard"><img src="'+imgSrc(c)+'" alt=""><div class="dnm">'+esc(c.name)+'</div></div>';
+    }).join("")+'</div>'):'<p class="dlnote">The main deck has no cards to deal.</p>'):'<p class="dlnote">No hand dealt yet.</p>';
+    var flipHtml="";
+    if(deckPractice.flip){
+      var f=deckPractice.flip;
+      var seen=f.seen.map(function(c){ return esc(c.name)+(c.sub==="Lucky Pal"?" (Lucky)":""); }).join(", ");
+      var verdict=f.saved?"Saved. A Lucky Pal cancelled the damage.":(f.short?"The deck ran out before Strike "+f.strike+". No Lucky Pal, so the life is still lost.":"No Lucky Pal in the top "+f.strike+". The life is lost.");
+      flipHtml='<div class="dflip"><b>'+verdict+'</b> '+(seen?("Revealed: "+seen+"."):"")+'</div>';
+    }
+    var strikeCells=[1,2,3,4].map(function(s){
+      return '<div class="dodd"><b>'+(list.length?oddsPct(dmg[s]):"—")+'</b><span>Strike '+s+'</span></div>';
+    }).join("");
+    host.hidden=false;
+    host.innerHTML=
+      '<section class="deckpanel" id="deckLuckyPanel"><h3>Lucky Pals · '+lucky+(list.length?' of '+list.length+' · '+oddsPct(list.length?lucky/list.length:0):'')+'</h3>'+
+      '<p class="dlnote">A Damage Check looks at the top of the main deck, one card at a time, until it has seen Strike cards or a Lucky Pal. A Lucky Pal saves the life. These chances use the full main deck as listed, souls excluded, not the cards left after the opening hand. '+esc(sizeNote)+'</p>'+
+      '<div class="dstrikes">'+strikeCells+'</div>'+
+      '<div class="dlabacts">'+[1,2,3,4].map(function(s){ return '<button type="button" class="btn sec" data-s="'+s+'">Flip '+s+'</button>'; }).join("")+'</div>'+flipHtml+'</section>'+
+      '<section class="deckpanel" id="deckHandPanel"><h3>Opening hand</h3>'+
+      '<p class="dlnote">Draw 5 from the main deck. Mulligan once: put the whole hand back, shuffle, and draw 5 again. You cannot redraw part of the hand. Souls stay out. The odds are the chance of at least one copy of the key card, from the copies in this list.</p>'+
+      handHtml+
+      '<div class="dlabacts"><button type="button" class="btn sec" id="deckDeal">'+(deckPractice.dealt?"Shuffle again":"Deal opening hand")+'</button>'+
+      (deckPractice.dealt?'<button type="button" class="btn sec" id="deckMulligan"'+(deckPractice.mulligan?' disabled':'')+'>'+(deckPractice.mulligan?"Mulligan used":"Mulligan")+'</button>':'')+
+      '</div>'+
+      (nameList.length?'<label class="dlnote" for="deckKey">Key card</label><select class="sortsel deckkey" id="deckKey" aria-label="Key card">'+keyOpts+'</select>'+
+      '<div class="dodds"><div class="dodd"><b>'+oddsPct(odds.opening)+'</b><span>Opening 5</span></div><div class="dodd"><b>'+oddsPct(odds.after1)+'</b><span>After 1 draw</span></div><div class="dodd"><b>'+oddsPct(odds.after3)+'</b><span>After 3 draws</span></div></div>':'')+
+      '</section>';
+    host.querySelectorAll(".dlabacts button[data-s]").forEach(function(btn){
+      btn.onclick=function(){
+        var cards=shuffleCards(mainDeckList(d.cards||{}, byNumberIdx));
+        var strike=+btn.getAttribute("data-s")||1, seen=[], saved=false, i;
+        for(i=0;i<cards.length && seen.length<strike;i++){
+          seen.push(cards[i]);
+          if(cards[i].sub==="Lucky Pal"){ saved=true; break; }
+        }
+        deckPractice.flip={strike:strike, seen:seen, saved:saved, short:cards.length<strike && !saved};
+        renderDeckLab(d);
+      };
+    });
+    var deal=$("deckDeal");
+    if(deal) deal.onclick=function(){
+      var cards=shuffleCards(mainDeckList(d.cards||{}, byNumberIdx));
+      var n=Math.min(5, cards.length);
+      deckPractice.hand=cards.slice(0, n);
+      deckPractice.pile=cards.slice(n);
+      deckPractice.dealt=true;
+      deckPractice.mulligan=false;
+      renderDeckLab(d);
+    };
+    var mull=$("deckMulligan");
+    if(mull) mull.onclick=function(){
+      if(deckPractice.mulligan) return;
+      var all=shuffleCards(deckPractice.hand.concat(deckPractice.pile));
+      var n=Math.min(5, all.length);
+      deckPractice.hand=all.slice(0, n);
+      deckPractice.pile=all.slice(n);
+      deckPractice.mulligan=true;
+      renderDeckLab(d);
+    };
+    var keySel=$("deckKey");
+    if(keySel) keySel.onchange=function(){ deckPractice.key=keySel.value; renderDeckLab(d); };
+  }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck();
     ["deckSel","deckRename","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
-    if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
+    if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -6236,6 +6465,7 @@
       '<div class="deckbreak"><div class="deckcurve" aria-label="Main deck cost curve">'+bars+'</div><div class="deckkinds">'+kindChips+'</div><div class="deckcolors">'+colChips+'</div></div>'+
       focusNote;
     renderDeckLegality(d);
+    renderDeckLab(d);
     renderDeckCompletion(d);
     $("deckStats").querySelectorAll(".dbar,.dchip").forEach(function(b){
       b.onclick=function(){ deckFocusOn(b.getAttribute("data-k"), b.getAttribute("data-v")); };
@@ -6409,10 +6639,12 @@
     var progress=data&&data.total?Math.min(100,pctOf(data.owned,data.total)):0;
         var sphereSilhouette=missingGoal==="sphere"&&data?'<div class="spherehero"><span class="rwsphere" style="--rc:'+data.track.sphere.c+';width:54px;height:54px;margin:0;">'+sphereSVG(data.track.sphere.c,data.track.id)+'</span><span class="spherelabel">'+esc(data.track.sphere.name)+'</span></div>':"";
     var eligibility=missingGoal==="sphere"?'Each official main-set printing counts once. Trial decks and promos do not count.':missingGoal==="master"?'Each catalogued printing counts once; raw or graded copies both qualify, while duplicates do not.':(missingGoal==="set"||missingGoal==="rarity"||missingGoal==="pal")?'Each unique printing counts once, whether raw or graded.':'';
+    var tcgRows=missingTcgRows(missingGoal, data);
     hero.innerHTML='<div class="missingherohead"><div><div class="missingeyebrow">'+esc(copy.eyebrow)+'</div><div class="missingname">'+esc(copy.name)+'</div></div><div class="missingcount"><b>'+copy.count+'</b>'+esc(copy.detail)+'</div></div>'+
-      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
+      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
     var choice=$("missingChoice"); if(choice) choice.onchange=function(){ missingChoice[missingGoal]=choice.value; renderMissing(); };
     var bulk=$("missingBulkAction"); if(bulk) bulk.onclick=function(){ addMissingToWishlist(items); };
+    var missingTcg=$("missingTcgAction"); if(missingTcg) missingTcg.onclick=function(){ copyTcgplayerRows(tcgRows); };
     $("missingHeroAction").onclick=function(){
       if(copy.actionType==="master") openMissingCollection();
       else if(copy.actionType==="sphere" && data) openSet(data.set,"missing");
@@ -6474,7 +6706,7 @@
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
   function deckToText(d){
@@ -6525,6 +6757,42 @@
     function done(){ toast("Decklist copied"); }
     function fallback(){ var ta=$("deckIOText"); if(ta){ ta.focus(); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("Select the text and copy it"); } } }
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done, fallback); } else fallback();
+  }
+  function showCopyBox(text, title, hint){
+    var sc=$("deckIOScrim"); if(!sc) return;
+    var ta=$("deckIOText"), act=$("deckIOAction"), alt=$("deckIOAlt"), cancel=$("deckIOCancel");
+    function close(){ sc.hidden=true; act.onclick=alt.onclick=cancel.onclick=sc.onclick=null; }
+    cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    $("deckIOTitle").textContent=title||"Copy";
+    $("deckIOHint").textContent=hint||"Clipboard access is not available. Select the text and copy it.";
+    ta.value=text; ta.readOnly=true;
+    act.textContent="Copy";
+    act.onclick=function(){
+      ta.focus(); ta.select();
+      var ok=false; try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
+      toast(ok?"Copied for TCGplayer":"Select the text and copy it");
+    };
+    alt.hidden=true;
+    sc.hidden=false;
+    setTimeout(function(){ ta.focus(); ta.select(); }, 30);
+  }
+  function copyPlainText(text, okMsg){
+    function done(){ toast(okMsg||"Copied"); }
+    function failed(){ showCopyBox(text, "Copy for TCGplayer", "Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry."); }
+    function execCopy(){
+      var ta=document.createElement("textarea");
+      ta.value=text; ta.setAttribute("readonly","");
+      ta.style.position="fixed"; ta.style.left="0"; ta.style.top="0"; ta.style.opacity="0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var ok=false; try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ if(execCopy()) done(); else failed(); });
+    } else if(execCopy()) done();
+    else failed();
   }
   function openDeckIO(mode){
     var sc=$("deckIOScrim"); if(!sc) return;
@@ -6704,6 +6972,7 @@
     var head=$("colModeHead"), dash=$("colDash"), m=colMode();
     var titles={wish:"Wishlist", fav:"Favourites", graded:"Graded", collected:"What you have collected"};
     if(head){ head.hidden=(m==="col"); head.textContent=titles[m]||""; }
+    var wishExport=$("wishExport"); if(wishExport) wishExport.hidden=!(m==="wish" && wishCount()>0);
     if(dash){ dash.hidden=(m!=="col"); }
     var cb=$("collectedBar"); if(cb) cb.hidden=(m!=="collected");
     var sb=$("setsBack"); if(sb) sb.innerHTML=(m==="col")?"&lsaquo; Browse by set":"&lsaquo; Back";
