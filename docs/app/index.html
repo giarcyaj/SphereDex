@@ -807,6 +807,13 @@
   .palprog { height:5px; border-radius:4px; overflow:hidden; background:var(--surface-2); margin:0 10px 5px; }
   .palprog span { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,var(--accent),var(--up)); transition:width .3s ease; }
   .palcount { margin:0 10px 9px; color:var(--ink-faint); font-size:.64rem; font-family:var(--font-mono); }
+  .paltile.soon .palcount { color:var(--accent-ink); font-weight:650; }
+  .uplead { color:var(--ink); font-weight:650; margin:8px 0 2px; }
+  .update { color:var(--ink-soft); margin:0 0 14px; font-size:.85rem; }
+  .uprow { margin:0 0 12px; }
+  .uprow .upname { font-family:var(--font-display); font-weight:750; }
+  .uprow .upnum { font-family:var(--font-mono); font-size:.8rem; color:var(--ink-soft); }
+  .uprow a { color:var(--accent-ink); font-weight:700; }
   /* ==== FEATURED CAROUSEL BEGIN (styles; guarded by tools/test_carousel.cjs) ==== */
   /* Featured window: the top of Home. Four images that scroll themselves through the newest news,
      releases. A track of full-width slides, moved with one transform, so the animation is a genuine
@@ -2601,6 +2608,14 @@
   </div>
 </div>
 
+<div class="askscrim" id="upScrim" hidden>
+  <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="upTitle">
+    <h3 id="upTitle"></h3>
+    <div id="upBody"></div>
+    <div class="askbtns"><button type="button" id="upClose">Close</button></div>
+  </div>
+</div>
+
 <div class="askscrim" id="askScrim" hidden>
   <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="askTitle">
     <h3 id="askTitle"></h3>
@@ -2817,7 +2832,7 @@
   var FILTER_SETS = [
     { key:"dop", name:"Dawn of Palpagos", products:[ {code:"EBP01", name:"Booster Box"}, {code:"ETD01", name:"Trial Deck Red · Blue"}, {code:"ETD02", name:"Trial Deck Green · Purple"} ] },
     { key:"la", name:"Legends Awaken", products:[ {code:"EBP02", name:"Booster Box"} ] },
-    { key:"ea", name:"Eternal Ascent", products:[ {code:"ETD03", name:"Trial Deck Red · Green"}, {code:"ETD04", name:"Trial Deck Blue · Purple"} ] },
+    { key:"ea", name:"Eternal Ascent", products:[ {code:"EBP03", name:"Booster Box"}, {code:"ETD03", name:"Trial Deck Red · Green"}, {code:"ETD04", name:"Trial Deck Blue · Purple"} ] },
     { key:"promo", name:"Promo", products:[ {code:"PR2026", name:"Promo Cards"} ] }
   ];
   function filterSetOf(code){ for(var i=0;i<FILTER_SETS.length;i++){ if(FILTER_SETS[i].products.some(function(p){ return p.code===code; })) return FILTER_SETS[i]; } return null; }
@@ -5414,8 +5429,10 @@
     { id:"box-bp02", set:"Legends Awaken", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP02", code:"BP02", q:"Palworld Legends Awaken Booster Box", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
     { id:"pack-bp02", set:"Legends Awaken", name:"Booster Pack", sub:"7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
     { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"75 sleeves · 10 cards", box:"BOX_SS01", banner:"BOX_BANNER_SS01", code:"SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
-    { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD03", code:"TD03", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["Eternal Ascent"], pre:true, date:"Dec 18, 2026" },
-    { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", code:"TD04", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["Eternal Ascent"], pre:true, date:"Dec 18, 2026" }
+    { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD03", code:"TD03", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["TD03","Red・Green"], pre:true, date:"Dec 18, 2026" },
+    { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", code:"TD04", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["TD04","Blue・Purple"], pre:true, date:"Dec 18, 2026" },
+    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" },
+    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" }
   ];
   // ---- Auto release-date updates from the news feed ----
   // The backend refreshes the official news nightly; the app parses a concrete "Month D, YYYY" out of any
@@ -7087,7 +7104,7 @@
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -7514,6 +7531,133 @@
   // Base Pal name: "Jormuntide - Surging Sea Serpent" -> "Jormuntide". The en dash is what separates the
   // Pal from its card title, so this also decides how the Missing screen's Pal goal groups cards.
   function palKey(c){ return String((c&&c.name)||"").split(" \u2013 ")[0].trim(); }
+  // Upcoming Pal cards. Live file docs/paldex/upcoming-cards.json is fetched from
+  // UPCOMING_CARDS_URL. Field contract: docs/paldex/README.md. UPCOMING_CARDS_FALLBACK
+  // is the copy shipped in the app for when that fetch fails.
+  /* UPCOMING CARDS BEGIN */
+  var UPCOMING_CARDS_URL = "https://spheredex.app/paldex/upcoming-cards.json";
+  var UPCOMING_CARDS_LS = "palvault-upcoming-cards";
+  var UPCOMING_CARDS_TTL = 30*24*60*60*1000;
+  var UPCOMING_CARDS_FALLBACK = {"updated_at":"2026-09-28T10:49:15Z","entries":[{"pal":"Jetragon","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":"Jetragon – Legendary Guardian Dragon","card_number":"EBP02-097","source_url":"https://x.com/PalworldOCG_EN/status/2101352941034865035","revealed_at":"2026-09-19T16:49:17Z"},{"pal":"Frostallion","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":"Frostallion – Everlasting Rime","card_number":"EBP02-025","source_url":"https://x.com/PalworldOCG_EN/status/2102246510952100189","revealed_at":"2026-09-22T04:00:00Z"},{"pal":"Frostallion Noct","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":"Frostallion Noct – Eternal Darkness","card_number":"EBP02-073","source_url":"https://x.com/PalworldOCG_EN/status/2102261612023521310","revealed_at":"2026-09-22T05:00:01Z"},{"pal":"Anubis","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":"Anubis – Noble Reaper","card_number":"EBP02-049","source_url":"https://x.com/PalworldOCG_EN/status/2103423638800339279","revealed_at":"2026-09-25T09:57:29Z"},{"pal":"Selyne","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":"Selyne – Saya's Moonlit Beacon","card_number":"EBP02-074","source_url":"https://x.com/PalworldOCG_EN/status/2104390642336137721","revealed_at":"2026-09-28T02:00:01Z"},{"pal":"Orserk","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2093503912149950892","revealed_at":"2026-08-29T01:00:02Z"},{"pal":"Anubis","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2094862864377069701","revealed_at":"2026-09-01T19:00:02Z"},{"pal":"Tombat","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2095225245527683465","revealed_at":"2026-09-02T19:00:00Z"},{"pal":"Leezpunk Ignis","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2095587634655666465","revealed_at":"2026-09-03T19:00:00Z"},{"pal":"Chillet Ignis","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2095950025016656028","revealed_at":"2026-09-04T19:00:01Z"},{"pal":"Chillet Ignis","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG/status/2094349483056234687","revealed_at":"2026-08-31T09:00:02Z"},{"pal":"Relaxaurus Lux","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2096765394363244864","revealed_at":"2026-09-07T01:00:00Z"},{"pal":"Quivern Botan","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2097127786980823065","revealed_at":"2026-09-08T01:00:01Z"},{"pal":"Sweepa","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2097490170170036626","revealed_at":"2026-09-09T01:00:00Z"},{"pal":"Swee","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2097852558299500737","revealed_at":"2026-09-10T01:00:00Z"},{"pal":"Daedream","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2098214945989026000","revealed_at":"2026-09-11T01:00:00Z"},{"pal":"Tombat","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2099302107530854575","revealed_at":"2026-09-14T01:00:00Z"},{"pal":"Prixter","set":"Legends Awaken","set_code":"EBP02","release_date":"2026-10-30","card_name":null,"card_number":null,"source_url":"https://x.com/PalworldOCG_EN/status/2099664495257780667","revealed_at":"2026-09-15T01:00:00Z"},{"pal":"Cattiva","set":"Sleeve & Card Set Vol.1","set_code":"SS01","release_date":"2026-10-16","card_name":"Cattiva – Brimming Bravado","card_number":"SS01-004","source_url":"https://x.com/PalworldOCG_EN/status/2104496345927332076","revealed_at":"2026-09-28T09:00:03Z"},{"pal":"Depresso","set":"Sleeve & Card Set Vol.1","set_code":"SS01","release_date":"2026-10-16","card_name":"Depresso – Midnight Overdrive","card_number":"SS01-003","source_url":"https://x.com/PalworldOCG_EN/status/2104496345927332076","revealed_at":"2026-09-28T09:00:03Z"},{"pal":"Chillet","set":"Sleeve & Card Set Vol.1","set_code":"SS01","release_date":"2026-10-16","card_name":"Chillet – Final Frostneedle","card_number":"SS01-002","source_url":"https://x.com/PalworldOCG_EN/status/2104496345927332076","revealed_at":"2026-09-28T09:00:03Z"},{"pal":"Quivern","set":"Sleeve & Card Set Vol.1","set_code":"SS01","release_date":"2026-10-16","card_name":"Quivern – Breath of the Wyvern","card_number":"SS01-005","source_url":"https://x.com/PalworldOCG_EN/status/2104496345927332076","revealed_at":"2026-09-28T09:00:03Z"},{"pal":"Grizzbolt","set":"Sleeve & Card Set Vol.1","set_code":"SS01","release_date":"2026-10-16","card_name":"Grizzbolt – Cascading Voltage","card_number":"SS01-001","source_url":"https://x.com/PalworldOCG_EN/status/2104496345927332076","revealed_at":"2026-09-28T09:00:03Z"}]};
+  var _upcomingEntries = [];
+  var _upcomingReq = 0;
+  function upcomingIso(value){
+    var raw=String(value||"").trim();
+    var m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.exec(raw);
+    if(!m) return NaN;
+    return Date.parse(m[4] ? raw : (m[1]+"-"+m[2]+"-"+m[3]+"T00:00:00Z"));
+  }
+  function upcomingDay(iso){
+    var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||""));
+    if(!m) return NaN;
+    var y=+m[1], mo=+m[2], d=+m[3];
+    if(mo<1||mo>12||d<1||d>31) return NaN;
+    return Date.UTC(y, mo-1, d);
+  }
+  function upcomingKey(row){
+    return row.pal+"\n"+row.set_code+"\n"+(row.card_number||"")+"\n"+row.source_url;
+  }
+  function upcomingNormalise(feed){
+    if(!feed || typeof feed!=="object" || !Array.isArray(feed.entries)) return null;
+    var entries=[], seen=Object.create(null);
+    for(var i=0;i<feed.entries.length;i++){
+      var raw=feed.entries[i];
+      if(!raw || typeof raw!=="object") continue;
+      var pal=String(raw.pal||"").replace(/\s+/g," ").trim();
+      var set=String(raw.set||"").replace(/\s+/g," ").trim();
+      var code=String(raw.set_code||"").trim();
+      var release=String(raw.release_date||"").trim();
+      var url=String(raw.source_url||"").trim();
+      var revealed=String(raw.revealed_at||"").trim();
+      var cardName=raw.card_name==null ? null : String(raw.card_name).replace(/\s+/g," ").trim();
+      var cardNumber=raw.card_number==null ? null : String(raw.card_number).replace(/\s+/g," ").trim();
+      if(!cardName) cardName=null;
+      if(!cardNumber) cardNumber=null;
+      if(!pal || pal.length>80 || !set || set.length>120) continue;
+      if(!/^[A-Z0-9]{2,12}$/.test(code)) continue;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(release) || isNaN(upcomingDay(release))) continue;
+      if(!/^https:\/\/[^\s]+$/i.test(url) || url.length>300) continue;
+      if(isNaN(upcomingIso(revealed))) continue;
+      if(cardName && cardName.length>160) continue;
+      if(cardNumber && cardNumber.length>32) continue;
+      var row={ pal:pal, set:set, set_code:code, release_date:release, card_name:cardName, card_number:cardNumber, source_url:url, revealed_at:revealed };
+      var key=upcomingKey(row);
+      if(seen[key]) continue;
+      seen[key]=1;
+      entries.push(row);
+    }
+    var updated=String(feed.updated_at||"").trim();
+    return { updated_at: isNaN(upcomingIso(updated))?"":updated, entries:entries };
+  }
+  function upcomingPassed(releaseDate, now){
+    var day=upcomingDay(releaseDate);
+    if(isNaN(day)) return true;
+    var t=new Date(+now||Date.now());
+    if(isNaN(t.getTime())) return true;
+    return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) > day;
+  }
+  function upcomingPhrase(setName){ return "Card upcoming in "+setName; }
+  function upcomingDateLabel(iso){
+    var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||""));
+    if(!m) return "";
+    var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var mo=months[(+m[2])-1];
+    if(!mo) return "";
+    return (+m[3])+" "+mo+" "+m[1];
+  }
+  function upcomingMatch(pal, hasCards, entries, now){
+    if(hasCards) return null;
+    var list=(entries||[]).filter(function(e){ return e && e.pal===pal && !upcomingPassed(e.release_date, now); });
+    if(!list.length) return null;
+    list.sort(function(a,b){
+      return upcomingDay(a.release_date)-upcomingDay(b.release_date) || String(a.revealed_at).localeCompare(String(b.revealed_at)) || String(a.source_url).localeCompare(String(b.source_url));
+    });
+    var set=list[0].set;
+    return { set:set, release_date:list[0].release_date, entries:list.filter(function(e){ return e.set===set; }) };
+  }
+  function upcomingSheetHtml(pal, match){
+    if(!match || !match.entries || !match.entries.length) return "";
+    var rows=match.entries.map(function(e){
+      var name=e.card_name ? '<div class="upname">'+esc(e.card_name)+'</div>' : "";
+      var num=e.card_number ? '<div class="upnum">'+esc(e.card_number)+'</div>' : "";
+      var label=e.card_name ? "Source" : "Official reveal";
+      return '<div class="uprow">'+name+num+'<a href="'+esc(e.source_url)+'" target="_blank" rel="noopener">'+esc(label)+'</a></div>';
+    }).join("");
+    return '<p class="uplead">'+esc(upcomingPhrase(match.set))+'</p><p class="update">'+esc(upcomingDateLabel(match.release_date))+'</p>'+rows;
+  }
+  function upcomingReadCache(){
+    try{
+      var d=JSON.parse(lsGet(UPCOMING_CARDS_LS)||"null");
+      if(!d || !d.feed || (Date.now()-(+d.at||0))>=UPCOMING_CARDS_TTL) return null;
+      return upcomingNormalise(d.feed) ? d.feed : null;
+    }catch(e){ return null; }
+  }
+  function upcomingWriteCache(feed){
+    try{ lsSet(UPCOMING_CARDS_LS, JSON.stringify({at:Date.now(), feed:feed})); }catch(e){}
+  }
+  function upcomingUse(feed){
+    var norm=upcomingNormalise(feed);
+    if(!norm) return false;
+    _upcomingEntries=norm.entries;
+    return true;
+  }
+  function upcomingLoad(){
+    if(!upcomingUse(upcomingReadCache() || UPCOMING_CARDS_FALLBACK)) _upcomingEntries=[];
+    var req=++_upcomingReq;
+    if(typeof fetch!=="function") return;
+    fetch(UPCOMING_CARDS_URL, {cache:"no-store"}).then(function(res){
+      if(!res || !res.ok) throw new Error("upcoming");
+      return res.json();
+    }).then(function(feed){
+      if(req!==_upcomingReq || !upcomingNormalise(feed)) return;
+      upcomingWriteCache(feed);
+      upcomingUse(feed);
+      try{ if(typeof renderPaldex==="function" && typeof _curPage==="string" && _curPage==="paldex") renderPaldex(); }catch(e){}
+    }).catch(function(){});
+  }
+  upcomingUse(UPCOMING_CARDS_FALLBACK);
+  /* UPCOMING CARDS END */
+
   function palGroups(){
     var map = {}, order = [];
     // Seed every Pal from the dex (including future/not-yet-printed) so gap pals appear as 0-printing tiles.
@@ -7587,6 +7731,17 @@
   // Every data point leads somewhere: a tile opens this Pal's missing cards (the existing Pal goal), and
   // a pip opens that printing's card sheet.
   function openPalGoal(name){ missingGoal = "pal"; missingChoice.pal = name; showPage("missing"); }
+  function openUpcomingPal(name, match){
+    var sc=$("upScrim");
+    if(!sc || !match){ toast(match ? upcomingPhrase(match.set) : (name+" has no cards yet \u00b7 future set")); return; }
+    var title=$("upTitle"), body=$("upBody");
+    if(title) title.textContent=name;
+    if(body) body.innerHTML=upcomingSheetHtml(name, match);
+    sc.hidden=false;
+    function close(){ sc.hidden=true; }
+    var btn=$("upClose"); if(btn) btn.onclick=close;
+    sc.onclick=function(e){ if(e.target===sc) close(); };
+  }
   function renderPaldex(){
     var grid = $("paldexGrid"); if(!grid) return;
     var all = palGroups();
@@ -7635,7 +7790,9 @@
     list.forEach(function(g){
       var el = document.createElement("article");
       el.className = "paltile"; el.tabIndex = 0; el.setAttribute("role","button");
-      el.setAttribute("aria-label", g.name + (paldexLabel(g.name) ? " " + paldexLabel(g.name) : "") + ": " + g.owned + " of " + g.total + " printings owned");
+      var up = (typeof upcomingMatch==="function") ? upcomingMatch(g.name, g.total>0, _upcomingEntries, Date.now()) : null;
+      var soon = up ? upcomingPhrase(up.set) : "";
+      el.setAttribute("aria-label", g.name + (paldexLabel(g.name) ? " " + paldexLabel(g.name) : "") + ": " + (soon || (g.owned + " of " + g.total + " printings owned")));
       // All five slots always render, so "no promo exists for this Pal" stays visibly different from
       // "a promo exists and you do not own it".
       var pips = g.variants.map(function(x){
@@ -7644,8 +7801,8 @@
         var tip = x.v.label + " \u00b7 " + x.owned + "/" + x.cards.length + " owned" + (x.owned ? "" : " \u00b7 none yet");
         return '<button class="palpip '+state+'" type="button" data-cid="'+esc(x.cards[0].id)+'" style="color:'+x.v.color+'" title="'+esc(tip)+'" aria-label="'+esc(tip)+'"></button>';
       }).join("");
-      var countText = (g.total ? g.owned+" of "+g.total+((g.total===1)?" printing":" printings") : "no printings yet \u00b7 future set");
-      var subText = (paldexLabel(g.name) ? paldexLabel(g.name)+" \u00b7 " : "")+ (g.total ? g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "") : "not printed yet");
+      var countText = (g.total ? g.owned+" of "+g.total+((g.total===1)?" printing":" printings") : (soon || "no printings yet \u00b7 future set"));
+      var subText = (paldexLabel(g.name) ? paldexLabel(g.name)+" \u00b7 " : "")+ (g.total ? g.percent+'% of variants'+(g.total && g.owned >= g.total ? " \u00b7 complete" : "") : (soon || "not printed yet"));
       var tint = (g.hero && g.hero.els && g.hero.els.length) ? artTint(g.hero) : null;
       var haveArt = !!PAL_ART[g.name];
       el.innerHTML = '<span class="palart palart-pal"'+(tint ? ' style="--_pal:'+elVar(tint)+'"' : "")+'>' +
@@ -7662,9 +7819,21 @@
         var artImg = el.querySelector(".palart img");
         if(artImg) artImg.onerror = function(){ artImg.onerror = null; artImg.src = imgSrc(g.hero); };
       }
-      if(!g.total){ el.style.opacity=".78"; el.title=esc(g.name)+" \u00b7 not printed yet \u00b7 future set"; }
-      el.onclick = function(){ if(!g.total){ toast(esc(g.name)+" has no cards yet \u00b7 future set"); return; } openPalGoal(g.name); };
-      el.onkeydown = function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); if(!g.total){ toast(esc(g.name)+" has no cards yet \u00b7 future set"); return; } openPalGoal(g.name); } };
+      if(!g.total){
+        if(up) el.classList.add("soon");
+        else el.style.opacity=".78";
+        el.title = g.name+" \u00b7 "+(soon || "not printed yet \u00b7 future set");
+      }
+      function openThisPal(){
+        if(!g.total){
+          if(up) openUpcomingPal(g.name, up);
+          else toast(g.name+" has no cards yet \u00b7 future set");
+          return;
+        }
+        openPalGoal(g.name);
+      }
+      el.onclick = openThisPal;
+      el.onkeydown = function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openThisPal(); } };
       Array.prototype.forEach.call(el.querySelectorAll(".palpip"), function(b){
         b.onclick = function(e){
           e.stopPropagation();
@@ -7694,7 +7863,8 @@
       if(!top.length){ palSugClose(); return; }
       box.innerHTML=top.map(function(g){
         var hasArt=!!PAL_ART[g.name];
-        var sub=(paldexLabel(g.name)?paldexLabel(g.name)+" · ":"")+ (g.total? (g.owned+"/"+g.total+" printings"):"no printings");
+        var sugUp=(typeof upcomingMatch==="function")?upcomingMatch(g.name, g.total>0, _upcomingEntries, Date.now()):null;
+        var sub=(paldexLabel(g.name)?paldexLabel(g.name)+" · ":"")+ (g.total? (g.owned+"/"+g.total+" printings"):(sugUp?upcomingPhrase(sugUp.set):"no printings"));
         var img=palImgSrc(g)|| (g.hero?imgSrc(g.hero):"");
         return '<div class="palsugrow" role="option" data-pal="'+esc(g.name)+'"><img src="'+esc(img)+'" alt=""><div style="min-width:0"><div class="palsugname">'+hiName(g.name, qi.value.trim())+'</div><div class="palsugmeta">'+esc(sub)+'</div></div><span class="palsugno">'+(hasArt?"":"no cards yet")+'</span></div>';
       }).join("");
@@ -9945,7 +10115,7 @@
     if(!apiBase()){ if(!silent) toast("Prices are unavailable right now"); return Promise.resolve(); }
     var reg=encodeURIComponent(ebayReg());
     // No id list. This used to send every card id in the query string: 4.5KB of url at 275 cards, and with
-    // Booster 02, the Sleeve and Card Set, both Eternal Ascent decks and the 2nd Edition reprint already
+    // Booster 02, the Sleeve and Card Set, the Eternal Ascent booster and both trial decks, and the 2nd Edition reprint already
     // baked in as upcoming, heading for the ceiling proxies and CDNs enforce with a 414 nobody would have
     // traced. Asking for the whole market is what we wanted anyway, it gives every user in a region the
     // SAME url so the edge can actually serve it, and it prices cards the catalogue channel adds before
@@ -10144,7 +10314,7 @@
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   (function(){ var sb=$("setsBack"); if(sb) sb.onclick=function(){ if(colMode()!=="col"){ goBack(); return; } renderSetBrowse(); showCollGrid(false); window.scrollTo(0,0); }; })();
-  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); renderTcgNews(); })();
+  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); renderTcgNews(); if(typeof upcomingLoad==="function") upcomingLoad(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
