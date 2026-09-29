@@ -3498,7 +3498,7 @@ label.acctsetrow { align-items:center; }
       if(e){
         var aged = (SEAL_ED!=="jp") && SOLD_ASOF && +e.pAt>0 && +e.pAt < SOLD_ASOF
           && PRICEBOOK_SOLD[id]!=null && (+e.mkt||0)===(+e.sold||0);
-        if(!aged){
+        if(!aged && !implausiblePull(id, e)){
           // The bulk sold refresh copies book rows onto owned cards, so a figure equal to the book is the book's source.
           if(+e.sold>0){ why.k=(+e.sold===+PRICEBOOK_SOLD[id] && srcKind(PRICESRC_SOLD[id])) || "sold"; return +e.sold; }
           if(+e.mkt>0){ why.k=+e.pAt>0 ? (+e.list>0?"list":"sold") : "yours"; return +e.mkt; }
@@ -3511,10 +3511,19 @@ label.acctsetrow { align-items:center; }
       // headline as a last resort — never let e.mkt (sold) masquerade as live. Book-first is what stops an
       // owned card freezing on an old per-card e.list while the daily book moves underneath it.
       var pbl=PRICEBOOK[id]; if(pbl!=null){ why.k=srcKind(PRICESRC[id]); return +pbl; }
-      if(e && +e.list>0){ why.k="list"; return +e.list; }
-      if(e && +e.mkt>0){ why.k=+e.pAt>0?"sold":"yours"; return +e.mkt; }
+      if(e && !implausiblePull(id, e)){
+        if(+e.list>0){ why.k="list"; return +e.list; }
+        if(+e.mkt>0){ why.k=+e.pAt>0?"sold":"yours"; return +e.mkt; }
+      }
     }
     return 0; }
+  // The sold feed once priced whole cards thousands of times too high (a $3.50 card at $63,519), and those
+  // pulls were saved onto owned cards. A pulled figure over 20x the card's shared market price is ignored so
+  // the value falls back to the books. Typed figures carry no pAt stamp and always count.
+  function implausiblePull(id, e){
+    if(!(+e.pAt>0)) return false;
+    var ref=Math.max(+PRICEBOOK[id]||0, +PRICEBOOK_SOLD[id]||0); if(!(ref>0)) return false;
+    return Math.max(+e.sold||0, +e.mkt||0, +e.list||0) > ref*20; }
   // Server source name -> the kind of figure it is. "" when the book predates source tracking.
   function srcKind(s){ return s==="tcgplayer"||s==="palworld" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
