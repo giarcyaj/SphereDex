@@ -849,6 +849,7 @@
   .featmove { display:flex; gap:5px; min-width:0; white-space:nowrap; }
   .featmove b { flex:none; font-weight:850; }
   .featmove span { min-width:0; overflow:hidden; text-overflow:ellipsis; color:rgba(255,255,255,.9); }
+.featmoveprice { margin:-3px 0 2px; font-weight:700; color:rgba(255,255,255,.75); white-space:nowrap; }
   .featmove.up b, .featpaircard.up .featpairpct { color:#65e58a; }
   .featmove.down b, .featpaircard.down .featpairpct { color:#ff7777; }
   .featart { position:absolute; top:12px; bottom:12px; right:12px; width:calc(44% - 16px); display:flex;
@@ -8321,8 +8322,8 @@ label.acctsetrow { align-items:center; }
         try{ if(upM && typeof imgSrc==="function") mArt=imgSrc(upM.c); else if(downM) mArt=imgSrc(downM.c); }catch(e){}
         var featuredMovers=[];
         try{
-          if(upM) featuredMovers.push({dir:"up", name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct)});
-          if(downM) featuredMovers.push({dir:"down", name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct)});
+          if(upM) featuredMovers.push({dir:"up", id:upM.c.id, name:upM.c.name, art:imgSrc(upM.c), pct:Math.abs(upM.pct), prev:upM.prev, cur:upM.cur});
+          if(downM) featuredMovers.push({dir:"down", id:downM.c.id, name:downM.c.name, art:imgSrc(downM.c), pct:Math.abs(downM.pct), prev:downM.prev, cur:downM.cur});
         }catch(e){}
         out.push({kind:"movers", badge:"Your collection", title:"Movers in your collection", meta:notes.join(" \u00b7 ")||"Prices moved today", notes:notes, movers:featuredMovers, art:mArt||art});
         return;
@@ -8493,7 +8494,7 @@ label.acctsetrow { align-items:center; }
       if(movers){
         art='<span class="featart featart--card">'+movers.map(function(m){
           var up=m.dir==="up";
-          return '<span class="featpaircard '+(up?'up':'down')+'"><img src="'+esc(m.art)+'" alt="" loading="lazy" decoding="async"><span class="featpairpct">'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</span></span>';
+          return '<span class="featpaircard '+(up?'up':'down')+'" data-mover="'+esc(m.id||"")+'"><img src="'+esc(m.art)+'" alt="" loading="lazy" decoding="async"><span class="featpairpct">'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</span></span>';
         }).join("")+'</span>';
       } else if(s.art && !s.releaseArt){
         art='<span class="featart'+(isCardArt(s)?' featart--card':'')+'"><img class="featart-img zoom" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>';
@@ -8503,7 +8504,9 @@ label.acctsetrow { align-items:center; }
       if(movers){
         bodyMeta='<span class="featmovelist">'+movers.map(function(m){
           var up=m.dir==="up";
-          return '<span class="featmove '+(up?'up':'down')+'"><b>'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</b><span>'+esc(String(m.name).split(" \u2013 ")[0])+'</span></span>';
+          var mid=esc(m.id||"");
+          var moved=(+m.prev>0 && +m.cur>0) ? '<span class="featmoveprice" data-mover="'+mid+'">'+money(m.prev)+' \u2192 '+money(m.cur)+'</span>' : '';
+          return '<span class="featmove '+(up?'up':'down')+'" data-mover="'+mid+'"><b>'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</b><span>'+esc(String(m.name).split(" \u2013 ")[0])+'</span></span>'+moved;
         }).join("")+'</span>';
       } else if((s.kind==="update" || s.kind==="features") && s.notes && s.notes.length){
         bodyMeta='<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>';
@@ -8528,10 +8531,13 @@ label.acctsetrow { align-items:center; }
   // handler on every rebuilt node.
   var _featSlides=[];
   // Walk up from whatever was tapped to the dot or slide that owns it.
+  // A card on the movers slide resolves to "mover" with its card id, so the tap opens that card.
   function featTarget(node){
-    var el = (node && node.getAttribute) ? node : null;
+    var el = (node && node.getAttribute) ? node : null, mover = "";
     while(el && el !== document){
+      if(!mover && el.getAttribute && el.getAttribute("data-mover")) mover = el.getAttribute("data-mover");
       if(el.classList && (el.classList.contains("featdot") || el.classList.contains("featslide"))){
+        if(mover && el.classList.contains("featslide")) return { kind: "mover", i: +el.getAttribute("data-i"), id: mover };
         return { kind: el.classList.contains("featdot") ? "dot" : "slide", i: +el.getAttribute("data-i") };
       }
       el = el.parentNode;
@@ -8547,7 +8553,8 @@ label.acctsetrow { align-items:center; }
     host.addEventListener("click", function(e){
       var hit=featTarget(e.target);
       if(hit.kind==="dot"){ if(hit.i>=0 && hit.i<_featSlides.length){ _featIndex=hit.i; featPaint(); featStart(); } return; }
-      if(hit.kind==="slide"){ openFeatured(_featSlides[hit.i]); }
+      if(hit.kind==="mover"){ var mc=cardById(hit.id); if(mc){ openDetail(mc); return; } }
+      if(hit.kind==="slide" || hit.kind==="mover"){ openFeatured(_featSlides[hit.i]); }
     });
     host.addEventListener("mouseenter", function(){ featPause(true); });
     host.addEventListener("mouseleave", function(){ featPause(false); });
