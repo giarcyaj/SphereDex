@@ -6733,11 +6733,19 @@ label.acctsetrow { align-items:center; }
   // ---- Deck builder ----
   function decks(){ if(!STATE.decks) STATE.decks=[]; return STATE.decks; }
   function activeDeck(){ var ds=decks(); if(!ds.length) return null; return ds.filter(function(x){return x.id===STATE.activeDeck;})[0]||ds[0]; }
+  // How many more copies a deck needs from the active collection, shown on every deck in the picker so a
+  // buildable deck is visible without switching to it. Ids missing from the catalogue do not count.
+  function deckNeedCount(cards, ownMap){ var n=0, any=false;
+    Object.keys(cards||{}).forEach(function(id){ var q=+cards[id]||0; if(q<=0 || !byNumberIdx[id.toUpperCase()]) return; any=true;
+      n+=Math.max(0, q-((ownMap[id]&&+ownMap[id].qty)||0)); });
+    return any ? n : -1; }
+  function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
+    return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
     var ad=activeDeck();
-    ds.forEach(function(d){ var o=document.createElement("option"); o.value=d.id; o.textContent=d.name; if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
+    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
     sel.onchange=function(){ STATE.activeDeck=sel.value; save(); renderDecks(); };
   }
   function renderDeckCompletion(d){
@@ -11013,6 +11021,7 @@ label.acctsetrow { align-items:center; }
     try{ if(typeof priceBookGate==="function") priceBookGate(); }catch(e){}
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
     try{ if(typeof renderReleases==="function" && _curPage==="releases") renderReleases(); }catch(e){}   // release countdowns roll over at local midnight
+    try{ if(typeof renderDecks==="function" && _curPage==="decks") renderDecks(); }catch(e){}   // deck needs follow a collection synced from another device
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
