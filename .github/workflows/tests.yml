@@ -6,6 +6,7 @@ name: Tests
 #   2. tools/test_scan_review.cjs — the scan session/review sheet, same treatment.
 #   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
+#      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
 #   5. A rebuild + git diff so a src/ edit without regenerated WEB/Android/iOS bundles
@@ -71,8 +72,14 @@ jobs:
       - name: Editions / CSV guard suite
         run: node tools/test_editions.cjs
 
+      - name: Deck legality, stats, effect search and purchase price
+        run: node tools/test_v21.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
+
+      - name: PalDex upcoming cards
+        run: node tools/test_upcoming_cards.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)

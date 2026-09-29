@@ -28,7 +28,7 @@ function appConstant(name) {
 }
 const functionNames = [
   'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts',
-  'changeRaw', 'mergeRawCounts', 'csvNum', 'csvCell', 'csvEdition', 'collectionCsv',
+  'changeRaw', 'mergeRawCounts', 'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
   'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
   'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'

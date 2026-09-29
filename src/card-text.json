@@ -1,0 +1,1103 @@
+{
+  "readme": "Rules text for SphereDex, keyed by base card number. Parallel printings (OSR, SSP, SP, and the rest) inherit the base entry. To add a set, append entries under cards. Leave a card out rather than guessing its text. text is the printed rules text only (flavour with no rules is an empty string). keywords are glossary terms that appear in that text. Source: palworldtcg.gg public card API (https://palworldtcg.gg/api/v1/cards), cached 2026-09-27 for offline use. Glossary lines follow that site's Comprehensive Rules guide. Card text and rules belong to Bushiroad / Pocketpair.",
+  "source": "https://palworldtcg.gg/api/v1/cards",
+  "fetched": "2026-09-27",
+  "glossary": {
+    "Quick": {
+      "rule": "12.2.1",
+      "text": "Can be played during the Quick Step, which follows block declaration and comes before damage resolves."
+    },
+    "Interrupt": {
+      "rule": "12.8.1 / 12.8.2",
+      "text": "A Quick activated ability that nullifies the attack. Pay its listed cost during the Quick Step."
+    },
+    "Taunt": {
+      "rule": "12.10.1 / 12.10.2",
+      "text": "Your opponent must choose this card as their attack target when they can, keeping attacks off your Master."
+    },
+    "Stealth": {
+      "rule": "12.11.1 / 12.11.2",
+      "text": "This card cannot be blocked, so its attack reaches the target it chose."
+    },
+    "Assault": {
+      "rule": "12.15.1 / 12.15.2",
+      "text": "This card can choose a Pal in the stand state as its attack target, opening lines that are normally unavailable."
+    },
+    "Breakthrough": {
+      "rule": "12.14.2",
+      "text": "If the opposing combat Pal is put into the graveyard while this card is attacking, deal this card's Strike to that Pal's Master."
+    },
+    "Retaliate": {
+      "rule": "12.12.2",
+      "text": "When this Pal is put into the graveyard while battling, the opposing combat Pal is put into the graveyard too."
+    },
+    "Vigilance": {
+      "rule": "12.9.2",
+      "text": "Stands this card at the end of your turn, so it can attack and still be ready to block."
+    },
+    "Brave": {
+      "rule": "12.6.2",
+      "text": "On Attack, this card's Power increases by the listed number until end of turn."
+    },
+    "Serious": {
+      "rule": "12.7.2",
+      "text": "On Assign, choose 1 Pal: its Power increases by the listed number until end of turn."
+    },
+    "Nocturnal": {
+      "rule": "12.13.1 / 12.13.2",
+      "text": "While it is night, this card's Power increases by the listed number."
+    },
+    "Legendary": {
+      "rule": "",
+      "text": "Only 1 Legendary Pal with the same card name can be put into your base at a time. Different Legendary Pals can stand side by side, but a second copy of the same one cannot be placed."
+    }
+  },
+  "cards": {
+    "EBP01-001": {
+      "text": "ACT 1/Turn [③] OR [Discard 2 cards from hand] Stand this card.",
+      "keywords": [],
+      "sourceNumber": "BP01-001"
+    },
+    "EBP01-002": {
+      "text": "CONT When your red card would deal Damage other than battle damage to a Pal, deal +200 Damage instead (Strengthens this card's ability too).\nAUTO OnDeploy Choose up to 1 Pal, and deal 700 Damage.",
+      "keywords": [],
+      "sourceNumber": "BP01-002"
+    },
+    "EBP01-003": {
+      "text": "CONT All of your other red Pals get Power +300.",
+      "keywords": [],
+      "sourceNumber": "BP01-003"
+    },
+    "EBP01-004": {
+      "text": "AUTO At the end of the battle this card attacked, you may return this card to hand.\nACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-004"
+    },
+    "EBP01-005": {
+      "text": "AUTO OnDeploy Get 3 Material.\nACT 1/Turn [Consume 3 Material ] Look at the top 5 cards of your deck, choose up to 1 ◇8 or less gear from among them and deploy it, and shuffle the rest of the cards with the deck.",
+      "keywords": [],
+      "sourceNumber": "BP01-005"
+    },
+    "EBP01-006": {
+      "text": "AUTO Brave 300 (OnAttack This card gets Power +300 until end of turn)",
+      "keywords": [
+        "Brave"
+      ],
+      "sourceNumber": "BP01-006"
+    },
+    "EBP01-007": {
+      "text": "AUTO OnDeploy Choose up to 1 ◇7 or greater Pal, and deal 1200 Damage.",
+      "keywords": [],
+      "sourceNumber": "BP01-007"
+    },
+    "EBP01-008": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal in the stand state, and deal 500 Damage.",
+      "keywords": [],
+      "sourceNumber": "BP01-008"
+    },
+    "EBP01-009": {
+      "text": "AUTO Brave 300 (OnAttack This card gets Power +300 until end of turn)",
+      "keywords": [
+        "Brave"
+      ],
+      "sourceNumber": "BP01-009"
+    },
+    "EBP01-010": {
+      "text": "AUTO OnAttack Choose all of your red Pals, and they get Power +500/Strike +1 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-010"
+    },
+    "EBP01-011": {
+      "text": "AUTO Serious 400 (OnAssign Choose 1 Pal, and it gets Power +400 until end of turn)",
+      "keywords": [
+        "Serious"
+      ],
+      "sourceNumber": "BP01-011"
+    },
+    "EBP01-012": {
+      "text": "AUTO OnDeploy Get 2 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-012"
+    },
+    "EBP01-013": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "BP01-013"
+    },
+    "EBP01-014": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-014"
+    },
+    "EBP01-015": {
+      "text": "ACT 1/Turn [Consume X Material, assign 1 Pal] Perform 〈Choose 1 Pal, and deal 500 Damage. 〉 X times.",
+      "keywords": [],
+      "sourceNumber": "BP01-015"
+    },
+    "EBP01-016": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Get 3 Material, and draw 1 card.\nACT 1/Turn [Consume X Material ] Reduce the cost of playing your next gear from hand by X until end of turn. It does not become ◇0 or less from this ability.",
+      "keywords": [],
+      "sourceNumber": "BP01-016"
+    },
+    "EBP01-017": {
+      "text": "CONT All of your red Pals get Power +200.\nAUTO When your red Pal is deployed, get 1 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-017"
+    },
+    "EBP01-018": {
+      "text": "ACT 1/Turn [①, assign 1 Pal] Stand all Pals assigned this turn. Until end of turn, your Pals cannot be assigned, and must attack as much as possible (Includes Pals deployed after activating this ability).",
+      "keywords": [],
+      "sourceNumber": "BP01-018"
+    },
+    "EBP01-019": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn. If its main name is 《Foxparks》, it gets the skill in 〈〉 until end of turn. 〈AUTO OnAttack Choose up to 1 Pal, and deal 700 Damage 〉.",
+      "keywords": [],
+      "sourceNumber": "BP01-019"
+    },
+    "EBP01-020": {
+      "text": "AUTO OnDeploy Choose all of your opponent's Pals, and deal 1200 Damage.\nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-020"
+    },
+    "EBP01-021": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and deal 500 Damage.\nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-021"
+    },
+    "EBP01-022": {
+      "text": "ACT [Rest this card] Choose 1 Pal, it gets Power +200 until end of turn, and you get 1 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-022"
+    },
+    "EBP01-023": {
+      "text": "Choose 1 of the following:\n・Choose 1 Pal, and deal 1500 Damage.\n・Choose up to X Pals, and stand them. X is equal to your number of gears.\n・Choose all of your opponent's ◇5 or greater Pals, and they cannot block until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-023"
+    },
+    "EBP01-024": {
+      "text": "Look at the top 5 cards of your deck, choose up to 1 red structure or red gear from among them and add it to hand, and shuffle the rest of the cards with the deck. If you chose 0 cards, get 3 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-024"
+    },
+    "EBP01-025": {
+      "text": "AUTO OnDeploy Reveal the top card of your deck, and if it is a ◇8 or less Dragon Pal, you may deploy it. If you did not deploy it, add it to hand.",
+      "keywords": [],
+      "sourceNumber": "BP01-025"
+    },
+    "EBP01-026": {
+      "text": "AUTO OnDeploy Choose up to 1 ◇6 or less Pal, and rest it. While this card is in the base, that card does not stand.",
+      "keywords": [],
+      "sourceNumber": "BP01-026"
+    },
+    "EBP01-027": {
+      "text": "AUTO OnDeploy Draw 1 card, choose up to 1 ◇7 or less Pal, and rest it. That card does not stand during your opponent's next stand phase.",
+      "keywords": [],
+      "sourceNumber": "BP01-027"
+    },
+    "EBP01-028": {
+      "text": "AUTO When this card is put into the graveyard, draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-028"
+    },
+    "EBP01-029": {
+      "text": "AUTO OnDeploy Draw 1 card, choose up to 1 Pal, and rest it.",
+      "keywords": [],
+      "sourceNumber": "BP01-029"
+    },
+    "EBP01-030": {
+      "text": "AUTO OnDeploy Draw 1 card.\nACT 1/Turn [Discard 1 card from hand] Look at the top 5 cards of your deck, choose up to 2 ◇6 or less structures from among them and deploy them, and shuffle the rest of the cards with the deck.",
+      "keywords": [],
+      "sourceNumber": "BP01-030"
+    },
+    "EBP01-031": {
+      "text": "CONT All of your main name 《Pengullet》 Pals get Power +700.",
+      "keywords": [],
+      "sourceNumber": "BP01-031"
+    },
+    "EBP01-032": {
+      "text": "AUTO When this card is attacked, this card gets Power +300 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-032"
+    },
+    "EBP01-033": {
+      "text": "CONT If this card is in the rest state, all of your opponent's Pals get Strike -1.",
+      "keywords": [],
+      "sourceNumber": "BP01-033"
+    },
+    "EBP01-034": {
+      "text": "AUTO Serious 400 (OnAssign Choose 1 Pal, and it gets Power +400 until end of turn)",
+      "keywords": [
+        "Serious"
+      ],
+      "sourceNumber": "BP01-034"
+    },
+    "EBP01-035": {
+      "text": "AUTO When this card is assigned to a 「Farming」 structure, draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-035"
+    },
+    "EBP01-036": {
+      "text": "AUTO OnAttack Draw 1 card, choose 1 card from your hand, and discard it.",
+      "keywords": [],
+      "sourceNumber": "BP01-036"
+    },
+    "EBP01-037": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "BP01-037"
+    },
+    "EBP01-038": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-038"
+    },
+    "EBP01-039": {
+      "text": "AUTO OnDeploy Choose up to X of your opponent's Pals, and return them to hand. X is equal to the number of different card names among your structures with 《Antique》 in their card names (For example, if the current state has 4 《Antique Mirror》, and 《Antique Curtain》 is deployed, return up to 2 cards).",
+      "keywords": [],
+      "sourceNumber": "BP01-039"
+    },
+    "EBP01-040": {
+      "text": "ACT 1/Turn [Discard 1 card from hand] Declare 1 card name. Choose all of your cards, and they get that declared card name in addition until end of turn.\nACT 1/Turn [Discard X cards from hand] Choose X of your Pals, and they get Power +1000/Strike +1 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-040"
+    },
+    "EBP01-041": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Choose up to 2 ◇6 or less Pals, and rest them. Those cards do not stand during your opponent's next stand phase.",
+      "keywords": [],
+      "sourceNumber": "BP01-041"
+    },
+    "EBP01-042": {
+      "text": "AUTO OnDeploy Draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-042"
+    },
+    "EBP01-043": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Draw 2 cards, choose 1 card from your hand, and discard it.",
+      "keywords": [],
+      "sourceNumber": "BP01-043"
+    },
+    "EBP01-044": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn. If its main name is 《Pengullet》, instead it gets Power +500 and the skill in 〈〉 until end of turn. 〈ACT [Rest this card] Choose all of your opponent's Pals, and they get X Damage. X is equal to this card's Power. Put this card into the graveyard〉.",
+      "keywords": [],
+      "sourceNumber": "BP01-044"
+    },
+    "EBP01-045": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +200 and the skill in 〈〉 until end of turn. 〈AUTO Vigilance (At the end of your turn, stand this card)〉.",
+      "keywords": [
+        "Vigilance"
+      ],
+      "sourceNumber": "BP01-045"
+    },
+    "EBP01-046": {
+      "text": "Choose 1 of the following:\n・Look at the top 5 cards of your deck, choose 1 card from among them and add it to hand, and shuffle the rest of the cards with the deck.\n・Choose 1 Pal, and return it to hand.\n・Draw X cards. X is equal to the number of your structures.",
+      "keywords": [],
+      "sourceNumber": "BP01-046"
+    },
+    "EBP01-047": {
+      "text": "Draw 3 cards.",
+      "keywords": [],
+      "sourceNumber": "BP01-047"
+    },
+    "EBP01-048": {
+      "text": "Quick Draw 1 card, choose up to 1 card from your hand, and put it on the top of the deck.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "BP01-048"
+    },
+    "EBP01-049": {
+      "text": "AUTO OnDeploy Get 3 Ingredient.\nACT 1/Turn [Consume 3 Ingredient ] Look at the top 5 cards of your deck, choose up to 1 ◇6 or less Pal from among them and deploy it, and shuffle the rest of the cards with the deck.",
+      "keywords": [],
+      "sourceNumber": "BP01-049"
+    },
+    "EBP01-050": {
+      "text": "CONT If you have 10 or more souls, this card gets Power +1000/Strike +1.\nACT 1/Turn [Consume 2 Ingredient ] Until end of turn, this card gets Power +500, and the skill in 〈〉. 〈AUTO Breakthrough (When the opposing combat Pal is put into the graveyard during this card's attack, the opposing player is also dealt Damage )〉.",
+      "keywords": [
+        "Breakthrough"
+      ],
+      "sourceNumber": "BP01-050"
+    },
+    "EBP01-051": {
+      "text": "AUTO OnDeploy Gain 1 life, choose 2 souls, and stand them.",
+      "keywords": [],
+      "sourceNumber": "BP01-051"
+    },
+    "EBP01-052": {
+      "text": "AUTO When this card attacks a structure, this card gets Power +800 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-052"
+    },
+    "EBP01-053": {
+      "text": "CONT This card gets Power +300 for each of your main name 《Beegarde》 Pals.\nACT [Consume 1 Ingredient ] Look at the top card of your deck, and if that is a main name 《Beegarde》 Pal, you may play it with its cost reduced by 2. It does not become ◇0 or less from this ability.",
+      "keywords": [],
+      "sourceNumber": "BP01-053"
+    },
+    "EBP01-054": {
+      "text": "CONT Taunt (Your opponent cannot attack other targets if a card with taunt can be targeted for an attack)",
+      "keywords": [
+        "Taunt"
+      ],
+      "sourceNumber": "BP01-054"
+    },
+    "EBP01-055": {
+      "text": "ACT 1/Turn [Discard 1 card from hand] If you assigned this card this turn, stand this card.",
+      "keywords": [],
+      "sourceNumber": "BP01-055"
+    },
+    "EBP01-056": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "BP01-056"
+    },
+    "EBP01-057": {
+      "text": "AUTO OnDeploy Get 2 Ingredient.\nAUTO When this card is assigned to a 「Farming」 structure, increase your soul by 1 card in the rest state.",
+      "keywords": [],
+      "sourceNumber": "BP01-057"
+    },
+    "EBP01-058": {
+      "text": "AUTO OnDeploy This card gets Power +300 and the skill in 〈〉 until end of turn. 〈CONT Assault (This card can attack Pals in the stand state)〉.",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "BP01-058"
+    },
+    "EBP01-059": {
+      "text": "ACT 1/Turn [Consume 2 Ingredient ] This card gets Power +500 and the skill in 〈〉 until end of turn. 〈AUTO Breakthrough (When the opposing combat Pal is put into the graveyard during this card's attack, the opposing player is also dealt Damage )〉.",
+      "keywords": [
+        "Breakthrough"
+      ],
+      "sourceNumber": "BP01-059"
+    },
+    "EBP01-060": {
+      "text": "AUTO Serious 400 (OnAssign Choose 1 Pal, and it gets Power +400 until end of turn)",
+      "keywords": [
+        "Serious"
+      ],
+      "sourceNumber": "BP01-060"
+    },
+    "EBP01-061": {
+      "text": "CONT You may put any number of cards with the same card name as this card into your deck.\nAUTO OnDeploy Get 1 Ingredient. If you have a 「Farming」 structure, this card gets Power +500 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-061",
+      "anyNumber": true
+    },
+    "EBP01-062": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-062"
+    },
+    "EBP01-063": {
+      "text": "ACT 1/Turn [Consume 2 Ingredient ] Reveal the top card of your deck, add it to hand if it is a ◇8 or less Pal, otherwise put it into the graveyard.\nACT 1/Turn [Consume 2 Ingredient, assign 2 Pals] Choose 1 ◇8 or less Pal from hand, and deploy it.",
+      "keywords": [],
+      "sourceNumber": "BP01-063"
+    },
+    "EBP01-064": {
+      "text": "ACT 1/Turn [Consume X Ingredient, assign 1 Pal] Choose 1 soul, and stand it. Then, choose up to 3 times of X number of souls, and stand them.",
+      "keywords": [],
+      "sourceNumber": "BP01-064"
+    },
+    "EBP01-065": {
+      "text": "ACT 1/Turn [Consume 1 Ingredient ] Increase your soul by 1 card in the rest state. If there were 10 or more souls before increasing, choose 2 souls, and stand them.",
+      "keywords": [],
+      "sourceNumber": "BP01-065"
+    },
+    "EBP01-066": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Get either 3 Material or 3 Ingredient, and draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-066"
+    },
+    "EBP01-067": {
+      "text": "ACT 1/Turn [Assign 1 Pal] The Pal assigned to this card gets the skill in 〈〉 until the end of the opponent's next turn. 〈CONT Taunt (Your opponent cannot attack other targets if a card with taunt can be targeted for an attack)〉.",
+      "keywords": [
+        "Taunt"
+      ],
+      "sourceNumber": "BP01-067"
+    },
+    "EBP01-068": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn. If its main name is 《Digtoise》, get either 2 Material or 2 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "BP01-068"
+    },
+    "EBP01-069": {
+      "text": "ACT [Rest this card] Choose 1 Pal, it gets Power +200 until end of turn, and you get 1 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "BP01-069"
+    },
+    "EBP01-070": {
+      "text": "Choose 1 of the following:\n・Choose all of your Pals, and they get Power +1000 until end of turn.\n・Choose 1 structure or gear, and put it into the graveyard.\n・Increase your soul by 1 card in the rest state.",
+      "keywords": [],
+      "sourceNumber": "BP01-070"
+    },
+    "EBP01-071": {
+      "text": "Look at the top 5 cards of your deck, choose up to 1 Pal from among them and add it to hand, and shuffle the rest of the cards with the deck. If you choose 0 cards, get 3 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "BP01-071"
+    },
+    "EBP01-072": {
+      "text": "Gain 1 life, and draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-072"
+    },
+    "EBP01-073": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)\nAUTO When your 〈Nocturnal〉 Pal is deployed, if it is night, choose up to 1 Pal with cost less than or equal to that, and put it into the graveyard. If you put 1 or more Pals this way, at the end of that turn, rest this card.",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-073"
+    },
+    "EBP01-074": {
+      "text": "CONT While this card is in the rest state, it is night.\nCONT If it is night, your Pal's AUTO activates twice.\nAUTO At the end of your turn, choose up to 1 of your Pals, and butcher it. If you butchered 1 or more cards this way, your opponent chooses 1 of their Pals, and puts it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-074"
+    },
+    "EBP01-075": {
+      "text": "ACT 1/Turn [Butcher 1 other Pal] This card gets Power +1000/Strike +1 until end of turn.\nAUTO When your Pal is butchered, choose up to 1 cost X normal Pal from your graveyard, and deploy it in the rest state. X is equal to the cost of the butchered Pal -1.",
+      "keywords": [],
+      "sourceNumber": "BP01-075"
+    },
+    "EBP01-076": {
+      "text": "AUTO OnDeploy Reveal the top 3 cards of your deck, choose up to 1 Pal from among them and add it to hand, and put the remaining cards into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-076"
+    },
+    "EBP01-077": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)\nACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt",
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-077"
+    },
+    "EBP01-078": {
+      "text": "ACT [Rest this card, discard 1 card from hand] Choose 1 ◇6 or less Pal from your graveyard, and deploy it in the rest state.",
+      "keywords": [],
+      "sourceNumber": "BP01-078"
+    },
+    "EBP01-079": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)\nCONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-079"
+    },
+    "EBP01-080": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-080"
+    },
+    "EBP01-081": {
+      "text": "AUTO OnAttack You may discard 1 card from hand. If you discarded this way, gain 1 life.",
+      "keywords": [],
+      "sourceNumber": "BP01-081"
+    },
+    "EBP01-082": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-082"
+    },
+    "EBP01-083": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and it gets Power -300 until end of turn (It is not put into the graveyard even if Power becomes 0 or less).",
+      "keywords": [],
+      "sourceNumber": "BP01-083"
+    },
+    "EBP01-084": {
+      "text": "AUTO Retaliate (When this card is put into the graveyard during battle, put the opposing combat Pal into the graveyard)\nAUTO When this card is put into the graveyard, choose up to 1 normal Pal from your graveyard, and return it to hand.",
+      "keywords": [
+        "Retaliate"
+      ],
+      "sourceNumber": "BP01-084"
+    },
+    "EBP01-085": {
+      "text": "CONT While this card is in the rest state, it is night.\nCONT If it is night, all of your opponent's Pals get Power -200 (It is not put into the graveyard even if Power becomes 0 or less).",
+      "keywords": [],
+      "sourceNumber": "BP01-085"
+    },
+    "EBP01-086": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "BP01-086"
+    },
+    "EBP01-087": {
+      "text": "AUTO OnDeploy If it is night, choose up to 1 ◇6 or less Pal in the stand state, and put it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-087"
+    },
+    "EBP01-088": {
+      "text": "ACT 1/Turn [Put the top 3 cards of the deck into the graveyard] It becomes night until the end of the opponent's next turn.\nCONT All of your Pals get the skill in 〈 〉. 〈CONT Nocturnal (If it is night, this card gets Power +300)〉.",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-088"
+    },
+    "EBP01-089": {
+      "text": "ACT 1/Turn [Put the top 3 cards of the deck into the graveyard] It becomes night until the end of the opponent's next turn.\nAUTO At the end of your turn, if you have a 〈Nocturnal〉 Pal in the rest state, draw 1 card.",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-089"
+    },
+    "EBP01-090": {
+      "text": "ACT 1/Turn [③, assign 1 Pal] Choose 1 cost X or less Pal from your graveyard, and deploy it in the rest state. X is equal to the cost of the assigned Pal +2.",
+      "keywords": [],
+      "sourceNumber": "BP01-090"
+    },
+    "EBP01-091": {
+      "text": "CONT Taunt (Your opponent cannot attack other targets if a card with taunt can be targeted for an attack)\nAUTO When this card is put into the graveyard, draw 1 card.",
+      "keywords": [
+        "Taunt"
+      ],
+      "sourceNumber": "BP01-091"
+    },
+    "EBP01-092": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Exile the assigned Pal. Choose 1 cost X or less Pal, and exile it. X is equal to the cost of the assigned Pal +2.\nAUTO When this card leaves the base, return all Pals exiled by this card to the owner's hand.",
+      "keywords": [],
+      "sourceNumber": "BP01-092"
+    },
+    "EBP01-093": {
+      "text": "ACT [Rest this card, butcher 1 Pal] Reveal the top 3 cards of your deck, choose 1 card from among them and add it to hand, and put the remaining cards into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-093"
+    },
+    "EBP01-094": {
+      "text": "AUTO OnDeploy Choose up to 1 main name 《Daedream》 Pal from your hand, and deploy it.\nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn. It becomes night until the end of the opponent's next turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-094"
+    },
+    "EBP01-095": {
+      "text": "Choose 1 of the following:\n・Choose up to 5 of your opponent's Material and/or Ingredient in total, and your opponent loses them.\n・Choose up to 1 Pal from your graveyard, and return it to hand. Your opponent chooses 1 card from their hand, and discards it.\n・Choose 1 of your Pals, and butcher it. If you butchered 1 or more cards this way, choose 1 of your opponent's Pals, and put it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-095"
+    },
+    "EBP01-096": {
+      "text": "Quick Choose 1 ◇5 or less Pal, and put it into the graveyard.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "BP01-096"
+    },
+    "EBP01-097": {
+      "text": "Choose up to 2 Pals without 〈Interrupt〉 from your graveyard, and return them to hand. It becomes night until the end of the opponent's next turn.",
+      "keywords": [
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-097"
+    },
+    "EBP01-098": {
+      "text": "AUTO OnAttack You may reveal 1 card from your hand. If you revealed a Dragon Pal this way, this card gets Power +500 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-098"
+    },
+    "EBP01-099": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "BP01-099"
+    },
+    "EBP01-100": {
+      "text": "If you have not played any other cards during this game, draw 2 cards.\nIf you have 3 or more Pals with 《My First》 in their different card names, choose all of your Pals, and they get Power +1000/Strike +5 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-100"
+    },
+    "EPR-001": {
+      "text": "CONT This card cannot be attacked by ◇4 or greater Pals.",
+      "keywords": [],
+      "sourceNumber": "EPR-001"
+    },
+    "EPR-002": {
+      "text": "AUTO OnDeploy Get 2 Material.",
+      "keywords": [],
+      "sourceNumber": "EPR-002"
+    },
+    "EPR-002S": {
+      "text": "AUTO OnDeploy Get 2 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-012"
+    },
+    "EPR-003": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EPR-003"
+    },
+    "EPR-003S": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-014"
+    },
+    "EPR-004": {
+      "text": "AUTO When this card is attacked, this card gets Power +300 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "EPR-004"
+    },
+    "EPR-004S": {
+      "text": "AUTO When this card is attacked, this card gets Power +300 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "BP01-032"
+    },
+    "EPR-005": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EPR-005"
+    },
+    "EPR-005S": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "BP01-038"
+    },
+    "EPR-006": {
+      "text": "AUTO OnDeploy This card gets Power +300 and the skill in 〈〉 until end of turn. 〈CONT Assault (This card can attack Pals in the stand state)〉.",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "EPR-006"
+    },
+    "EPR-006S": {
+      "text": "AUTO OnDeploy This card gets Power +300 and the skill in 〈〉 until end of turn. 〈CONT Assault (This card can attack Pals in the stand state)〉.",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "BP01-058"
+    },
+    "EPR-007": {
+      "text": "ACT 1/Turn [Consume 2 Ingredient ] This card gets Power +500 and the skill in 〈〉 until end of turn. 〈AUTO Breakthrough (When the opposing combat Pal is put into the graveyard during this card's attack, the opposing player is also dealt Damage )〉.",
+      "keywords": [
+        "Breakthrough"
+      ],
+      "sourceNumber": "EPR-007"
+    },
+    "EPR-007S": {
+      "text": "ACT 1/Turn [Consume 2 Ingredient ] This card gets Power +500 and the skill in 〈〉 until end of turn. 〈AUTO Breakthrough (When the opposing combat Pal is put into the graveyard during this card's attack, the opposing player is also dealt Damage )〉.",
+      "keywords": [
+        "Breakthrough"
+      ],
+      "sourceNumber": "BP01-059"
+    },
+    "EPR-008": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "EPR-008"
+    },
+    "EPR-008S": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-082"
+    },
+    "EPR-009": {
+      "text": "AUTO OnDeploy If it is night, choose up to 1 ◇6 or less Pal in the stand state, and put it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "EPR-009"
+    },
+    "EPR-009S": {
+      "text": "AUTO OnDeploy If it is night, choose up to 1 ◇6 or less Pal in the stand state, and put it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "BP01-087"
+    },
+    "EPR-010": {
+      "text": "ACT 1/Turn [③] OR [Discard 2 cards from hand] Stand this card.",
+      "keywords": [],
+      "sourceNumber": "BP01-001"
+    },
+    "EPR-011": {
+      "text": "AUTO OnAttack You may discard 1 card from hand. If you discarded this way, gain 1 life.",
+      "keywords": [],
+      "sourceNumber": "BP01-081"
+    },
+    "EPR-012": {
+      "text": "AUTO Brave 300 (OnAttack This card gets Power +300 until end of turn)",
+      "keywords": [
+        "Brave"
+      ],
+      "sourceNumber": "BP01-006"
+    },
+    "EPR-013": {
+      "text": "Look at the top 5 cards of your deck, choose up to 1 red structure or red gear from among them and add it to hand, and shuffle the rest of the cards with the deck. If you chose 0 cards, get 3 Material.",
+      "keywords": [],
+      "sourceNumber": "BP01-024"
+    },
+    "EPR-014": {
+      "text": "AUTO When this card is put into the graveyard, draw 1 card.",
+      "keywords": [],
+      "sourceNumber": "BP01-028"
+    },
+    "EPR-015": {
+      "text": "Look at the top 5 cards of your deck, choose up to 1 Pal from among them and add it to hand, and shuffle the rest of the cards with the deck. If you choose 0 cards, get 3 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "BP01-071"
+    },
+    "EPR-016": {
+      "text": "CONT Nocturnal (If it is night, this card gets Power +300)\nCONT Nocturnal (If it is night, this card gets Power +300)",
+      "keywords": [
+        "Nocturnal"
+      ],
+      "sourceNumber": "BP01-079"
+    },
+    "EPR-017": {
+      "text": "AUTO When this card is put into the graveyard, your opponent chooses 1 card from their hand, and discards it.",
+      "keywords": [],
+      "sourceNumber": "TD02-014"
+    },
+    "EPR-018": {
+      "text": "CONT This card cannot be attacked by ◇4 or greater Pals.",
+      "keywords": [],
+      "sourceNumber": "EPR-001"
+    },
+    "EPR-019": {
+      "text": "AUTO When this card is put into the graveyard, get 1 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "TD02-024"
+    },
+    "EPR-020": {
+      "text": "CONT This card cannot be attacked by ◇3 or less Pals.",
+      "keywords": [],
+      "sourceNumber": "TD02-023"
+    },
+    "ESOUL-000": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-000"
+    },
+    "ESOUL-001": {
+      "text": "(During your turn, you may rest 3 souls once during the main phase to draw 1 card.)",
+      "keywords": [],
+      "sourceNumber": "SOUL-001"
+    },
+    "ESOUL-002": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-002"
+    },
+    "ESOUL-003": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-003"
+    },
+    "ESOUL-004": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-004"
+    },
+    "ESOUL-005": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-005"
+    },
+    "ESOUL-006": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-006"
+    },
+    "ESOUL-007": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-007"
+    },
+    "ESOUL-008": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "SOUL-008"
+    },
+    "ETD01-001": {
+      "text": "CONT Assault (This card can attack Pals in the stand state)",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "TD01-001"
+    },
+    "ETD01-002": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD01-002"
+    },
+    "ETD01-003": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD01-003"
+    },
+    "ETD01-004": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "TD01-004"
+    },
+    "ETD01-005": {
+      "text": "AUTO OnDeploy Get 2 Material.",
+      "keywords": [],
+      "sourceNumber": "TD01-005"
+    },
+    "ETD01-006": {
+      "text": "ACT [Consume 2 Material ] This card gets Power +500 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD01-006"
+    },
+    "ETD01-007": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and deal 1000 Damage.",
+      "keywords": [],
+      "sourceNumber": "TD01-007"
+    },
+    "ETD01-008": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Get 3 Material, and draw 1 card. (You can rest your standing Pal to assign it)",
+      "keywords": [],
+      "sourceNumber": "TD01-008"
+    },
+    "ETD01-009": {
+      "text": "ACT 1/Turn [Consume 1 Material, assign 1 Pal] Choose up to 1 Pal, and deal 800 Damage. Choose all of your Pals, and they get Strike +1 until end of turn. (You can rest your standing Pal to assign it)",
+      "keywords": [],
+      "sourceNumber": "TD01-009"
+    },
+    "ETD01-010": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and deal 1500 Damage.\nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD01-010"
+    },
+    "ETD01-011": {
+      "text": "Quick Choose 1 Pal, and deal 500 Damage.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "TD01-011"
+    },
+    "ETD01-012": {
+      "text": "AUTO OnDeploy Draw 2 cards, choose 1 card from your hand, and put it on the top of the deck.",
+      "keywords": [],
+      "sourceNumber": "TD01-012"
+    },
+    "ETD01-013": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD01-013"
+    },
+    "ETD01-014": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD01-014"
+    },
+    "ETD01-015": {
+      "text": "AUTO OnDeploy Choose up to 1 ◇3 or less Pal, and rest it.",
+      "keywords": [],
+      "sourceNumber": "TD01-015"
+    },
+    "ETD01-016": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "TD01-016"
+    },
+    "ETD01-017": {
+      "text": "AUTO Vigilance (At the end of your turn, stand this card)",
+      "keywords": [
+        "Vigilance"
+      ],
+      "sourceNumber": "TD01-017"
+    },
+    "ETD01-018": {
+      "text": "CONT This card gets Power +200 for each of your structures.\nACT [Discard 1 structure from hand] This card gets Strike +1 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD01-018"
+    },
+    "ETD01-019": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and it gets Power +1000 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD01-019"
+    },
+    "ETD01-020": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Reveal the top card of your deck, if it is a ◇6 or less structure or gear, you may deploy it. If you did not deploy it, add it to hand. (You can rest your standing Pal to assign it)",
+      "keywords": [],
+      "sourceNumber": "TD01-020"
+    },
+    "ETD01-021": {
+      "text": "AUTO OnDeploy Draw 1 card.\nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD01-021"
+    },
+    "ETD01-022": {
+      "text": "Quick Choose 1 Pal, and it gets Strike -3 until end of turn. That card does not stand during your opponent's next stand phase.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "TD01-022"
+    },
+    "ETD01-023": {
+      "text": "CONT This card cannot be attacked by ◇4 or greater Pals.",
+      "keywords": [],
+      "sourceNumber": "TD01-023"
+    },
+    "ETD01-024": {
+      "text": "AUTO When this card is put into the graveyard, get 1 Material.",
+      "keywords": [],
+      "sourceNumber": "TD01-024"
+    },
+    "ETD02-001": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD02-001"
+    },
+    "ETD02-002": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD02-002"
+    },
+    "ETD02-003": {
+      "text": "AUTO OnDeploy Get 2 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "TD02-003"
+    },
+    "ETD02-004": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "TD02-004"
+    },
+    "ETD02-005": {
+      "text": "CONT Taunt (Your opponent cannot attack other targets if a card with taunt can be targeted for an attack)\nACT [Consume 2 Ingredient ] This card gets Power +500 until end of turn.",
+      "keywords": [
+        "Taunt"
+      ],
+      "sourceNumber": "TD02-005"
+    },
+    "ETD02-006": {
+      "text": "CONT Taunt (Your opponent cannot attack other targets if a card with taunt can be targeted for an attack)",
+      "keywords": [
+        "Taunt"
+      ],
+      "sourceNumber": "TD02-006"
+    },
+    "ETD02-007": {
+      "text": "AUTO When this card is put into the graveyard, get 3 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "TD02-007"
+    },
+    "ETD02-008": {
+      "text": "ACT 1/Turn [Assign 1 Pal] Get 3 Ingredient, and draw 1 card. (You can rest your standing Pal to assign it)",
+      "keywords": [],
+      "sourceNumber": "TD02-008"
+    },
+    "ETD02-009": {
+      "text": "ACT 1/Turn [Consume 2 Ingredient, assign 1 Pal] You gain 1 life, choose all of your Pals, and they get Power +1000 until end of turn. (You can rest your standing Pal to assign it)",
+      "keywords": [],
+      "sourceNumber": "TD02-009"
+    },
+    "ETD02-010": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +900 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "TD02-010"
+    },
+    "ETD02-011": {
+      "text": "Quick Choose 1 Pal, and it gets Power +500 until end of turn.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "TD02-011"
+    },
+    "ETD02-012": {
+      "text": "AUTO OnDeploy Choose up to 1 Pal, and it gets Power -1000 until end of turn (It is not put into the graveyard even if Power becomes 0 or less).\nAUTO OnAttack Choose all Pals with Power 300 or less, and put them into the graveyard (Choose your Pals too).",
+      "keywords": [],
+      "sourceNumber": "TD02-012"
+    },
+    "ETD02-013": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD02-013"
+    },
+    "ETD02-014": {
+      "text": "AUTO When this card is put into the graveyard, your opponent chooses 1 card from their hand, and discards it.",
+      "keywords": [],
+      "sourceNumber": "TD02-014"
+    },
+    "ETD02-015": {
+      "text": "CONT Stealth (This card cannot be blocked)",
+      "keywords": [
+        "Stealth"
+      ],
+      "sourceNumber": "TD02-015"
+    },
+    "ETD02-016": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "TD02-016"
+    },
+    "ETD02-017": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "TD02-017"
+    },
+    "ETD02-018": {
+      "text": "CONT Stealth (This card cannot be blocked)\nAUTO OnAttack Gain 1 life.",
+      "keywords": [
+        "Stealth"
+      ],
+      "sourceNumber": "TD02-018"
+    },
+    "ETD02-019": {
+      "text": "ACT 1/Turn [Assign 1 Pal] If there are no Pals exiled by this card in the exile zone, choose 1 Pal, and exile it. (You can rest your standing Pal to assign it)\nAUTO When this card leaves the base, deploy the Pal exiled by this card into the owner's base in the rest state.",
+      "keywords": [],
+      "sourceNumber": "TD02-019"
+    },
+    "ETD02-020": {
+      "text": "ACT [Rest this card] Choose 1 Pal, and it gets Power +200 and the skill in 〈〉 until end of turn. 〈CONT Stealth (This card cannot be blocked)〉.",
+      "keywords": [
+        "Stealth"
+      ],
+      "sourceNumber": "TD02-020"
+    },
+    "ETD02-021": {
+      "text": "Choose 1 Pal, and put it into the graveyard.",
+      "keywords": [],
+      "sourceNumber": "TD02-021"
+    },
+    "ETD02-022": {
+      "text": "Choose 1 ◇8 or less Pal from your graveyard, and deploy it in the rest state.",
+      "keywords": [],
+      "sourceNumber": "TD02-022"
+    },
+    "ETD02-023": {
+      "text": "CONT This card cannot be attacked by ◇3 or less Pals.",
+      "keywords": [],
+      "sourceNumber": "TD02-023"
+    },
+    "ETD02-024": {
+      "text": "AUTO When this card is put into the graveyard, get 1 Ingredient.",
+      "keywords": [],
+      "sourceNumber": "TD02-024"
+    }
+  }
+}
