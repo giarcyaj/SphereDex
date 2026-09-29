@@ -213,6 +213,8 @@ function paidApp() {
   };
   const names = [
     'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts', 'changeRaw',
+    'langKey', 'emptyLangBucket', 'copyLangBucket', 'langCounts', 'setLangCounts', 'changeRawLang',
+    'gradedLang', 'csvLang', 'langOfCsv',
     'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
     'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
   ];
