@@ -603,6 +603,10 @@
   #homeAway .homeupdate-actions .homeaction { white-space:nowrap; }
   #homeAway .awaylist { margin:10px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
   #homeAway .awaylist li { display:flex; gap:8px; align-items:flex-start; font-size:.8rem; color:var(--ink-soft); line-height:1.35; }
+  /* Each bullet's text sits in one span, so the li has the same two flex items (::before plus span) a
+     plain bullet has. Old WebViews collapse flex gap, hence the margin fallback, per the standing rule. */
+  .no-flexgap #homeAway .awaylist li { gap:0; }
+  .no-flexgap #homeAway .awaylist li > span { margin-left:8px; }
   #homeAway .awaylist li::before { content:"•"; color:var(--accent); font-weight:800; flex:none; }
   #homeAway .hcname { font-size:1.05rem; }
   #homeAway .hcmeta { font-size:.76rem; color:var(--ink-soft); margin-top:4px; }
@@ -3402,13 +3406,35 @@ label.acctsetrow { align-items:center; }
       }
     }
     return 0; }
-  // The sold feed once priced whole cards thousands of times too high (a $3.50 card at $63,519), and those
-  // pulls were saved onto owned cards. A pulled figure over 20x the card's shared market price is ignored so
-  // the value falls back to the books. Typed figures carry no pAt stamp and always count.
+  // ---- Sold price sanity ----
+  // The sold feed repeatedly prices a card thousands of times too high: a $3.50 card at $63,519, and
+  // EBP01-006 served at $226.38 against a $0.99 listing on 2026-09-29. Two things were wrong with the first
+  // guard. It only questioned a figure already copied onto an owned card, so the BOOK itself was served
+  // unchecked to everyone in that market; and it took its reference from max(live, sold), so a bad sold
+  // figure became its own 20x allowance and the guard could never fire on the very case it was written for.
+  // The live listings book is the reference instead. It is one source, eBay's active listings for this exact
+  // card, refreshed nightly for every market, and it is not the book that goes wrong. A sold figure above
+  // SANE_RATIO times it is dropped, leaving the card with no last sold price, exactly as it would be had the
+  // server never held a row for it. A wrong number is worse than no number. A card with no live price has no
+  // reference, so it is left alone rather than guessed at.
+  var SANE_RATIO=20;
+  function saneSold(id, v, live){
+    var ref=+((live||PRICEBOOK)[id])||0;
+    return (ref>0 && +v>ref*SANE_RATIO) ? null : v; }
+  // Drop the spikes out of a whole sold book, keeping meta and source in step with what survives.
+  function sanitiseSold(sold, meta, src, live){
+    var kept={}, keptMeta={}, keptSrc={}, dropped=0, id;
+    for(id in sold){
+      if(saneSold(id, sold[id], live)==null){ dropped++; continue; }
+      kept[id]=sold[id];
+      if(meta && meta[id]!=null) keptMeta[id]=meta[id];
+      if(src && src[id]!=null) keptSrc[id]=src[id];
+    }
+    return {sold:kept, meta:keptMeta, src:keptSrc, dropped:dropped}; }
+  // A figure PULLED onto an owned card gets the same test. Typed figures carry no pAt stamp and always count.
   function implausiblePull(id, e){
     if(!(+e.pAt>0)) return false;
-    var ref=Math.max(+PRICEBOOK[id]||0, +PRICEBOOK_SOLD[id]||0); if(!(ref>0)) return false;
-    return Math.max(+e.sold||0, +e.mkt||0, +e.list||0) > ref*20; }
+    return saneSold(id, Math.max(+e.sold||0, +e.mkt||0, +e.list||0), null)==null; }
   // Server source name -> the kind of figure it is. "" when the book predates source tracking.
   function srcKind(s){ return s==="tcgplayer"||s==="palworld" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
@@ -5704,6 +5730,19 @@ label.acctsetrow { align-items:center; }
   // upcoming product: the sweep's is newer. Images are served by the backend (/api/release-img/...).
   var REL_KEY = "palvault-releases";
   function storedReleases(){ try{ return JSON.parse(lsGet(REL_KEY)||"null"); }catch(e){ return null; } }
+  // What the sweep CHANGED, kept so Home can say so on the next open. applyReleases already knows which
+  // branch it took; nothing else in the app remembered. One entry per product, newest five kept, and
+  // anything older than the last visit is dropped when it is read.
+  var RELNEWS_KEY = "palvault-release-news";
+  function relNews(kind, p){
+    if(!p || !p.id) return;
+    try{
+      var list=JSON.parse(lsGet(RELNEWS_KEY)||"[]"); if(!Array.isArray(list)) list=[];
+      list=list.filter(function(x){ return x && x.id!==p.id; });
+      list.push({ id:p.id, kind:kind, set:p.set||"", name:p.name||"", at:Date.now() });
+      lsSet(RELNEWS_KEY, JSON.stringify(list.slice(-5)));
+    }catch(e){}
+  }
   function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
   function applyReleases(pay){
     if(!pay || !pay.version) return false;
@@ -5715,12 +5754,13 @@ label.acctsetrow { align-items:center; }
       var p=SEALED.filter(function(x){ return x.id===r.id; })[0]
         || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null);
       if(p){
-        if(p.pre && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; }
+        if(p.pre && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; relNews("date", p); }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
       }
       SEALED.push({ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
         q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:true });
+      relNews("new", SEALED[SEALED.length-1]);
       changed=true;
     });
     Object.keys(pay.sets||{}).forEach(function(name){
@@ -5744,6 +5784,9 @@ label.acctsetrow { align-items:center; }
         try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
         try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
         try{ if(typeof renderSetBrowse==="function") renderSetBrowse(); }catch(e){}
+        // This resolves seconds AFTER renderHome ran, so without this the release line would not appear
+        // until the next launch, by which time it is no longer news.
+        try{ if(_curPage==="home" && typeof renderHome==="function") renderHome(); }catch(e){}
       }).catch(function(){});
   }
   applyReleases(storedReleases());
@@ -8912,27 +8955,85 @@ label.acctsetrow { align-items:center; }
     if(gap<48*60*60*1000){ var h=Math.max(1, Math.round(gap/36e5)); return h+" hour"+(h===1?"":"s")+" since your last visit"; }
     var d=Math.max(2, Math.round(gap/864e5)); return d+" day"+(d===1?"":"s")+" since your last visit";
   }
-  function missedUpdate(o){
-    o=o||{};
-    var now=+o.now||0, prev=+o.previousVisit||0, opened=+o.openedAt||now;
-    var since=+o.addedSince||0, week=+o.addedThisWeek||0;
-    var lastTotal=+o.lastTotal||0, total=+o.total||0;
-    var newCards=(lastTotal>0 && total>lastTotal) ? (total-lastTotal) : 0;
-    var behind=(typeof verNum==="function") && verNum(o.latestVersion)>verNum(o.appVersion);
-    var notes=behind && o.updateNotes && o.updateNotes.length ? o.updateNotes.slice(0,2) : [];
-    var gap=prev ? Math.max(0, (opened||now)-prev) : 0;
-    var show=!!(prev && (since || newCards || notes.length));
-    if(!show) return {show:false, title:"", meta:"", bullets:[], addedSince:0};
-    var sinceLine=since ? (since+" card"+(since===1?"":"s")+" added since your last visit") : "";
-    var newLine=newCards ? (newCards+" new card"+(newCards===1?"":"s")+" in the app · "+total+" total") : "";
-    var title=sinceLine || newLine || "An update is ready";
-    var meta=missedVisitPhrase(gap);
-    if(week && week!==since) meta+=" · "+week+" added this week";
-    var bullets=[];
-    if(sinceLine && title!==sinceLine) bullets.push(sinceLine);
-    if(newLine && title!==newLine) bullets.push(newLine);
-    notes.forEach(function(f){ if(f && bullets.indexOf(f)===-1 && f!==title) bullets.push(f); });
-    return {show:true, title:title, meta:meta, bullets:bullets.slice(0,4), addedSince:since};
+  // ---- While you were away ----
+  // A digest of what happened in the WORLD since the last open, not a recap of what the owner did.
+  // What this replaced led on "N cards added since your last visit", which was wrong for almost everyone:
+  // palvault-last-visit is written at boot, so PREVIOUS_VISIT is the PREVIOUS SESSION'S OPEN time, and every
+  // card added by hand during that session satisfied t > PREVIOUS_VISIT. For a single device owner that was
+  // the only thing it ever counted, and the same fact is already on the collection tile, the card sheet's
+  // "Added to collection" line and the Collection recent sort.
+  // Fixed order, first four shown, the first becomes the headline. There is no scoring: the order IS the
+  // ranking, which keeps the whole thing readable in one pass.
+  var AWAY_GO = { releases:"View releases", paldex:"View PalDex", wishlist:"View wishlist" };
+  // monDateTime falls back to the 28th for a bare "Mon YYYY", so "late Oct 2026" parses as a real day and
+  // the 2nd Edition box would announce itself as released on a date nobody published. A product is only
+  // called out when its date names an actual day.
+  function sealDayKnown(str){ var d=String(str||"");
+    return /^\d{4}-\d{2}-\d{2}/.test(d) || /\d{1,2},?\s+\d{4}/.test(d); }
+  function awayRows(){
+    var rows=[], prev=PREVIOUS_VISIT, now=APP_OPENED_AT;
+    if(!prev) return rows;                       // first ever open on this device: nothing to be away from
+    // 1. A pre order whose day arrived while they were away. One line per set, not per product.
+    try{
+      var seenSet={};
+      SEALED.forEach(function(p){
+        if(!p || !p.pre || seenSet[p.set]) return;
+        var d=sealDate(p); if(!sealDayKnown(d)) return;
+        var t=monDateTime(d); if(!(t>prev && t<=now)) return;
+        seenSet[p.set]=1;
+        rows.push({ line:esc(p.set)+" is out now", go:"releases" });
+      });
+    }catch(e){}
+    // 2. A release date that moved, or a product that appeared, since the last open.
+    try{
+      var news=JSON.parse(lsGet(RELNEWS_KEY)||"[]");
+      (Array.isArray(news)?news:[]).forEach(function(x){
+        if(!x || !(+x.at>prev)) return;
+        var what=String((x.set||"")+" "+(x.name||"")).replace(/\s+/g," ").trim();
+        if(!what) return;
+        rows.push({ line:(x.kind==="new" ? "New pre order \u00b7 " : "Release date changed \u00b7 ")+esc(what), go:"releases" });
+      });
+    }catch(e){}
+    // 3. Pals revealed while they were away. Pals, not card names: many entries carry no card yet, and a
+    //    card name would drag in the en dash subtitle that palKey exists to strip.
+    try{
+      var pals=[], gotPal={};
+      (_upcomingEntries||[]).forEach(function(e){
+        // upcomingIso returns a ms timestamp (or NaN), not a string, so it is used as is.
+        var t=(typeof upcomingIso==="function") ? upcomingIso(e && e.revealed_at) : NaN;
+        if(!(t>prev && t<=now)) return;
+        var nm=String((e&&e.pal)||"").trim(); if(!nm || gotPal[nm]) return;
+        gotPal[nm]=1; pals.push(nm);
+      });
+      if(pals.length){
+        var show=pals.slice(0,3).map(esc), more=pals.length-show.length;
+        // One "and" only: "A, B and C", or "A, B, C and 4 more" once the tail is a count.
+        var list = more>0 ? show.join(", ")+" and "+more+" more"
+          : (show.length===1 ? show[0] : show.slice(0,-1).join(", ")+" and "+show[show.length-1]);
+        rows.push({ line:"New reveals \u00b7 "+list, go:"paldex" });
+      }
+    }catch(e){}
+    // 4. The biggest wishlist faller. This is DAY OVER DAY, the same pair the wishlist tile already counts,
+    //    so the copy says what it fell TO and never claims to span the whole absence. A converted estimate is
+    //    skipped: an exchange rate move is not a price fall.
+    try{
+      if(SETTINGS.mode!=="collector"){
+        var best=null;
+        CARDS.forEach(function(c){
+          if(!isWished(c.id) || has(o(c.id)) || isConverted(c.id)) return;
+          var nowP=+PRICEBOOK[c.id]||0, was=+PRICEPREV[c.id]||0;
+          if(!(nowP>0 && was>0 && nowP<was*0.99)) return;
+          if(!best || (was-nowP)>best.drop) best={ c:c, drop:was-nowP, now:nowP };
+        });
+        if(best) rows.push({ line:esc(palKey(best.c))+" fell to "+esc(money(best.now))+" on your wishlist", go:"wishlist" });
+      }
+    }catch(e){}
+    // 5. A newer build exists. One line: the feature list belongs on the update headliner, not here.
+    try{
+      if(typeof verNum==="function" && _latestAppVersion && verNum(_latestAppVersion)>verNum(APP_VERSION))
+        rows.push({ line:"SphereDex "+esc(_latestAppVersion)+" is available", go:"" });
+    }catch(e){}
+    return rows;
   }
   // A home bar is a completion meter. Omit it when the card has no total to measure:
   // no deck, an empty deck, an empty wishlist, or collection value (a price, not a percent).
@@ -8956,28 +9057,18 @@ label.acctsetrow { align-items:center; }
         if(t>=weekCutoff && t<APP_OPENED_AT) addedWeekN++;
       });
     }
-    var missedNotes=[];
-    try{
-      if(typeof verNum==="function" && verNum(_latestAppVersion)>verNum(APP_VERSION)){
-        var feats=(typeof updateNotesFor==="function") ? updateNotesFor(_latestAppVersion) : [];
-        missedNotes=(feats||[]).slice(0,2);
-      }
-    }catch(e){}
-    var missed=missedUpdate({
-      now:APP_OPENED_AT, previousVisit:PREVIOUS_VISIT, openedAt:APP_OPENED_AT,
-      addedSince:addedSinceN, addedThisWeek:addedWeekN,
-      lastTotal:(typeof LAST_TOTAL_SEEN==="number"?LAST_TOTAL_SEEN:0), total:TOTAL,
-      appVersion:APP_VERSION, latestVersion:_latestAppVersion, updateNotes:missedNotes
-    });
     if(away){
-      if(missed.show){
-        var bulletHtml=missed.bullets.length ? '<ul class="awaylist">'+missed.bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>' : '';
-        var actions=missed.addedSince?'<div class="hcfoot"><span></span><div class="homeupdate-actions"><button class="homeaction" type="button" data-act="since">View those cards</button></div></div>':'';
+      var aRows=awayRows();
+      if(aRows.length){
+        var head=aRows[0], rest=aRows.slice(1,4);
+        var bull=rest.length ? '<ul class="awaylist">'+rest.map(function(r){ return '<li><span>'+r.line+'</span></li>'; }).join("")+'</ul>' : "";
+        var act=head.go ? '<div class="hcfoot"><span></span><div class="homeupdate-actions"><button class="homeaction" type="button" data-go="'+head.go+'">'+AWAY_GO[head.go]+'</button></div></div>' : "";
         away.hidden=false;
-        away.innerHTML='<div class="hclabel">'+icon('refresh')+'Your collection update</div><div class="hcname">'+esc(missed.title)+'</div>'+
-          (missed.meta?'<div class="hcmeta">'+esc(missed.meta)+'</div>':'')+bulletHtml+actions;
-        var sinceBtn=away.querySelector('[data-act="since"]');
-        if(sinceBtn) sinceBtn.onclick=function(ev){ ev.stopPropagation(); openSinceVisit(); };
+        away.innerHTML='<div class="hclabel">'+icon("refresh")+'While you were away</div>'+
+          '<div class="hcname">'+head.line+'</div>'+
+          '<div class="hcmeta">'+esc(missedVisitPhrase(Math.max(0, APP_OPENED_AT-PREVIOUS_VISIT)))+'</div>'+bull+act;
+        var goBtn=away.querySelector("[data-go]");
+        if(goBtn) goBtn.onclick=function(ev){ ev.stopPropagation(); showPage(goBtn.getAttribute("data-go")); };
       } else { away.hidden=true; away.innerHTML=""; }
     }
     document.documentElement.style.setProperty("--logo-c", rk.c);
@@ -10658,7 +10749,12 @@ label.acctsetrow { align-items:center; }
       // price. Only replace when the answer actually carries prices, so an empty reply never blanks the app.
       var nextLive={}, nextSold={}, nextMeta={}, nextSoldMeta={}, nextPrev={}, nextSrc={}, nextSoldSrc={};
       Object.keys(liveSrc).forEach(function(id){ var row=liveSrc[id]; if(row && row.market!=null){ nextLive[id]=+row.market; nextMeta[id]=row.converted?1:0; nextSrc[id]=row.source||""; n++; if(row.prev!=null) nextPrev[id]=+row.prev; } });
-      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(row && row.market!=null){ nextSold[id]=+row.market; nextSoldMeta[id]=row.converted?1:0; nextSoldSrc[id]=row.source||""; } });
+      var soldSpikes=0;
+      Object.keys(soldSrc).forEach(function(id){ var row=soldSrc[id]; if(!(row && row.market!=null)) return;
+        // A sold figure wildly out of line with this card's own live listing never enters the book.
+        if(saneSold(id, +row.market, nextLive)==null){ soldSpikes++; return; }
+        nextSold[id]=+row.market; nextSoldMeta[id]=row.converted?1:0; nextSoldSrc[id]=row.source||""; });
+      if(soldSpikes) try{ console.warn("dropped "+soldSpikes+" implausible sold price(s)"); }catch(_){}
       if(Object.keys(nextLive).length){ PRICEBOOK=nextLive; PRICEMETA=nextMeta; PRICEPREV=nextPrev; PRICESRC=nextSrc; }
       if(Object.keys(nextSold).length){ PRICEBOOK_SOLD=nextSold; PRICEMETA_SOLD=nextSoldMeta; PRICESRC_SOLD=nextSoldSrc; }
       // Only overwrite when the server actually reports a time; an empty table (no timestamp) must NOT wipe the
@@ -10718,6 +10814,9 @@ label.acctsetrow { align-items:center; }
     // Load the cached price book (+ previous-day prices) so Sort by Value and movers work instantly,
     // then refresh in the background on the first open after the server's daily ~1am refresh (12h fallback).
     try{ PRICEBOOK=JSON.parse(localStorage.getItem("palvault-pricebook")||"{}")||{}; PRICEBOOK_SOLD=JSON.parse(localStorage.getItem("palvault-pricebook-sold")||"{}")||{}; PRICEPREV=JSON.parse(localStorage.getItem("palvault-priceprev")||"{}")||{}; PRICEMETA=JSON.parse(localStorage.getItem("palvault-pricemeta")||"{}")||{}; PRICEMETA_SOLD=JSON.parse(localStorage.getItem("palvault-pricemeta-sold")||"{}")||{}; PRICESRC=JSON.parse(localStorage.getItem("palvault-pricesrc")||"{}")||{}; PRICESRC_SOLD=JSON.parse(localStorage.getItem("palvault-pricesrc-sold")||"{}")||{}; PRICEASOF=+localStorage.getItem("palvault-price-asof")||0; LIVE_ASOF=+localStorage.getItem("palvault-live-asof")||0; SOLD_ASOF=+localStorage.getItem("palvault-sold-asof")||0; }catch(_){ PRICEBOOK={}; PRICEBOOK_SOLD={}; PRICEPREV={}; PRICEMETA={}; PRICEMETA_SOLD={}; PRICESRC={}; PRICESRC_SOLD={}; PRICEASOF=0; LIVE_ASOF=0; SOLD_ASOF=0; }
+    // A book cached before this guard existed can carry a spike, so the stored copy is filtered too.
+    try{ var _sane=sanitiseSold(PRICEBOOK_SOLD, PRICEMETA_SOLD, PRICESRC_SOLD, PRICEBOOK);
+      if(_sane.dropped){ PRICEBOOK_SOLD=_sane.sold; PRICEMETA_SOLD=_sane.meta; PRICESRC_SOLD=_sane.src; } }catch(_){}
     renderFoot();
     if(apiBase()){
       priceBookGate();
