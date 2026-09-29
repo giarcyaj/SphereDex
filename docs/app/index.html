@@ -873,6 +873,42 @@
     .featart { top:16px; bottom:16px; right:16px; max-width:340px; } .featslide.pair .featart { max-width:320px; }
     .featbody, .featslide.pair .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featart-img.zoom { animation:none; } }
+  /* Version banners are 16:9 screenshot collages with their own title and labels. Show the whole
+     frame, sharp, and keep this slide's copy off the phones. Other slide kinds stay as they are. */
+  .featslide.release { display:flex; flex-direction:column; align-self:flex-start; height:auto;
+    flex:0 0 100%; width:100%; max-width:100%; min-width:0; color:var(--ink); background:var(--surface); }
+  .featslide.release .featbg { position:relative; inset:auto; flex:none; width:100%; max-width:100%; min-width:0;
+    aspect-ratio:16 / 9; height:auto; background:#0b1c27; }
+  .featslide.release .featbg img { inset:0; width:100%; height:100%; object-fit:contain; object-position:center center;
+    filter:none; }
+  .featslide.release .featbg::after { content:none; }
+  .featslide.release .featart { display:none; }
+  .featslide.release .featbody { position:relative; inset:auto; right:auto; width:100%; flex:none;
+    padding:10px 14px 14px; color:var(--ink); background:var(--surface); border-top:1px solid var(--line); }
+  .featslide.release .featbadge { color:var(--accent-ink);
+    background:color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color:color-mix(in srgb, var(--accent) 40%, var(--line)); }
+  .featslide.release .feattitle { color:var(--ink); }
+  .featslide.release .featpoints, .featslide.release .featmeta { color:var(--ink-soft); }
+  .featured.banneropen { height:auto; }
+  .featured.banneropen .feattrack { height:auto; align-items:flex-start; }
+  .featured.banneropen .featslide { height:200px; }
+  .featured.banneropen .featslide.release { height:auto; }
+  .featured.banneropen .featdots { left:auto; right:12px; top:12px; bottom:auto; }
+  .featured.banneropen .featdot { background:rgba(255,255,255,.5); box-shadow:0 1px 2px rgba(0,0,0,.55); }
+  .featured.banneropen .featdot[aria-current="true"] { background:#fff; }
+  @media (min-width:760px) {
+    .featured.banneropen { height:240px; }
+    .featured.banneropen .feattrack { height:100%; align-items:stretch; }
+    .featured.banneropen .featslide { height:100%; }
+    .featured.banneropen .featslide.release { height:100%; align-self:stretch; }
+    .featslide.release .featbg { position:absolute; inset:0; width:auto; height:auto; aspect-ratio:auto; }
+    .featslide.release .featbg img { object-position:right center; }
+    .featslide.release .featbody { position:absolute; left:0; top:0; bottom:0; width:calc(100% - 440px); right:auto;
+      padding:18px 16px 18px 22px; border-top:0;
+      background:linear-gradient(90deg, var(--surface) 0%, var(--surface) 88%, transparent 100%); }
+    .featured.banneropen .featdots { right:16px; top:16px; }
+  }
   /* ==== FEATURED CAROUSEL END (styles) ==== */
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.68rem; }
   .pallegend i { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:-1px; }
@@ -2988,6 +3024,11 @@
       "Match tracker for the table \u00b7 life, Material, Ingredient, day and night",
       "Rules text and keyword search \u00b7 upcoming PalDex cards name their set"
     ]
+  };
+  // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
+  // A version with no entry keeps today's set-art fallback. Paths are bundled img/ files.
+  var RELEASE_ART = {
+    "2.1": "img/UPDATE_2_1.webp"
   };
   // The store build the version check learns about ("" until the first check completes).
   // Persisted so an offline behind user still sees the update headliner from the last check.
@@ -8068,6 +8109,12 @@
     var c=CARDS.filter(function(x){ return x.set===setKey; })[0];
     return c ? imgSrc(c) : "";
   }
+  // The release banner for a version, or "" when that version still uses set art.
+  function featReleaseArt(ver){
+    var src="";
+    try{ if(typeof RELEASE_ART!=="undefined" && RELEASE_ART) src=RELEASE_ART[String(ver||"")]||""; }catch(e){}
+    return src ? String(src) : "";
+  }
   // Which product a headline is about, so the news slide shows that set's art instead of a stock image.
   // Deliberately a small keyword map: guessing wrong only costs one background image.
   function featNewsSet(news){
@@ -8138,9 +8185,11 @@
       if(behind && (!notes || !notes.length)) notes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
       notes=(notes||[]).slice(0,3);
       if(!notes.length) return;
-      var art = liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : "");
-      if(behind) out.push({kind:"update", badge:"Update available", title:"SphereDex "+ver+" is here", meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
-      else out.push({kind:"features", badge:"Latest update", title:"What\u2019s new in "+ver, meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver});
+      var mapped = featReleaseArt(ver);
+      var art = mapped || (liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : ""));
+      var slide = {badge: behind?"Update available":"Latest update", title: behind?("SphereDex "+ver+" is here"):("What\u2019s new in "+ver), meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver, releaseArt:!!mapped};
+      if(behind) out.push(Object.assign({kind:"update"}, slide));
+      else out.push(Object.assign({kind:"features"}, slide));
     })();
     // 3 - movers among cards this collection owns. Hidden entirely when prices are off.
     (function(){
@@ -8229,8 +8278,15 @@
     return out.slice(0,5);
   }
 
+  function featSyncBanner(){
+    var host=$("homeFeatured"); if(!host || !host.classList) return;
+    var s=(_featSlides||[])[_featIndex];
+    if(s && s.releaseArt) host.classList.add("banneropen");
+    else host.classList.remove("banneropen");
+  }
   function featPaint(){
     var host=$("homeFeatured"), track=$("featTrack"); if(!host||!track) return;
+    featSyncBanner();
     track.style.transform="translateX(-"+(_featIndex*100)+"%)";
     Array.prototype.forEach.call(track.querySelectorAll(".featslide"), function(s,i){
       var on=(i===_featIndex);
@@ -8311,8 +8367,8 @@
     var host=$("homeFeatured"); if(!host) return;
     var slides=featuredSlides();
     featStop();
-    if(!slides.length){ host.hidden=true; host.innerHTML=""; _featSig=""; return; }
-    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta+"|"+(s.notes?s.notes.join("|"):""); }).join("~");
+    if(!slides.length){ host.hidden=true; host.innerHTML=""; _featSig=""; if(host.classList) host.classList.remove("banneropen"); return; }
+    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta+"|"+(s.art||"")+"|"+(s.releaseArt?1:0)+"|"+(s.notes?s.notes.join("|"):""); }).join("~");
     // renderHome runs on every collection change; rebuilding identical slides would restart the scroll
     // animation mid-way, so only repaint when the content itself has moved on.
     if(sig===_featSig && !host.hidden){ featStart(); return; }
@@ -8329,7 +8385,7 @@
           var up=m.dir==="up";
           return '<span class="featpaircard '+(up?'up':'down')+'"><img src="'+esc(m.art)+'" alt="" loading="lazy" decoding="async"><span class="featpairpct">'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</span></span>';
         }).join("")+'</span>';
-      } else if(s.art){
+      } else if(s.art && !s.releaseArt){
         art='<span class="featart'+(isCardArt(s)?' featart--card':'')+'"><img class="featart-img zoom" src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>';
       }
       var badgeIcon = s.kind==="release"?"sphere":(s.kind==="soon"?"calendar":(s.kind==="reveal"?"layers":(s.kind==="update"||s.kind==="features"?"refresh":(s.kind==="movers"?"chart":(s.kind==="collection"?"grid":"news")))));
@@ -8344,7 +8400,7 @@
       } else {
         bodyMeta='<span class="featmeta">'+esc(s.meta)+'</span>';
       }
-      return '<button class="featslide'+(on?" on":"")+(art?"":" noart")+(movers&&movers.length>1?" pair":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
+      return '<button class="featslide'+(on?" on":"")+(art?"":" noart")+(s.releaseArt?" release":"")+(movers&&movers.length>1?" pair":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
         '>'+bg+art+'<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
         '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span></button>';
     }).join("");
@@ -8354,6 +8410,7 @@
     host.hidden=false;
     host.innerHTML='<div class="feattrack" id="featTrack" style="transform:translateX(-'+(_featIndex*100)+'%)" role="group" aria-roledescription="carousel" aria-label="Featured news and releases">'+cells+'</div>'+dots;
     _featSlides=slides;
+    featSyncBanner();
     bindFeatured();
     featStart();
   }
