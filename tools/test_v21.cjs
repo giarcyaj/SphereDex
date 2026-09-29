@@ -465,7 +465,7 @@ test('TCGplayer Mass Entry uses quantity, name, and a set code only when one is 
 });
 
 test('JSON import clamps bad quantities and never records a negative value', () => {
-  const box = {};
+  const box = { recordDayPrices() {} };
   vm.createContext(box);
   vm.runInContext(['plainObj', 'rawCount', 'cardMap', 'sealedMap', 'cardValue', 'clampMoney', 'snapshot'].map(appFunction).join('\n'), box);
   const src = { 'EBP01-002': { qty: -4, mkt: 2.84, addAt: 5 } };

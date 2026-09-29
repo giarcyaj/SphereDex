@@ -1282,6 +1282,69 @@ label.acctsetrow { align-items:center; }
   .pdrow .pddel { flex:0 0 auto; width:26px; height:26px; margin-left:2px; border:none; background:none; color:var(--ink-faint); font-size:.9rem; line-height:1; border-radius:8px; cursor:pointer; opacity:.5; transition:opacity .12s, color .12s, background .12s; }
   .pdrow .pddel:hover, .pdrow .pddel:focus-visible { opacity:1; color:var(--down); background:color-mix(in srgb, var(--down) 15%, transparent); outline:none; }
   .pdrow .pddel.ph { background:none; cursor:default; pointer-events:none; }
+  .pdrow.pdtap { cursor:pointer; flex-wrap:wrap; }
+  .pdrow.pdtap:hover, .pdrow.pdtap:focus-visible { background:color-mix(in srgb, var(--accent) 6%, transparent); outline:none; }
+  .pdrow .pdgo { flex:0 0 auto; color:var(--ink-faint); font-size:1.3rem; line-height:1; margin-left:2px; }
+  .pdrow.pdtap .pddel { margin-left:auto; }
+  .pdrow .pdtop { flex:1 1 100%; order:9; font-size:.74rem; color:var(--ink-faint); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pdrow .pdtop b { color:var(--ink-soft); font-weight:700; }
+  /* Day page */
+  #page-day .pdup { color:var(--el-Grass); } #page-day .pddown { color:var(--el-Fire); } #page-day .pdflat { color:var(--ink-faint); }
+  .dvnav { display:flex; justify-content:space-between; align-items:center; margin:0 0 14px; }
+  .dvstep { flex:0 0 auto; min-width:64px; background:var(--surface-2); border:1.5px solid var(--line-strong); color:var(--ink-soft); border-radius:10px; padding:7px 10px; font:700 .78rem var(--font-display); cursor:pointer; }
+  .dvstep[disabled] { visibility:hidden; }
+  .dvdate { flex:1; min-width:0; font-family:var(--font-display); font-size:1.12rem; font-weight:800; text-align:center; padding:0 8px; }
+  .dvdate small { display:block; font-size:.68rem; font-weight:700; color:var(--ink-faint); letter-spacing:.08em; text-transform:uppercase; margin-top:2px; }
+  .dvline { position:absolute; top:0; bottom:0; width:0; border-left:1.5px dashed var(--line-strong); pointer-events:none; }
+  .dvsel { position:absolute; width:12px; height:12px; border-radius:50%; background:var(--up); border:3px solid var(--surface); box-shadow:0 0 0 2px var(--up); transform:translate(-50%,-50%); pointer-events:none; }
+  .dvsel.sold { background:var(--azure); box-shadow:0 0 0 2px var(--azure); }
+  .dvsel.dvselsm { width:10px; height:10px; border-width:2px; background:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+  .dvrange { display:flex; justify-content:center; margin:10px 0 14px; }
+  .dvrb { margin:0 3px; font:700 .72rem var(--font-display); padding:5px 12px; border-radius:999px; background:var(--surface-2); color:var(--ink-faint); border:1.5px solid var(--line); cursor:pointer; }
+  .dvrb.on { color:var(--ink); border-color:var(--accent); }
+  .dvsum { display:grid; grid-template-columns:repeat(3,1fr); grid-gap:8px; margin:6px 0 10px; }
+  .dvsum > div { background:var(--surface-2); border:1.5px solid var(--line); border-radius:12px; padding:9px 6px; text-align:center; }
+  .dvsum b { display:block; font:800 1.1rem var(--font-display); }
+  .dvsum span { font-size:.66rem; color:var(--ink-faint); letter-spacing:.06em; text-transform:uppercase; }
+  .dvbest { display:grid; grid-template-columns:1fr 1fr; grid-gap:8px; }
+  .dvtile { display:flex; align-items:center; text-align:left; background:var(--surface-2); border:1.5px solid var(--line); border-radius:12px; padding:8px; min-width:0; color:var(--ink); font:inherit; cursor:pointer; }
+  .dvtile img, .dvtile .dvph { flex:0 0 auto; width:34px; height:48px; object-fit:cover; border-radius:4px; margin-right:9px; }
+  .dvtile0 { display:block; cursor:default; }
+  .dvtt { display:block; min-width:0; }
+  .dvtl { display:block; font-size:.62rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.07em; }
+  .dvtn { display:block; font-weight:700; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dvtc { display:block; font:700 .78rem var(--font-mono); }
+  .dvph { display:flex; align-items:center; justify-content:center; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-faint); font-size:.55rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .dvctl { display:flex; flex-direction:column; margin-bottom:6px; }
+  .dvctl .seg { align-self:stretch; display:flex; margin-bottom:9px; } .dvctl .seg .segb { flex:1; padding:6px 8px; }
+  .dvchips { display:flex; flex-wrap:wrap; margin:0 -3px 6px; }
+  .dvchip { margin:0 3px 6px; font:700 .74rem var(--font-display); padding:6px 12px; border-radius:999px; background:var(--surface-2); color:var(--ink-soft); border:1.5px solid var(--line-strong); cursor:pointer; }
+  .dvchip.on { background:var(--accent); color:#04222a; border-color:var(--accent); }
+  .dvsort { display:flex; }
+  .dvsort select { flex:1; min-width:0; background:var(--surface-2); color:var(--ink); border:1.5px solid var(--line-strong); border-radius:10px; padding:8px 10px; font:600 .8rem var(--font-body, inherit); }
+  .dvsort select + select { margin-left:8px; flex:0 1 40%; }
+  .dvcount { font-size:.74rem; color:var(--ink-faint); margin:8px 0 2px; }
+  .dvrow { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .dvrow.open { border-bottom-color:transparent; }
+  .dvrow:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .dvrow img, .dvrow .dvph { flex:0 0 auto; width:44px; height:62px; object-fit:cover; border-radius:5px; margin-right:11px; }
+  .dvmid { flex:1; min-width:0; }
+  .dvn { font-weight:700; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dvs { font-size:.72rem; color:var(--ink-faint); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dvp { font:600 .78rem var(--font-mono); color:var(--ink-soft); margin-top:3px; font-variant-numeric:tabular-nums; }
+  .dvr { flex:0 0 auto; text-align:right; margin-left:8px; font-variant-numeric:tabular-nums; }
+  .dva { font:800 .9rem var(--font-mono); }
+  .dvb { font:600 .74rem var(--font-mono); }
+  .dvh { font-size:.68rem; color:var(--ink-faint); margin-top:3px; }
+  .dvexp { padding:2px 0 14px; border-bottom:1px solid var(--line); }
+  .dvspark { position:relative; height:96px; background:var(--surface-2); border:1.5px solid var(--line); border-radius:12px; overflow:hidden; }
+  .dvspark svg { width:100%; height:100%; display:block; }
+  .dvkv { display:grid; grid-template-columns:repeat(4,1fr); grid-gap:6px; margin:9px 0; text-align:center; }
+  .dvkv b { display:block; font:700 .82rem var(--font-mono); }
+  .dvkv span { font-size:.6rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; }
+  .dvbtns { display:flex; }
+  .dvbtns button { flex:1; background:var(--surface-2); border:1.5px solid var(--line-strong); color:var(--ink); border-radius:10px; padding:9px; font:700 .78rem var(--font-display); cursor:pointer; }
+  .dvbtns button + button { margin-left:8px; }
   /* collected mode (owned cards + sealed) */
   #ownedPanel, #valPanel { cursor:pointer; }
   .collectedbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
@@ -2140,6 +2203,11 @@ label.acctsetrow { align-items:center; }
   <section class="page priceui" id="page-portfolio">
     <button class="backbtn" type="button" id="pdBack">&lsaquo; Home</button>
     <div class="pcard" id="pdHost"></div>
+  </section>
+
+  <section class="page priceui" id="page-day">
+    <button class="backbtn" type="button" id="dvBack">&lsaquo; Back</button>
+    <div class="pcard" id="dvHost"></div>
   </section>
 
 
@@ -3192,7 +3260,7 @@ label.acctsetrow { align-items:center; }
         vLive=clampMoney(cardsValueMode("live")+sealedValueMode("live")),
         vSold=clampMoney(cardsValueMode("sold")+sealedValueMode("sold")), ct=collCounts();
     var cards=rawCount(ct&&ct.cards), graded=rawCount(ct&&ct.graded), sealed=rawCount(ct&&ct.sealed);
-    if(v>0 || vLive>0 || vSold>0 || cards || graded || sealed){ var pt=c.hist[d]||{}; pt.v=v; pt.vLive=vLive; if(vSold>0) pt.vSold=vSold; pt.cards=cards; pt.graded=graded; pt.sealed=sealed; c.hist[d]=pt; } }
+    if(v>0 || vLive>0 || vSold>0 || cards || graded || sealed){ var pt=c.hist[d]||{}; pt.v=v; pt.vLive=vLive; if(vSold>0) pt.vSold=vSold; pt.cards=cards; pt.graded=graded; pt.sealed=sealed; c.hist[d]=pt; recordDayPrices(); } }
   // Stamp today's (or a given day's) last-sold value as a blue graph mark; called on a last-sold refresh.
   function stampSoldMark(dayKey){ var c=activeCol(); if(!c.hist) c.hist={}; var d=dayKey||todayKey();
     var vSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100;
@@ -6187,39 +6255,42 @@ label.acctsetrow { align-items:center; }
   // Portfolio day-by-day price source: "live" | "sold" (null = follow the global price mode).
   var pdMode=null;
   // Full-page portfolio view (reached by tapping the home chart).
-  function renderPortfolioDetail(){
-    var host=$("pdHost"); if(!host) return;
+  // The portfolio series for one price mode, ending with today's live total.
+  // LIVE: every day valued at live listings (green line, a point each day).
+  // SOLD: only the days that carry a last-sold reading, plus today's current sold total, valued at last sold
+  // (blue markers). So each mode shows only its own colour on the graph and only its own days in Day by day.
+  function portfolioPoints(mode){
     var raw=portfolioSeries(), curLive=Math.round((cardsValueMode("live")+sealedValueMode("live"))*100)/100, curSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100, today=todayKey(), ct=collCounts();
     var storedToday=(activeCol().hist||{})[today]||{};
     var live={d:today, v:Math.round((cardsValue()+sealedValue())*100)/100, vLive:curLive, vSold:(storedToday.vSold!=null?+storedToday.vSold:null), vSoldCur:curSold, cards:ct.cards, graded:ct.graded, sealed:ct.sealed};
     if(raw.length && raw[raw.length-1].d===today) raw[raw.length-1]=live; else raw=raw.concat([live]);
-    var mode=(pdMode||priceMode()), isSold=(mode==="sold");
-    // One series per mode. LIVE: every day valued at live listings (green line, a point each day).
-    // SOLD: only the days that carry a last-sold reading, plus today's current sold total, valued at last sold
-    // (blue markers). So each mode shows only its own colour on the graph and only its own days in Day by day.
-    var pts;
-    if(isSold){
-      pts=raw.filter(function(d){ return d.vSold!=null || d.d===today; }).map(function(d){
+    if(mode==="sold"){
+      return raw.filter(function(d){ return d.vSold!=null || d.d===today; }).map(function(d){
         var v=(d.d===today)?(d.vSoldCur!=null?+d.vSoldCur:(d.vSold!=null?+d.vSold:0)):(+d.vSold||0);
         return {d:d.d, v:v, cards:d.cards, graded:d.graded, sealed:d.sealed};
       });
-    } else {
-      pts=raw.map(function(d){ return {d:d.d, v:(+d.vLive||+d.v||0), cards:d.cards, graded:d.graded, sealed:d.sealed}; });
     }
+    return raw.map(function(d){ return {d:d.d, v:(+d.vLive||+d.v||0), cards:d.cards, graded:d.graded, sealed:d.sealed}; });
+  }
+  function renderPortfolioDetail(){
+    var host=$("pdHost"); if(!host) return;
+    var today=todayKey(), mode=(pdMode||priceMode()), isSold=(mode==="sold"), pts=portfolioPoints(mode);
+    fetchPriceHistory().then(function(changed){ var pg=$("page-portfolio"); if(changed && pg && pg.classList.contains("active")) renderPortfolioDetail(); });
     var cur=pts[pts.length-1].v;
     var first=pts[0].v, delta=cur-first, pct=first>0?(delta/first*100):0;
     var dir=delta>0.005?"up":(delta<-0.005?"down":"flat"), sign=delta>0.005?"+":(delta<-0.005?"":"");
     var vals=pts.map(function(s){return s.v;}), hi=Math.max.apply(null,vals), lo=Math.min.apply(null,vals);
     var soldSparse=(isSold && pts.length<2);   // sold chosen but no last-sold history recorded yet
-    var rows=pts.map(function(s,i){ return {s:s, delta:(i>0? s.v-pts[i-1].v : null)}; }).reverse().map(function(row){
-      var s=row.s, d=row.delta;
+    var rows=pts.map(function(s,i){ return {s:s, delta:(i>0? s.v-pts[i-1].v : null), prevD:(i>0? pts[i-1].d : null)}; }).reverse().map(function(row){
+      var s=row.s, d=row.delta, top=row.prevD ? dayTopMover(s.d, row.prevD, mode) : null;
       var parts=[]; if(s.cards!=null) parts.push(s.cards+" card"+(s.cards===1?"":"s")); if(s.graded) parts.push(s.graded+" graded"); if(s.sealed) parts.push(s.sealed+" sealed");
       var chg = (d==null) ? '<span class="pdflat">·</span>'
               : (d>0.005) ? '<span class="pdup">&#9650; '+money(d)+'</span>'
               : (d<-0.005) ? '<span class="pddown">&#9660; '+money(Math.abs(d))+'</span>'
               : '<span class="pdflat">&#8211;</span>';
       var del = (s.d!==today) ? '<button class="pddel" type="button" data-day="'+s.d+'" title="Delete this day" aria-label="Delete '+fmtFull(s.d)+' from history">✕</button>' : '<span class="pddel ph" aria-hidden="true"></span>';
-      return '<div class="pdrow"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdchg">'+chg+'</span><span class="pdv">'+money(s.v)+'</span>'+del+'</div>';
+      var topHtml = top ? '<span class="pdtop">Top mover: <b>'+esc(top.name)+'</b> <span class="'+(top.chg>0?'pdup':'pddown')+'">'+(top.chg>0?'&#9650; +':'&#9660; &minus;')+Math.abs(top.pct).toFixed(1)+'%</span></span>' : '';
+      return '<div class="pdrow pdtap" data-open-day="'+s.d+'" role="button" tabindex="0" aria-label="Open '+fmtFull(s.d)+'"><span class="pdd">'+fmtFull(s.d)+'</span><span class="pdc">'+(parts.join(" · ")||"nothing yet")+'</span><span class="pdchg">'+chg+'</span><span class="pdv">'+money(s.v)+'</span>'+del+'<span class="pdgo" aria-hidden="true">&rsaquo;</span>'+topHtml+'</div>';
     }).join("");
     host.innerHTML=
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
@@ -6252,6 +6323,244 @@ label.acctsetrow { align-items:center; }
     var rsb=$("refreshSoldBtn"); if(rsb) rsb.onclick=function(){ refreshLastSold(); };
     updateRefreshLabel();
     Array.prototype.forEach.call(host.querySelectorAll(".pddel[data-day]"), function(b){ b.onclick=function(e){ e.stopPropagation(); askDeleteDay(b.getAttribute("data-day")); }; });
+    Array.prototype.forEach.call(host.querySelectorAll("[data-open-day]"), function(r){
+      r.onclick=function(){ openDay(r.getAttribute("data-open-day")); };
+      r.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openDay(r.getAttribute("data-open-day")); } };
+    });
+  }
+  // ---- Day pages: every owned card and product's price move on one day ----
+  // Per-item daily prices come from two places. The device saves the unit prices it valued the collection at
+  // each day (sealed products included), and the server's daily history covers the days before that, for
+  // cards only. Where both have a day, the device figure wins, because it is what that day's total used.
+  var DAYP_KEY="palvault-dayprices", DAYP_KEEP=120, _dayP=null, _dayPTimer=null;
+  function dayPriceStore(){ if(!_dayP){ try{ _dayP=JSON.parse(localStorage.getItem(DAYP_KEY)||"{}")||{}; }catch(e){ _dayP={}; } } return _dayP; }
+  function r2p(n){ n=+n; return (isFinite(n) && n>0) ? Math.round(n*100)/100 : 0; }
+  // save() runs on every edit, so the write is batched rather than serialising the whole store each time.
+  function recordDayPrices(){
+    if(_dayPTimer) return;
+    _dayPTimer=setTimeout(function(){ _dayPTimer=null;
+      try{
+        var all=dayPriceStore(), d=todayKey(), day=all[d]||{}, n=0, sm=sealMap();
+        CARDS.forEach(function(c){ var e=own[c.id]; if(!e || !(rawCount(e.qty)>0)) return;
+          var l=r2p(unitOf(c.id,"live")), s=r2p(unitOf(c.id,"sold")); if(l||s){ day[c.id]=[l,s]; n++; } });
+        SEALED.forEach(function(p){ if(p.pre) return; var s=sm[p.id]; if(!s || !(rawCount(s.qty)>0)) return;
+          var l=r2p(sealUnit(s,"live")), so=r2p(sealUnit(s,"sold")); if(l||so){ day[p.id]=[l,so]; n++; } });
+        if(!n) return;
+        all[d]=day;
+        var ks=Object.keys(all).sort(); while(ks.length>DAYP_KEEP) delete all[ks.shift()];
+        localStorage.setItem(DAYP_KEY, JSON.stringify(all));
+      }catch(e){}
+    }, 1500);
+  }
+  // Server history is held for the session only: the server keeps every day, so there is nothing to lose.
+  var _srvHist={region:"", days:{}, at:0, since:"", busy:null};
+  function histSince(){ var first=todayKey();
+    (STATE.cols||[]).forEach(function(c){ Object.keys(c.hist||{}).forEach(function(k){ if(k<first) first=k; }); });
+    var d=new Date(first+"T12:00:00"); d.setDate(d.getDate()-8);
+    return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function fetchPriceHistory(){
+    var reg=ebayReg();
+    if(!apiBase()) return Promise.resolve(false);
+    if(_srvHist.region!==reg) _srvHist={region:reg, days:{}, at:0, since:"", busy:null};
+    if(_srvHist.busy) return _srvHist.busy;
+    var since=histSince();
+    if(Date.now()-_srvHist.at < 3*3600*1000 && _srvHist.since && _srvHist.since<=since) return Promise.resolve(false);
+    var have=Object.keys(_srvHist.days).sort();
+    var from=(have.length && _srvHist.since && _srvHist.since<=since) ? have[Math.max(0,have.length-2)] : since;
+    _srvHist.busy=api("/api/price-history?region="+encodeURIComponent(reg)+"&since="+from,"GET").then(function(r){
+      _srvHist.busy=null;
+      var b=r && r.ok && r.body; if(!b || !b.days){ _srvHist.at=Date.now()-150*60*1000; return false; }
+      b.days.forEach(function(d,i){ var day={};
+        ["live","sold"].forEach(function(k,j){ var m=b[k]||{}; Object.keys(m).forEach(function(id){ var v=m[id][i]; if(v!=null && +v>0) (day[id]||(day[id]=[0,0]))[j]=+v; }); });
+        _srvHist.days[d]=day; });
+      _srvHist.at=Date.now(); if(!_srvHist.since || since<_srvHist.since) _srvHist.since=since;
+      return b.days.length>0;
+    }).catch(function(){ _srvHist.busy=null; _srvHist.at=Date.now()-150*60*1000; return false; });
+    return _srvHist.busy;
+  }
+  function dayPriceMap(d, mode){
+    var k=(mode==="sold")?1:0, out={}, s=_srvHist.days[d], l=dayPriceStore()[d], id;
+    if(s) for(id in s){ if(s[id][k]>0) out[id]=s[id][k]; }
+    if(l) for(id in l){ if(l[id][k]>0) out[id]=l[id][k]; }
+    return out;
+  }
+  function dayHasPrices(d){ return d===todayKey() || !!(_srvHist.days[d] || dayPriceStore()[d]); }
+  function priceDays(){ var seen={}; Object.keys(_srvHist.days).concat(Object.keys(dayPriceStore())).forEach(function(k){ seen[k]=1; }); return Object.keys(seen).sort(); }
+  // Today reads the books directly, so today's page always agrees with the headline value.
+  function todayPriceMap(mode){ var out={}, sm=sealMap();
+    CARDS.forEach(function(c){ var e=own[c.id]; if(e && rawCount(e.qty)>0){ var v=unitOf(c.id,mode); if(v>0) out[c.id]=v; } });
+    SEALED.forEach(function(p){ if(p.pre) return; var s=sm[p.id]; if(s && rawCount(s.qty)>0){ var v=sealUnit(s,mode); if(v>0) out[p.id]=v; } });
+    return out; }
+  function pricesFor(d, mode){ return d===todayKey() ? todayPriceMap(mode) : dayPriceMap(d, mode); }
+  // An item with no figure on the comparison day takes the nearest earlier one within a week, since a price
+  // holds between refreshes.
+  function prevPriceMap(d, mode){
+    var out=pricesFor(d, mode), back=priceDays().filter(function(k){ return k<d; }).reverse().slice(0,7);
+    back.forEach(function(k){ var m=dayPriceMap(k, mode); for(var id in m){ if(out[id]==null) out[id]=m[id]; } });
+    return out; }
+  function dayItem(id, kind, name, ref, qty, cur, prev){
+    var known=prev>0, chg=known?cur-prev:0;
+    return {id:id, kind:kind, name:name, ref:ref, qty:qty, cur:cur, prev:known?prev:null, chg:chg, pct:known?chg/prev*100:0, hold:chg*qty, moved:known && Math.abs(chg)>=0.005};
+  }
+  function dayItems(d, prevD, mode){
+    var cur=pricesFor(d, mode), prv=prevD ? prevPriceMap(prevD, mode) : {}, out=[], sm=sealMap();
+    CARDS.forEach(function(c){ var e=own[c.id]; if(!e || !(rawCount(e.qty)>0) || !(cur[c.id]>0)) return;
+      out.push(dayItem(c.id, "card", c.name, c, rawCount(e.qty), cur[c.id], prv[c.id])); });
+    SEALED.forEach(function(p){ if(p.pre) return; var s=sm[p.id]; if(!s || !(rawCount(s.qty)>0) || !(cur[p.id]>0)) return;
+      out.push(dayItem(p.id, "sealed", p.set+" "+p.name, p, rawCount(s.qty), cur[p.id], prv[p.id])); });
+    return out;
+  }
+  function dayTopMover(d, prevD, mode){
+    if(!dayHasPrices(d)) return null;
+    var best=null; dayItems(d, prevD, mode).forEach(function(it){ if(it.moved && (!best || Math.abs(it.pct)>Math.abs(best.pct))) best=it; });
+    return best;
+  }
+  var DAYV_KEY="palvault-dayview", _dayD=null, _dayRange=30, _dayOpen=null, _dayCtx=null;
+  function dayPrefs(){ var p={}; try{ p=JSON.parse(localStorage.getItem(DAYV_KEY)||"{}")||{}; }catch(e){}
+    return {kind:p.kind||"all", dir:p.dir||"all", changed:p.changed!==false, set:p.set||"", sort:p.sort||"hold"}; }
+  function saveDayPrefs(p){ try{ localStorage.setItem(DAYV_KEY, JSON.stringify(p)); }catch(e){} }
+  var WEEKDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], MONTHS_LONG=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function isoDate(iso){ var p=iso.split("-"); return new Date(+p[0], (+p[1])-1, +p[2]); }
+  function fmtDayLong(iso){ var d=isoDate(iso); return WEEKDAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS_LONG[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():""); }
+  function fmtDayShort(iso){ var d=isoDate(iso); return WEEKDAYS[d.getDay()].slice(0,3)+" "+d.getDate(); }
+  function fmtDayMid(iso){ var d=isoDate(iso); return WEEKDAYS[d.getDay()].slice(0,3)+" "+d.getDate()+" "+MONTHS[d.getMonth()]; }
+  function dayArt(it){
+    var src="";
+    try{ src = it.kind==="card" ? imgSrc(it.ref) : ((window.CARD_IMG && window.CARD_IMG[it.ref.box]) || ""); }catch(e){}
+    return src ? '<img src="'+esc(src)+'" alt="" loading="lazy">' : '<span class="dvph" aria-hidden="true">'+(it.kind==="card"?"":"Sealed")+'</span>';
+  }
+  function signedMoney(n){ return (n>0?"+":(n<0?"\u2212":""))+money(Math.abs(n)); }
+  function openDay(d){ _dayD=d||todayKey(); _dayOpen=null; showPage("day"); }
+  function renderDayView(){
+    var host=$("dvHost"); if(!host) return;
+    var today=todayKey(), mode=(pdMode||priceMode()), isSold=(mode==="sold"), pts=portfolioPoints(mode);
+    fetchPriceHistory().then(function(changed){ var pg=$("page-day"); if(changed && pg && pg.classList.contains("active")) renderDayView(); });
+    var want=_dayD||today, idx=pts.length-1;
+    for(var i=pts.length-1;i>=0;i--){ if(pts[i].d<=want){ idx=i; break; } }
+    var sel=pts[idx]; _dayD=sel.d;
+    var prev=idx>0?pts[idx-1]:null, next=idx<pts.length-1?pts[idx+1]:null;
+    var delta=prev? sel.v-prev.v : 0, pct=(prev && prev.v>0)? delta/prev.v*100 : 0;
+    var dir=delta>0.005?"up":(delta<-0.005?"down":"flat");
+    // The graph window ends today unless the chosen day falls outside it, in which case it follows the day.
+    var n=pts.length, end=n-1, start=0, R=_dayRange;
+    if(R>0){ if(end-idx>=R) end=Math.min(n-1, idx+Math.floor(R/2)); start=Math.max(0, end-R+1); }
+    var win=pts.slice(start, end+1), wi=idx-start, W=600, H=150, pad=8;
+    var vals=win.map(function(p){ return p.v; }), mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals); if(mx===mn){ mx=mn+1; mn=Math.max(0,mn-1); }
+    var mxp=win.length<=1 ? 50 : (pad+(wi/(win.length-1))*(W-pad*2))/W*100, myp=(pad+(H-pad*2)-((sel.v-mn)/(mx-mn))*(H-pad*2))/H*100;
+    var items=dayItems(sel.d, prev?prev.d:null, mode), known=items.filter(function(it){ return it.prev!=null; });
+    var ups=known.filter(function(it){ return it.moved && it.chg>0; }), downs=known.filter(function(it){ return it.moved && it.chg<0; });
+    var best=ups.slice().sort(function(a,b){ return b.pct-a.pct; })[0], worst=downs.slice().sort(function(a,b){ return a.pct-b.pct; })[0];
+    _dayCtx={d:sel.d, mode:mode, items:items};
+    var ranges=[[7,"7D"],[30,"30D"],[90,"90D"],[0,"All"]];
+    var tile=function(it, label){ if(!it) return '<div class="dvtile dvtile0"><div class="dvtl">'+label+'</div><div class="dvtn">None</div></div>';
+      return '<button class="dvtile" type="button" data-dv-item="'+esc(it.id)+'">'+dayArt(it)+'<span class="dvtt"><span class="dvtl">'+label+'</span><span class="dvtn">'+esc(it.name)+'</span><span class="dvtc '+(it.chg>0?'pdup':'pddown')+'">'+(it.chg>0?'&#9650; +':'&#9660; &minus;')+Math.abs(it.pct).toFixed(1)+'%</span></span></button>'; };
+    var detail = dayHasPrices(sel.d) && prev;
+    var first=priceDays()[0];
+    var note = !prev ? 'This is the first tracked day, so there is nothing to compare it with yet.'
+      : !dayHasPrices(sel.d) ? (_srvHist.busy ? 'Loading prices for this day\u2026' : 'Card-by-card prices start from '+(first?fmtFull(first):'today')+'. This day shows the collection total only.')
+      : '';
+    var hasSealed=items.some(function(it){ return it.kind==="sealed"; }) || SEALED.some(function(p){ var s=sealMap()[p.id]; return s && rawCount(s.qty)>0; });
+    var sealedNote = (detail && sel.d!==today && !dayPriceStore()[sel.d] && hasSealed) ? '<div class="pcnote">Products are not included for this day. Their daily prices are saved from the first day you use this version.</div>' : '';
+    host.innerHTML=
+      '<div class="dvnav"><button class="dvstep" type="button" id="dvPrev"'+(prev?'':' disabled')+'>&lsaquo; '+(prev?fmtDayShort(prev.d):'')+'</button>'+
+        '<div class="dvdate">'+fmtDayLong(sel.d)+'<small>'+(sel.d===today?'Today · ':'')+(isSold?'Last sold':'Live listings')+'</small></div>'+
+        '<button class="dvstep" type="button" id="dvNext"'+(next?'':' disabled')+'>'+(next?fmtDayShort(next.d):'')+' &rsaquo;</button></div>'+
+      '<div class="pctop"><div><div class="pcval">'+money(sel.v)+'</div><div class="pclab">Collection value · '+esc(activeCol().name)+'</div></div>'+
+        (prev?'<div class="pcchg '+dir+'">'+signedMoney(delta)+' ('+(delta>0.005?'+':(delta<-0.005?'\u2212':''))+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> vs '+fmtDayMid(prev.d)+'</span></div>':'')+'</div>'+
+      '<div class="pcchartwrap pcbig'+(isSold?' pcsold':'')+'" id="dvWrap">'+chartSVG(win, {single:true, color:(isSold?"var(--azure)":"var(--up)"), gradId:"dvg"})+
+        '<span class="dvline" style="left:'+mxp.toFixed(3)+'%"></span><span class="dvsel'+(isSold?' sold':'')+'" style="left:'+mxp.toFixed(3)+'%;top:'+myp.toFixed(3)+'%"></span>'+
+        '<div class="pcmark" id="dvMark" hidden></div><div class="pctip" id="dvTip" hidden></div></div>'+
+      '<div class="dvrange" id="dvRange">'+ranges.map(function(r){ return '<button type="button" class="dvrb'+(r[0]===_dayRange?' on':'')+'" data-r="'+r[0]+'">'+r[1]+'</button>'; }).join("")+'</div>'+
+      (note?'<div class="pcnote">'+note+'</div>':'')+
+      (detail?
+        '<div class="dvsum"><div><b class="pdup">'+ups.length+'</b><span>Gained</span></div><div><b class="pddown">'+downs.length+'</b><span>Lost</span></div><div><b>'+(known.length-ups.length-downs.length)+'</b><span>Unchanged</span></div></div>'+
+        '<div class="dvbest">'+tile(best,"Biggest gain")+tile(worst,"Biggest loss")+'</div>'+
+        sealedNote+
+        '<h2 class="sech" style="margin-top:24px">What moved on '+fmtDayMid(sel.d)+'</h2>'+
+        '<div id="dvCtl"></div><div id="dvList"></div>'
+      :'');
+    wireChart(win, {wrap:"dvWrap", tip:"dvTip", mark:"dvMark"});
+    var wrap=$("dvWrap");
+    if(wrap && win.length>1){ wrap.style.cursor="pointer"; wrap.onclick=function(e){ var r=wrap.getBoundingClientRect(), k=Math.round(((e.clientX-r.left)/r.width)*(win.length-1)); k=Math.max(0,Math.min(win.length-1,k)); if(win[k].d!==_dayD){ _dayD=win[k].d; _dayOpen=null; renderDayView(); } }; }
+    var pb=$("dvPrev"); if(pb && prev) pb.onclick=function(){ _dayD=prev.d; _dayOpen=null; renderDayView(); };
+    var nb=$("dvNext"); if(nb && next) nb.onclick=function(){ _dayD=next.d; _dayOpen=null; renderDayView(); };
+    Array.prototype.forEach.call(host.querySelectorAll(".dvrb"), function(b){ b.onclick=function(){ _dayRange=+b.getAttribute("data-r"); renderDayView(); }; });
+    Array.prototype.forEach.call(host.querySelectorAll(".dvtile[data-dv-item]"), function(b){ b.onclick=function(){ openDayItem(b.getAttribute("data-dv-item")); }; });
+    var bk=$("dvBack"); if(bk) bk.onclick=goBack;
+    if(detail) renderDayList();
+  }
+  function renderDayList(){
+    var ctl=$("dvCtl"), list=$("dvList"); if(!ctl || !list || !_dayCtx) return;
+    var p=dayPrefs(), items=_dayCtx.items, sets={};
+    items.forEach(function(it){ if(it.kind==="card") sets[it.ref.set]=1; });
+    var setOpts='<option value="">All sets</option>'+Object.keys(sets).sort().map(function(s){ return '<option value="'+esc(s)+'"'+(p.set===s?' selected':'')+'>'+esc(SETS[s]?SETS[s].name:s)+'</option>'; }).join("");
+    var sorts=[["hold","Biggest move"],["pct","Biggest % move"],["value","Highest value"],["name","Name"],["num","Card number"]];
+    ctl.innerHTML='<div class="dvctl">'+
+      '<span class="seg" id="dvKind"><button class="segb'+(p.kind==="all"?" on":"")+'" data-k="all" type="button">All</button><button class="segb'+(p.kind==="card"?" on":"")+'" data-k="card" type="button">Cards</button><button class="segb'+(p.kind==="sealed"?" on":"")+'" data-k="sealed" type="button">Products</button></span>'+
+      '<div class="dvchips"><button type="button" class="dvchip'+(p.changed?' on':'')+'" data-chip="changed">Changed only</button><button type="button" class="dvchip'+(p.dir==="up"?' on':'')+'" data-chip="up">Gainers</button><button type="button" class="dvchip'+(p.dir==="down"?' on':'')+'" data-chip="down">Losers</button></div>'+
+      '<div class="dvsort"><select id="dvSort" aria-label="Sort">'+sorts.map(function(s){ return '<option value="'+s[0]+'"'+(p.sort===s[0]?' selected':'')+'>Sort: '+s[1]+'</option>'; }).join("")+'</select>'+
+        '<select id="dvSet" aria-label="Set">'+setOpts+'</select></div></div>';
+    var shown=items.filter(function(it){
+      if(p.kind!=="all" && it.kind!==p.kind) return false;
+      if(p.set && !(it.kind==="card" && it.ref.set===p.set)) return false;
+      if(p.changed && !it.moved) return false;
+      if(p.dir==="up" && !(it.moved && it.chg>0)) return false;
+      if(p.dir==="down" && !(it.moved && it.chg<0)) return false;
+      return true; });
+    var by={
+      hold:function(a,b){ return Math.abs(b.hold)-Math.abs(a.hold); },
+      pct:function(a,b){ return Math.abs(b.pct)-Math.abs(a.pct); },
+      value:function(a,b){ return b.cur*b.qty-a.cur*a.qty; },
+      name:function(a,b){ return a.name.localeCompare(b.name); },
+      num:function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); } };
+    shown.sort(by[p.sort]||by.hold);
+    var sortLbl={hold:"biggest change on your copies", pct:"biggest % change", value:"highest value", name:"name", num:"card number"}[p.sort]||"";
+    list.innerHTML='<div class="dvcount">'+shown.length+' of '+items.length+' item'+(items.length===1?'':'s')+' · sorted by '+sortLbl+'</div>'+
+      (shown.length ? shown.map(function(it){
+        var sub = it.kind==="card" ? esc(it.id)+(RARE_NAME[it.ref.rare]?' · '+esc(RARE_NAME[it.ref.rare]):'') : 'Sealed · '+esc(it.ref.sub||'');
+        var chgCls = it.chg>0 ? 'pdup' : (it.chg<0 ? 'pddown' : 'pdflat');
+        var right = it.prev==null ? '<div class="dva pdflat">New</div><div class="dvh">no earlier price</div>'
+          : '<div class="dva '+chgCls+'">'+signedMoney(it.chg)+'</div><div class="dvb '+chgCls+'">'+(it.moved?(it.chg>0?'&#9650; +':'&#9660; &minus;')+Math.abs(it.pct).toFixed(1)+'%':'no change')+'</div>'+
+            (it.qty>1 && it.moved ? '<div class="dvh">×'+it.qty+' '+signedMoney(it.hold)+'</div>' : '');
+        return '<div class="dvrow'+(_dayOpen===it.id?' open':'')+'" data-dv-row="'+esc(it.id)+'" role="button" tabindex="0" aria-expanded="'+(_dayOpen===it.id)+'">'+dayArt(it)+
+          '<div class="dvmid"><div class="dvn">'+esc(it.name)+'</div><div class="dvs">'+sub+' · ×'+it.qty+'</div>'+
+          '<div class="dvp">'+(it.prev!=null?money(it.prev)+' &rarr; ':'')+money(it.cur)+'</div></div>'+
+          '<div class="dvr">'+right+'</div></div>'+(_dayOpen===it.id?dayItemHistory(it):'');
+      }).join("") : '<div class="pcnote">Nothing matches these filters on this day.</div>');
+    Array.prototype.forEach.call(ctl.querySelectorAll("#dvKind .segb"), function(b){ b.onclick=function(){ p.kind=b.getAttribute("data-k"); saveDayPrefs(p); renderDayList(); }; });
+    Array.prototype.forEach.call(ctl.querySelectorAll(".dvchip"), function(b){ b.onclick=function(){ var c=b.getAttribute("data-chip");
+      if(c==="changed") p.changed=!p.changed; else p.dir=(p.dir===c?"all":c); saveDayPrefs(p); renderDayList(); }; });
+    $("dvSort").onchange=function(){ p.sort=this.value; saveDayPrefs(p); renderDayList(); };
+    $("dvSet").onchange=function(){ p.set=this.value; saveDayPrefs(p); renderDayList(); };
+    Array.prototype.forEach.call(list.querySelectorAll("[data-dv-row]"), function(r){
+      var toggle=function(){ var id=r.getAttribute("data-dv-row"); _dayOpen=(_dayOpen===id?null:id); renderDayList(); };
+      r.onclick=toggle; r.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); } }; });
+    Array.prototype.forEach.call(list.querySelectorAll("[data-dv-open]"), function(b){ b.onclick=function(e){ e.stopPropagation(); openDayItem(b.getAttribute("data-dv-open")); }; });
+    Array.prototype.forEach.call(list.querySelectorAll("[data-dv-alert]"), function(b){ b.onclick=function(e){ e.stopPropagation(); var c=cardById(b.getAttribute("data-dv-alert")); if(c) openPriceAlert(c); }; });
+  }
+  // One item's price over every day there is a figure for, up to today, with the chosen day marked.
+  function dayItemHistory(it){
+    var k=(_dayCtx.mode==="sold")?1:0, today=todayKey(), srv=_srvHist.days, loc=dayPriceStore(), pts=[];
+    priceDays().forEach(function(d){ if(d>=today) return; var v=(loc[d]&&loc[d][it.id]&&loc[d][it.id][k]) || (srv[d]&&srv[d][it.id]&&srv[d][it.id][k]) || 0; if(v>0) pts.push({d:d, v:v}); });
+    pts.push({d:today, v:(_dayCtx.d===today ? it.cur : (todayPriceMap(_dayCtx.mode)[it.id]||0))});
+    pts=pts.filter(function(p){ return p.v>0; });
+    var btns='<div class="dvbtns"><button type="button" data-dv-open="'+esc(it.id)+'">'+(it.kind==="card"?'Open card':'Open product')+'</button>'+
+      (it.kind==="card"?'<button type="button" data-dv-alert="'+esc(it.id)+'">Set price alert</button>':'')+'</div>';
+    if(pts.length<2) return '<div class="dvexp"><div class="pcnote">Price history for this item builds up day by day.</div>'+btns+'</div>';
+    var W=600, H=150, pad=10, n=pts.length, vs=pts.map(function(p){ return p.v; }), mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs), rg=(mx-mn)||1;
+    var X=function(i){ return pad+(i/(n-1))*(W-pad*2); }, Y=function(v){ return pad+(H-pad*2)-((v-mn)/rg)*(H-pad*2); };
+    var line=pts.map(function(p,i){ return (i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1); }).join(" ");
+    var si=-1; pts.forEach(function(p,i){ if(p.d===_dayCtx.d) si=i; });
+    var change=(pts[n-1].v-pts[0].v)/pts[0].v*100;
+    return '<div class="dvexp"><div class="dvspark"><svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>'+
+        (si>=0?'<span class="dvsel dvselsm" style="left:'+(X(si)/W*100).toFixed(2)+'%;top:'+(Y(pts[si].v)/H*100).toFixed(2)+'%"></span>':'')+'</div>'+
+      '<div class="dvkv"><div><b>'+money(mx)+'</b><span>High</span></div><div><b>'+money(mn)+'</b><span>Low</span></div>'+
+        '<div><b class="'+(change>0.05?'pdup':(change<-0.05?'pddown':''))+'">'+(change>0.05?'+':(change<-0.05?'\u2212':''))+Math.abs(change).toFixed(1)+'%</b><span>Since '+fmtDate(pts[0].d)+'</span></div>'+
+        '<div><b>'+n+'</b><span>Days</span></div></div>'+btns+'</div>';
+  }
+  function openDayItem(id){
+    var c=cardById(id); if(c){ openDetail(c); return; }
+    var p=SEALED.filter(function(x){ return x.id===id; })[0]; if(p) openSealedDetail(p);
   }
   // Remove a single saved day from the portfolio history (destructive, so confirm first).
   function askDeleteDay(dayKey){
@@ -7253,6 +7562,7 @@ label.acctsetrow { align-items:center; }
     if (p==="key") renderKey();
     if (p==="contact") renderContact();
     if (p==="portfolio") renderPortfolioDetail();
+    if (p==="day") renderDayView();
     // Rewards was built only inside renderHome(), so sphere progress showed whatever it was at startup.
     if (p==="rewards"){ if(typeof checkRewards==="function") checkRewards(); if(typeof renderRewards==="function") renderRewards(); }
     if (p==="paldex") renderPaldex();
@@ -8469,7 +8779,7 @@ label.acctsetrow { align-items:center; }
     if(s.kind==="release" && s.set){ openSet(s.set); return; }
     if(s.kind==="news"){ showPage("news"); return; }
     if(s.kind==="ximage"){ if(s.link && !window.IS_NATIVE && !window.IS_IOS){ try{ window.open(s.link,"_blank"); }catch(e){} } showPage("news"); return; }
-    if(s.kind==="movers"){ showPage("portfolio"); return; }
+    if(s.kind==="movers"){ openDay(todayKey()); return; }
     if(s.kind==="collection"){ showPage("collection"); return; }
     if(s.kind==="reveal"){ showPage("news"); return; }
     showPage("releases");
