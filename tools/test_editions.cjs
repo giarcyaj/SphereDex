@@ -30,7 +30,7 @@ const functionNames = [
   'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts',
   'changeRaw', 'langKey', 'emptyLangBucket', 'copyLangBucket', 'langCounts', 'setLangCounts',
   'changeRawLang', 'gradedLang', 'rawQtyInLang', 'ownsInLang', 'has', 'csvLang', 'langOfCsv',
-  'mergeRawCounts', 'csvNum', 'csvCell', 'csvEdition', 'collectionCsv',
+  'mergeRawCounts', 'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
   'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeLangCounts', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
   'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
@@ -231,9 +231,9 @@ test('CSV keeps English and Japanese apart, and an old file without Language sta
   const col = { own: { [card.id]: entry } };
   const before = JSON.stringify(col);
   const csv = a.collectionCsv(col);
-  assert.equal(csv.split('\r\n')[0].endsWith('Language'), true);
-  assert.match(csv, /,EN\r\n/);
-  assert.match(csv, /,JP\r\n/);
+  assert.match(csv.split('\r\n')[0], /,Language,Paid$/);
+  assert.match(csv, /,EN,/);
+  assert.match(csv, /,JP,/);
   const imported = a.parseCsvCollection(csv);
   assert.equal(a.langCounts(imported.own[card.id]).en['1'], 2);
   assert.equal(a.langCounts(imported.own[card.id]).jp['2'], 1);
@@ -249,6 +249,10 @@ test('CSV keeps English and Japanese apart, and an old file without Language sta
   const labelledJp = a.parseCsvCollection('Number,Quantity,Edition,Language,Type\nEBP01-001,1,1st,Japanese,Card\n');
   assert.equal(a.langCounts(labelledJp.own[card.id]).jp['1'], 1);
   assert.equal(a.langCounts(labelledJp.own[card.id]).en['1'], 0);
+  const paidOnly = a.parseCsvCollection('Number,Quantity,Edition,Paid,Type\nEBP01-001,1,1st,1.50,Card\n');
+  expectCounts(a, paidOnly.own[card.id], 1, 0, 0);
+  assert.equal(paidOnly.own[card.id].langs, undefined);
+  assert.equal(paidOnly.own[card.id].paidRaw['1'], 1.5);
 });
 
 test('an English slab and a Japanese slab of the same grade stay distinct', () => {
