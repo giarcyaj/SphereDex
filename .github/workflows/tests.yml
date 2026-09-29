@@ -5,6 +5,7 @@ name: Tests
 #      behaviour on a stub DOM) so edits to paldeck.html cannot silently regress it.
 #   2. tools/test_scan_review.cjs — the scan session/review sheet, same treatment.
 #   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
+#      tools/test_checklist.cjs — offline binder checklist PDF.
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
@@ -70,6 +71,9 @@ jobs:
 
       - name: Editions / CSV guard suite
         run: node tools/test_editions.cjs
+
+      - name: Checklist PDF guard suite
+        run: node tools/test_checklist.cjs
 
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs

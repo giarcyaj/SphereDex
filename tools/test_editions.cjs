@@ -28,9 +28,11 @@ function appConstant(name) {
 }
 const functionNames = [
   'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts',
-  'changeRaw', 'mergeRawCounts', 'csvNum', 'csvCell', 'csvEdition', 'collectionCsv',
+  'changeRaw', 'langKey', 'emptyLangBucket', 'copyLangBucket', 'langCounts', 'setLangCounts',
+  'changeRawLang', 'gradedLang', 'rawQtyInLang', 'ownsInLang', 'has', 'csvLang', 'langOfCsv',
+  'mergeRawCounts', 'csvNum', 'csvCell', 'csvEdition', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
-  'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
+  'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeLangCounts', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
   'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
 ];
 const appCode = functionNames.map(appFunction).join('\n') + '\n' +
@@ -192,6 +194,71 @@ test('deck import skips negative or zero quantities and caps a line at a full de
   assert.deepEqual(plain(res.cards), { 'EBP01-001-SR': 60, 'EBP01-001': 2 });
   assert.equal(res.added, 2);
   assert.equal(res.skipped, 2);
+});
+
+test('a collection with no language record is English and is not rewritten on read', () => {
+  const a = app();
+  const entry = { qty: 2, edition: '1', notes: 'Already here' };
+  const before = JSON.stringify(entry);
+  assert.deepEqual(plain(a.langCounts(entry)), { en: { '1': 2, '2': 0, unknown: 0 }, jp: { '1': 0, '2': 0, unknown: 0 } });
+  assert.equal(a.ownsInLang(entry, 'en'), true);
+  assert.equal(a.ownsInLang(entry, 'jp'), false);
+  assert.equal(a.ownsInLang(entry, 'both'), true);
+  assert.equal(JSON.stringify(entry), before);
+  assert.equal(entry.langs, undefined);
+});
+
+test('Japanese copies are stored beside English and do not move the English count', () => {
+  const a = app();
+  const entry = { qty: 2, edition: '1', notes: 'Keep this note', graded: [] };
+  a.changeRawLang(entry, 1, '2', 'jp');
+  assert.deepEqual(plain(a.langCounts(entry).en), { '1': 2, '2': 0, unknown: 0 });
+  assert.deepEqual(plain(a.langCounts(entry).jp), { '1': 0, '2': 1, unknown: 0 });
+  assert.equal(entry.qty, 3);
+  assert.equal(entry.notes, 'Keep this note');
+  a.changeRaw(entry, 1, '1');
+  assert.equal(a.langCounts(entry).en['1'], 3);
+  assert.equal(a.langCounts(entry).jp['2'], 1);
+  assert.equal(a.rawQtyInLang(entry, 'jp'), 1);
+  assert.equal(a.rawQtyInLang(entry, 'both'), entry.qty);
+});
+
+test('CSV keeps English and Japanese apart, and an old file without Language stays English', () => {
+  const a = app();
+  const entry = { qty: 0, cond: 'Near Mint', notes: 'Split', graded: [{ grader: 'PSA', grade: '10', value: 4, lang: 'jp' }, { grader: 'PSA', grade: '9', value: 3 }] };
+  a.changeRaw(entry, 2, '1');
+  a.changeRawLang(entry, 1, '2', 'jp');
+  const col = { own: { [card.id]: entry } };
+  const before = JSON.stringify(col);
+  const csv = a.collectionCsv(col);
+  assert.equal(csv.split('\r\n')[0].endsWith('Language'), true);
+  assert.match(csv, /,EN\r\n/);
+  assert.match(csv, /,JP\r\n/);
+  const imported = a.parseCsvCollection(csv);
+  assert.equal(a.langCounts(imported.own[card.id]).en['1'], 2);
+  assert.equal(a.langCounts(imported.own[card.id]).jp['2'], 1);
+  assert.equal(a.gradedLang(imported.own[card.id].graded[0]), 'jp');
+  assert.equal(a.gradedLang(imported.own[card.id].graded[1]), 'en');
+  assert.equal(JSON.stringify(col), before, 'export must not mutate the collection');
+  const oldFile = a.parseCsvCollection('Number,Quantity,Edition\nEBP01-001,2,1st\n');
+  expectCounts(a, oldFile.own[card.id], 2, 0, 0);
+  assert.equal(oldFile.own[card.id].langs, undefined);
+  const labelledEn = a.parseCsvCollection('Number,Quantity,Edition,Language,Type\nEBP01-001,1,2nd,EN,Card\n');
+  expectCounts(a, labelledEn.own[card.id], 0, 1, 0);
+  assert.equal(labelledEn.own[card.id].langs, undefined);
+  const labelledJp = a.parseCsvCollection('Number,Quantity,Edition,Language,Type\nEBP01-001,1,1st,Japanese,Card\n');
+  assert.equal(a.langCounts(labelledJp.own[card.id]).jp['1'], 1);
+  assert.equal(a.langCounts(labelledJp.own[card.id]).en['1'], 0);
+});
+
+test('an English slab and a Japanese slab of the same grade stay distinct', () => {
+  const a = app();
+  const english = { grader: 'PSA', grade: '10', value: 40 };
+  const japanese = { grader: 'PSA', grade: '10', value: 40, lang: 'jp' };
+  assert.equal(a.gradedLang(english), 'en');
+  assert.notEqual(a.slabSig(english), a.slabSig(japanese));
+  const merged = a.mergeEntry({ qty: 0, graded: [english] }, { qty: 0, graded: [japanese] });
+  assert.equal(merged.graded.length, 2);
 });
 
 test('untouched card entries count as empty; anything the user or a price wrote does not', () => {
