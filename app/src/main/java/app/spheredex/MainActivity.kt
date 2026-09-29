@@ -247,12 +247,13 @@ class MainActivity : ComponentActivity() {
             val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
             if (web.paddingBottom != 0) web.setPadding(0, 0, 0, 0)
             val d = resources.displayMetrics.density
-            insetJs = "var r=document.documentElement.style;" +
+            // Insets arrive before the page has a document element; applyInsets runs again once it loads.
+            insetJs = "(function(){var e=document.documentElement;if(!e)return;var r=e.style;" +
                 "r.setProperty('--sat','${bars.top / d}px');" +
                 "r.setProperty('--sab','${bars.bottom / d}px');" +
                 "r.setProperty('--sal','${bars.left / d}px');" +
                 "r.setProperty('--sar','${bars.right / d}px');" +
-                "r.setProperty('--kb','${ime / d}px');"
+                "r.setProperty('--kb','${ime / d}px');})();"
             applyInsets()
             insets
         }
