@@ -5414,15 +5414,19 @@ label.acctsetrow { align-items:center; }
   function renderFoot(){
   var tcg = tcgInUse();
   var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://ko-fi.com/spheredex" target="_blank" rel="noopener" aria-label="Support SphereDex on Ko-fi"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Support on Ko-fi</span></a>';
-  $("foot").innerHTML = '<strong>Features and data may change.</strong> Back up your collection. Fan made tracker for the Palworld TCG, not affiliated with or endorsed by Pocketpair / Bushiroad. Card data &amp; artwork © Pocketpair / Bushiroad. Prices via '+(tcg?'Palworld Prices, eBay and TCGplayer':'Palworld Prices and eBay')+'. Your collection saves on your device, with optional free cloud sync.<div class="footlinks"><a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a><span class="sep">·</span><a href="https://spheredex.app/roadmap.html" target="_blank" rel="noopener">Roadmap</a><span class="sep">·</span><a href="https://spheredex.app/privacy.html" target="_blank" rel="noopener">Privacy</a></div>'+_bmc+'<br><span class="footver">'+(V2_PREVIEW?'V2.0 PREVIEW · IN PROGRESS':'v'+APP_VERSION)+'</span>';
+  $("foot").innerHTML = '<strong>Features and data may change.</strong> Back up your collection. Fan made tracker for the Palworld TCG, not affiliated with or endorsed by Pocketpair / Bushiroad. Card data &amp; artwork © Pocketpair / Bushiroad. Prices via '+(tcg?'eBay and TCGplayer':'eBay')+'. Your collection saves on your device, with optional free cloud sync.<div class="footlinks"><a href="https://spheredex.app/roadmap.html" target="_blank" rel="noopener">Roadmap</a><span class="sep">·</span><a href="https://spheredex.app/privacy.html" target="_blank" rel="noopener">Privacy</a></div>'+_bmc+'<br><span class="footver">'+(V2_PREVIEW?'V2.0 PREVIEW · IN PROGRESS':'v'+APP_VERSION)+'</span>';
   }
   renderFoot();
 
   // Settings > Prices & markets: says in plain words where the values on screen come from for this market and
   // price mode, then counts the owned cards by the source their value actually came from (via unitOfEntry).
-  var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
   function renderPriceSources(){
-    var box=$("priceSources"); if(!box) return;
+    var h=priceSourcesHtml();
+    var box=$("priceSources"); if(box) box.innerHTML=h;
+    var acct=$("acctPriceSources"); if(acct) acct.innerHTML=h;
+  }
+  function priceSourcesHtml(){
+    var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
     var reg=ebayReg(), us=(reg==="com"), site="ebay."+reg, sold=(priceMode()==="sold");
     var opt=document.querySelector('#setEbayRegion option[value="'+reg+'"]');
     var market=opt ? opt.textContent.replace(/\s*\(.*\)\s*$/,"") : reg;
@@ -5440,7 +5444,7 @@ label.acctsetrow { align-items:center; }
         .map(function(k){ return n[k]+' '+SRC_LABEL[k]; });
       h+='<br>Your cards right now: '+parts.join(' · ')+'.';
     }
-    box.innerHTML=h;
+    return h;
   }
 
   // ---- Per-product metadata: release date + box image + blurb ----
@@ -10126,7 +10130,8 @@ label.acctsetrow { align-items:center; }
           ? '<option value="1"'+(src.checked?' selected':'')+'>On</option><option value="0"'+(src.checked?'':' selected')+'>Off</option>'
           : Array.prototype.map.call(src.options, function(o){ return '<option value="'+esc(o.value)+'"'+(o.value===src.value?' selected':'')+'>'+esc(o.textContent.replace(/^Edition\s*\S\s*/,"").replace(/\s*\(.*\)\s*$/,""))+'</option>'; }).join("");
         return '<label class="acctsetrow"><span class="k">'+esc(r[0])+'</span><select class="sortsel" data-for="'+r[1]+'">'+opts+'</select></label>';
-      }).join("")+'</div>';
+      }).join("")+'</div>'+
+      (SETTINGS.mode==="collector" ? '' : '<div class="stitle" style="margin-top:18px">Where your prices come from</div><p class="sdesc" id="acctPriceSources" style="margin:6px 0 0">'+priceSourcesHtml()+'</p>');
     Array.prototype.forEach.call(el.querySelectorAll("select[data-for]"), function(s){ s.onchange=function(){
       var src=$(s.getAttribute("data-for")); if(!src) return;
       if(src.type==="checkbox") src.checked=(s.value==="1"); else src.value=s.value;
