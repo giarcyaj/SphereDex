@@ -1907,6 +1907,7 @@ label.acctsetrow { align-items:center; }
   .salerow.ro a.lprice{ color:var(--accent-ink); }
   .dsec{ font-family:var(--font-display); font-weight:750; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:20px 0 10px; padding-bottom:6px; border-bottom:1.5px solid var(--line); }
   .salesavg{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; }
+  .pxrange{ font-size:.82rem; color:var(--ink-soft); margin-top:8px; line-height:1.45; overflow-wrap:anywhere; }
   .gradeguide{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
   .ggnote{ grid-column:1/-1; font-size:.8rem; color:var(--ink-faint); margin-bottom:4px; }
   .ggrow{ display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:6px 10px; }
@@ -4479,6 +4480,7 @@ label.acctsetrow { align-items:center; }
         '<h3 class="dsec" style="margin:12px 0 0">Graded price guide</h3>'+
         '<div class="gradeguide" id="gradeGuide"></div>'+
       '</div>'+
+      '<div class="pxrange priceui" id="pxRange" hidden></div>'+
       // Price alert (native push only; priceui, so collector mode hides it). Sits after the glance panels so an
       // open panel stays attached to its bubble.
       (nativePushIface()?'<div class="sdbtnrow priceui" style="display:flex;margin-top:9px"><button class="btn sec" id="bubAlert" type="button"></button></div>':'')+
@@ -4627,6 +4629,16 @@ label.acctsetrow { align-items:center; }
       $("sumBreak").textContent=parts.length?"("+parts.join(" · ")+")":"";
     }
     renderGrades(); updateSum(); paintOwn();
+    // Week change and 7 and 30 day ranges from the saved daily prices. Japanese edition is skipped: the
+    // history is English, so it would be compared against the wrong printing.
+    function paintRange(){
+      var el=$("pxRange"); if(!el || myGen!==detailGen) return;
+      var lines=(SEAL_ED==="jp") ? [] : priceRangeLines(cardPricePoints(c.id, priceMode()), todayKey());
+      el.innerHTML=lines.map(function(t){ return '<div>'+esc(t)+'</div>'; }).join("");
+      el.hidden=!lines.length;
+    }
+    paintRange();
+    fetchPriceHistory().then(function(got){ if(got) paintRange(); });
 
     // ---- Recent eBay sales (avg of last 5) ----
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
@@ -4634,7 +4646,7 @@ label.acctsetrow { align-items:center; }
     var glLoading = !!apiBase();   // spinner shows while the auto-load pulls are in flight
     function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
     // Once all the price pulls have settled, swap any spinners still showing for "n/a".
-    function finishLoading(){ glLoading=false; refreshAvg(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
+    function finishLoading(){ glLoading=false; refreshAvg(); paintRange(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
     function renderGradeGuide(){
       var host=$("gradeGuide"); if(!host) return;
@@ -6402,6 +6414,7 @@ label.acctsetrow { align-items:center; }
   function histSince(){ var first=todayKey();
     (STATE.cols||[]).forEach(function(c){ Object.keys(c.hist||{}).forEach(function(k){ if(k<first) first=k; }); });
     var d=new Date(first+"T12:00:00"); d.setDate(d.getDate()-8);
+    var m=new Date(); m.setDate(m.getDate()-31); if(m<d) d=m;   // the card sheet's 30 day range needs a month even on a new collection
     return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
   function fetchPriceHistory(){
     var reg=ebayReg();
@@ -6431,6 +6444,27 @@ label.acctsetrow { align-items:center; }
   }
   function dayHasPrices(d){ return d===todayKey() || !!(_srvHist.days[d] || dayPriceStore()[d]); }
   function priceDays(){ var seen={}; Object.keys(_srvHist.days).concat(Object.keys(dayPriceStore())).forEach(function(k){ seen[k]=1; }); return Object.keys(seen).sort(); }
+  function dayKeyAdd(k, n){ var d=new Date(k+"T12:00:00"); d.setDate(d.getDate()+n);
+    return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  // One card's saved daily prices in a mode, oldest first, with today's figure from the books on the end.
+  function cardPricePoints(id, mode){
+    var k=(mode==="sold")?1:0, today=todayKey(), srv=_srvHist.days, loc=dayPriceStore(), pts=[];
+    priceDays().forEach(function(d){ if(d>=today) return; var v=(loc[d]&&loc[d][id]&&loc[d][id][k]) || (srv[d]&&srv[d][id]&&srv[d][id][k]) || 0; if(v>0) pts.push({d:d, v:+v}); });
+    var t=unitOf(id, mode); if(t>0) pts.push({d:today, v:+t});
+    return pts;
+  }
+  // The card sheet's week change and 7 and 30 day ranges. A line with too few days behind it is left out.
+  function priceRangeLines(pts, today){
+    var out=[], cents=function(v){ return Math.round(v*Math.pow(10,CUR.dec)); };
+    if(!pts.length) return out;
+    var last=pts[pts.length-1], weekAgo=dayKeyAdd(today,-7), base=null;
+    pts.forEach(function(p){ if(p.d<=weekAgo) base=p; });
+    if(base){ var diff=cents(last.v)-cents(base.v);
+      out.push(diff>0 ? 'Up '+money(last.v-base.v)+' this week' : (diff<0 ? 'Down '+money(base.v-last.v)+' this week' : 'Unchanged this week')); }
+    [7,30].forEach(function(n){ var from=dayKeyAdd(today,1-n), vs=pts.filter(function(p){ return p.d>=from && p.d<=today; }).map(function(p){ return p.v; });
+      if(vs.length>=2) out.push('Last '+n+' days: '+money(Math.min.apply(null,vs))+' to '+money(Math.max.apply(null,vs))); });
+    return out;
+  }
   // Today reads the books directly, so today's page always agrees with the headline value.
   function todayPriceMap(mode){ var out={}, sm=sealMap();
     CARDS.forEach(function(c){ var e=own[c.id]; if(e && rawCount(e.qty)>0){ var v=unitOf(c.id,mode); if(v>0) out[c.id]=v; } });
