@@ -1137,6 +1137,11 @@
   .acctsetrow .v { font-weight:700; text-align:right; }
 .acctsetrow select { max-width:60%; padding:7px 10px; }
 label.acctsetrow { align-items:center; }
+.srcchain { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:8px 0; }
+.srcchip { background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:5px 11px; color:var(--ink); font-weight:600; font-size:.84rem; }
+.srcchip small { font-weight:500; color:var(--ink-soft); }
+.srcarrow { color:var(--ink-soft); font-size:.95rem; }
+.srcnote { font-size:.82rem; }
   @media (max-width:560px){ .setrow { flex-direction:column; align-items:stretch; gap:12px; } .setrow > .setinfo { width:100%; } .setrow > select, .setrow > input, .setrow > .sortsel { width:100%; }
     /* Card controls: keep the bar to tidy full-width rows instead of orphan-wrapping. */
     .searchrow .search { flex:1 1 100%; }
@@ -5426,25 +5431,26 @@ label.acctsetrow { align-items:center; }
     var acct=$("acctPriceSources"); if(acct) acct.innerHTML=h;
   }
   function priceSourcesHtml(){
-    var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
     var reg=ebayReg(), us=(reg==="com"), site="ebay."+reg, sold=(priceMode()==="sold");
     var opt=document.querySelector('#setEbayRegion option[value="'+reg+'"]');
     var market=opt ? opt.textContent.replace(/\s*\(.*\)\s*$/,"") : reg;
-    var conv=us ? "" : ", converted from USD (shown with ≈)";
-    var h='<b>'+esc(market)+'</b> · '+site+' · '+esc(CUR.code)+' · valued at <b>'+(sold?'last sold':'live listings')+'</b><br>';
-    if(!sold) h+='Collection values use the lowest current listings on '+site+', refreshed daily. Cards with no listing use Palworld Prices'+conv+'.';
-    else h+='Collection values use recent sold prices on '+site+' (average of the last 5). Cards without recent eBay sales use TCGplayer Market Price (from completed TCGplayer sales), then Palworld Prices'+conv+'.';
-    h+='<br>Opening a card shows its last 5 sold and current listings on '+site+(SETTINGS.fallbackUS && !us ? ', then ebay.com (in USD) if '+site+' has none.' : '.');
+    var usd=us ? "" : ' <small>(converted from USD)</small>';
+    var chain=sold ? [site+" sold listings", "TCGplayer"+usd, "Palworld Prices"+usd]
+                   : [site+" current listings", "Palworld Prices"+usd];
+    var h='<div class="srcnote">'+esc(market)+' · '+esc(CUR.code)+' · '+(sold?'Last sold':'Live listings')+'</div>'+
+      '<div class="srcchain">'+chain.map(function(s){ return '<span class="srcchip">'+s+'</span>'; }).join('<span class="srcarrow" aria-label="then">→</span>')+'</div>'+
+      '<div class="srcnote">Each card uses the first source that has a price for it.';
+    if(SETTINGS.fallbackUS && !us) h+=' Opening a card also checks ebay.com (USD) when '+site+' has nothing.';
     var n={}, total=0;
     CARDS.forEach(function(c){ var e=own[c.id]; if(!e || !(+e.qty>0)) return;
       var why={}; if(!unitOfEntry(c.id, null, e, why) || !why.k) return;
       n[why.k]=(n[why.k]||0)+1; total++; });
     if(total){
-      var parts=["sold","list","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
-        .map(function(k){ return n[k]+' '+SRC_LABEL[k]; });
-      h+='<br>Your cards right now: '+parts.join(' · ')+'.';
+      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
+      h+='<br>Your cards: '+["sold","list","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
+        .map(function(k){ return n[k]+' '+SRC_LABEL[k]; }).join(' · ')+'.';
     }
-    return h;
+    return h+'</div>';
   }
 
   // ---- Per-product metadata: release date + box image + blurb ----
@@ -10131,7 +10137,7 @@ label.acctsetrow { align-items:center; }
           : Array.prototype.map.call(src.options, function(o){ return '<option value="'+esc(o.value)+'"'+(o.value===src.value?' selected':'')+'>'+esc(o.textContent.replace(/^Edition\s*\S\s*/,"").replace(/\s*\(.*\)\s*$/,""))+'</option>'; }).join("");
         return '<label class="acctsetrow"><span class="k">'+esc(r[0])+'</span><select class="sortsel" data-for="'+r[1]+'">'+opts+'</select></label>';
       }).join("")+'</div>'+
-      (SETTINGS.mode==="collector" ? '' : '<div class="stitle" style="margin-top:18px">Where your prices come from</div><p class="sdesc" id="acctPriceSources" style="margin:6px 0 0">'+priceSourcesHtml()+'</p>');
+      (SETTINGS.mode==="collector" ? '' : '<div class="stitle" style="margin-top:18px">Where your prices come from</div><div class="sdesc" id="acctPriceSources" style="margin:6px 0 0">'+priceSourcesHtml()+'</div>');
     Array.prototype.forEach.call(el.querySelectorAll("select[data-for]"), function(s){ s.onchange=function(){
       var src=$(s.getAttribute("data-for")); if(!src) return;
       if(src.type==="checkbox") src.checked=(s.value==="1"); else src.value=s.value;
