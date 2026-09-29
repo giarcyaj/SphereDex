@@ -969,6 +969,8 @@
   .tbadge.live { color:var(--up); border-color:color-mix(in srgb,var(--up) 40%,var(--line-strong)); background:color-mix(in srgb,var(--up) 9%,var(--surface)); }
   .tbadge.soon { color:var(--r-SSP); border-color:color-mix(in srgb,var(--r-SSP) 38%,var(--line-strong)); background:color-mix(in srgb,var(--r-SSP) 9%,var(--surface)); }
   .trow .tdate { font-family:var(--font-mono); font-size:.76rem; color:var(--accent-ink); font-weight:650; }
+  .trow .tcountdown { display:flex; align-items:center; margin-top:6px; font-size:.8rem; font-weight:700; color:var(--ink); overflow-wrap:anywhere; }
+  .trow .tcountdown svg { width:14px; height:14px; flex:none; margin-right:5px; color:var(--accent-ink); }
   .trow .tprog { font-family:var(--font-mono); font-size:.76rem; color:var(--ink-faint); margin-top:8px; }
   .treleasebar { height:6px; max-width:360px; margin-top:6px; overflow:hidden; border-radius:999px; background:var(--surface-2); }
   .treleasebar span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--accent),var(--up)); }
@@ -9270,6 +9272,17 @@ label.acctsetrow { align-items:center; }
     // Upcoming products, generated from the sealed pre-order list (sorted by date) so this timeline stays
     // current automatically as pre-orders are added or re-dated — no separate hardcoded schedule to go stale.
     function upDate(d){ return monDateTime(d); }
+    // Whole local days until a release. Needs an exact day ("Oct 30, 2026" or ISO); a month only date such as
+    // "Oct 2026" gets no countdown rather than a guessed one. Past or undated releases get none either.
+    function releaseCountdown(d){
+      var s=String(d||""), t=null, iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+      if(iso) t=new Date(+iso[1], +iso[2]-1, +iso[3]);
+      else if(/[A-Za-z]{3}[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/.test(s)){ var ms=monDateTime(s); if(Number.isFinite(ms)) t=new Date(ms); }
+      if(!t||isNaN(t.getTime())) return "";
+      var now=new Date(), today=new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var n=Math.round((t.getTime()-today.getTime())/86400000);   // round, not floor: a DST day is 23 or 25 hours
+      if(n<0) return ""; if(n===0) return "Releases today"; if(n===1) return "Releases tomorrow"; return "Releases in "+n+" days";
+    }
     // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
     var ugroups=[], ugmap={};
     SEALED.filter(function(p){ return p.pre; }).forEach(function(p){
@@ -9287,7 +9300,8 @@ label.acctsetrow { align-items:center; }
       var up=document.createElement("div"); up.className="trow tupcoming clickable";
       up.innerHTML='<div class="tbox">'+(img?'<img src="'+img+'" alt="'+esc(g.title)+'">':'<span class="ph">Soon</span>')+'</div>'+
         '<div class="tinfo"><div class="treleasetop"><span class="tbadge soon">✦ On the horizon</span><span class="tdate">'+esc(g.date||"Date TBA")+'</span></div><h3>'+esc(g.title)+' →</h3>'+
-        (subline?'<div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(subline)+'</div>':'')+'</div>';
+        (subline?'<div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(subline)+'</div>':'')+
+        (function(c){ return c?'<div class="tcountdown">'+icon('calendar')+'<span>'+esc(c)+'</span>'+'</div>':''; })(releaseCountdown(g.date))+'</div>';
       up.onclick=function(){ openSealedDetail(g.first); }; tapTarget(up);
       tl.appendChild(up);
     });
@@ -10923,6 +10937,7 @@ label.acctsetrow { align-items:center; }
     WAKE_AT=now;
     try{ if(typeof priceBookGate==="function") priceBookGate(); }catch(e){}
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
+    try{ if(typeof renderReleases==="function" && _curPage==="releases") renderReleases(); }catch(e){}   // release countdowns roll over at local midnight
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
