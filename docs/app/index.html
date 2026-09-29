@@ -1494,6 +1494,13 @@ label.acctsetrow { align-items:center; }
   .newsitem .ndate { font-family:var(--font-mono); font-size:.72rem; color:var(--accent-ink); font-weight:600; }
   .newsitem .ntitle { font-family:var(--font-display); font-weight:750; font-size:1rem; margin-top:3px; }
   .newsitem .nsum { font-size:.85rem; color:var(--ink-soft); margin-top:4px; }
+  .nwrow .nwlink { display:block; color:inherit; text-decoration:none; }
+  .nwish { display:flex; flex-wrap:wrap; align-items:center; margin-top:10px; padding-top:10px; border-top:1.5px solid var(--line); overflow-wrap:anywhere; }
+  .nwish .ic { width:14px; height:14px; margin-right:5px; flex:none; }
+  .nwbtn, .nwstate { display:inline-flex; align-items:center; margin-right:10px; font:700 .8rem var(--font-body); border-radius:999px; padding:6px 12px; }
+  .nwbtn { cursor:pointer; color:var(--accent-ink); background:var(--surface-2); border:1.5px solid var(--accent); }
+  .nwstate { color:var(--ink-soft); border:1.5px dashed var(--line); }
+  .nwname { font-size:.78rem; color:var(--ink-faint); min-width:0; }
   /* Palworld TCG digest (docs/news/palworld-tcg.json). Margins, not flex gap, so the badges stay apart on older WebViews. */
   .tcgnewshead { margin-top:28px; }
   .nmeta { display:flex; flex-wrap:wrap; align-items:center; margin:0 0 2px; }
@@ -9389,6 +9396,37 @@ label.acctsetrow { align-items:center; }
       return tb-ta;
     });
   }
+  // A news row that names exactly one catalog card gets a Wishlist control. A card code wins over a name, and
+  // a row naming two cards, or none, gets nothing rather than a guess.
+  function newsHasWord(text, w){ var i=w ? text.indexOf(w) : -1;
+    while(i!==-1){ if(!/[A-Za-z0-9]/.test(text.charAt(i-1)) && !/[A-Za-z0-9]/.test(text.charAt(i+w.length))) return true; i=text.indexOf(w,i+1); }
+    return false; }
+  function newsCardFor(text, cid){
+    if(cid){ var byId=cardById(String(cid)); if(byId) return byId; }
+    text=String(text||""); if(!text) return null;
+    var hits=CARDS.filter(function(c){ return newsHasWord(text, c.id); });
+    if(!hits.length){ var low=text.toLowerCase(); hits=CARDS.filter(function(c){ return newsHasWord(low, String(c.name||"").toLowerCase()); }); }
+    return hits.length===1 ? hits[0] : null;
+  }
+  function newsWishHtml(c){
+    var who='<span class="nwname">'+esc(c.name)+'</span>';
+    return isWished(c.id) ? '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('starf')+'On Wishlist</span>'+who+'</div>'
+      : '<div class="nwish" data-nw-card="'+esc(c.id)+'"><button type="button" class="nwbtn" data-news-wish="'+esc(c.id)+'">'+icon('star')+'Add to Wishlist</button>'+who+'</div>';
+  }
+  // The link and the control are siblings inside the row, since a button cannot sit inside a link.
+  function newsRowHtml(href, inner, c){
+    if(!c) return '<a class="newsitem" href="'+esc(href)+'" target="_blank" rel="noopener">'+inner+'</a>';
+    return '<div class="newsitem nwrow"><a class="nwlink" href="'+esc(href)+'" target="_blank" rel="noopener">'+inner+'</a>'+newsWishHtml(c)+'</div>';
+  }
+  function wireNewsWish(host){
+    Array.prototype.forEach.call(host.querySelectorAll("[data-news-wish]"), function(b){ b.onclick=function(e){
+      e.preventDefault(); e.stopPropagation();
+      var c=cardById(b.getAttribute("data-news-wish")); if(!c) return;
+      if(!isWished(c.id)){ toggleWish(c.id); save(); render(); toast("Added to wishlist"); }
+      // The same card can sit in both lists, so every control for it flips.
+      Array.prototype.forEach.call(document.querySelectorAll('.nwish[data-nw-card="'+c.id+'"]'), function(n){ n.outerHTML=newsWishHtml(c); });
+    }; });
+  }
   function renderNews(){
     var el=$("newsList"); if(!el) return;
     function paint(list, live){
@@ -9399,11 +9437,13 @@ label.acctsetrow { align-items:center; }
       el.innerHTML = list.map(function(n){
         var meta=[]; if(n.date) meta.push(esc(dayLabel(n.date))); if(n.source) meta.push(esc(n.source));
         var img = n.image ? '<img src="'+esc(n.image)+'" alt="" loading="lazy" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;margin-bottom:8px;background:var(--surface-2)" onerror="this.style.display=\'none\'">' : '';
-        return '<a class="newsitem" href="'+esc(n.link||OFFICIAL_NEWS)+'" target="_blank" rel="noopener">'+
+        return newsRowHtml(n.link||OFFICIAL_NEWS,
           (meta.length?'<div class="ndate">'+meta.join(' · ')+'</div>':'')+
           '<div class="ntitle">'+esc(decodeEntities(n.title))+'</div>'+
-          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+img+'</a>';
+          (n.summary?'<div class="nsum">'+esc(decodeEntities(n.summary))+'</div>':'')+img,
+          newsCardFor(decodeEntities(n.title)+" \n "+decodeEntities(n.summary), n.cardId||n.card_id));
       }).join("");
+      wireNewsWish(el);
       _newsList = list; updateBell();
     }
     paint(_newsCache||NEWS_SEED, !!_newsCache);   // keep the last live list offline; SEED only until the first successful load
@@ -9544,11 +9584,11 @@ label.acctsetrow { align-items:center; }
     meta+='<span class="ncat">'+esc(TCG_NEWS_CATEGORIES[n.category]||n.category)+'</span>';
     if(n.unconfirmed) meta+='<span class="nunconfirmed">Unconfirmed</span>';
     meta+='<span class="nsrc">'+esc(tcgNewsSourceLabel(n))+'</span>';
-    return '<a class="newsitem" href="'+esc(n.url)+'" target="_blank" rel="noopener">'+
+    return newsRowHtml(n.url,
       '<div class="nmeta">'+meta+'</div>'+
       '<div class="ntitle">'+esc(n.title)+'</div>'+
-      (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':'')+
-      '</a>';
+      (n.summary?'<div class="nsum">'+esc(n.summary)+'</div>':''),
+      n.unconfirmed ? null : newsCardFor(n.title+" \n "+n.summary));   // a rumour never gets a wish button
   }
   function tcgNewsListHtml(feed){
     var norm=tcgNewsNormalise(feed);
@@ -9574,6 +9614,7 @@ label.acctsetrow { align-items:center; }
       var norm=tcgNewsNormalise(feed) || {updated_at:"", items:[]};
       _tcgNewsList=norm.items;
       el.innerHTML=tcgNewsListHtml(norm);
+      wireNewsWish(el);
       if(note) note.textContent = mode==="saved"
         ? "Showing the last update saved on this device."
         : "Announcements, releases, reveals and community threads.";
