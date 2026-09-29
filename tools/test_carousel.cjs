@@ -443,6 +443,71 @@ test('swiping horizontally changes the slide without breaking taps', () => {
   assert.equal(a.api.snapshot().paused, false, 'autoplay resumes after the swipe');
 });
 
+test('a mapped release banner is used for the 2.1 features and update slides', () => {
+  const source = fs.readFileSync(FILES.src, 'utf8');
+  assert.match(source, /var RELEASE_ART = \{[\s\S]*?"2\.1": "img\/UPDATE_2_1\.webp"[\s\S]*?\};/);
+  assert.match(source, /\.featslide\.release \.featbg img \{[^}]*object-fit:contain/);
+  assert.match(source, /\.featslide\.release \.featbg img \{[^}]*filter:none/);
+  const banner = 'img/UPDATE_2_1.webp';
+  const notes = ['Deck check', 'Match tracker', 'Rules text'];
+  const base = {
+    visibleNews: () => [],
+    RELEASE_HIGHLIGHTS: { '2.1': notes, '2.0': ['Older'], '9.9': ['Unmapped one', 'Unmapped two'] },
+    RELEASE_ART: { '2.1': banner },
+    updateNotesFor: (v) => (v === '2.1' ? notes : ['Unmapped one', 'Unmapped two']),
+  };
+  const features = app({ ...base, APP_VERSION: '2.1', _latestAppVersion: '2.1' });
+  const feat = features.api.slides().find((s) => s.kind === 'features');
+  assert.ok(feat, 'current 2.1 build shows a features slide');
+  assert.equal(feat.badge, 'Latest update');
+  assert.equal(feat.art, banner);
+  assert.equal(feat.releaseArt, true);
+  features.api.render();
+  const featHtml = features.host.innerHTML.match(/<button class="featslide[^"]*\brelease\b[\s\S]*?<\/button>/);
+  assert.ok(featHtml, 'features slide is marked release');
+  assert.match(featHtml[0], /class="featbg"><img src="img\/UPDATE_2_1\.webp"/);
+  assert.equal(featHtml[0].includes('class="featart'), false, 'the collage is the frame, not a side card');
+  assert.match(features.host.className, /\bbanneropen\b/);
+
+  const update = app({ ...base, APP_VERSION: '2.0', _latestAppVersion: '2.1' });
+  const up = update.api.slides().find((s) => s.kind === 'update');
+  assert.ok(up, 'a build behind 2.1 shows the update slide');
+  assert.equal(up.badge, 'Update available');
+  assert.equal(up.version, '2.1');
+  assert.equal(up.art, banner);
+  assert.equal(up.releaseArt, true);
+  update.api.render();
+  assert.match(update.host.innerHTML, /<button class="featslide[^"]*\brelease\b[\s\S]*?src="img\/UPDATE_2_1\.webp"/);
+
+  const fallback = app({ ...base, APP_VERSION: '9.9', _latestAppVersion: '' });
+  const own = fallback.api.slides().find((s) => s.kind === 'features');
+  assert.ok(own, 'an unmapped version still shows a features slide');
+  assert.equal(own.releaseArt, false);
+  assert.equal(own.art, 'data:art-ebp01', 'unmapped version keeps the set-art fallback');
+  assert.notEqual(own.art, banner);
+  fallback.api.render();
+  assert.equal(/class="featslide[^"]*\brelease\b/.test(fallback.host.innerHTML), false);
+  assert.match(fallback.host.innerHTML, /src="data:art-ebp01"/);
+  assert.equal(/\bbanneropen\b/.test(fallback.host.className), false);
+
+  const copies = [
+    'docs/app/img/UPDATE_2_1.webp',
+    'app/src/main/assets/img/UPDATE_2_1.webp',
+    'ios/SphereDex/SphereDex/Resources/img/UPDATE_2_1.webp',
+  ].map((rel) => {
+    const file = path.join(REPO, rel);
+    assert.equal(fs.existsSync(file), true, rel + ' is in the built output');
+    return fs.readFileSync(file);
+  });
+  assert.ok(copies[0].length > 1000 && copies[0].length < 250 * 1024, 'banner is an optimised file under 250KB');
+  assert.equal(copies[0].subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.equal(copies[0].subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.equal(copies[0].subarray(23, 26).toString('hex'), '9d012a');
+  assert.equal(copies[0].readUInt16LE(26) & 0x3fff, 1600);
+  assert.equal(copies[0].readUInt16LE(28) & 0x3fff, 900);
+  for (const copy of copies.slice(1)) assert.equal(copy.equals(copies[0]), true, 'native bundles mirror the web banner');
+});
+
 test('bind is idempotent: re-render never stacks a second set of listeners', () => {
   const a = app({ visibleNews: () => [news({ title: 'Official update' })] });
   a.api.render();
