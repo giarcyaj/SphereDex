@@ -565,3 +565,16 @@ test('card of the day: the burst is drawn in the card tint, with a fallback', ()
   assert.match(logic, /--cotd-tint:/, 'the renderer puts the tint on the slide');
   assert.match(logic, /function featCotdTint/, 'the tint is derived from the card');
 });
+
+// Collector mode (Settings > Track value off) hides every price surface app wide through one rule,
+// `.collector .priceui`. The card of the day has to opt into it rather than quote a market at someone
+// who asked not to see one. The slide itself stays: a featured card is still worth showing.
+test('card of the day: the price surfaces follow collector mode', () => {
+  const logic = readSection(FILES.src, 'logic');
+  const css = fs.readFileSync(FILES.src, 'utf8');
+  assert.match(logic, /class="cotdfig priceui"/, 'the percentage figure carries .priceui');
+  assert.match(logic, /class="cotdsub priceui"/, 'the price line carries .priceui');
+  // And the mechanism it is opting into still exists.
+  assert.match(css, /\.collector \.priceui\{ display:none !important; \}/,
+    'the app wide collector-mode price hide is still in place');
+});

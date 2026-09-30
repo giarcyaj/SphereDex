@@ -947,6 +947,10 @@
     text-transform:uppercase; color:rgba(255,255,255,.62); }
   /* The rising line under the figure. Pure geometry, no data points to plot: there are only two
      readings (yesterday and today), so an honest sparkline would be a straight line anyway. */
+  /* Collector mode hides every price surface app wide, and the card of the day is no exception:
+     the figure and the price line carry .priceui so they go with the rest. The slide stays, and the
+     name takes back the space they leave. */
+  .collector .featslide.cotd .feattitle { font-size:1.12rem; -webkit-line-clamp:3; }
   .cotdsub { display:block; max-width:100%; font-size:.67rem; color:rgba(255,255,255,.76);
     font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cotdart .featart-img { border:1.5px solid rgba(255,176,32,.5);
@@ -5557,7 +5561,14 @@ label.acctsetrow { align-items:center; }
       if(REGION_CUR[ebayReg()]===code){ applyCurrency(code); toast("Display currency: "+CUR.code+" "+CUR.sym); return; }   // already on a market that quotes it
       var er=$("setEbayRegion");
       if(er && typeof er.onchange==="function"){ er.value=reg; er.onchange(); toast("Market set to "+reg+" so prices match "+code); return; }
-      SETTINGS.ebayRegion=reg; saveSettings(); renderFoot(); applyCurrency(code); toast("Market set to "+reg+" so prices match "+code);
+      // Fallback for before the Settings controls are wired. It has to do the SAME work as the
+      // handler above: moving the market without dropping the price book leaves every price on
+      // screen, the card of the day included, quoting the old market under the new symbol.
+      SETTINGS.ebayRegion=reg; saveSettings(); renderFoot(); applyCurrency(code);
+      clearFetchedPrices();
+      if(typeof syncPushPrefs==="function") syncPushPrefs();
+      if(typeof fetchServerPrices==="function") fetchServerPrices(true);
+      toast("Market set to "+reg+" so prices match "+code);
     };
   })();
   $("search").addEventListener("input", function(e){ filters.q=e.target.value; render(); });
@@ -9100,8 +9111,8 @@ label.acctsetrow { align-items:center; }
           '<span class="featbody">'+
             '<span class="featbadge">'+icon("chart")+esc(s.badge)+'</span>'+
             '<span class="feattitle">'+esc(s.title)+'</span>'+
-            '<span class="cotdfig"><b>'+esc(pctTxt)+'</b><i>today</i></span>'+
-            '<span class="cotdsub">'+esc(moved)+'</span>'+
+            '<span class="cotdfig priceui"><b>'+esc(pctTxt)+'</b><i>today</i></span>'+
+            '<span class="cotdsub priceui">'+esc(moved)+'</span>'+
           '</span></button>';
       }
       var movers=(s.kind==="movers" && s.movers && s.movers.length) ? s.movers : null;
