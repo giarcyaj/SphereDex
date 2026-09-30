@@ -212,11 +212,11 @@ function paidApp() {
     sealUnit: () => 20
   };
   const names = [
-    'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts', 'changeRaw',
+    'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
     'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
     'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
   ];
-  const code = names.map(appFunction).join('\n') + '\n' + ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
+  const code = names.map(appFunction).join('\n') + '\n' + ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
   vm.runInContext(code, vm.createContext(sandbox));
   sandbox.col = col;
   sandbox.box = box;
