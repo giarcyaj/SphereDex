@@ -325,57 +325,119 @@ test('cost basis ignores copies with no paid amount and keeps an explicit zero',
   assert.equal(none.collectionCostBasis().cost, 0);
 });
 
-test('the home catch-up is only what this person missed since their last visit', () => {
+// The Home catch-up card. awayRows() reads a lot of app state, so the sandbox stubs the DATA and keeps
+// the REAL date helpers, which is exactly where this went wrong once: upcomingIso returns a timestamp,
+// not a string, and feeding it back through Date.parse silently dropped every reveal.
+function awaySandbox(over) {
   const box = {};
   vm.createContext(box);
-  vm.runInContext(['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
-  const H = 60 * 60 * 1000;
+  vm.runInContext(['awayRows', 'sealDayKnown', 'monDateTime', 'upcomingIso', 'verNum', 'palKey']
+    .map(appFunction).join('\n'), box);
   const opened = 1_700_000_000_000;
-  const back = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 18 * H,
-    addedSince: 3, addedThisWeek: 5, lastTotal: 270, total: 277,
-    appVersion: '2.0', latestVersion: '2.0', updateNotes: ['A more useful Home']
-  });
-  assert.equal(back.show, true);
-  assert.equal(back.title, '3 cards added since your last visit');
-  assert.match(back.meta, /18 hours since your last visit/);
-  assert.match(back.meta, /5 added this week/);
-  assert.equal(back.bullets.includes('A more useful Home'), false);
-  assert.equal(back.bullets.some((b) => b.indexOf('7 new card') === 0), true);
+  Object.assign(box, {
+    APP_OPENED_AT: opened,
+    PREVIOUS_VISIT: opened - 8 * 24 * 60 * 60 * 1000,
+    SEALED: [],
+    RELNEWS_KEY: 'palvault-release-news',
+    lsGet: () => '[]',
+    _upcomingEntries: [],
+    CARDS: [],
+    SETTINGS: { mode: 'trader' },
+    PRICEBOOK: {},
+    PRICEPREV: {},
+    isWished: () => false,
+    has: () => false,
+    o: (id) => ({ id: id }),
+    isConverted: () => false,
+    sealDate: (p) => p.date,
+    esc: (v) => String(v),
+    money: (n) => '\u00a3' + Number(n).toFixed(2),
+    APP_VERSION: '2.1',
+    _latestAppVersion: '2.1',
+  }, over || {});
+  return box;
+}
 
-  assert.equal(box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 10 * 60 * 1000,
-    addedSince: 0, addedThisWeek: 4, lastTotal: 277, total: 277
-  }).show, false, 'a short return does not repeat cards already seen last visit');
+test('the away card reports what happened in the world, not what you did yourself', () => {
+  const opened = 1_700_000_000_000, DAY = 24 * 60 * 60 * 1000;
+  const at = (t) => new Date(t).toISOString().replace(/\.\d+Z$/, 'Z');
 
-  assert.equal(box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: 0,
-    addedSince: 0, addedThisWeek: 4, lastTotal: 0, total: 277
-  }).show, false, 'the first open has nothing missed, and the whole catalogue is not new');
+  // A first open on this device has nothing to be away from.
+  assert.equal(awaySandbox({ PREVIOUS_VISIT: 0 }).awayRows().length, 0);
 
-  const fresh = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 20 * 60 * 1000,
-    addedSince: 1, addedThisWeek: 1, lastTotal: 277, total: 277
-  });
-  assert.equal(fresh.title, '1 card added since your last visit');
-  assert.match(fresh.meta, /20 minutes since your last visit/);
-  assert.equal(fresh.meta.includes('1 hour'), false);
+  // A quiet week says nothing rather than padding the card.
+  assert.equal(awaySandbox().awayRows().length, 0);
 
-  const days = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 50 * H,
-    addedSince: 0, addedThisWeek: 0, lastTotal: 270, total: 274,
-    appVersion: '2.0', latestVersion: '2.1', updateNotes: ['Deck tools when you choose Play']
-  });
-  assert.equal(days.title, '4 new cards in the app · 274 total');
-  assert.match(days.meta, /2 days since your last visit/);
-  assert.deepEqual(JSON.parse(JSON.stringify(days.bullets)), ['Deck tools when you choose Play']);
+  // Reveals inside the window, and ONLY inside it.
+  const reveals = awaySandbox({
+    _upcomingEntries: [
+      { pal: 'Selyne', revealed_at: at(opened - 2 * DAY) },
+      { pal: 'Cattiva', revealed_at: at(opened - 3 * DAY) },
+      { pal: 'Depresso', revealed_at: at(opened - 4 * DAY) },
+      { pal: 'Grizzbolt', revealed_at: at(opened - 30 * DAY) },
+    ],
+  }).awayRows();
+  assert.equal(reveals.length, 1, 'a reveal from before the last visit is not news');
+  assert.equal(reveals[0].line, 'New reveals \u00b7 Selyne, Cattiva and Depresso');
+  assert.equal(reveals[0].go, 'paldex');
 
-  assert.equal(source.includes('Welcome back'), false);
-  assert.equal(source.includes('Next set:'), false);
-  assert.equal(source.includes('Find next card'), false);
-  assert.equal(source.includes('View recent'), false);
-  assert.match(source, /View those cards/);
-  assert.match(source, /t>PREVIOUS_VISIT && t<APP_OPENED_AT/);
+  // Four or more becomes a count, and the line never carries two "and"s.
+  const many = awaySandbox({
+    _upcomingEntries: ['Selyne', 'Cattiva', 'Depresso', 'Quivern', 'Chillet']
+      .map((p, i) => ({ pal: p, revealed_at: at(opened - (i + 1) * DAY) })),
+  }).awayRows();
+  assert.equal(many[0].line, 'New reveals \u00b7 Selyne, Cattiva, Depresso and 2 more');
+  assert.equal((many[0].line.match(/ and /g) || []).length, 1, 'one "and", never two');
+
+  // The same Pal revealed twice is named once.
+  const dupe = awaySandbox({
+    _upcomingEntries: [
+      { pal: 'Tombat', revealed_at: at(opened - 2 * DAY) },
+      { pal: 'Tombat', revealed_at: at(opened - 3 * DAY) },
+    ],
+  }).awayRows();
+  assert.equal(dupe[0].line, 'New reveals \u00b7 Tombat');
+
+  // The biggest wishlist faller, named through palKey so the en dash subtitle never reaches the card.
+  const wish = {
+    CARDS: [{ id: 'EBP01-001', name: 'Jetragon \u2013 Legendary Guardian Dragon' }],
+    isWished: () => true,
+    PRICEBOOK: { 'EBP01-001': 14.2 },
+    PRICEPREV: { 'EBP01-001': 20 },
+  };
+  const fell = awaySandbox(wish).awayRows();
+  assert.equal(fell.length, 1);
+  assert.equal(fell[0].line, 'Jetragon fell to \u00a314.20 on your wishlist');
+  assert.equal(fell[0].go, 'wishlist');
+
+  // Collector mode hides every price in the app, this card included.
+  assert.equal(
+    awaySandbox(Object.assign({}, wish, { SETTINGS: { mode: 'collector' } })).awayRows().length, 0,
+    'collector mode shows no money');
+
+  // A converted estimate moving is an exchange rate, not a price fall.
+  assert.equal(
+    awaySandbox(Object.assign({}, wish, { isConverted: () => true })).awayRows().length, 0);
+
+  // A newer store build is one line, with no feature bullets.
+  const behind = awaySandbox({ _latestAppVersion: '2.2' }).awayRows();
+  assert.equal(behind.length, 1);
+  assert.equal(behind[0].line, 'SphereDex 2.2 is available');
+  assert.equal(behind[0].go, '');
+  assert.equal(awaySandbox({ _latestAppVersion: '2.0' }).awayRows().length, 0,
+    'an older store record is not an update');
+
+  // A product is only called released when its date names a real day: monDateTime falls back to the
+  // 28th for a bare month and year, so "late Oct 2026" would announce a date nobody published.
+  const box = awaySandbox();
+  assert.equal(box.sealDayKnown('2026-10-16'), true);
+  assert.equal(box.sealDayKnown('Oct 16, 2026'), true);
+  assert.equal(box.sealDayKnown('late Oct 2026'), false);
+  assert.equal(box.sealDayKnown(''), false);
+
+  // The card is a world digest now, and the copy rule holds.
+  assert.match(source, /While you were away/);
+  assert.equal(source.includes('missedUpdate'), false, 'the old recap is gone, not merely unused');
 });
 
 test('home bars only measure a goal that has a total', () => {
@@ -582,24 +644,11 @@ test('2.1 is this build, and a store record of 2.0 is not an update', () => {
   assert.ok(highlights, 'RELEASE_HIGHLIGHTS is in the source');
   const box = {};
   vm.createContext(box);
-  vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
+  vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase'].map(appFunction).join('\n'), box);
   assert.equal(box.RELEASE_HIGHLIGHTS['2.1'].length, 3);
   assert.match(box.RELEASE_HIGHLIGHTS['2.1'][1], /Match tracker/);
   assert.ok(box.verNum('2.1') > box.verNum('2.0'));
   assert.equal(box.verNum('2.0') > box.verNum('2.1'), false);
-  const caught = box.missedUpdate({
-    now: 1_700_000_000_000,
-    openedAt: 1_700_000_000_000,
-    previousVisit: 1_700_000_000_000 - 50 * 60 * 60 * 1000,
-    addedSince: 0,
-    addedThisWeek: 0,
-    lastTotal: 270,
-    total: 274,
-    appVersion: '2.1',
-    latestVersion: '2.0',
-    updateNotes: ['Old store note']
-  });
-  assert.equal(caught.bullets.includes('Old store note'), false);
   assert.match(source, /if\(latest && verNum\(latest\) > verNum\(APP_VERSION\)\) offerUpdate\(latest\);/);
   const ver = box.verNum('2.1');
   const latest = box.verNum('2.0');
