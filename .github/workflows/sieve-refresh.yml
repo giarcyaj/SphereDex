@@ -80,12 +80,16 @@ jobs:
           BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
           INGEST_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
           X_STATUS: ${{ steps.scrape_x.outputs.status }}
+          X_POSTS: ${{ steps.scrape_x.outputs.posts }}
         run: |
           if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
           if [ -z "$INGEST_KEY" ]; then echo "::warning::BACKEND_ADMIN_KEY secret is not set - feed not published. Set it to the Worker's ADMIN_KEY value (wrangler secret put ADMIN_KEY)."; exit 0; fi
           # x_complete tells the backend this batch holds the current X posts, so it drops stored
           # X posts that are missing (deleted on X). Only sent when the X API fetch succeeded.
-          if [ "$X_STATUS" = "ok" ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
+          # A successful call that returns ZERO posts is not evidence the account is empty, but
+          # x_complete makes the backend delete every stored X post before merging. Require a
+          # post count as well as an ok status, or one quiet response wipes the app's X news.
+          if [ "$X_STATUS" = "ok" ] && [ "${X_POSTS:-0}" -gt 0 ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
           echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news (X status: ${X_STATUS:-none})"
           curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-post.json -w "\nHTTP %{http_code}\n"
 
