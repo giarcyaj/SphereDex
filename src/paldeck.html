@@ -3309,29 +3309,37 @@ label.acctsetrow { align-items:center; }
   // Raw copies retain a total for existing collection/price readers, plus a per-edition breakdown.
   // Unlabelled legacy copies stay unknown. Read without mutating so CSV export and merging are pure.
   function rawCount(n){ n=Number(n); return isFinite(n)?Math.max(0,Math.floor(n)):0; }
-  function rawEditionKey(ed){ return String(ed)==="1"?"1":(String(ed)==="2"?"2":"unknown"); }
-  function rawEditionLabel(ed){ return ed==="1"?"1st edition":(ed==="2"?"2nd edition":"Not specified"); }
+  // Japanese ("jp") and Chinese ("cn") copies are printings of the same card: counted apart, valued like the
+  // rest. They are only stored when above zero, so older saves and older app versions (which read them as
+  // Not specified inside the same qty) are unchanged.
+  var RAW_KNOWN=["1","2","jp","cn"], RAW_LANGS={jp:1,cn:1};
+  function rawEditionKey(ed){ ed=String(ed); return (ed==="1"||ed==="2"||RAW_LANGS[ed]===1)?ed:"unknown"; }
+  function rawEditionLabel(ed){ return ed==="1"?"1st edition":(ed==="2"?"2nd edition":(ed==="jp"?"Japanese":(ed==="cn"?"Chinese":"Not specified"))); }
+  // The printings a card sheet offers: 1st and 2nd only where that reprint exists, Japanese and Chinese everywhere.
+  function printingKeys(card){ return canEdition(card)?["unknown","1","2","jp","cn"]:["unknown","jp","cn"]; }
   function rawCounts(e){
-    var q=rawCount(e&&e.qty), out={"1":0,"2":0,unknown:0}, saved=e&&e.rawEditions;
+    var q=rawCount(e&&e.qty), out={"1":0,"2":0,unknown:0}, saved=e&&e.rawEditions, left=q;
     if(saved && typeof saved==="object"){
       // qty is the compatibility boundary for older clients. Keep known counts within that total.
-      out["1"]=Math.min(q,rawCount(saved["1"]));
-      out["2"]=Math.min(q-out["1"],rawCount(saved["2"]));
-      out.unknown=q-out["1"]-out["2"];
+      RAW_KNOWN.forEach(function(k){ var n=Math.min(left,rawCount(saved[k])); if(n || RAW_LANGS[k]!==1) out[k]=n; left-=n; });
+      out.unknown=left;
     } else out[rawEditionKey(e&&e.edition)]=q;
     return out;
   }
+  function rawKnownTotal(c){ return RAW_KNOWN.reduce(function(a,k){ return a+(c[k]||0); },0); }
   function setRawCounts(e, counts){
     var b={"1":rawCount(counts["1"]),"2":rawCount(counts["2"]),unknown:rawCount(counts.unknown)};
-    e.rawEditions=b; e.qty=b["1"]+b["2"]+b.unknown; e.rawEditionsAt=Date.now();
+    if(rawCount(counts.jp)) b.jp=rawCount(counts.jp);
+    if(rawCount(counts.cn)) b.cn=rawCount(counts.cn);
+    e.rawEditions=b; e.qty=rawKnownTotal(b)+b.unknown; e.rawEditionsAt=Date.now();
     if(e.qty && b["1"]===e.qty) e.edition="1";
     else if(e.qty && b["2"]===e.qty) e.edition="2";
     else delete e.edition;
   }
   function changeRaw(e, delta, edition){
     var b=rawCounts(e), key=rawEditionKey(edition), n=rawCount(Math.abs(delta));
-    if(delta<0) n=-Math.min(b[key],n);
-    b[key]+=n; setRawCounts(e,b); return n;
+    if(delta<0) n=-Math.min(b[key]||0,n);
+    b[key]=(b[key]||0)+n; setRawCounts(e,b); return n;
   }
   function mergeRawCounts(a,b,out){
     // A correction of unknown -> 1st is the same copy, not two copies. Keep one coherent breakdown
@@ -3340,7 +3348,7 @@ label.acctsetrow { align-items:center; }
     if(!a.rawEditions && b.rawEditions) picked=b;
     else if(!!a.rawEditions===!!b.rawEditions){
       if((+b.rawEditionsAt||0)>(+a.rawEditionsAt||0)) picked=b;
-      else if((+b.rawEditionsAt||0)===(+a.rawEditionsAt||0) && bc["1"]+bc["2"]>ac["1"]+ac["2"]) picked=b;
+      else if((+b.rawEditionsAt||0)===(+a.rawEditionsAt||0) && rawKnownTotal(bc)>rawKnownTotal(ac)) picked=b;
     }
     var counts=rawCounts(picked), total=Math.max(rawCount(a.qty),rawCount(b.qty));
     counts.unknown+=total-rawCount(picked.qty); setRawCounts(out,counts);
@@ -4248,7 +4256,7 @@ label.acctsetrow { align-items:center; }
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
     var p=el.querySelector(".plus"), m=el.querySelector(".minus");
     if (p) p.addEventListener("click", function(ev){ ev.stopPropagation(); var b=rawCounts(s), keys=Object.keys(b).filter(function(k){return b[k]>0;}); changeRaw(s,1,keys.length===1?keys[0]:defaultEditionFor(c)); save(); patchCard(c); });
-    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); var b=rawCounts(s), keys=Object.keys(b).filter(function(k){return b[k]>0;}); if(keys.length>1){ openDetail(c); $("bubColl").click(); toast("Choose the edition to remove"); return; } changeRaw(s,-1,keys[0]); save(); patchCard(c); });
+    if (m) m.addEventListener("click", function(ev){ ev.stopPropagation(); var b=rawCounts(s), keys=Object.keys(b).filter(function(k){return b[k]>0;}); if(keys.length>1){ openDetail(c); $("bubColl").click(); toast("Choose the printing to remove"); return; } changeRaw(s,-1,keys[0]); save(); patchCard(c); });
     tapTarget(el.querySelector(".art"), c.name+", "+c.id).addEventListener("click", function(){ openDetail(c); });
     el.querySelector(".cbody").addEventListener("click", function(){ openDetail(c); });
     return el;
@@ -4486,7 +4494,7 @@ label.acctsetrow { align-items:center; }
           '<button class="segb on" data-type="raw" type="button">Raw</button>'+
           '<button class="segb" data-type="graded" type="button">Graded</button>'+
         '</div>'+
-        (function(){ if(!canEdition(c)) return ""; var def=defaultEditionFor(c); var sel=def||"unknown"; return '<div class="field"><label for="addEdition">Edition to add</label><select id="addEdition"><option value="unknown"'+(sel==="unknown"?' selected':'')+'>Not specified</option><option value="1"'+(sel==="1"?' selected':'')+'>1st edition</option><option value="2"'+(sel==="2"?' selected':'')+'>2nd edition</option></select></div>'; })()+
+        (function(){ var sel=defaultEditionFor(c)||"unknown"; return '<div class="field"><label for="addEdition">Edition to add</label><select id="addEdition">'+printingKeys(c).map(function(ed){ return '<option value="'+ed+'"'+(sel===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>'; }).join("")+'</select></div>'; })()+
         '<div class="addgrid" id="rawAdd">'+
           '<div class="field"><label>Condition</label><select id="fCond">'+
             [["Near Mint","NM"],["Lightly Played","LP"],["Moderately Played","MP"],["Heavily Played","HP"],["Damaged","D"]].map(function(p){return '<option value="'+p[0]+'"'+(p[0]===s.cond?' selected':'')+'>'+p[1]+' · '+p[0]+'</option>';}).join("")+
@@ -4561,18 +4569,18 @@ label.acctsetrow { align-items:center; }
       var host=$("ownLine"); if(!host) return;
       var parts=[], q=parseInt($("fQty").value,10)||0;
       var counts=rawCounts(s);
-      Object.keys(counts).forEach(function(ed){ if(counts[ed]) parts.push('<span class="ownpill" data-t="raw">'+counts[ed]+' raw'+(canEdition(c)?' · '+rawEditionLabel(ed):'')+' · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" data-edition="'+ed+'" type="button" aria-label="Remove one '+rawEditionLabel(ed)+' raw copy">−</button></span>'); });
+      Object.keys(counts).forEach(function(ed){ if(counts[ed]) parts.push('<span class="ownpill" data-t="raw">'+counts[ed]+' raw'+(ed!=="unknown"?' · '+rawEditionLabel(ed):'')+' · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" data-edition="'+ed+'" type="button" aria-label="Remove one '+rawEditionLabel(ed)+' raw copy">−</button></span>'); });
       // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
       // again anywhere in the app, so there was no way to check a slab against its label.
-      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(canEdition(c)?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
       host.hidden=!parts.length;
       host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
-      if(canEdition(c) && q){
-        host.innerHTML+='<div class="editioncounts"><p>Edit your raw-copy totals by edition. Older unlabelled copies are kept under Not specified.</p>'+["1","2","unknown"].map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+counts[ed]+'"></div>';}).join('')+'</div>';
+      if(q){
+        host.innerHTML+='<div class="editioncounts"><p>Edit your raw-copy totals by printing, for example to mark copies as Japanese or Chinese. Older unlabelled copies are kept under Not specified.</p>'+printingKeys(c).map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+(counts[ed]||0)+'"></div>';}).join('')+'</div>';
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
       }
       if(trackPaidOn()){
-        var paidBits=["1","2","unknown"].filter(function(ed){ return counts[ed]; }).map(function(ed){
+        var paidBits=["unknown","1","2","jp","cn"].filter(function(ed){ return counts[ed]; }).map(function(ed){
           var cur=(s.paidRaw && s.paidRaw[ed]!=null && s.paidRaw[ed]!=="") ? s.paidRaw[ed] : "";
           return '<div class="field"><label for="paidEdition'+ed+'">Paid each · '+rawEditionLabel(ed)+'</label><input id="paidEdition'+ed+'" data-paid-edition="'+ed+'" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+esc(String(cur))+'"></div>';
         }).join("");
@@ -4657,7 +4665,7 @@ label.acctsetrow { align-items:center; }
         row.innerHTML=
           '<select class="gg gGrader">'+GRADERS.map(function(x){return '<option'+(x===g.grader?' selected':'')+'>'+x+'</option>';}).join("")+'</select>'+
           '<select class="gg gGrade">'+GRADES.map(function(x){return '<option'+(x===g.grade?' selected':'')+'>'+x+'</option>';}).join("")+'</select>'+
-          (canEdition(c)?'<select class="gEdition" aria-label="Slab edition">'+["unknown","1","2"].map(function(ed){return '<option value="'+ed+'"'+(rawEditionKey(g.edition)===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>';}).join('')+'</select>':'')+
+          ('<select class="gEdition" aria-label="Slab printing">'+printingKeys(c).map(function(ed){return '<option value="'+ed+'"'+(rawEditionKey(g.edition)===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>';}).join('')+'</select>')+
           '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="Value '+esc(CUR.sym)+'" value="'+(g.value||0)+'">'+
           '<input class="gv gPaid paidui" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Paid" aria-label="Amount paid" value="'+(g.paid!=null && g.paid!=="" ? g.paid : "")+'">'+
           '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>';
@@ -5140,7 +5148,7 @@ label.acctsetrow { align-items:center; }
     if(!isNumber && /^[=+\-@\t\r]/.test(s)) s="'"+s;
     if(/[",\r\n]/.test(s)) s='"'+s.replace(/"/g,'""')+'"';
     return s; }
-  function csvEdition(e){ e=(e==null)?"":String(e); return e==="1"?"1st":(e==="2"?"2nd":""); }
+  function csvEdition(e){ e=(e==null)?"":String(e); return e==="1"?"1st":(e==="2"?"2nd":(e==="jp"?"Japanese":(e==="cn"?"Chinese":""))); }
   function csvFileName(col){ col=col||activeCol(); return fileSlug(col&&col.name,"collection")+"-"+todayKey()+".csv"; }
   // Pure read of one collection (no o(), no sealItem): nothing is created or changed by exporting.
   function collectionCsv(col){
@@ -5152,7 +5160,7 @@ label.acctsetrow { align-items:center; }
       var nm=c?(c.name||""):"", setNm=(c && SETS[c.set])?SETS[c.set].name:"", rare=c?(RARE_NAME[c.rare]||c.rare||""):"";
       var q=Math.floor(+e.qty||0);
       if(q>0){ var u=unitOf(id, mode), us=csvNum(u), counts=rawCounts(e);
-        ["1","2","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return; var ts=csvNum(n*u);
+        ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return; var ts=csvNum(n*u);
           rows.push([id, String(n), nm, "Card", setNm, rare, e.cond||"", csvEdition(ed), "", "", "", us, ts, (us||ts)?code:"", e.notes||"", csvPaid(e.paidRaw && e.paidRaw[ed])]); }); }
       (Array.isArray(e.graded)?e.graded:[]).forEach(function(g){ if(!g || typeof g!=="object") return; var v=csvNum(g.value);
         rows.push([id, "1", nm, "Graded", setNm, rare, "", csvEdition(g.edition), g.grader||"", (g.grade==null?"":g.grade), (g.cert==null?"":g.cert), v, v, v?code:"", "", csvPaid(g.paid)]); });
@@ -5212,7 +5220,7 @@ label.acctsetrow { align-items:center; }
       var cell=function(r, k, keepSpace){ var ix=colIx[k]; if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
       var condOf={}; CARD_CONDS.forEach(function(c){ condOf[c.toLowerCase()]=c; });
       var sealIds={}; SEALED.forEach(function(p){ sealIds[p.id.toLowerCase()]=p.id; });
-      var edOf=function(v){ v=String(v||"").toLowerCase(); return (v==="1st"||v==="1")?"1":((v==="2nd"||v==="2")?"2":""); };
+      var edOf=function(v){ v=String(v||"").toLowerCase(); return (v==="1st"||v==="1")?"1":((v==="2nd"||v==="2")?"2":((v==="japanese"||v==="jp")?"jp":((v==="chinese"||v==="cn")?"cn":""))); };
       var numOf=function(v){ v=String(v||"").replace(/\s+/g,""); if(/^-?\d+,\d+$/.test(v)) v=v.replace(",","."); return parseFloat(v); };
       var paidOfCell=function(r){ if(colIx.paid==null) return null; return paidNumber(cell(r,"paid")); };
       for(ri=hi+1; ri<rows.length; ri++){
@@ -5923,7 +5931,7 @@ label.acctsetrow { align-items:center; }
     CARDS.forEach(function(c){
       var e=own[c.id]; if(!e || typeof e!=="object") return;
       var counts=rawCounts(e), unit=+unitOf(c.id)||0;
-      ["1","2","unknown"].forEach(function(ed){
+      ["1","2","jp","cn","unknown"].forEach(function(ed){
         var n=counts[ed]; if(!n) return;
         var paid=paidNumber(e.paidRaw && e.paidRaw[ed]); if(paid==null) return;
         var spent=n*paid, worth=n*unit;

@@ -27,14 +27,14 @@ function appConstant(name) {
   return match[0];
 }
 const functionNames = [
-  'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts',
+  'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts',
   'changeRaw', 'mergeRawCounts', 'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
   'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
   'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
 ];
 const appCode = functionNames.map(appFunction).join('\n') + '\n' +
-  ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX'].map(appConstant).join('\n');
+  ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX'].map(appConstant).join('\n');
 const card = { id: 'EBP01-001', name: 'Lamball', set: 'EBP01', rare: 'C', base: 'EBP01-001' };
 const variant = { ...card, id: 'EBP01-001-SR', rare: 'SR' };
 function app() {
@@ -62,6 +62,41 @@ function expectCounts(context, entry, first, second, unknown) {
 function capture(id, edition, qty = 1) {
   return { id, edition, qty, dest: 'collection', type: 'raw', colId: 'test', before: '', beforeEntries: { [id]: '' }, value: 2.5 * qty };
 }
+
+test('Japanese and Chinese copies are their own printings inside the same total', () => {
+  const a = app(), entry = { qty: 2, edition: '1' };
+  a.changeRaw(entry, 2, 'jp');
+  a.changeRaw(entry, 1, 'cn');
+  assert.deepEqual(plain(a.rawCounts(entry)), { '1': 2, '2': 0, jp: 2, cn: 1, unknown: 0 });
+  assert.equal(entry.qty, 5);
+  assert.deepEqual(plain(entry.rawEditions), { '1': 2, '2': 0, unknown: 0, jp: 2, cn: 1 });
+  a.changeRaw(entry, -5, 'cn');
+  assert.deepEqual(plain(entry.rawEditions), { '1': 2, '2': 0, unknown: 0, jp: 2 }, 'a printing at zero is not stored');
+  assert.equal(entry.qty, 4);
+  assert.equal(a.rawEditionKey('jp'), 'jp');
+  assert.equal(a.rawEditionKey('constructor'), 'unknown');
+  assert.equal(a.rawEditionLabel('cn'), 'Chinese');
+  // An older client that only knows 1st and 2nd keeps the total, so the Japanese copies read as Not specified there.
+  const older = { qty: 3, rawEditions: { '1': 1, jp: 5 } };
+  assert.deepEqual(plain(a.rawCounts(older)), { '1': 1, '2': 0, jp: 2, unknown: 0 }, 'known counts stay within qty');
+});
+
+test('Japanese and Chinese copies survive CSV export and import', () => {
+  const a = app();
+  const entry = { qty: 4, rawEditions: { unknown: 1, jp: 2, cn: 1 }, cond: 'Near Mint', notes: '', graded: [{ grader: 'PSA', grade: '10', value: 9, edition: 'jp' }] };
+  const csv = a.collectionCsv({ own: { [card.id]: entry } });
+  assert.match(csv, /Japanese/);
+  assert.match(csv, /Chinese/);
+  const imported = a.parseCsvCollection(csv).own[card.id];
+  assert.deepEqual(plain(a.rawCounts(imported)), { '1': 0, '2': 0, jp: 2, cn: 1, unknown: 1 });
+  assert.equal(imported.graded[0].edition, 'jp');
+  // Paid per printing round trips like 1st and 2nd; words are read in any case, and a word the app does not know stays Not specified.
+  const paidEntry = { qty: 2, rawEditions: { jp: 1, cn: 1 }, paidRaw: { jp: 4, cn: 0 }, cond: 'Near Mint', notes: '', graded: [] };
+  const paidBack = a.parseCsvCollection(a.collectionCsv({ own: { [card.id]: paidEntry } })).own[card.id];
+  assert.deepEqual(plain(paidBack.paidRaw), { jp: 4, cn: 0 });
+  const mixed = a.parseCsvCollection(['Number,Quantity,Type,Edition', card.id + ',1,Card,JAPANESE', card.id + ',1,Card,chinese', card.id + ',1,Card,Korean'].join('\n')).own[card.id];
+  assert.deepEqual(plain(a.rawCounts(mixed)), { '1': 0, '2': 0, jp: 1, cn: 1, unknown: 1 });
+});
 
 test('legacy edition and unspecified copies migrate without changing the original entry', () => {
   const a = app();
