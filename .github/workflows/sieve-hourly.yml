@@ -1,0 +1,96 @@
+name: Sieve Hourly Refresh
+
+# The free half of the Sieve pipeline, every hour.
+#
+# Why this is a separate workflow from sieve-refresh.yml: three of the four fetchers hit the official
+# site's own WordPress REST API, which needs no key, has no quota and costs nothing, so there is no
+# reason for them to wait 12 hours. The fourth, tools/fetch_x_posts.py, is billed per post read and
+# has no since_id cursor, so running it hourly would pay roughly 12 times over for the same 10 posts.
+# They shared one job and one cron, which meant the free half could not be sped up without paying for
+# the metered one. X therefore stays in sieve-refresh.yml on its twice daily schedule.
+#
+# There is NO X step here on purpose. x_complete tells the backend to delete every stored X post that
+# is missing from the batch, and it is gated on the X fetch status, which this workflow never sets. A
+# run of this file can therefore never prune X posts, whatever else goes wrong.
+#
+# Note on timing: GitHub's scheduled runs drift under load, and this repo's twice daily Sieve has been
+# observed running 3 to 6 hours late. At 24 attempts a day that drift stops mattering, which is most
+# of the point of this file.
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# An hourly job can overlap a slow predecessor, which would double download the banner, double run
+# Tesseract and double PUT the image for a brand new announcement. One at a time, newest wins.
+concurrency:
+  group: sieve-hourly
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch official news (REST, robots-permitted)
+        id: scrape_official
+        continue-on-error: true
+        run: python tools/fetch_official_news.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
+
+      - name: Fetch official card reveals (REST, robots-permitted)
+        if: always()
+        run: python tools/fetch_card_reveals.py --root stage/sieve
+
+      - name: Release sweep (products, dates, banners, logos)
+        id: releases
+        if: always()
+        continue-on-error: true
+        env:
+          BACKEND_ADMIN_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          sudo apt-get install -y -qq tesseract-ocr > /dev/null
+          pip install --quiet numpy pillow
+          python tools/release_sweep.py --github-output "$GITHUB_OUTPUT"
+
+      - name: Consolidate Sieve results
+        id: consolidate
+        if: always()
+        run: python tools/news_feed.py --root stage/sieve --output stage/news-feed.json --github-output "$GITHUB_OUTPUT"
+
+      # No x_complete: this workflow holds no X posts, so it must never claim to know the current set.
+      # The backend merges by link, so posting the official items alone leaves stored X posts untouched.
+      - name: POST to backend (/api/admin/news)
+        if: always() && steps.consolidate.outcome == 'success'
+        env:
+          BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
+          INGEST_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
+          if [ -z "$INGEST_KEY" ]; then echo "::warning::BACKEND_ADMIN_KEY secret is not set - feed not published."; exit 0; fi
+          echo "POSTing $(jq length stage/news-feed.json) official item(s) to $BACKEND_URL/api/admin/news"
+          curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-feed.json -w "\nHTTP %{http_code}\n"
+
+      - name: Report status
+        if: always()
+        run: |
+          if [ "${{ steps.scrape_official.outcome }}" = "failure" ]; then
+            echo "::warning::Official-news fetch failed. Its error is in the step log."
+          else
+            echo "Official news items published: ${{ steps.consolidate.outputs.official_items }}"
+          fi
+          if [ "${{ steps.releases.outcome }}" = "failure" ]; then
+            echo "::warning::Release sweep failed. Its error is in the step log; app release data was not updated."
+          else
+            echo "Release sweep: ${{ steps.releases.outputs.products || 0 }} product(s) published from new announcements"
+          fi

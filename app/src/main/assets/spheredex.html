@@ -869,12 +869,16 @@
     box-shadow:0 10px 24px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.4); }
   .featpairpct { font-family:var(--font-mono); font-size:.68rem; font-weight:850; white-space:nowrap;
     padding:2px 8px; border-radius:999px; background:rgba(6,9,14,.6); }
-  .featdots { position:absolute; left:16px; bottom:12px; display:flex; gap:6px; }
-  .featdot { width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer; background:rgba(255,255,255,.42); }
+  /* Anchored to the TOP of the card, not the bottom: the update headliner grows the card from
+     200px to 310px on a phone, and only the top edge stays put. Right, because the badge chip
+     owns the left. One position for every slide, so the dots never jump. */
+  .featdots { position:absolute; right:12px; top:12px; display:flex; gap:6px; }
+  .featdot { width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer;
+    background:rgba(255,255,255,.5); box-shadow:0 1px 2px rgba(0,0,0,.55); }
   .featdot[aria-current="true"] { background:#fff; transform:scale(1.25); }
   .featslide:focus-visible, .featdot:focus-visible { outline:2px solid #fff; outline-offset:2px; }
-  @media (max-width:390px) { .feattitle { font-size:.9rem; -webkit-line-clamp:4; } .featbody { padding-left:14px; } .featdots { left:14px; } }
-  @media (min-width:760px) { .featured { height:240px; } .featbody { padding:18px 14px 34px 22px; } .featdots { left:22px; bottom:14px; }
+  @media (max-width:390px) { .feattitle { font-size:.9rem; -webkit-line-clamp:4; } .featbody { padding-left:14px; } }
+  @media (min-width:760px) { .featured { height:240px; } .featbody { padding:18px 14px 34px 22px; } .featdots { right:16px; top:16px; }
     .featart { top:16px; bottom:16px; right:16px; max-width:340px; } .featslide.pair .featart { max-width:320px; }
     .featbody, .featslide.pair .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featart-img.zoom { animation:none; } }
@@ -899,9 +903,6 @@
   .featured.banneropen .feattrack { height:auto; align-items:flex-start; }
   .featured.banneropen .featslide { height:200px; }
   .featured.banneropen .featslide.release { height:auto; }
-  .featured.banneropen .featdots { left:auto; right:12px; top:12px; bottom:auto; }
-  .featured.banneropen .featdot { background:rgba(255,255,255,.5); box-shadow:0 1px 2px rgba(0,0,0,.55); }
-  .featured.banneropen .featdot[aria-current="true"] { background:#fff; }
   @media (min-width:760px) {
     .featured.banneropen { height:240px; }
     .featured.banneropen .feattrack { height:100%; align-items:stretch; }
@@ -912,7 +913,6 @@
     .featslide.release .featbody { position:absolute; left:0; top:0; bottom:0; width:calc(100% - 440px); right:auto;
       padding:18px 16px 18px 22px; border-top:0;
       background:linear-gradient(90deg, var(--surface) 0%, var(--surface) 88%, transparent 100%); }
-    .featured.banneropen .featdots { right:16px; top:16px; }
   }
   /* ==== FEATURED CAROUSEL END (styles) ==== */
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.68rem; }
@@ -11070,6 +11070,11 @@ label.acctsetrow { align-items:center; }
     WAKE_AT=now;
     try{ if(typeof priceBookGate==="function") priceBookGate(); }catch(e){}
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
+    // News was the one thing a wake never refreshed, so the carousel kept whatever it loaded at
+    // boot while every other slide moved on. primeNewsBell refetches, updates the bell and the
+    // release dates, and repaints the carousel only when Home is the visible page. WAKE_GAP caps
+    // this at one edge cached request every 15 minutes.
+    try{ if(typeof primeNewsBell==="function") primeNewsBell(); }catch(e){}
     try{ if(typeof renderReleases==="function" && _curPage==="releases") renderReleases(); }catch(e){}   // release countdowns roll over at local midnight
     try{ if(typeof renderDecks==="function" && _curPage==="decks") renderDecks(); }catch(e){}   // deck needs follow a collection synced from another device
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}

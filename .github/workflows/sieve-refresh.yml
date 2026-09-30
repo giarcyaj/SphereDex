@@ -37,9 +37,22 @@ jobs:
         continue-on-error: true
         run: python tools/fetch_official_news.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
 
+      # Headline translations, carried between runs. An X post never changes, so its translation
+      # never needs redoing; without this the Japanese posts would be re-translated every run. A cache
+      # miss is not a failure, it just costs one translation call.
+      - name: Restore translation cache
+        uses: actions/cache@v4
+        with:
+          path: stage/sieve/translations.json
+          key: x-translations-${{ github.run_id }}
+          restore-keys: |
+            x-translations-
+
       # x.com's robots.txt is Disallow: /, so Sieve refuses to scrape it; posts come from the
       # official X API v2 instead (pay-per-use, at most 10 posts per run). Needs X_BEARER_TOKEN
       # (optionally X_USER_ID) in Infisical; without it the step skips and the feed still publishes.
+      # XAI_API_KEY, also from Infisical, turns Japanese headlines into English ones. It is
+      # optional in exactly the same way: without it the Japanese posts publish untranslated.
       - name: Fetch X posts (official X API)
         id: scrape_x
         continue-on-error: true
@@ -80,12 +93,16 @@ jobs:
           BACKEND_URL: https://spheredex-backend.craigjayedit.workers.dev
           INGEST_KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
           X_STATUS: ${{ steps.scrape_x.outputs.status }}
+          X_POSTS: ${{ steps.scrape_x.outputs.posts }}
         run: |
           if [ ! -s stage/news-feed.json ] || [ "$(cat stage/news-feed.json)" = "[]" ]; then echo "No items to POST - skipping"; exit 0; fi
           if [ -z "$INGEST_KEY" ]; then echo "::warning::BACKEND_ADMIN_KEY secret is not set - feed not published. Set it to the Worker's ADMIN_KEY value (wrangler secret put ADMIN_KEY)."; exit 0; fi
           # x_complete tells the backend this batch holds the current X posts, so it drops stored
           # X posts that are missing (deleted on X). Only sent when the X API fetch succeeded.
-          if [ "$X_STATUS" = "ok" ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
+          # A successful call that returns ZERO posts is not evidence the account is empty, but
+          # x_complete makes the backend delete every stored X post before merging. Require a
+          # post count as well as an ok status, or one quiet response wipes the app's X news.
+          if [ "$X_STATUS" = "ok" ] && [ "${X_POSTS:-0}" -gt 0 ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
           echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news (X status: ${X_STATUS:-none})"
           curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-post.json -w "\nHTTP %{http_code}\n"
 

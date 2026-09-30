@@ -34,8 +34,18 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
+try:                                   # translation is a nicety, never a reason not to fetch
+    import translate_posts
+except ImportError:                    # pragma: no cover
+    translate_posts = None
+
 API = "https://api.x.com/2"
-USERNAME = "PalworldOCG_EN"
+# Both official accounts. The Japanese one posts reveals and countdowns most days, usually ahead
+# of the English account, and its posts are in Japanese: the app shows each one credited to its
+# own handle so the reader can see which is which. USERNAME stays the default for every helper
+# signature below, so single account callers and the tests are unchanged.
+USERNAMES = ["PalworldOCG_EN", "PalworldOCG"]
+USERNAME = USERNAMES[0]
 TITLE_MAX = 120
 SUMMARY_MAX = 300
 TCO = re.compile(r"https?://t\.co/\S+")
@@ -141,7 +151,77 @@ def fetch_rows(token: str, user_id: str = "", max_results: int = 10,
     payload = get(f"{API}/users/{uid}/tweets?{query}", token)
     if "data" not in payload and payload.get("errors"):
         raise ValueError(f"X API error: {api_error(payload)}")
-    return rows_from_payload(payload, username)
+    return tidy_rows(rows_from_payload(payload, username))
+
+
+# A post is worth showing when it says something on its own. Measured against a real two account
+# fetch: link only follow ups ("product details here") carry no image and a 7 to 19 character summary,
+# while every genuine post carries an image and 129 to 295. Multi part posts also lead with a
+# decorative line, so a post whose title is punctuation or a lone symbol keeps its art and borrows the
+# first real line of its own summary rather than showing up as a slash.
+FRAGMENT_TITLE = re.compile(r"^[\W_\s]*$", re.UNICODE)
+LINK_ONLY_MIN = 40
+
+
+def first_text_line(summary: str) -> str:
+    """The first line of a post body that is actual prose rather than a divider or a bare link."""
+    for line in str(summary or "").splitlines():
+        line = TCO.sub("", line).strip()
+        if len(line) >= 4 and not FRAGMENT_TITLE.match(line):
+            return line[:TITLE_MAX]
+    return ""
+
+
+# The split announcement habit belongs to the Japanese account; the English one posts short complete
+# thoughts like "Tournament results are up." that must not be mistaken for a fragment. So the length
+# test only applies to posts that are actually in Japanese, and English filler stays the backend's job
+# (SOCIAL_SKIP), which is where it already was.
+CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff66-\uff9f]")
+
+
+def worth_showing(row: dict) -> bool:
+    """Drop the link only half of a split announcement: no art, and nothing to read but a pointer."""
+    if row.get("image"):
+        return True
+    body = str(row.get("summary") or "").strip()
+    if not CJK.search(str(row.get("title") or "") + body):
+        return True                                   # English: not this filter's problem
+    return len(body) >= LINK_ONLY_MIN
+
+
+def tidy_rows(rows: list[dict]) -> list[dict]:
+    out = []
+    for row in rows:
+        if not worth_showing(row):
+            continue
+        title = str(row.get("title") or "").strip()
+        if not title or FRAGMENT_TITLE.match(title):
+            better = first_text_line(row.get("summary", ""))
+            if not better:
+                continue                      # nothing readable anywhere in it
+            row = {**row, "title": better}
+        out.append(row)
+    return out
+
+
+def translated(rows: list[dict], root: Path) -> list[dict]:
+    """English headlines for the Japanese account, cached between runs.
+
+    Japanese posts are the reason this exists: the app is English and a Japanese headline reads as a
+    bug. Everything here degrades to "publish it in Japanese": no module, no key, no network and a
+    confused model all leave the rows exactly as they arrived.
+    """
+    if translate_posts is None:
+        return rows
+    try:
+        rows, stats = translate_posts.translate_rows(rows, translate_posts.cache_path_for(root))
+    except Exception as exc:                       # never let a nicety break the fetch
+        print(f"x-api: translation skipped ({exc})", file=sys.stderr)
+        return rows
+    if stats["considered"]:
+        print("x-api: translated {translated} headline(s), {cached} from cache, {failed} left in "
+              "the original".format(**stats))
+    return rows
 
 
 def api_error(data: dict) -> str:
@@ -157,7 +237,7 @@ def stage_session(rows: list[dict], root: Path, stamp: str | None = None) -> Pat
     (session / "files").mkdir(parents=True, exist_ok=True)
     (session.with_suffix(".json")).write_text(json.dumps({
         "session_id": session.name,
-        "instruction": f"Latest @{USERNAME} posts from the official X API v2",
+        "instruction": "Latest " + ", ".join("@" + u for u in USERNAMES) + " posts from the official X API v2",
         "source": "x-api",
     }, ensure_ascii=False), encoding="utf-8")
     (session / "files" / "scrape_results.json").write_text(
@@ -181,28 +261,45 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.offline:
-        rows = rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8")))
+        rows = translated(
+            tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8")))),
+            args.root)
     else:
         token = os.environ.get("X_BEARER_TOKEN", "").strip()
         if not token:
             print("x-api: X_BEARER_TOKEN is not set - skipping X posts (not an error)")
             write_github_output(args.github_output, "skipped", 0)
             return 0
-        try:
-            rows = fetch_rows(token, os.environ.get("X_USER_ID", "").strip(), args.max_results)
-        except urllib.error.HTTPError as exc:
-            # The body is the API's JSON error; it never echoes the bearer token.
+        # One account failing must not look like a complete set: the backend treats an "ok" status as
+        # permission to delete every stored X post, so a partial fetch reports "partial" instead and
+        # the workflow leaves the stored posts alone.
+        rows, failed = [], []
+        pinned_id = os.environ.get("X_USER_ID", "").strip()
+        for i, handle in enumerate(USERNAMES):
             try:
-                detail = api_error(json.loads(exc.read().decode("utf-8")))
-            except (OSError, ValueError):
-                detail = exc.reason
-            print(f"x-api fetch failed: HTTP {exc.code} {detail}", file=sys.stderr)
+                # X_USER_ID, when set, pins only the first handle; the rest resolve by name.
+                rows.extend(fetch_rows(token, pinned_id if i == 0 else "", args.max_results, handle))
+            except urllib.error.HTTPError as exc:
+                # The body is the API's JSON error; it never echoes the bearer token.
+                try:
+                    detail = api_error(json.loads(exc.read().decode("utf-8")))
+                except (OSError, ValueError):
+                    detail = exc.reason
+                print(f"x-api fetch failed for @{handle}: HTTP {exc.code} {detail}", file=sys.stderr)
+                failed.append(handle)
+            except (OSError, ValueError) as exc:
+                print(f"x-api fetch failed for @{handle}: {exc}", file=sys.stderr)
+                failed.append(handle)
+        if len(failed) == len(USERNAMES):
             write_github_output(args.github_output, "failed", 0)
             return 1
-        except (OSError, ValueError) as exc:
-            print(f"x-api fetch failed: {exc}", file=sys.stderr)
-            write_github_output(args.github_output, "failed", 0)
-            return 1
+        rows = translated(rows, args.root)
+        if failed:
+            session = stage_session(rows, args.root)
+            print(f"x-api: staged {len(rows)} post(s) from "
+                  f"{len(USERNAMES) - len(failed)} of {len(USERNAMES)} accounts -> {session}")
+            write_github_output(args.github_output, "partial", len(rows))
+            return 0
     session = stage_session(rows, args.root)
     print(f"x-api: staged {len(rows)} post(s) -> {session}")
     write_github_output(args.github_output, "ok", len(rows))
