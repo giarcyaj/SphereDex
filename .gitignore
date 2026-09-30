@@ -46,3 +46,7 @@ ios/Paldeck/
 .env
 .env.*
 !.env.example
+
+# Wrangler local state (Cloudflare account cache). This repo is public and serves
+# GitHub Pages, so account state must never be swept in by a git add -A.
+.wrangler/
