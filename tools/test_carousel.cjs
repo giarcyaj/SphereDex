@@ -517,62 +517,51 @@ test('bind is idempotent: re-render never stacks a second set of listeners', () 
   assert.equal(a.host._listeners.keydown.length, 1, 'exactly one keydown listener');
 });
 
-// The card of the day's instrument frame is fourteen background layers driven by three parallel lists
-// (image, size, position). They are one table read down the page: layer N's image, size and position
-// must stay on the same row. A drifted list does not error, it silently draws the wrong graphic, which
-// is exactly the kind of thing nobody notices until a user screenshots it. So count them.
-test('card of the day: the HUD frame background lists stay in lockstep', () => {
+// The only thing that moves on the card of the day is the background burst. The scan sweep and the
+// card foil shimmer were both removed by request, and "just a subtle shimmer" is exactly the kind of
+// thing that creeps back in later, so the rule is a test rather than a comment.
+test('card of the day: the burst turns and nothing else moves', () => {
   const css = readSection(FILES.src, 'style');
+  const zone = css.slice(css.indexOf('.cotdaura {'));
+  assert.ok(zone.length > 200, 'found the card of the day styles');
 
-  // Split on commas at paren depth 0, so gradients keep their own argument lists intact.
-  const topLevelParts = (value) => {
-    const parts = [];
-    let depth = 0, current = '';
-    for (const ch of value) {
-      if (ch === '(') depth++;
-      else if (ch === ')') depth--;
-      if (ch === ',' && depth === 0) { parts.push(current.trim()); current = ''; continue; }
-      current += ch;
-    }
-    if (current.trim()) parts.push(current.trim());
-    return parts;
-  };
+  const keyframes = [...css.matchAll(/@keyframes\s+(cotd\w*)/g)].map((m) => m[1]);
+  assert.deepEqual(keyframes, ['cotdspin'], 'exactly one card of the day animation exists: the burst');
 
-  // Every .cotdhud::after block: the base rule plus each media-query restatement.
-  const blocks = [...css.matchAll(/\.cotdhud::after\s*\{([\s\S]*?)\}/g)].map((m) => m[1]);
-  assert.ok(blocks.length >= 2, 'found the base frame rule and at least one restatement');
+  // Every animation declaration in the zone is either the spin itself or an off switch.
+  const decls = [...zone.matchAll(/animation\s*:\s*([^;}]+)/g)].map((m) => m[1].trim());
+  assert.ok(decls.length > 0, 'the burst animation is declared');
+  for (const d of decls) {
+    assert.ok(/^cotdspin\b/.test(d) || d === 'none', `unexpected animation on the slide: ${d}`);
+  }
 
-  blocks.forEach((block, n) => {
-    const grab = (prop) => {
-      const m = block.match(new RegExp(prop + ':([\s\S]*?);'));
-      return m ? topLevelParts(m[1]) : null;
-    };
-    const size = grab('background-size');
-    const position = grab('background-position');
-    if (!size && !position) return;               // a block that only tweaks inset is fine
-    assert.ok(size && position, `block ${n}: restating one list means restating both`);
-    assert.equal(size.length, position.length,
-      `block ${n}: background-size has ${size.length} layers but background-position has ${position.length}`);
-    const image = grab('background-image');
-    if (image) {
-      assert.equal(image.length, size.length,
-        `block ${n}: background-image has ${image.length} layers but the size/position lists have ${size.length}`);
-    }
-  });
+  // And the only element that animates is the burst layer.
+  const animated = [...zone.matchAll(/([^{}]+)\{[^{}]*animation\s*:\s*cotdspin/g)].map((m) => m[1].trim());
+  assert.ok(animated.length > 0, 'found the rule that animates the burst');
+  for (const sel of animated) {
+    assert.match(sel, /\.cotdhud::before/, `only the burst layer animates, not ${sel}`);
+  }
 
-  // The base rule is the one that declares all three, and it is the fourteen-layer table.
-  const base = blocks.find((b) => /background-image:/.test(b));
-  assert.ok(base, 'the base frame rule declares background-image');
-  assert.equal(topLevelParts(base.match(/background-image:([\s\S]*?);/)[1]).length, 14,
-    'the frame is the documented fourteen layers');
+  // Scoped to the zone on purpose: the carousel has its own long standing reduced motion block
+  // further up the section, and searching the whole of it finds that one instead.
+  const idx = zone.indexOf('prefers-reduced-motion:reduce');
+  assert.ok(idx > 0, 'the card of the day styles carry their own reduced motion block');
+  const tail = zone.slice(idx, idx + 220);
+  assert.match(tail, /\.cotdhud::before/, 'the reduced motion block names the burst layer');
+  assert.match(tail, /animation:\s*none/, 'the burst stops under prefers-reduced-motion');
 });
 
-// The foil sweep travels well outside the card panel, so the panel must clip it. Without this it
-// spends most of its cycle over the headline instead of the card: measured at 426px of travel across
-// the text column on a 1024px viewport before it was fixed.
-test('card of the day: the foil sweep is clipped to the card panel', () => {
+// The whole point of the burst is that it is the CARD's colour, not a fixed brand colour. If someone
+// swaps the tint for a hardcoded hex, every one of the 277 cards silently gets the same slide again.
+test('card of the day: the burst is drawn in the card tint, with a fallback', () => {
   const css = readSection(FILES.src, 'style');
-  const rule = css.match(/\.cotdart\s*\{([^}]*)\}/);
-  assert.ok(rule, '.cotdart has its own rule');
-  assert.match(rule[1], /overflow\s*:\s*hidden/, '.cotdart clips, so the sweep cannot reach .featbody');
+  const rule = css.match(/\.cotdhud::before\s*\{([\s\S]*?)\}/);
+  assert.ok(rule, '.cotdhud::before exists');
+  assert.match(rule[1], /var\(--cotd-t\)/, 'the rays use the per-card tint');
+  assert.match(css, /@supports not \(background-image:repeating-conic-gradient/,
+    'a conic-gradient fallback is declared for old WebViews');
+  // The tint itself has to reach the element, or the fallback colour is all anyone ever sees.
+  const logic = readSection(FILES.src, 'logic');
+  assert.match(logic, /--cotd-tint:/, 'the renderer puts the tint on the slide');
+  assert.match(logic, /function featCotdTint/, 'the tint is derived from the card');
 });

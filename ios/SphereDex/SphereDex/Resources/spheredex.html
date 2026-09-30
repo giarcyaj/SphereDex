@@ -931,10 +931,11 @@
   /* Capped on both axes. aspect-ratio:1 on a percentage width computes to roughly 500px tall at
      desktop widths against a 240px slide: the carousel clips it, so it looked right while painting a
      half megapixel gradient inside an already animating track. */
+  /* The core bloom directly behind the card, in the card's own colour. Capped on both axes: a
+     percentage width with aspect-ratio computed to roughly 500px tall against a 240px slide. */
   .cotdaura { position:absolute; right:2%; top:50%; width:46%; max-width:300px; height:200%;
-    max-height:300px; transform:translateY(-50%);
-    background:radial-gradient(circle, rgba(55,200,106,.30), rgba(55,200,106,.09) 46%, transparent 68%);
-    pointer-events:none; }
+    max-height:300px; transform:translateY(-50%); opacity:.5; pointer-events:none;
+    background:radial-gradient(circle, var(--cotd-t) 0%, transparent 62%); }
   .featslide.cotd .featbadge { background:linear-gradient(180deg, rgba(255,176,32,.34), rgba(255,176,32,.15));
     border-color:rgba(255,176,32,.62); color:#ffdb93; }
   .featslide.cotd .feattitle { -webkit-line-clamp:2; font-size:.92rem; }
@@ -946,117 +947,58 @@
     text-transform:uppercase; color:rgba(255,255,255,.62); }
   /* The rising line under the figure. Pure geometry, no data points to plot: there are only two
      readings (yesterday and today), so an honest sparkline would be a straight line anyway. */
-  .cotdspark { display:block; width:86px; height:14px; margin:1px 0 1px; }
-  .cotdspark svg { display:block; width:100%; height:100%; overflow:visible; }
-  .cotdspark path { fill:none; stroke:#5cf08d; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
-    filter:drop-shadow(0 0 5px rgba(55,200,106,.75)); }
-  .cotdspark circle { fill:#bdffd6; filter:drop-shadow(0 0 5px rgba(92,240,141,.9)); }
   .cotdsub { display:block; max-width:100%; font-size:.67rem; color:rgba(255,255,255,.76);
     font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cotdart .featart-img { border:1.5px solid rgba(255,176,32,.5);
     box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 14px 30px rgba(0,0,0,.6), 0 0 34px rgba(55,200,106,.26); }
   /* Foil sweep across the art panel. One pass every few seconds, the same idea as a card catching the
      light, and it is the only motion on the slide. */
-  /* overflow:hidden is load bearing. Without it the sweep below, which travels from -130% to +130%
-     of this panel's width, spends most of its cycle over .featbody: measured at 426px of travel across
-     the text column on a 1024px viewport. The clip keeps it on the card, which is the whole idea. */
-  .cotdart { overflow:hidden; }
-  .cotdart::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:8px;
-    background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.20) 49%, transparent 58%);
-    transform:translateX(-130%); }
-  .featslide.cotd.on .cotdart::after { animation:cotdfoil 4.2s ease-in-out .6s infinite; }
-  @keyframes cotdfoil { 0% { transform:translateX(-130%); } 55%, 100% { transform:translateX(130%); } }
-  @media (min-width:760px) { .cotdfig b { font-size:2.3rem; } .cotdspark { width:104px; height:16px; } }
-  @media (prefers-reduced-motion:reduce) { .featslide.cotd.on .cotdart::after { animation:none; } }
-  /* ---- Card of the day: the scanner bay -----------------------------------------------------------
-     The slide reads as an instrument rig with the card mounted in it: a tinted hairline frame with
-     corner brackets and a power rail, a divider on the art panel's edge with a tick scale, a baseline
-     ruler, a readout lattice, and one slow scan sweep down the bay behind the card.
-     EVERY mark is var(--cotd-tint), the card's own element colour, so a Fire card is a hot orange rig
-     and an Ice card a cold blue console. The colour is carried by GEOMETRY, not by a wash: a tinted
-     wash behind the card is exactly the generic gradient this was meant to avoid.
-     Nothing here uses conic-gradient, mask, backdrop-filter, color-mix or any filter, so there is
-     nothing to fall back from on the old WebViews this app still supports. */
+  @media (min-width:760px) { .cotdfig b { font-size:2.3rem; } }
+  /* ---- Card of the day: the burst ----------------------------------------------------------------
+     Light radiating from behind the card, drawn in the card's OWN colour (--cotd-tint, from the same
+     artTint source the card tiles use), so a Fire card throws amber and an Ice card throws pale blue.
+     Two spoke sets at different frequencies and start angles beat against each other, which is what
+     gives the swirl rather than a flat starburst.
+     The burst turns, slowly. Nothing else on the slide moves: there is no scan sweep and no foil
+     shimmer, both of which were removed by request. */
   .featslide.cotd { --cotd-t: var(--cotd-tint, #12e3f5); }
-  /* Readout ground: a dark left weighted scrim over the blurred art, so white text always has a plain
-     field under it no matter what the card's own artwork looks like. */
-  .cotdhud { position:absolute; inset:0; pointer-events:none;
-    background-image:linear-gradient(90deg, rgba(3,11,10,.40), rgba(3,11,10,.20) 34%, rgba(3,11,10,0) 58%); }
-  /* The lattice. One box, one alpha, so no colour maths is needed on the hex tint. Layers are listed
-     top first. Layer 1 knocks the grid back over the text column; layer 4 is opaque there, which
-     removes the dense scanlines from the text entirely and halves them inside the bay. That is how two
-     strengths come out of a single opacity without color-mix. */
-  .cotdhud::before { content:""; position:absolute; inset:0; opacity:.2;
+  /* Clips the spinning square below to the slide. Without it the square bleeds sideways over the
+     neighbouring slide in the flex track, which shows during a carousel transition. */
+  .cotdhud { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  /* The rays sit on a SQUARE centred on the burst origin, not on the slide sized box, because rotating
+     a rectangle swings its corners through the frame. Deliberately bounded rather than large enough to
+     reach the far corner: the falloff below has already taken the rays to nothing well before the left
+     edge, so a bigger square would buy nothing and cost real paint on a phone.
+     Rotation is transform only, so after the first raster the compositor does the work and no pixel in
+     the slide is repainted. */
+  .cotdhud::before { content:""; position:absolute; left:72%; top:50%;
+    width:440px; height:440px; margin:-220px 0 0 -220px; opacity:.5;
     background-image:
-      linear-gradient(90deg, rgba(5,13,12,.68) 0, rgba(5,13,12,.68) 34%, rgba(5,13,12,0) 62%),
-      repeating-linear-gradient(90deg, var(--cotd-t) 0, var(--cotd-t) 1px, transparent 1px, transparent 26px),
-      repeating-linear-gradient(180deg, var(--cotd-t) 0, var(--cotd-t) 1px, transparent 1px, transparent 26px),
-      linear-gradient(90deg, #050d0c 0, #050d0c 46%, rgba(5,13,12,.5) 62%),
-      repeating-linear-gradient(180deg, var(--cotd-t) 0, var(--cotd-t) 1px, transparent 1px, transparent 6px); }
-  /* The frame. FOURTEEN layers, and the three lists below are one table read down the page: layer N's
-     image, size and position must stay on the same row. tools/test_carousel.cjs counts them and fails
-     the build if they ever drift, because a miscounted list draws a silently wrong graphic rather than
-     erroring. The top edge stops at the divider on purpose: the readout column is a closed box and the
-     bay is left open at the top, which is where .featdots sits. */
-  .cotdhud::after { content:""; position:absolute; inset:8px; opacity:.55;
+      repeating-conic-gradient(from 5deg, var(--cotd-t) 0deg 1.6deg, transparent 1.6deg 7.5deg),
+      repeating-conic-gradient(from 19deg, var(--cotd-t) 0deg 3.4deg, transparent 3.4deg 17deg); }
+  /* One minute a turn. At this size that is a few pixels a second at the rim: present when you look at
+     it, never the thing moving in the corner of your eye while you read the price. */
+  .featslide.cotd.on .cotdhud::before { animation:cotdspin 60s linear infinite; will-change:transform; }
+  @keyframes cotdspin { to { transform:rotate(360deg); } }
+  /* Falloff and legibility scrim, both STILL. ::after paints above ::before, so these sit over the
+     spinning rays: the copy keeps a plain dark field under it however bright the card's colour is, and
+     the rays fade out towards the edges instead of ending on a hard square boundary. */
+  .cotdhud::after { content:""; position:absolute; inset:0;
     background-image:
-      linear-gradient(var(--cotd-t),var(--cotd-t)), linear-gradient(var(--cotd-t),var(--cotd-t)),
-      linear-gradient(var(--cotd-t),var(--cotd-t)), linear-gradient(var(--cotd-t),var(--cotd-t)),
-      linear-gradient(var(--cotd-t),var(--cotd-t)), linear-gradient(var(--cotd-t),var(--cotd-t)),
-      linear-gradient(180deg, transparent, var(--cotd-t) 18%, var(--cotd-t) 82%, transparent),
-      linear-gradient(var(--cotd-t),var(--cotd-t)), linear-gradient(var(--cotd-t),var(--cotd-t)),
-      linear-gradient(var(--cotd-t),var(--cotd-t)), linear-gradient(var(--cotd-t),var(--cotd-t)),
-      linear-gradient(var(--cotd-t),var(--cotd-t)),
-      repeating-linear-gradient(180deg, var(--cotd-t) 0, var(--cotd-t) 1px, transparent 1px, transparent 10px),
-      repeating-linear-gradient(90deg, var(--cotd-t) 0, var(--cotd-t) 1px, transparent 1px, transparent 10px);
-    background-size:
-      24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px,
-      3px 100%,
-      1px 100%, 100% 1px, 1px 100%, 56% 1px,
-      1px 100%, 5px 100%, 100% 5px;
-    background-position:
-      left top, left top, left bottom, left bottom, right bottom, right bottom,
-      left center,
-      left top, left bottom, right top, left top,
-      56% top, 56% top, left bottom;
-    background-repeat:no-repeat; }
-  /* The sweep. Its box IS the bay and it clips, so the bar cannot reach the text however far it
-     travels. Full height with the line at its top edge, so one set of percentage keyframes works at
-     both 200px and 240px. Only the live slide animates. */
-  .cotdscan { position:absolute; top:9px; bottom:9px; left:56%; right:9px; overflow:hidden; pointer-events:none; }
-  .cotdscan::before { content:""; position:absolute; left:0; right:0; top:0; height:100%; opacity:.5;
-    background-image:linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--cotd-t) 86%, var(--cotd-t) 100%);
-    background-size:100% 36px; background-position:left top; background-repeat:no-repeat;
-    transform:translateY(-26%); }
-  .featslide.cotd.on .cotdscan::before { animation:cotdsweep 6.4s cubic-bezier(.45,0,.55,1) 1.1s infinite; }
-  @keyframes cotdsweep {
-    0% { transform:translateY(-26%); opacity:0; }
-    14% { opacity:.5; }
-    84% { opacity:.45; }
-    100% { transform:translateY(100%); opacity:0; } }
-  @media (min-width:760px) { .cotdhud::after { inset:10px; } .cotdscan { top:11px; bottom:11px; } }
-  /* The bay anchors to the RIGHT edge only once .featart has actually hit its 340px cap, which happens
-     at 44% of the width minus 16px = 340, i.e. 809.1px. Below that the panel is still 44% wide, so its
-     left edge is exactly 56% of the slide and the base rules above are already correct. Anchoring at
-     760px instead, as the original draft did, put the divider up to 13px left of the card in the
-     760 to 809 band, where it reads as a rule floating in open space. */
-  @media (min-width:810px) {
-    .cotdhud::after {
-      background-size:
-        24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px,
-        3px 100%,
-        1px 100%, 100% 1px, 1px 100%, calc(100% - 346px) 1px,
-        1px 100%, 5px 100%, 100% 5px;
-      background-position:
-        left top, left top, left bottom, left bottom, right bottom, right bottom,
-        left center,
-        left top, left bottom, right top, left top,
-        right 346px top, right 346px top, left bottom; }
-    .cotdscan { left:auto; right:11px; width:345px; }
+      linear-gradient(90deg, rgba(5,9,13,.78), rgba(5,9,13,.42) 40%, rgba(5,9,13,0) 66%),
+      radial-gradient(125% 135% at 72% 50%, rgba(6,10,14,0) 0%, rgba(6,10,14,.5) 44%, rgba(6,10,14,.93) 78%); }
+  @media (min-width:760px) {
+    .cotdhud::before { width:760px; height:760px; margin:-380px 0 0 -380px; }
   }
-  /* Parked as a still tinted glow at the top of the bay, so it still reads as lit rather than dead. */
+  /* Ancient WebViews without conic-gradient get a still bloom instead of spokes. The whole declaration
+     is replaced rather than added to, because one unsupported value in a list invalidates the entire
+     background-image at parse time. */
+  @supports not (background-image:repeating-conic-gradient(from 0deg, red 0deg 1deg, blue 1deg 2deg)) {
+    .cotdhud::before { background-image:radial-gradient(circle, var(--cotd-t) 0%, transparent 70%); }
+    .featslide.cotd.on .cotdhud::before { animation:none; }
+  }
   @media (prefers-reduced-motion:reduce) {
-    .featslide.cotd.on .cotdscan::before { animation:none; transform:none; opacity:.28; }
+    .featslide.cotd.on .cotdhud::before { animation:none; }
   }
   /* ==== FEATURED CAROUSEL END (styles) ==== */
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.68rem; }
@@ -9149,17 +9091,16 @@ label.acctsetrow { align-items:center; }
       if(s.kind==="cotd" && s.cotd){
         var cd=s.cotd, cid=esc(cd.id||"");
         var pctTxt="+"+(Math.abs(+cd.pct)||0).toFixed(1)+"%";
-        var moved=(+cd.prev>0 && +cd.cur>0) ? money(cd.prev)+" \u2192 "+money(cd.cur)+" \u00b7 "+cd.basis : cd.basis;
+        var moved=(+cd.prev>0 && +cd.cur>0) ? money(cd.cur)+" from "+money(cd.prev) : cd.basis;
         var cbg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
         var tintStyle=' style="--cotd-tint:'+(cd.tint||"var(--c-Colorless)")+';--cotd-tint2:'+(cd.tint2||cd.tint||"var(--c-Colorless)")+'"';
         return '<button class="featslide cotd'+(on?" on":"")+'" type="button" data-i="'+i+'" data-mover="'+cid+'"'+tintStyle+(on?"":' tabindex="-1" aria-hidden="true"')+'>'+
-          cbg+'<span class="cotdaura"></span><span class="cotdhud" aria-hidden="true"></span><span class="cotdscan" aria-hidden="true"></span>'+
+          cbg+'<span class="cotdaura"></span><span class="cotdhud" aria-hidden="true"></span>'+
           '<span class="featart featart--card cotdart"><img class="featart-img" src="'+esc(cd.art)+'" alt="" loading="lazy" decoding="async"></span>'+
           '<span class="featbody">'+
             '<span class="featbadge">'+icon("chart")+esc(s.badge)+'</span>'+
             '<span class="feattitle">'+esc(s.title)+'</span>'+
             '<span class="cotdfig"><b>'+esc(pctTxt)+'</b><i>today</i></span>'+
-            '<span class="cotdspark" aria-hidden="true"><svg viewBox="0 0 86 14" preserveAspectRatio="none"><path d="M1 12.5 L26 9 L48 10.5 L84 1.5"/><circle cx="84" cy="1.5" r="2.4"/></svg></span>'+
             '<span class="cotdsub">'+esc(moved)+'</span>'+
           '</span></button>';
       }
