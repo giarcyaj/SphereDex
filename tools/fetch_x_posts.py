@@ -35,7 +35,12 @@ from pathlib import Path
 from typing import Callable
 
 API = "https://api.x.com/2"
-USERNAME = "PalworldOCG_EN"
+# Both official accounts. The Japanese one posts reveals and countdowns most days, usually ahead
+# of the English account, and its posts are in Japanese: the app shows each one credited to its
+# own handle so the reader can see which is which. USERNAME stays the default for every helper
+# signature below, so single account callers and the tests are unchanged.
+USERNAMES = ["PalworldOCG_EN", "PalworldOCG"]
+USERNAME = USERNAMES[0]
 TITLE_MAX = 120
 SUMMARY_MAX = 300
 TCO = re.compile(r"https?://t\.co/\S+")
@@ -141,7 +146,47 @@ def fetch_rows(token: str, user_id: str = "", max_results: int = 10,
     payload = get(f"{API}/users/{uid}/tweets?{query}", token)
     if "data" not in payload and payload.get("errors"):
         raise ValueError(f"X API error: {api_error(payload)}")
-    return rows_from_payload(payload, username)
+    return tidy_rows(rows_from_payload(payload, username))
+
+
+# A post is worth showing when it says something on its own. Measured against a real two account
+# fetch: link only follow ups ("product details here") carry no image and a 7 to 19 character summary,
+# while every genuine post carries an image and 129 to 295. Multi part posts also lead with a
+# decorative line, so a post whose title is punctuation or a lone symbol keeps its art and borrows the
+# first real line of its own summary rather than showing up as a slash.
+FRAGMENT_TITLE = re.compile(r"^[\W_\s]*$", re.UNICODE)
+LINK_ONLY_MIN = 40
+
+
+def first_text_line(summary: str) -> str:
+    """The first line of a post body that is actual prose rather than a divider or a bare link."""
+    for line in str(summary or "").splitlines():
+        line = TCO.sub("", line).strip()
+        if len(line) >= 4 and not FRAGMENT_TITLE.match(line):
+            return line[:TITLE_MAX]
+    return ""
+
+
+def worth_showing(row: dict) -> bool:
+    """Drop the link only half of a split announcement: no art and nothing to read."""
+    if row.get("image"):
+        return True
+    return len(str(row.get("summary") or "").strip()) >= LINK_ONLY_MIN
+
+
+def tidy_rows(rows: list[dict]) -> list[dict]:
+    out = []
+    for row in rows:
+        if not worth_showing(row):
+            continue
+        title = str(row.get("title") or "").strip()
+        if not title or FRAGMENT_TITLE.match(title):
+            better = first_text_line(row.get("summary", ""))
+            if not better:
+                continue                      # nothing readable anywhere in it
+            row = {**row, "title": better}
+        out.append(row)
+    return out
 
 
 def api_error(data: dict) -> str:
@@ -157,7 +202,7 @@ def stage_session(rows: list[dict], root: Path, stamp: str | None = None) -> Pat
     (session / "files").mkdir(parents=True, exist_ok=True)
     (session.with_suffix(".json")).write_text(json.dumps({
         "session_id": session.name,
-        "instruction": f"Latest @{USERNAME} posts from the official X API v2",
+        "instruction": "Latest " + ", ".join("@" + u for u in USERNAMES) + " posts from the official X API v2",
         "source": "x-api",
     }, ensure_ascii=False), encoding="utf-8")
     (session / "files" / "scrape_results.json").write_text(
@@ -181,28 +226,42 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.offline:
-        rows = rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8")))
+        rows = tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8"))))
     else:
         token = os.environ.get("X_BEARER_TOKEN", "").strip()
         if not token:
             print("x-api: X_BEARER_TOKEN is not set - skipping X posts (not an error)")
             write_github_output(args.github_output, "skipped", 0)
             return 0
-        try:
-            rows = fetch_rows(token, os.environ.get("X_USER_ID", "").strip(), args.max_results)
-        except urllib.error.HTTPError as exc:
-            # The body is the API's JSON error; it never echoes the bearer token.
+        # One account failing must not look like a complete set: the backend treats an "ok" status as
+        # permission to delete every stored X post, so a partial fetch reports "partial" instead and
+        # the workflow leaves the stored posts alone.
+        rows, failed = [], []
+        pinned_id = os.environ.get("X_USER_ID", "").strip()
+        for i, handle in enumerate(USERNAMES):
             try:
-                detail = api_error(json.loads(exc.read().decode("utf-8")))
-            except (OSError, ValueError):
-                detail = exc.reason
-            print(f"x-api fetch failed: HTTP {exc.code} {detail}", file=sys.stderr)
+                # X_USER_ID, when set, pins only the first handle; the rest resolve by name.
+                rows.extend(fetch_rows(token, pinned_id if i == 0 else "", args.max_results, handle))
+            except urllib.error.HTTPError as exc:
+                # The body is the API's JSON error; it never echoes the bearer token.
+                try:
+                    detail = api_error(json.loads(exc.read().decode("utf-8")))
+                except (OSError, ValueError):
+                    detail = exc.reason
+                print(f"x-api fetch failed for @{handle}: HTTP {exc.code} {detail}", file=sys.stderr)
+                failed.append(handle)
+            except (OSError, ValueError) as exc:
+                print(f"x-api fetch failed for @{handle}: {exc}", file=sys.stderr)
+                failed.append(handle)
+        if len(failed) == len(USERNAMES):
             write_github_output(args.github_output, "failed", 0)
             return 1
-        except (OSError, ValueError) as exc:
-            print(f"x-api fetch failed: {exc}", file=sys.stderr)
-            write_github_output(args.github_output, "failed", 0)
-            return 1
+        if failed:
+            session = stage_session(rows, args.root)
+            print(f"x-api: staged {len(rows)} post(s) from "
+                  f"{len(USERNAMES) - len(failed)} of {len(USERNAMES)} accounts -> {session}")
+            write_github_output(args.github_output, "partial", len(rows))
+            return 0
     session = stage_session(rows, args.root)
     print(f"x-api: staged {len(rows)} post(s) -> {session}")
     write_github_output(args.github_output, "ok", len(rows))
