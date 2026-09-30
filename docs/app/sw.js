@@ -10,12 +10,16 @@
 // to be bumped by hand, which is what left it on one literal name for the app's whole life.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 const BUILD = '2.1-c5f30328';
 =======
 const BUILD = '2.1-bbbd06e7';
 >>>>>>> main
 =======
 const BUILD = '2.1-a94f17a7';
+>>>>>>> main
+=======
+const BUILD = '2.1-09d48b7a';
 >>>>>>> main
 const SHELL = 'spheredex-shell-' + BUILD;
 const ASSETS = 'spheredex-assets-v1';
