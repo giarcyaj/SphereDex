@@ -2376,6 +2376,7 @@ label.acctsetrow { align-items:center; }
         <select class="sortsel" id="deckSel" aria-label="Active deck"></select>
         <button class="tbtn" id="deckNew" data-icon="plus">New</button>
         <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
+        <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
@@ -7097,7 +7098,7 @@ label.acctsetrow { align-items:center; }
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck();
-    ["deckSel","deckRename","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
@@ -7490,6 +7491,18 @@ label.acctsetrow { align-items:center; }
     $("deckNew").onclick=function(){ openAsk({title:"New deck", value:"Deck "+(decks().length+1), okText:"Create", onOk:function(n){ newDeck(); activeDeck().name=n; save(); renderDecks(); }}); };
     $("deckRename").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Rename deck", value:d.name, okText:"Rename", onOk:function(r){ d.name=r; save(); renderDecks(); }}); };
     $("deckDelete").onclick=function(){ var d=activeDeck(); if(!d)return; openAsk({title:"Delete this deck?", message:"“"+d.name+"” will be removed.", confirmOnly:true, danger:true, okText:"Delete", onOk:function(){ STATE.decks=decks().filter(function(x){return x.id!==d.id;}); STATE.activeDeck=(STATE.decks[0]||{}).id; save(); renderDecks(); }}); };
+    // Duplicate: a new deck with the same cards and copy counts, named "<name> duplicate" (numbered if taken),
+    // appended after the others and opened. The original is left as it was.
+    var ddup=$("deckDupe"); if(ddup) ddup.onclick=function(){
+      var d=activeDeck(); if(!d) return;
+      var base=d.name+" duplicate", name=base, n=2;
+      function taken(x){ return decks().some(function(k){ return k.name===x; }); }
+      while(taken(name)){ name=base+" "+n; n++; }
+      var copy=JSON.parse(JSON.stringify(d)), t=Date.now();
+      while(decks().some(function(k){ return k.id==="d"+t; })) t++;   // two quick taps must not share an id
+      copy.id="d"+t; copy.name=name;
+      decks().push(copy); STATE.activeDeck=copy.id; save(); renderDecks(); toast("Deck duplicated");
+    };
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
