@@ -382,8 +382,14 @@
   .countline { font-size:.8rem; color:var(--ink-faint); margin:0 0 12px; font-weight:600; }
 
   /* Modal */
+  /* z-index 72 is deliberate and constrained on both sides. It MUST beat .navmenu (70), the floating
+     bottom nav: at 50 the nav painted on top of an open card sheet and, because .navmenu .navbar takes
+     pointer events, it also swallowed taps meant for the sheet, so the buttons along the bottom of a tall
+     card sheet (Save among them) could not be pressed at all. It must stay BELOW .toast and .chooser
+     (both 75), which are meant to appear over an open sheet. Anything added in the 50 to 75 band has to
+     be checked against this. */
   .scrim { position:fixed; inset:0; background:color-mix(in srgb,#0a0f14 64%,transparent); backdrop-filter:blur(4px);
-    display:none; place-items:center; z-index:50;
+    display:none; place-items:center; z-index:72;
     padding-top: calc(16px + var(--sat, env(safe-area-inset-top, 0px)));
     padding-bottom: calc(16px + max(var(--sab, env(safe-area-inset-bottom, 0px)), var(--kb, 0px)));
     padding-left: calc(16px + var(--sal, env(safe-area-inset-left, 0px)));
