@@ -28,6 +28,13 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_FILE: SphereDex/Info.plist
         GENERATE_INFOPLIST_FILE: NO
+        # APNs entitlement. This MUST be declared HERE, not only in the committed .xcodeproj:
+        # ci_scripts/ci_post_clone.sh regenerates the project from THIS file on every Xcode Cloud
+        # build, so any setting that exists only in the checked in pbxproj is discarded before the
+        # archive. Leaving it out shipped an app with no aps-environment, which made
+        # registerForRemoteNotifications() fail into didFailToRegisterForRemoteNotificationsWithError
+        # and left every iOS install unable to register for push. tools/test_ios_project.py guards it.
+        CODE_SIGN_ENTITLEMENTS: SphereDex/SphereDex.entitlements
         # Version source of truth for Xcode Cloud (ci_post_clone.sh regenerates the project from this).
         # Keep in step with android/src/paldeck.html APP_VERSION and app/build.gradle.kts on each release.
         MARKETING_VERSION: "2.1"

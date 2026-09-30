@@ -9,6 +9,11 @@ name: Tests
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
+#      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
+#      SphereDex.xcodeproj from project.yml on every archive, so a build setting that lives only
+#      in the committed .xcodeproj never reaches a real build. That is how the APNs entitlement
+#      went missing and iOS push registration died silently for 18 days; this guard fails the
+#      push for any such setting, not just that one.
 #   5. A rebuild + git diff so a src/ edit without regenerated WEB/Android/iOS bundles
 #      fails the push instead of shipping stale bundles.
 #   6. A plain grep fails fast (before Node is even installed, independent of the .cjs suites)
