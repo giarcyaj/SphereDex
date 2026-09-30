@@ -638,33 +638,54 @@ test('an upcoming PalDex tile names its set once', () => {
   assert.equal(fn.includes('soon || "not printed yet"'), false);
 });
 
-test('2.1 is this build, and a store record of 2.0 is not an update', () => {
-  assert.match(source, /var APP_VERSION = "2\.1";/);
+test('every version spot agrees, and this build has release highlights', () => {
+  // Deliberately derives the version instead of pinning it. The old form asserted "2.1" in six places,
+  // so every release broke it and had to hand edit it, which is precisely the step that gets skipped.
+  // What is worth guarding is not the NUMBER, it is that the four places never drift apart: the app
+  // footer, Android, the XcodeGen spec Xcode Cloud actually builds from, and the committed pbxproj.
+  const m = source.match(/var APP_VERSION = "([^"]+)";/);
+  assert.ok(m, 'APP_VERSION is in the source');
+  const version = m[1];
+
+  const gradle = fs.readFileSync(path.join(__dirname, '../app/build.gradle.kts'), 'utf8');
+  const gm = gradle.match(/versionName = "([^"]+)"/);
+  assert.ok(gm, 'versionName is in build.gradle.kts');
+  assert.equal(gm[1], version, `Android versionName ${gm[1]} does not match APP_VERSION ${version}`);
+  assert.match(gradle, /versionCode = System\.getenv\("VERSION_CODE"\)\?\.toIntOrNull\(\) \?: \d+/);
+
+  const spec = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/project.yml'), 'utf8');
+  const sm = spec.match(/MARKETING_VERSION: "([^"]+)"/);
+  const sb = spec.match(/CURRENT_PROJECT_VERSION: "([^"]+)"/);
+  assert.ok(sm && sb, 'project.yml carries both iOS version fields');
+  assert.equal(sm[1], version, `iOS MARKETING_VERSION ${sm[1]} does not match APP_VERSION ${version}`);
+
+  // project.yml is the one Xcode Cloud builds from; the pbxproj is for local Xcode. They must agree, or
+  // a Simulator build and a store build report different versions.
+  const project = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/SphereDex.xcodeproj/project.pbxproj'), 'utf8');
+  assert.equal((project.match(new RegExp('MARKETING_VERSION = ' + version.replace(/\./g, '\\.') + ';', 'g')) || []).length, 2,
+    `pbxproj MARKETING_VERSION should be ${version} in both configs`);
+  assert.equal((project.match(new RegExp('CURRENT_PROJECT_VERSION = ' + sb[1] + ';', 'g')) || []).length, 2,
+    `pbxproj CURRENT_PROJECT_VERSION should be ${sb[1]} in both configs`);
+
+  // The release needs its three "What's new" lines, or the update headliner shows an empty slide.
   const highlights = source.match(/var RELEASE_HIGHLIGHTS = \{[\s\S]*?\n  \};/);
   assert.ok(highlights, 'RELEASE_HIGHLIGHTS is in the source');
   const box = {};
   vm.createContext(box);
   vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase'].map(appFunction).join('\n'), box);
-  assert.equal(box.RELEASE_HIGHLIGHTS['2.1'].length, 3);
-  assert.match(box.RELEASE_HIGHLIGHTS['2.1'][1], /Match tracker/);
-  assert.ok(box.verNum('2.1') > box.verNum('2.0'));
-  assert.equal(box.verNum('2.0') > box.verNum('2.1'), false);
+  assert.ok(box.RELEASE_HIGHLIGHTS[version], `RELEASE_HIGHLIGHTS has no entry for ${version}`);
+  assert.equal(box.RELEASE_HIGHLIGHTS[version].length, 3, `${version} needs exactly three highlight lines`);
+  for (const line of box.RELEASE_HIGHLIGHTS[version]) {
+    assert.equal(/[-\u2013\u2014]/.test(line), false, `no dashes in user facing copy: ${line}`);
+  }
+
+  // An older store record must never read as an update to install.
+  const older = Object.keys(box.RELEASE_HIGHLIGHTS).filter((v) => box.verNum(v) < box.verNum(version));
+  assert.ok(older.length > 0, 'there is at least one earlier release to compare against');
+  for (const v of older) {
+    assert.equal(box.verNum(v) > box.verNum(version), false, `${v} must not out-rank ${version}`);
+  }
   assert.match(source, /if\(latest && verNum\(latest\) > verNum\(APP_VERSION\)\) offerUpdate\(latest\);/);
-  const ver = box.verNum('2.1');
-  const latest = box.verNum('2.0');
-  const behind = latest > ver;
-  const notes = behind ? ['Old store note'] : box.RELEASE_HIGHLIGHTS['2.1'];
-  assert.equal(behind, false);
-  assert.deepEqual(JSON.parse(JSON.stringify(notes)), JSON.parse(JSON.stringify(box.RELEASE_HIGHLIGHTS['2.1'])));
-  const gradle = fs.readFileSync(path.join(__dirname, '../app/build.gradle.kts'), 'utf8');
-  assert.match(gradle, /versionName = "2\.1"/);
-  assert.match(gradle, /versionCode = System\.getenv\("VERSION_CODE"\)\?\.toIntOrNull\(\) \?: 13/);
-  const spec = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/project.yml'), 'utf8');
-  assert.match(spec, /MARKETING_VERSION: "2\.1"/);
-  assert.match(spec, /CURRENT_PROJECT_VERSION: "17"/);
-  const project = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/SphereDex.xcodeproj/project.pbxproj'), 'utf8');
-  assert.equal((project.match(/MARKETING_VERSION = 2\.1;/g) || []).length, 2);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 17;/g) || []).length, 2);
 });
 
 test('sign-in column forms do not use the 180px flex basis as height', () => {
