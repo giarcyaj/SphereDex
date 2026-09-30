@@ -3177,19 +3177,35 @@ label.acctsetrow { align-items:center; }
   // Global wishlist (its own list, separate from owned collections). Migrate old per-card flags once.
   if (!STATE.wishlist){ STATE.wishlist={};
     STATE.cols.forEach(function(c){ Object.keys(c.own||{}).forEach(function(id){ if(c.own[id]&&c.own[id].wish) STATE.wishlist[id]=true; }); }); }
-  if(!STATE.wishlistAt) STATE.wishlistAt={};
-  (function(){ Object.keys(STATE.wishlist).forEach(function(id){ if(!STATE.wishlistAt[id]){ var at=addedAt(id); STATE.wishlistAt[id]= at||0; }}); })();
-  function isWished(id){ return !!STATE.wishlist[id]; }
-  if(!STATE.wishlistAt) STATE.wishlistAt={};
-  function wishlistAt(id){ return STATE.wishlistAt[id]||0; }
+  // The wishlist, its add dates and favourites sit at the top of the saved state. A cloud copy saved without
+  // wishlist dates made every card tile throw once it was adopted (issue 15: an empty card list on 2.0, bare
+  // name tiles on 2.1), so every state the app takes on comes through here. A missing date falls back to the
+  // day the card was added to the active collection, or 0.
+  function normTop(st){
+    if(!st || typeof st!=="object") return st;
+    if(!st.wishlist || typeof st.wishlist!=="object") st.wishlist={};
+    if(!st.wishlistAt || typeof st.wishlistAt!=="object") st.wishlistAt={};
+    if(!st.fav || typeof st.fav!=="object") st.fav={};
+    var cols=st.cols||[], col=null, i;
+    for(i=0;i<cols.length;i++){ if(cols[i] && cols[i].id===st.active){ col=cols[i]; break; } }
+    if(!col) col=cols[0]||null;
+    Object.keys(st.wishlist).forEach(function(id){
+      if(+st.wishlistAt[id]>0) return;
+      var e=col && col.own ? col.own[id] : null;
+      st.wishlistAt[id]=(e && e.addAt && has(e)) ? +e.addAt : 0;
+    });
+    return st;
+  }
+  normTop(STATE);
+  function isWished(id){ return !!(STATE.wishlist && STATE.wishlist[id]); }
+  function wishlistAt(id){ return (STATE.wishlistAt && +STATE.wishlistAt[id]) || 0; }
   function toggleWish(id){
     if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; }
     else { STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); }
   }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
   // Global favourites (starred standout cards), separate from owning or wishing.
-  if (!STATE.fav) STATE.fav={};
-  function isFav(id){ return !!STATE.fav[id]; }
+  function isFav(id){ return !!(STATE.fav && STATE.fav[id]); }
   function toggleFav(id){ if(STATE.fav[id]) delete STATE.fav[id]; else STATE.fav[id]=true; }
   var wishMode = false, favMode = false, gradedMode = false, collectedMode = false;
   // Collection-page "modes": normal, wishlist, favourites, graded, collected. Only one at a time; all share the same controls.
@@ -10607,6 +10623,8 @@ label.acctsetrow { align-items:center; }
     // pushed the loss straight back up. Union them, this device winning a clash, the same rule as cards.
     out.wishlist=Object.assign({}, remote.wishlist||{}, local.wishlist||{});
     out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
+    out.wishlistAt=Object.assign({}, remote.wishlistAt||{}, local.wishlistAt||{});   // this device's date wins a clash
+    normTop(out);
     var dm={}, dorder=[];
     (remote.decks||[]).concat(local.decks||[]).forEach(function(d){
       if(!d || !d.id) return;
@@ -10624,7 +10642,7 @@ label.acctsetrow { align-items:center; }
     // Keep the copy being replaced. Whatever else goes wrong in a sync, the previous collection is one
     // localStorage key away instead of gone.
     try{ var prev=localStorage.getItem(LS_KEY); if(prev) localStorage.setItem(LS_KEY+"-prepull", prev); }catch(e){}
-    STATE=blob; cleanCols(STATE); AUTH.serverRev=rev; AUTH.dirty=false; AUTH.lastSyncAt=Date.now(); saveAuth(); addBaseline();   // cloud data keeps its own add times
+    STATE=blob; cleanCols(STATE); normTop(STATE); AUTH.serverRev=rev; AUTH.dirty=false; AUTH.lastSyncAt=Date.now(); saveAuth(); addBaseline();   // cloud data keeps its own add times
     try{ localStorage.setItem(LS_KEY, stateJSON()); }catch(e){}
     if(acct && typeof applyAccountSettings==="function") applyAccountSettings(acct);
     own=activeCol().own; buildColSel(); applySettings(); render(); renderQuick();
