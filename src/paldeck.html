@@ -10923,6 +10923,11 @@ label.acctsetrow { align-items:center; }
     WAKE_AT=now;
     try{ if(typeof priceBookGate==="function") priceBookGate(); }catch(e){}
     try{ if(typeof renderNews==="function" && _curPage==="news") renderNews(); }catch(e){}
+    // News was the one thing a wake never refreshed, so the carousel kept whatever it loaded at
+    // boot while every other slide moved on. primeNewsBell refetches, updates the bell and the
+    // release dates, and repaints the carousel only when Home is the visible page. WAKE_GAP caps
+    // this at one edge cached request every 15 minutes.
+    try{ if(typeof primeNewsBell==="function") primeNewsBell(); }catch(e){}
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
