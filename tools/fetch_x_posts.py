@@ -34,6 +34,11 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
+try:                                   # translation is a nicety, never a reason not to fetch
+    import translate_posts
+except ImportError:                    # pragma: no cover
+    translate_posts = None
+
 API = "https://api.x.com/2"
 # Both official accounts. The Japanese one posts reveals and countdowns most days, usually ahead
 # of the English account, and its posts are in Japanese: the app shows each one credited to its
@@ -167,11 +172,21 @@ def first_text_line(summary: str) -> str:
     return ""
 
 
+# The split announcement habit belongs to the Japanese account; the English one posts short complete
+# thoughts like "Tournament results are up." that must not be mistaken for a fragment. So the length
+# test only applies to posts that are actually in Japanese, and English filler stays the backend's job
+# (SOCIAL_SKIP), which is where it already was.
+CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff66-\uff9f]")
+
+
 def worth_showing(row: dict) -> bool:
-    """Drop the link only half of a split announcement: no art and nothing to read."""
+    """Drop the link only half of a split announcement: no art, and nothing to read but a pointer."""
     if row.get("image"):
         return True
-    return len(str(row.get("summary") or "").strip()) >= LINK_ONLY_MIN
+    body = str(row.get("summary") or "").strip()
+    if not CJK.search(str(row.get("title") or "") + body):
+        return True                                   # English: not this filter's problem
+    return len(body) >= LINK_ONLY_MIN
 
 
 def tidy_rows(rows: list[dict]) -> list[dict]:
@@ -187,6 +202,26 @@ def tidy_rows(rows: list[dict]) -> list[dict]:
             row = {**row, "title": better}
         out.append(row)
     return out
+
+
+def translated(rows: list[dict], root: Path) -> list[dict]:
+    """English headlines for the Japanese account, cached between runs.
+
+    Japanese posts are the reason this exists: the app is English and a Japanese headline reads as a
+    bug. Everything here degrades to "publish it in Japanese": no module, no key, no network and a
+    confused model all leave the rows exactly as they arrived.
+    """
+    if translate_posts is None:
+        return rows
+    try:
+        rows, stats = translate_posts.translate_rows(rows, translate_posts.cache_path_for(root))
+    except Exception as exc:                       # never let a nicety break the fetch
+        print(f"x-api: translation skipped ({exc})", file=sys.stderr)
+        return rows
+    if stats["considered"]:
+        print("x-api: translated {translated} headline(s), {cached} from cache, {failed} left in "
+              "the original".format(**stats))
+    return rows
 
 
 def api_error(data: dict) -> str:
@@ -226,7 +261,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.offline:
-        rows = tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8"))))
+        rows = translated(
+            tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8")))),
+            args.root)
     else:
         token = os.environ.get("X_BEARER_TOKEN", "").strip()
         if not token:
@@ -256,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
         if len(failed) == len(USERNAMES):
             write_github_output(args.github_output, "failed", 0)
             return 1
+        rows = translated(rows, args.root)
         if failed:
             session = stage_session(rows, args.root)
             print(f"x-api: staged {len(rows)} post(s) from "

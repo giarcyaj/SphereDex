@@ -37,9 +37,22 @@ jobs:
         continue-on-error: true
         run: python tools/fetch_official_news.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
 
+      # Headline translations, carried between runs. An X post never changes, so its translation
+      # never needs redoing; without this the Japanese posts would be re-translated every run. A cache
+      # miss is not a failure, it just costs one translation call.
+      - name: Restore translation cache
+        uses: actions/cache@v4
+        with:
+          path: stage/sieve/translations.json
+          key: x-translations-${{ github.run_id }}
+          restore-keys: |
+            x-translations-
+
       # x.com's robots.txt is Disallow: /, so Sieve refuses to scrape it; posts come from the
       # official X API v2 instead (pay-per-use, at most 10 posts per run). Needs X_BEARER_TOKEN
       # (optionally X_USER_ID) in Infisical; without it the step skips and the feed still publishes.
+      # XAI_API_KEY, also from Infisical, turns Japanese headlines into English ones. It is
+      # optional in exactly the same way: without it the Japanese posts publish untranslated.
       - name: Fetch X posts (official X API)
         id: scrape_x
         continue-on-error: true
