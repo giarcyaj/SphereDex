@@ -920,6 +920,44 @@
       padding:18px 16px 18px 22px; border-top:0;
       background:linear-gradient(90deg, var(--surface) 0%, var(--surface) 88%, transparent 100%); }
   }
+  /* Card of the day: the biggest riser in the whole catalogue. Built to read as an in game HUD
+     readout, so the gain IS the graphic rather than another line of prose: reward gold on the chip and
+     the card rim, price up green for the figure, the aura and the spark. The whole slide is one tap
+     target that opens the card, via the same data-mover route the movers slide uses. */
+  .featslide.cotd .featbg::after { background:linear-gradient(90deg, rgba(4,13,11,.92), rgba(5,16,13,.72) 52%, rgba(8,24,19,.4)); }
+  /* Green bloom behind the art. Sits under .featart, over .featbg. */
+  .cotdaura { position:absolute; right:2%; top:50%; width:46%; aspect-ratio:1; transform:translateY(-50%);
+    background:radial-gradient(circle, rgba(55,200,106,.40), rgba(55,200,106,.12) 46%, transparent 68%);
+    pointer-events:none; }
+  .featslide.cotd .featbadge { background:linear-gradient(180deg, rgba(255,176,32,.34), rgba(255,176,32,.15));
+    border-color:rgba(255,176,32,.62); color:#ffdb93; }
+  .featslide.cotd .feattitle { -webkit-line-clamp:2; font-size:.92rem; }
+  .cotdfig { display:flex; align-items:baseline; gap:7px; max-width:100%; }
+  .cotdfig b { font-family:var(--font-display); font-weight:850; font-size:1.9rem; line-height:1;
+    letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:#5cf08d;
+    text-shadow:0 0 20px rgba(55,200,106,.5), 0 2px 6px rgba(0,0,0,.65); }
+  .cotdfig i { font-style:normal; font-size:.56rem; font-weight:750; letter-spacing:.15em;
+    text-transform:uppercase; color:rgba(255,255,255,.62); }
+  /* The rising line under the figure. Pure geometry, no data points to plot: there are only two
+     readings (yesterday and today), so an honest sparkline would be a straight line anyway. */
+  .cotdspark { display:block; width:86px; height:14px; margin:1px 0 1px; }
+  .cotdspark svg { display:block; width:100%; height:100%; overflow:visible; }
+  .cotdspark path { fill:none; stroke:#5cf08d; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+    filter:drop-shadow(0 0 5px rgba(55,200,106,.75)); }
+  .cotdspark circle { fill:#bdffd6; filter:drop-shadow(0 0 5px rgba(92,240,141,.9)); }
+  .cotdsub { display:block; max-width:100%; font-size:.67rem; color:rgba(255,255,255,.76);
+    font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cotdart .featart-img { border:1.5px solid rgba(255,176,32,.5);
+    box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 14px 30px rgba(0,0,0,.6), 0 0 34px rgba(55,200,106,.26); }
+  /* Foil sweep across the art panel. One pass every few seconds, the same idea as a card catching the
+     light, and it is the only motion on the slide. */
+  .cotdart::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:8px;
+    background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.20) 49%, transparent 58%);
+    transform:translateX(-130%); }
+  .featslide.cotd.on .cotdart::after { animation:cotdfoil 4.2s ease-in-out .6s infinite; }
+  @keyframes cotdfoil { 0% { transform:translateX(-130%); } 55%, 100% { transform:translateX(130%); } }
+  @media (min-width:760px) { .cotdfig b { font-size:2.3rem; } .cotdspark { width:104px; height:16px; } }
+  @media (prefers-reduced-motion:reduce) { .featslide.cotd.on .cotdart::after { animation:none; } }
   /* ==== FEATURED CAROUSEL END (styles) ==== */
   .pallegend { display:flex; gap:13px; flex-wrap:wrap; margin:0 0 13px; color:var(--ink-faint); font-size:.68rem; }
   .pallegend i { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:-1px; }
@@ -8763,7 +8801,29 @@ label.acctsetrow { align-items:center; }
       var oArt = official.image || featArt(newsSet);
       out.push({ kind:"news", badge:"Latest news", title:decodeEntities(official.title||"What\u2019s new"), meta:(dayLabel(official.date)||"Latest update")+" \u00b7 Official site", art:oArt, set:newsSet, image:official.image||"", link:official.link||OFFICIAL_NEWS });
     }
-    // 2 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
+    // 2 - card of the day: the biggest riser across the WHOLE catalogue.
+    // Deliberately not scoped to the collection and not hidden in collector mode, unlike the movers
+    // slide below, so a brand new install with nothing owned still gets a reason to come back daily.
+    // The source is the free one: PRICEBOOK and PRICEPREV are eBay live listings, refreshed nightly for
+    // every market at no cost, which is also what makes this honest to label "live listings". When this
+    // install has no day over day baseline yet (a first run, or a market that has only been read once)
+    // it falls back to Palworld Prices' weekly movers, and says so rather than implying it is today's.
+    (function(){
+      var pick=null;
+      try{
+        var m=(typeof moverCard==="function") ? moverCard("up","all") : null;
+        if(m && m.c) pick={ id:m.c.id, name:m.c.name, art:imgSrc(m.c), pct:m.pct, prev:m.prev, cur:m.cur, basis:"live listings" };
+      }catch(e){}
+      if(!pick){
+        try{
+          var p=(typeof pwPick==="function") ? pwPick("up") : null;
+          if(p && p.c) pick={ id:p.c.id, name:p.c.name, art:imgSrc(p.c), pct:Math.abs(+p.m.pct)||0, prev:0, cur:0, basis:"Palworld Prices, this week" };
+        }catch(e){}
+      }
+      if(!pick || !(pick.pct>0)) return;
+      out.push({ kind:"cotd", badge:"Card of the day", title:String(pick.name).split(" \u2013 ")[0], cotd:pick, art:pick.art });
+    })();
+    // 3 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
     (function(){
       var behind=typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION);
       var ver=behind ? _latestAppVersion : (typeof APP_VERSION==="string" ? APP_VERSION : "");
@@ -8786,7 +8846,7 @@ label.acctsetrow { align-items:center; }
       if(behind) out.push(Object.assign({kind:"update"}, slide));
       else out.push(Object.assign({kind:"features"}, slide));
     })();
-    // 3 - movers among cards this collection owns. Hidden entirely when prices are off.
+    // 4 - movers among cards this collection owns. Hidden entirely when prices are off.
     (function(){
       if(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector") return;
       var art = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
@@ -8972,6 +9032,24 @@ label.acctsetrow { align-items:center; }
         function isCardArt(s){ var u=String(s.art||s.image||"").toLowerCase(); return s.kind==="reveal" || s.kind==="ximage" || s.kind==="movers" || /cardlist|pbs\.twimg\.com/i.test(u) || /card reveal|\breveal\b|jormuntide|savage lava/i.test(String(s.title||"")); }
     var cells=slides.map(function(s,i){
       var on=(i===_featIndex);
+      // Card of the day renders its own body and art: a gold chip, the card name, the gain as the
+      // hero figure with a rising spark under it, and the two prices it moved between.
+      if(s.kind==="cotd" && s.cotd){
+        var cd=s.cotd, cid=esc(cd.id||"");
+        var pctTxt="+"+(Math.abs(+cd.pct)||0).toFixed(1)+"%";
+        var moved=(+cd.prev>0 && +cd.cur>0) ? money(cd.prev)+" \u2192 "+money(cd.cur)+" \u00b7 "+cd.basis : cd.basis;
+        var cbg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
+        return '<button class="featslide cotd'+(on?" on":"")+'" type="button" data-i="'+i+'" data-mover="'+cid+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+'>'+
+          cbg+'<span class="cotdaura"></span>'+
+          '<span class="featart featart--card cotdart"><img class="featart-img" src="'+esc(cd.art)+'" alt="" loading="lazy" decoding="async"></span>'+
+          '<span class="featbody">'+
+            '<span class="featbadge">'+icon("chart")+esc(s.badge)+'</span>'+
+            '<span class="feattitle">'+esc(s.title)+'</span>'+
+            '<span class="cotdfig"><b>'+esc(pctTxt)+'</b><i>today</i></span>'+
+            '<span class="cotdspark" aria-hidden="true"><svg viewBox="0 0 86 14" preserveAspectRatio="none"><path d="M1 12.5 L26 9 L48 10.5 L84 1.5"/><circle cx="84" cy="1.5" r="2.4"/></svg></span>'+
+            '<span class="cotdsub">'+esc(moved)+'</span>'+
+          '</span></button>';
+      }
       var movers=(s.kind==="movers" && s.movers && s.movers.length) ? s.movers : null;
       var bg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
       var art="";
