@@ -516,3 +516,63 @@ test('bind is idempotent: re-render never stacks a second set of listeners', () 
   assert.equal(a.host._listeners.click.length, 1, 'exactly one delegated click listener');
   assert.equal(a.host._listeners.keydown.length, 1, 'exactly one keydown listener');
 });
+
+// The card of the day's instrument frame is fourteen background layers driven by three parallel lists
+// (image, size, position). They are one table read down the page: layer N's image, size and position
+// must stay on the same row. A drifted list does not error, it silently draws the wrong graphic, which
+// is exactly the kind of thing nobody notices until a user screenshots it. So count them.
+test('card of the day: the HUD frame background lists stay in lockstep', () => {
+  const css = readSection(FILES.src, 'style');
+
+  // Split on commas at paren depth 0, so gradients keep their own argument lists intact.
+  const topLevelParts = (value) => {
+    const parts = [];
+    let depth = 0, current = '';
+    for (const ch of value) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { parts.push(current.trim()); current = ''; continue; }
+      current += ch;
+    }
+    if (current.trim()) parts.push(current.trim());
+    return parts;
+  };
+
+  // Every .cotdhud::after block: the base rule plus each media-query restatement.
+  const blocks = [...css.matchAll(/\.cotdhud::after\s*\{([\s\S]*?)\}/g)].map((m) => m[1]);
+  assert.ok(blocks.length >= 2, 'found the base frame rule and at least one restatement');
+
+  blocks.forEach((block, n) => {
+    const grab = (prop) => {
+      const m = block.match(new RegExp(prop + ':([\s\S]*?);'));
+      return m ? topLevelParts(m[1]) : null;
+    };
+    const size = grab('background-size');
+    const position = grab('background-position');
+    if (!size && !position) return;               // a block that only tweaks inset is fine
+    assert.ok(size && position, `block ${n}: restating one list means restating both`);
+    assert.equal(size.length, position.length,
+      `block ${n}: background-size has ${size.length} layers but background-position has ${position.length}`);
+    const image = grab('background-image');
+    if (image) {
+      assert.equal(image.length, size.length,
+        `block ${n}: background-image has ${image.length} layers but the size/position lists have ${size.length}`);
+    }
+  });
+
+  // The base rule is the one that declares all three, and it is the fourteen-layer table.
+  const base = blocks.find((b) => /background-image:/.test(b));
+  assert.ok(base, 'the base frame rule declares background-image');
+  assert.equal(topLevelParts(base.match(/background-image:([\s\S]*?);/)[1]).length, 14,
+    'the frame is the documented fourteen layers');
+});
+
+// The foil sweep travels well outside the card panel, so the panel must clip it. Without this it
+// spends most of its cycle over the headline instead of the card: measured at 426px of travel across
+// the text column on a 1024px viewport before it was fixed.
+test('card of the day: the foil sweep is clipped to the card panel', () => {
+  const css = readSection(FILES.src, 'style');
+  const rule = css.match(/\.cotdart\s*\{([^}]*)\}/);
+  assert.ok(rule, '.cotdart has its own rule');
+  assert.match(rule[1], /overflow\s*:\s*hidden/, '.cotdart clips, so the sweep cannot reach .featbody');
+});
