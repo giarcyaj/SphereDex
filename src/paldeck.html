@@ -1914,6 +1914,12 @@ label.acctsetrow { align-items:center; }
   .salerow.ro a.lprice{ color:var(--accent-ink); }
   .dsec{ font-family:var(--font-display); font-weight:750; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:20px 0 10px; padding-bottom:6px; border-bottom:1.5px solid var(--line); }
   .salesavg{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; }
+  /* The bottom dock floats over sheets, so the last row of the card sheet keeps clear of it at full scroll. */
+  .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
+  .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
+  .setnav .snnext{ margin-left:auto; text-align:right; }
+  .setnav .snlab{ display:block; font-weight:600; }
+  .setnav .snname{ display:block; font-size:.78rem; color:var(--ink-faint); font-weight:400; margin-top:2px; }
   .pxrange{ font-size:.82rem; color:var(--ink-soft); margin-top:8px; line-height:1.45; overflow-wrap:anywhere; }
   .gradeguide{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
   .ggnote{ grid-column:1/-1; font-size:.8rem; color:var(--ink-faint); margin-bottom:4px; }
@@ -4390,6 +4396,19 @@ label.acctsetrow { align-items:center; }
     return '<div class="promonote"><span class="pnh">'+icon('ticket')+' How to get it</span><span class="pnt">'+esc(txt)+'</span></div>';
   }
   var detailGen=0;
+  // The catalog cards either side of c in its own set, in the same Card no. order the grid sorts by.
+  // No wrap around: the first card has no previous and the last has no next.
+  function setNeighbours(c){
+    var mates=CARDS.filter(function(x){ return x.set===c.set; }).sort(function(a,b){ return a.seq-b.seq || RARE_ORDER[a.rare]-RARE_ORDER[b.rare]; });
+    var i=-1; mates.forEach(function(x,j){ if(x.id===c.id) i=j; });
+    if(i<0) return {prev:null, next:null};
+    return {prev:i>0?mates[i-1]:null, next:i<mates.length-1?mates[i+1]:null};
+  }
+  function setNavHTML(c){
+    var nb=setNeighbours(c); if(!nb.prev && !nb.next) return "";
+    function btn(x, cls, label){ return '<button class="btn sec setnavb '+cls+'" type="button" data-id="'+esc(x.id)+'"><span class="snlab">'+label+'</span><span class="snname">'+esc(x.name)+'</span></button>'; }
+    return '<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
+  }
   function openDetail(c){
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
     var s=o(c.id);
@@ -4499,6 +4518,7 @@ label.acctsetrow { align-items:center; }
       sphereDetail+
       '<div class="valsum"><span>Card value <span id="sumBreak" style="color:var(--ink-faint)"></span></span><b id="sumVal">'+money(0)+'</b></div>'+
       '<div class="mfoot"><button class="btn primary" id="fSave">Save</button></div>'+
+      setNavHTML(c)+
       '</div>';
     wireKeywordNotes($("mMain"));
     var viewSphere=$("viewSetSphere"); if(viewSphere&&setTrack){ viewSphere.onclick=function(){ dismissOverlay(); openSetSphere(setTrack.id,false); }; }
@@ -4800,6 +4820,14 @@ label.acctsetrow { align-items:center; }
     renderSales(); refreshAvg();
 
     $("fSave").onclick = function(){ persist(); dismissOverlay(); toast(c.name+" updated"); };
+    // Previous / next card in this set: keep any typed note, then swap the sheet over to the neighbour.
+    Array.prototype.forEach.call($("mMain").querySelectorAll(".setnavb"), function(b){
+      b.onclick=function(){
+        var n=cardById(b.getAttribute("data-id")); if(!n) return;
+        if($("fNotes").value!==(s.notes||"")) persist();
+        openDetail(n);
+      };
+    });
     var _wasOpen=scrim.classList.contains("open");
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
