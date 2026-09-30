@@ -3338,6 +3338,8 @@ label.acctsetrow { align-items:center; }
     for(i=0;i<list.length;i++){ if(i && list[i-1][1]-list[i][1]>RECENT_GAP) break; set[list[i][0]]=true; }
     return set; }
   // The Show chip applies on the cards grid and Collected only; Wishlist, Favourites and Graded ignore Show chips.
+  // Every copy of a printing in this collection, raw and graded together (Extras = two or more).
+  function copiesOf(s){ return rawCount(s.qty)+(Array.isArray(s.graded)?s.graded.length:0); }
   function recentFilterOn(){ var m=colMode(); return filters.view==="recent" && (m==="col" || m==="collected"); }
   // The home catch-up's list: printings added after the previous open and before this one.
   // Separate from Recently added, which is only the latest 30-minute burst.
@@ -3915,7 +3917,7 @@ label.acctsetrow { align-items:center; }
       b.onclick = function(){ filters.rares[r]=!filters.rares[r]; b.setAttribute("aria-pressed",filters.rares[r]?"true":"false"); render(); };
       $("rareChips").appendChild(b);
     });
-    [["all","All"],["owned","Owned"],["partial","Playset incomplete"],["missing","Missing"],["wish","Wishlist"],["recent","Recently added"]].forEach(function(v){
+    [["all","All"],["owned","Owned"],["partial","Playset incomplete"],["extras","Extras"],["missing","Missing"],["wish","Wishlist"],["recent","Recently added"]].forEach(function(v){
       var b = chip(v[1], "", "var(--accent)", v[0]==="all"); b.classList.add("solid");
       b.onclick = function(){
         clearSinceVisit();
@@ -4042,6 +4044,7 @@ label.acctsetrow { align-items:center; }
         var copies=rawCount(s.qty)+(Array.isArray(s.graded)?s.graded.length:0);
         if(copies<1 || copies>=4) return false;
       }
+      if ((mode==="col" || mode==="collected") && filters.view==="extras" && copiesOf(s)<2) return false;
       if (mode==="col" && filters.view==="wish" && !isWished(c.id)) return false;
       if (recentFilterOn() && !RECENT[c.id]) return false;   // only cards from the latest adding session
       if (sinceVisitOn() && !SINCE_VISIT[c.id]) return false;   // only the printings the home catch-up counted
@@ -4093,6 +4096,8 @@ label.acctsetrow { align-items:center; }
       // Graded page that could never open, so nobody ever read it. Only when the binder really holds no
       // slabs, never when a filter or a search has simply hidden them.
       var noSlabs = gradedMode && !CARDS.some(function(c){ var g=o(c.id); return g.graded && g.graded.length; });
+      // Extras only when the binder really holds no second copy of anything, not when a filter hid them.
+      var noExtras = filters.view==="extras" && (colMode()==="col" || colMode()==="collected") && !CARDS.some(function(c){ return copiesOf(o(c.id))>=2; });
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
         : (wishMode && !wishCount())
@@ -4101,6 +4106,8 @@ label.acctsetrow { align-items:center; }
         ? "<b>No favourites yet</b>Open a card and tap the heart to keep it here."
         : noSlabs
         ? "<b>No graded slabs yet</b>Open a card, tap Collect, switch to Graded, pick the grader and grade, then tap Add."
+        : noExtras
+        ? "<b>No extras</b>Cards you own two or more copies of show up here, ready to trade."
         : (soonMsg() || "<b>No cards match those filters</b>Clear a colour, type, or rarity to widen the search.");
       grid.appendChild(e);
     } else if (viewMode==="binder9" || viewMode==="binder12"){
@@ -4133,6 +4140,7 @@ label.acctsetrow { align-items:center; }
     else if(sinceVisitOn()) $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " added since your last visit";
     else if(recentFilterOn() && cards.length) recentCountLine(cards.map(function(c){ return c.id; }));
     else if((m==="col" || m==="collected") && filters.view==="partial") $("countLine").textContent = cards.length + (cards.length===1?" printing":" printings") + " with 1–3 copies in this collection";
+    else if((m==="col" || m==="collected") && filters.view==="extras") $("countLine").textContent = cards.length + (cards.length===1?" extra":" extras");
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
@@ -4226,6 +4234,7 @@ label.acctsetrow { align-items:center; }
   function patchCard(c){
     // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
     if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
+    if(filters.view==="extras" && copiesOf(o(c.id))<2){ render(); return; }
     if(filters.view==="partial") { var totalCopies=rawCount(o(c.id).qty)+(Array.isArray(o(c.id).graded)?o(c.id).graded.length:0); if(totalCopies<1 || totalCopies>=4){ render(); return; } }
     // With the Recently added filter or sort on, redraw the grid when the card leaves the filtered list, or when
     // other cards join or leave the latest session (a new session began, a removal split it, or removing the only
