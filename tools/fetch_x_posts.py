@@ -205,10 +205,10 @@ def tidy_rows(rows: list[dict]) -> list[dict]:
 
 
 def translated(rows: list[dict], root: Path) -> list[dict]:
-    """English headlines for the Japanese account, cached between runs.
+    """English headlines and bodies for the Japanese account, cached between runs.
 
-    Japanese posts are the reason this exists: the app is English and a Japanese headline reads as a
-    bug. Everything here degrades to "publish it in Japanese": no module, no key, no network and a
+    Japanese posts are the reason this exists: the app is English and Japanese text reads as a bug.
+    Everything here degrades to "publish it in Japanese": no module, no key, no network and a
     confused model all leave the rows exactly as they arrived.
     """
     if translate_posts is None:
@@ -219,8 +219,8 @@ def translated(rows: list[dict], root: Path) -> list[dict]:
         print(f"x-api: translation skipped ({exc})", file=sys.stderr)
         return rows
     if stats["considered"]:
-        print("x-api: translated {translated} headline(s), {cached} from cache, {failed} left in "
-              "the original".format(**stats))
+        print("x-api: translated {translated} post(s), {cached} from cache, {partial} part done, "
+              "{failed} left in the original".format(**stats))
     return rows
 
 

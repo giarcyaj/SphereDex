@@ -14,6 +14,10 @@ from urllib.parse import urlparse
 FIELDS = ("title", "date", "summary", "link", "image")
 CONTAINER_KEYS = ("items", "result", "results", "rows", "data", "posts", "articles")
 X_HOSTS = {"x.com", "www.x.com", "twitter.com", "www.twitter.com"}
+X_FALLBACK_HANDLE = "PalworldOCG_EN"
+X_HANDLE = re.compile(r"^/+([A-Za-z0-9_]{1,15})(?:/|$)")
+# Paths that sit where a handle would and are not one.
+X_RESERVED = {"i", "home", "search", "hashtag", "intent", "status", "notifications", "messages"}
 
 
 def _rows_from_json(value: Any) -> list[dict[str, Any]]:
@@ -76,11 +80,28 @@ def _image_url(row: dict[str, Any]) -> str:
     return str(image).strip()
 
 
+def _x_handle(link: str) -> str:
+    """The account a post actually came from, read out of its own permalink.
+
+    Both official accounts are fetched, the Japanese @PalworldOCG and the English @PalworldOCG_EN,
+    so the handle cannot be assumed. Hardcoding the English one credited every Japanese post to the
+    wrong account on the face of the card. Reserved paths such as /i/status/... carry no handle, so
+    those fall back to the English account as before.
+    """
+    match = X_HANDLE.match(urlparse(link).path or "")
+    handle = match.group(1) if match else ""
+    return X_FALLBACK_HANDLE if handle.lower() in X_RESERVED else (handle or X_FALLBACK_HANDLE)
+
+
 def _source_for(link: str, instruction: str = "", image: str = "") -> str:
     host = (urlparse(link).hostname or "").lower()
     image_host = (urlparse(image).hostname or "").lower()
-    if host in X_HOSTS or image_host == "pbs.twimg.com" or re.search(r"\b(?:x|twitter)\b", instruction, re.IGNORECASE):
-        return "x:PalworldOCG_EN"
+    if host in X_HOSTS:
+        return "x:" + _x_handle(link)
+    # An X post whose own link points somewhere else, recognised by its image host or by the
+    # session's instruction. There is no handle to read, so it keeps the default.
+    if image_host == "pbs.twimg.com" or re.search(r"\b(?:x|twitter)\b", instruction, re.IGNORECASE):
+        return "x:" + X_FALLBACK_HANDLE
     return "official"
 
 

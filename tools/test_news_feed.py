@@ -48,6 +48,18 @@ class NewsFeedTests(unittest.TestCase):
         self.assertEqual(items[0]["source"], "x:PalworldOCG_EN")
         self.assertEqual(items[0]["link"], "https://x.com/PalworldOCG_EN")
 
+    def test_credits_each_post_to_the_account_in_its_own_link(self):
+        """Both official accounts are fetched, so the handle is read, never assumed."""
+        session = self.session("x-session", "Latest @PalworldOCG_EN, @PalworldOCG posts")
+        (session / "result.json").write_text(json.dumps([
+            {"title": "English post", "link": "https://x.com/PalworldOCG_EN/status/10"},
+            {"title": "Japanese post", "link": "https://x.com/PalworldOCG/status/11"},
+            {"title": "No handle in the path", "link": "https://x.com/i/status/12"},
+        ]), encoding="utf-8")
+        items, _ = news_feed.build_news_feed(self.root)
+        self.assertEqual([item["source"] for item in items],
+                         ["x:PalworldOCG_EN", "x:PalworldOCG", "x:PalworldOCG_EN"])
+
     def test_reads_root_result_and_csv_downloads_and_deduplicates(self):
         session = self.session("session")
         row = {"title": "Update", "link": "https://en.palworld-official-cardgame.com/news/post-1", "image": "https://example.test/card.png"}
