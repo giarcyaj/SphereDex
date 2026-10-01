@@ -3250,10 +3250,33 @@ label.acctsetrow { align-items:center; }
     "2.1": "img/UPDATE_2_1.webp",
     "2.2": "img/UPDATE_2_2.webp"
   };
+  // Where someone whose store build is newer than this one goes to get it. Both wrappers hand http(s)
+  // links to the system (Android shouldOverrideUrlLoading / onCreateWindow, iOS decidePolicyFor), so
+  // these open the real store app rather than loading a store page inside the WebView.
+  var STORE_IOS = "https://apps.apple.com/app/id6804377686";
+  var STORE_ANDROID = "https://play.google.com/store/apps/details?id=app.spheredex";
+  // window.IS_NATIVE is never assigned: the only IS_NATIVE in this file is a function scoped var near
+  // the bottom, so every check against window.IS_NATIVE has always read undefined and treated Android
+  // as web. The bridge the wrapper injects is the signal that actually exists.
+  function isAndroidApp(){ try{ return !!(window.AndroidScan && typeof window.AndroidScan.scan==="function"); }catch(e){ return false; } }
+  function isIosApp(){ return !!window.IS_IOS; }
+  // "" on the web, which has no store: there the newest build is simply the next load.
+  function storeUrl(){ return isIosApp() ? STORE_IOS : (isAndroidApp() ? STORE_ANDROID : ""); }
+  // The roadmap's version history, anchored at one release. docs/roadmap.html gives every version block
+  // an id of this shape, so 2.2 lands on the v2.2 list instead of the top of the page.
+  var ROADMAP_URL = "https://spheredex.app/roadmap";
+  function roadmapUrl(ver){
+    var v=String(ver||"").trim();
+    return v ? ROADMAP_URL+"#v"+v.replace(/\./g,"-") : ROADMAP_URL;
+  }
   // The store build the version check learns about ("" until the first check completes).
   // Persisted so an offline behind user still sees the update headliner from the last check.
   var _latestAppVersion = (function(){ try{ return String(localStorage.getItem("palvault-latest")||""); }catch(e){ return ""; } })();
   var _latestNotes = (function(){ try{ var j=JSON.parse(localStorage.getItem("palvault-latest-notes")||"null"); return Array.isArray(j)?j.slice(0,3).map(String):null; }catch(e){ return null; } })();
+  // The banner for the store build, which an older install has no bundled art for. It becomes an
+  // <img> src, and it arrives over the network, so only our own https banner is accepted.
+  function safeReleaseArt(u){ var t=String(u||""); return /^https:\/\/spheredex\.app\/app\/img\/[A-Za-z0-9_.-]+\.webp$/.test(t) ? t : ""; }
+  var _latestArt = (function(){ try{ return safeReleaseArt(localStorage.getItem("palvault-latest-art")||""); }catch(e){ return ""; } })();
   function updateNotesFor(v){
     if(_latestNotes && _latestNotes.length) return _latestNotes.slice(0,3);
     var m = RELEASE_HIGHLIGHTS[String(v||"")] || [];
@@ -8919,8 +8942,11 @@ label.acctsetrow { align-items:center; }
       notes=(notes||[]).slice(0,3);
       if(!notes.length) return;
       var mapped = featReleaseArt(ver);
+      // The whole point of this slide is the person who has NOT updated, and their build predates the
+      // version it is announcing, so it carries no banner for it. Fall back to the one the server names.
+      if(!mapped && behind && typeof _latestArt==="string" && _latestArt) mapped=_latestArt;
       var art = mapped || (liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : ""));
-      var slide = {badge: behind?"Update available":"Latest update", title: behind?("SphereDex "+ver+" is here"):("What\u2019s new in "+ver), meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver, releaseArt:!!mapped};
+      var slide = {badge: behind?"New update available":"Latest update features", title: behind?("SphereDex "+ver+" is here"):("What\u2019s new in "+ver), meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver, releaseArt:!!mapped};
       if(behind) out.push(Object.assign({kind:"update"}, slide));
       else out.push(Object.assign({kind:"features"}, slide));
     })();
@@ -9008,6 +9034,11 @@ label.acctsetrow { align-items:center; }
       }
       if(best) out.push({ kind:"soon", badge:"Next release", title:best.title, meta:best.date, art:best.art, date:best.date });
     })();
+    // Someone who has not updated should meet that first. Everything else on Home still works on their
+    // old build; the update is the one thing they cannot get to any other way.
+    for(var u=0; u<out.length; u++){
+      if(out[u].kind==="update"){ out.unshift(out.splice(u,1)[0]); break; }
+    }
     return out.slice(0,6);   // six headliner kinds since the card of the day; five silently dropped Next release
   }
 
@@ -9075,11 +9106,20 @@ label.acctsetrow { align-items:center; }
   }
   function openFeatured(s){
     if(!s) return;
-    if(s.kind==="features"){ toast("You\u2019re on SphereDex "+(s.version||APP_VERSION)+"."); return; }
+    // Up to date: the slide is a summary, so the tap opens the full list for that version.
+    if(s.kind==="features"){
+      var rm=""; try{ rm=(typeof roadmapUrl==="function") ? roadmapUrl(s.version||APP_VERSION) : ""; }catch(e){}
+      if(rm){ try{ window.open(rm,"_blank","noopener"); return; }catch(e){} }
+      toast("You\u2019re on SphereDex "+(s.version||APP_VERSION)+".");
+      return;
+    }
     if(s.kind==="soon"){ showPage("releases"); return; }
     if(s.kind==="update"){
       var v = s.version || _latestAppVersion || "";
-      if(window.IS_NATIVE || window.IS_IOS){
+      var su=""; try{ su=(typeof storeUrl==="function") ? storeUrl() : ""; }catch(e){}
+      if(su){
+        // Both wrappers hand an https link to the system, so this opens the store app itself.
+        try{ window.open(su,"_blank","noopener"); return; }catch(e){}
         toast("Version "+v+" is out. Update SphereDex for the newest cards and prices.");
       } else {
         toast("Version "+v+" is ready. Reloading to get it\u2026");
@@ -11233,13 +11273,16 @@ label.acctsetrow { align-items:center; }
       .then(function(j){
         var latest=j && j.app ? String(j.app) : "";
         var notes=j && j.notes && Array.isArray(j.notes) ? j.notes.slice(0,3).map(String) : null;
+        var art=j && j.art ? safeReleaseArt(j.art) : "";
         if(latest){
           _latestAppVersion = latest;
           if(notes && notes.length) _latestNotes = notes;
           else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[latest]) _latestNotes = RELEASE_HIGHLIGHTS[latest].slice(0,3);
           else _latestNotes = null;
+          _latestArt = art;
           try{ localStorage.setItem("palvault-latest", _latestAppVersion); }catch(e){}
           try{ if(_latestNotes && _latestNotes.length) localStorage.setItem("palvault-latest-notes", JSON.stringify(_latestNotes)); else localStorage.removeItem("palvault-latest-notes"); }catch(e){}
+          try{ if(_latestArt) localStorage.setItem("palvault-latest-art", _latestArt); else localStorage.removeItem("palvault-latest-art"); }catch(e){}
         }
         if(latest && verNum(latest) > verNum(APP_VERSION)) offerUpdate(latest);
         try{ if(typeof renderFeatured==="function") renderFeatured(); }catch(e){}

@@ -154,7 +154,8 @@ function app(opts) {
     getElementById(id) { return ids[id] || null; },
     createElement() { return makeNode('<div>'); },
   };
-  const window_ = { matchMedia: () => ({ matches: false }), IS_NATIVE: false, IS_IOS: false, open() {} };
+  const opened = [];
+  const window_ = { matchMedia: () => ({ matches: false }), IS_NATIVE: false, IS_IOS: false, open(u) { opened.push(String(u)); } };
   const shown = [];
   const toasts = [];
   const dispatch = (el, type, event) => (el._listeners[type] || []).forEach((fn) => fn(event));
@@ -182,12 +183,14 @@ function app(opts) {
     SETTINGS: { mode: 'market' }, TOTAL: 277, CARDS: [], has: () => false, o: (id) => id,
     setProgress: () => ({ owned: {}, tot: { EBP01: 1, EBP02: 1 } }),
     moverCard: () => null, pwPick: () => null,
+    storeUrl: () => '',
+    roadmapUrl: (v) => 'https://spheredex.app/roadmap#v' + String(v || '').replace(/\./g, '-'),
     ...opts,
   };
   const context = vm.createContext(sandbox);
   vm.runInContext(srcSection('logic') + '\n', context);
   return {
-    window: window_, host, track, shown, toasts, registry, sandbox, dispatch,
+    window: window_, host, track, shown, toasts, opened, registry, sandbox, dispatch,
     api: window_.FEATURED_CAROUSEL,
     tick: () => { const fn = registry.sets[registry.sets.length - 1]; if (fn) fn(); },
   };
@@ -243,7 +246,7 @@ test('home headliners are news, update features, collection movers, a card revea
   const slides = a.api.slides();
   assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,reveal,soon');
   assert.equal(slides[0].title, 'Eternal Ascent preorders');
-  assert.equal(slides[1].badge, 'Latest update');
+  assert.equal(slides[1].badge, 'Latest update features');
   assert.match(slides[1].title, /1\.11/);
   assert.equal(slides[2].title, 'Movers in your collection');
   assert.equal(slides[2].movers[0].name, 'Lamball');
@@ -271,7 +274,7 @@ test('latest update features stay on screen, and a newer store build says an upd
   const current = app();
   const feat = current.api.slides().find((s) => s.kind === 'features');
   assert.ok(feat, 'current build still shows its own features');
-  assert.equal(feat.badge, 'Latest update');
+  assert.equal(feat.badge, 'Latest update features');
   assert.match(feat.title, /1\.11/);
   assert.deepEqual(JSON.parse(JSON.stringify(feat.notes)), ['Note A for 1.11', 'Note B']);
   assert.equal(current.api.slides().some((s) => s.kind === 'update'), false);
@@ -286,6 +289,71 @@ test('latest update features stay on screen, and a newer store build says an upd
   assert.ok(own, 'a build ahead of the store record still shows a features slide');
   assert.deepEqual(JSON.parse(JSON.stringify(own.notes)), ['Home headliners', 'Pal pages', 'Deck tools']);
   assert.equal(ahead.api.slides().some((s) => s.kind === 'update'), false);
+});
+
+test('an out of date app meets the update slide first', () => {
+  const behind = app({ _latestAppVersion: '1.12' });
+  const kinds = behind.api.slides().map((s) => s.kind);
+  assert.equal(kinds[0], 'update', 'the update headliner leads, ahead of news and the card of the day');
+  assert.equal(behind.api.slides()[0].badge, 'New update available');
+  // Moving it to the front must not drop or duplicate anything else.
+  assert.equal(kinds.filter((k) => k === 'update').length, 1);
+  assert.equal(new Set(kinds).size, kinds.length, 'no kind appears twice');
+  const current = app();
+  assert.notEqual(current.api.slides()[0].kind, 'update', 'an up to date app has no update slide at all');
+});
+
+test('the update slide uses the banner the server names, because an old build has none for a newer version', () => {
+  const url = 'https://spheredex.app/app/img/UPDATE_1_12.webp';
+  // RELEASE_ART only knows this build's own releases, exactly like a real install that predates 1.12.
+  const behind = app({
+    _latestAppVersion: '1.12',
+    RELEASE_ART: { '1.11': 'img/UPDATE_1_11.webp' },
+    _latestArt: url,
+  });
+  const up = behind.api.slides().find((s) => s.kind === 'update');
+  assert.equal(up.art, url);
+  assert.equal(up.releaseArt, true, 'it renders as a release banner, not as set art');
+
+  // With no server url it must not invent one: it falls back to set art and is not a banner.
+  const noArt = app({ _latestAppVersion: '1.12', RELEASE_ART: { '1.11': 'img/UPDATE_1_11.webp' } });
+  const plain = noArt.api.slides().find((s) => s.kind === 'update');
+  assert.equal(plain.releaseArt, false);
+  assert.notEqual(plain.art, url);
+
+  // A bundled banner for that version still wins, so an app that does carry it stays offline capable.
+  const bundled = app({ _latestAppVersion: '1.12', RELEASE_ART: { '1.12': 'img/UPDATE_1_12.webp' }, _latestArt: url });
+  assert.equal(bundled.api.slides().find((s) => s.kind === 'update').art, 'img/UPDATE_1_12.webp');
+});
+
+test('tapping the update slide goes to the store, and tapping the features slide goes to the roadmap', () => {
+  // iOS and Android: storeUrl answers, so the tap leaves for the store and says nothing.
+  for (const store of ['https://apps.apple.com/app/id6804377686',
+                       'https://play.google.com/store/apps/details?id=app.spheredex']) {
+    const a = app({ _latestAppVersion: '1.12', storeUrl: () => store });
+    a.api.open(a.api.slides().find((s) => s.kind === 'update'));
+    assert.deepEqual(a.opened, [store]);
+    assert.deepEqual(a.toasts, [], 'no toast when the store actually opens');
+  }
+
+  // The web has no store, so the newest build is the next load: it keeps the reload path.
+  const web = app({ _latestAppVersion: '1.12' });
+  web.api.open(web.api.slides().find((s) => s.kind === 'update'));
+  assert.deepEqual(web.opened, [], 'the web never opens a store page');
+  assert.equal(web.toasts.length, 1);
+  assert.match(web.toasts[0], /Reloading/);
+
+  // Up to date: the tap opens that version's own section of the roadmap.
+  const current = app();
+  current.api.open(current.api.slides().find((s) => s.kind === 'features'));
+  assert.deepEqual(current.opened, ['https://spheredex.app/roadmap#v1-11']);
+  assert.deepEqual(current.toasts, [], 'the roadmap replaces the old "you are on x" toast');
+
+  // If opening is impossible the old toast is still there rather than a dead tap.
+  const blocked = app({ roadmapUrl: () => '' });
+  blocked.api.open(blocked.api.slides().find((s) => s.kind === 'features'));
+  assert.equal(blocked.toasts.length, 1);
+  assert.match(blocked.toasts[0], /SphereDex 1\.11/);
 });
 
 test('the movers slide is hidden when prices are off', () => {
@@ -430,8 +498,9 @@ test('openFeatured routes each slide kind to its destination', () => {
   a.api.open({ kind: 'soon' });
   a.api.open({ kind: 'features', version: '1.11' });
   assert.deepEqual(a.shown, ['set:EBP01', 'collection', 'releases']);
-  assert.equal(a.toasts.length, 1);
-  assert.match(a.toasts[0], /1\.11/);
+  // features leaves for the roadmap rather than toasting the version back at the reader.
+  assert.deepEqual(a.opened, ['https://spheredex.app/roadmap#v1-11']);
+  assert.deepEqual(a.toasts, []);
 });
 
 test('swiping horizontally changes the slide without breaking taps', () => {
@@ -459,7 +528,7 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   const features = app({ ...base, APP_VERSION: '2.1', _latestAppVersion: '2.1' });
   const feat = features.api.slides().find((s) => s.kind === 'features');
   assert.ok(feat, 'current 2.1 build shows a features slide');
-  assert.equal(feat.badge, 'Latest update');
+  assert.equal(feat.badge, 'Latest update features');
   assert.equal(feat.art, banner);
   assert.equal(feat.releaseArt, true);
   features.api.render();
@@ -472,7 +541,7 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   const update = app({ ...base, APP_VERSION: '2.0', _latestAppVersion: '2.1' });
   const up = update.api.slides().find((s) => s.kind === 'update');
   assert.ok(up, 'a build behind 2.1 shows the update slide');
-  assert.equal(up.badge, 'Update available');
+  assert.equal(up.badge, 'New update available');
   assert.equal(up.version, '2.1');
   assert.equal(up.art, banner);
   assert.equal(up.releaseArt, true);
