@@ -412,8 +412,17 @@
   .mclose { pointer-events:auto; position:relative; top:0; margin:0; width:34px; height:34px; border-radius:10px; border:1px solid var(--line);
     background:rgba(10,15,20,.62); color:#fff; font-size:1.05rem; backdrop-filter:blur(4px); display:grid; place-items:center; box-shadow:var(--shadow-sm); }
   .mclose:hover { background:rgba(10,15,20,.82); }
-  .mmain h2 { font-family:var(--font-display); margin:0; font-size:1.4rem; letter-spacing:-.01em; line-height:1.05; }
+  .mmain h2 { font-family:var(--font-display); margin:0 0 9px; font-size:1.4rem; letter-spacing:-.01em; line-height:1.08;
+    text-wrap:balance; }
   .mtags { display:flex; flex-wrap:wrap; align-items:center; }
+  /* The gems are 19px tall and the text pills were about 15px, so the row sat on two baselines and read
+     as two unrelated things. One height puts them all on one band. */
+  .mtags .eltag { display:inline-flex; align-items:center; height:19px; padding:0 9px; font-size:.62rem;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(0,0,0,.3); }
+  /* The premium rarities get the same treatment the gem on the artwork gets, so the pill beside the
+     title and the badge on the card agree. Scoped to .mtags: .eltag is also the card grid's pill. */
+  .mtags .eltag.holo { background:conic-gradient(from 0deg, #ff5f6d, #ffc371, #47e0a0, #4f9dff, #b06ff0, #ff5f6d); color:#1a1a1a; }
+  .mtags .eltag.glim { background:linear-gradient(135deg,#ffffff 0%, #dcccff 34%, #a9e8ff 63%, #ffe3f6 100%); color:#2a2140; }
   /* Space badges with margins, not flex `gap`: older WebViews (Chrome <84 / Safari <14.1) support
      grid-gap but NOT flex-gap, so gap here silently collapsed and the pills touched/overlapped. */
   .mtags > * { margin:0 6px 5px 0; }
@@ -423,7 +432,7 @@
   .promonote { margin-top:13px; padding:11px 13px; border-radius:12px; background:color-mix(in srgb,var(--accent) 9%,var(--surface)); border:1.5px solid color-mix(in srgb,var(--accent) 30%,var(--line)); display:flex; flex-direction:column; gap:4px; }
   .promonote .pnh { font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); }
   .promonote .pnt { font-size:.85rem; color:var(--ink); line-height:1.4; }
-  .statline { display:flex; gap:16px; padding:12px 15px; border-radius:14px; background:var(--surface-2);
+  .statline { display:flex; justify-content:center; gap:16px; padding:12px 15px; border-radius:14px; background:var(--surface-2);
     border:1.5px solid var(--line); box-shadow:inset 0 1px 0 var(--edge); }
   .statbox { display:flex; flex-direction:column; }
   .statbox .n { font-family:var(--font-display); font-size:1.3rem; font-weight:850; }
@@ -2012,12 +2021,56 @@ label.acctsetrow { align-items:center; }
   .dsec{ font-family:var(--font-display); font-weight:750; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:20px 0 10px; padding-bottom:6px; border-bottom:1.5px solid var(--line); }
   .salesavg{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; }
   /* The bottom dock floats over sheets, so the last row of the card sheet keeps clear of it at full scroll. */
+  /* Card value beside the alert button. They wrap onto separate lines rather than squeezing when the
+     sheet is narrow; the button keeps a floor so its label never breaks. paintPriceAlertBtn sets
+     flex:1 1 auto on the button inline, which is what shares the row. */
+  .valrow{ display:flex; flex-wrap:wrap; gap:9px; align-items:stretch; }
+  .valrow .valsum{ flex:1 1 auto; min-width:0; border-color:var(--line-strong); }
+  .valrow > .btn{ min-width:152px; white-space:nowrap; }
+  /* Full width, so it wraps to its own line under the value it explains. Empty until a pull lands,
+     and :empty keeps it from adding a gap before then. */
+  .pxbasis{ flex:1 1 100%; font-size:.7rem; color:var(--ink-faint); }
+  .pxbasis:empty{ display:none; }
+  /* The closing band, now just Save. */
+  .msave{ margin-top:5px; padding-top:15px; border-top:1.5px solid var(--line); }
+  /* .meditor is a flex column with gap:13px, but several of its children carry their own top margins
+     as well, so every gap down this column was 13px plus whatever that child declared: 25px in one
+     place, 33px in another, 19px in a third. That stacking is what made the bottom of the sheet read
+     as unsorted rather than any one element being wrong. The gap is the single authority now, and
+     .msave adds a few pixels on purpose because a closing band should sit a little apart. */
+  .meditor > .setcontrib{ margin:0; }
+  .meditor > .dsec{ margin:2px 0 0; }
+  .meditor > .ctmsg{ margin-top:0; }
   .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
   .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
   .setnav .snnext{ margin-left:auto; text-align:right; }
   .setnav .snlab{ display:block; font-weight:600; }
   .setnav .snname{ display:block; font-size:.78rem; color:var(--ink-faint); font-weight:400; margin-top:2px; }
-  .pxrange{ font-size:.82rem; color:var(--ink-soft); margin-top:8px; line-height:1.45; overflow-wrap:anywhere; }
+  /* Price trend. Floats under .martflo at the same width, so it lands in the empty column beside the
+     detail rows rather than leaving that space blank, and the rows keep flowing to its left. .meditor
+     already clears both floats, so a tall panel pushes nothing out of place. */
+  .pxtrend{ float:right; clear:right; width:clamp(120px,40%,158px); margin:0 0 12px 18px; box-sizing:border-box;
+    padding:9px 10px 10px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+  /* Text flows around a float, a grid or a flex container does not: .kv is display:grid and .promonote
+     is display:flex, so while the panel is showing they would draw straight over it. The card art never
+     exposed this because it ends above where those blocks start. The panel is a preceding sibling of
+     every block at risk, so ~ states the condition exactly and needs no class bookkeeping; it also
+     cannot leak into the sealed sheet, which shares #mMain but has no panel. The 40% resolves against
+     .mmain for the float and for these, so the two agree. */
+  .pxtrend:not([hidden]) ~ .kv,
+  .pxtrend:not([hidden]) ~ .promonote{ margin-right:calc(clamp(120px,40%,158px) + 18px); }
+  .pxspark{ display:block; width:100%; height:42px; margin-bottom:7px; }
+  .pxdelta{ display:flex; justify-content:center; align-items:baseline; gap:5px; font-family:var(--font-display); font-weight:750;
+    font-size:.95rem; line-height:1.1; overflow-wrap:anywhere; }
+  .pxdelta .pxarrow{ font-size:.72rem; flex:none; }
+  .pxup{ color:var(--el-Grass); } .pxdown{ color:var(--el-Fire); }
+  .pxflat{ color:var(--ink-faint); font-size:.82rem; }
+  .pxcap{ font-size:.66rem; color:var(--ink-faint); letter-spacing:.05em; text-transform:uppercase; margin-top:3px; text-align:center; }
+  /* Wraps to two lines on the narrowest sheets rather than overflowing. */
+  .pxrow{ display:flex; justify-content:space-between; align-items:baseline; gap:6px; flex-wrap:wrap;
+    font-size:.7rem; color:var(--ink-soft); margin-top:7px; padding-top:7px; border-top:1px solid var(--line); }
+  .pxrow .pxlab{ color:var(--ink-faint); }
+  .pxrow .pxval{ font-variant-numeric:tabular-nums; }
   .gradeguide{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:7px; }
   .ggnote{ grid-column:1/-1; font-size:.8rem; color:var(--ink-faint); margin-bottom:4px; }
   .ggrow{ display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--line); border-radius:10px; padding:6px 10px; }
@@ -2083,6 +2136,7 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .moverscope{gap:0}.no-flexgap .moverscope>*+*{margin-left:2px}
   .no-flexgap .statline{gap:0}.no-flexgap .statline>*+*{margin-left:16px}
   .no-flexgap .fieldrow{gap:0}.no-flexgap .fieldrow>*+*{margin-left:12px}
+  .no-flexgap .valrow{gap:0}.no-flexgap .valrow>*+*{margin-left:9px}
   .no-flexgap .mfoot{gap:0}.no-flexgap .mfoot>*+*{margin-left:10px}
   .no-flexgap .btn{gap:0}.no-flexgap .btn>*+*{margin-left:7px}
   .no-flexgap .tab{gap:0}.no-flexgap .tab>*+*{margin-left:7px}
@@ -2191,6 +2245,8 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .keysets{gap:0}.no-flexgap .keysets>*+*{margin-top:6px}
   .no-flexgap .scanvariants{gap:0}.no-flexgap .scanvariants>*+*{margin-top:7px}
   .no-flexgap .martflo .detactions{gap:0}.no-flexgap .martflo .detactions>*+*{margin-top:8px}
+  .no-flexgap .pxdelta{gap:0}.no-flexgap .pxdelta>*+*{margin-left:5px}
+  .no-flexgap .pxrow{gap:0}.no-flexgap .pxrow>*+*{margin-left:6px}
   .no-flexgap .glancebub{gap:0}.no-flexgap .glancebub>*+*{margin-top:3px}
   .no-flexgap .bubpanel{gap:0}.no-flexgap .bubpanel>*+*{margin-top:10px}
   .no-flexgap #notifGroup{gap:0}.no-flexgap #notifGroup>*+*{margin-top:14px}
@@ -4591,17 +4647,18 @@ label.acctsetrow { align-items:center; }
     var sphereDetail="";
     if(setTrack){ var setCards=setSphereCards(setTrack), setOwned=setCards.filter(function(x){ return has(o(x.id)); }).length;
       sphereDetail='<div class="setcontrib"><span class="rwsphere scorb" style="--rc:'+setTrack.sphere.c+'">'+sphereSVG(setTrack.sphere.c,"detail")+'</span><span class="sctxt"><b>Counts toward '+esc(setTrack.name)+' Sphere</b>Collecting this makes the set '+(setOwned+(has(s)?0:1))+' / '+setCards.length+' complete.</span><button type="button" id="viewSetSphere">View set</button></div>'; }
-    var detailGoalTags=[], currentDeck=(typeof deckMissingGoal==="function")?deckMissingGoal():null, deckItem=currentDeck&&currentDeck.items.filter(function(item){return item.card.id===c.id;})[0], sphereGoal=(typeof nextSphereMissingGoal==="function")?nextSphereMissingGoal():null;
-    if(deckItem) detailGoalTags.push('Needed for '+esc(currentDeck.deck.name)+' · '+deckItem.need+' '+(deckItem.need===1?'copy':'copies'));
-    if(sphereGoal&&sphereGoal.items.some(function(item){return item.card.id===c.id;})) detailGoalTags.push('Advances your next Sphere');
-    if(detailGoalTags.length) sphereDetail+='<div class="setcontrib"><span class="sctxt"><b>Collection goals</b>'+detailGoalTags.map(function(tag){return '<span class="mtag">'+tag+'</span>';}).join(' ')+'</span></div>';
     var gwork = (s.graded||[]).filter(function(g){ return g && typeof g==="object"; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=g.value; return x; });
     $("mMain").innerHTML =
       '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
       '<div class="martflo"><div class="art">'+artHTML(c,true)+'</div><span class="fullhint">⤢ See full card</span></div>'+
+      // Sits under the art, in what used to be blank space beside the detail rows. priceui, so collector
+      // mode still hides it, and hidden until there is enough history to draw.
+      '<aside class="pxtrend priceui" id="pxRange" hidden></aside>'+
       '<h2 id="mTitle">'+esc(c.name)+'</h2>'+
       '<div class="mtags">'+elTags+'<span class="eltag" style="background:'+colVar(c.color)+'">'+c.color+'</span>'+
-        '<span class="eltag" style="background:'+rareVar(c.rare)+';color:#fff">'+c.rare+'</span></div>'+
+        // A premium rarity takes its gradient from the class, so it must not also carry an inline
+        // background: inline wins, and the pill would stay flat exactly as it has been.
+        '<span class="'+rareCls+'"'+(/\b(holo|glim)\b/.test(rareCls)?'':' style="background:'+rareVar(c.rare)+';color:#fff"')+'>'+c.rare+'</span></div>'+
       (statBoxes.length?'<div class="statline">'+statBoxes.join("")+'</div>':'')+
       rulesBlock(c)+
       kv+
@@ -4637,7 +4694,7 @@ label.acctsetrow { align-items:center; }
           '<button class="btn primary addbtn" id="addGradedBtn" type="button">'+icon('plus')+' Add</button>'+
         '</div>'+
         '<div class="ownline" id="ownLine" hidden></div>'+
-        '<input type="hidden" id="fQty" value="'+s.qty+'"><input type="hidden" id="fMkt" value="'+(s.mkt||0)+'"><span id="priceBasis" hidden></span><div id="gradeList" hidden></div>'+
+        '<input type="hidden" id="fQty" value="'+s.qty+'"><input type="hidden" id="fMkt" value="'+(s.mkt||0)+'"><div id="gradeList" hidden></div>'+
         '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Fill values from sold</button>'+
       '</div>'+
 
@@ -4666,18 +4723,26 @@ label.acctsetrow { align-items:center; }
         '<h3 class="dsec" style="margin:12px 0 0">Graded price guide</h3>'+
         '<div class="gradeguide" id="gradeGuide"></div>'+
       '</div>'+
-      '<div class="pxrange priceui" id="pxRange" hidden></div>'+
-      // Price alert (native push only; priceui, so collector mode hides it). Sits after the glance panels so an
-      // open panel stays attached to its bubble.
-      (nativePushIface()?'<div class="sdbtnrow priceui" style="display:flex;margin-top:9px"><button class="btn sec" id="bubAlert" type="button"></button></div>':'')+
+      // Card value and the price alert together, directly under the tiles the value comes from. Both are
+      // priceui, so collector mode hides the row whole. The alert button is native push only, and on the
+      // web the value simply takes the full width. Sits after the glance panels so an open panel stays
+      // attached to its bubble.
+      '<div class="valrow priceui">'+
+        '<div class="valsum"><span>Card value <span id="sumBreak" style="color:var(--ink-faint)"></span></span><b id="sumVal">'+money(0)+'</b></div>'+
+        (nativePushIface()?'<button class="btn sec" id="bubAlert" type="button"></button>':'')+
+        // Wraps onto its own line inside the row, so it reads as a caption on the figure above it.
+        '<div class="pxbasis" id="priceBasis"></div>'+
+      '</div>'+
       '<input type="hidden" id="fLast"><input type="hidden" id="fAvg">'+
 
       // ---- Notes + save ----
+      // The Sphere box is a fact about the card, so it belongs with the other facts rather than wedged
+      // between the notes field and the total, which is what made this whole region read as unsorted.
+      sphereDetail+
       '<h3 class="dsec">Notes</h3>'+
       '<textarea id="fNotes" class="ctmsg" style="min-height:80px" placeholder="Trade, alt art pull, cert number…">'+esc(s.notes||"")+'</textarea>'+
-      sphereDetail+
-      '<div class="valsum"><span>Card value <span id="sumBreak" style="color:var(--ink-faint)"></span></span><b id="sumVal">'+money(0)+'</b></div>'+
-      '<div class="mfoot"><button class="btn primary" id="fSave">Save</button></div>'+
+      // Save closes the sheet on its own now that the value has moved up to the prices.
+      '<div class="msave"><div class="mfoot"><button class="btn primary" id="fSave">Save</button></div></div>'+
       setNavHTML(c)+
       '</div>';
     wireKeywordNotes($("mMain"));
@@ -4820,9 +4885,9 @@ label.acctsetrow { align-items:center; }
     // history is English, so it would be compared against the wrong printing.
     function paintRange(){
       var el=$("pxRange"); if(!el || myGen!==detailGen) return;
-      var lines=(SEAL_ED==="jp") ? [] : priceRangeLines(cardPricePoints(c.id, priceMode()), todayKey());
-      el.innerHTML=lines.map(function(t){ return '<div>'+esc(t)+'</div>'; }).join("");
-      el.hidden=!lines.length;
+      var t=(SEAL_ED==="jp") ? null : priceTrend(cardPricePoints(c.id, priceMode()), todayKey());
+      el.innerHTML=t?priceTrendHtml(t):"";
+      el.hidden=!t;                 // the [hidden] attribute is what frees the column again, see .pxtrend css
     }
     paintRange();
     fetchPriceHistory().then(function(got){ if(got) paintRange(); });
@@ -4831,7 +4896,10 @@ label.acctsetrow { align-items:center; }
     var salesWork = (s.sales||[]).map(function(x){ return {p:(+x.p||0), url:(x.url||"")}; });
     function avgLast5(arr){ var v=arr.slice(-5).map(function(x){return +x.p||0;}).filter(function(n){return n>0;}); return v.length? v.reduce(function(a,b){return a+b;},0)/v.length : 0; }
     var glLoading = !!apiBase();   // spinner shows while the auto-load pulls are in flight
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
+    // True once the sold figures on screen came from the US fallback rather than the user's own region.
+    // The listings panel has always said so; the sold panel said nothing, so a US sale read as a local one.
+    var soldUS=false;
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 '+(soldUS?'US ':'')+'sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
     // Once all the price pulls have settled, swap any spinners still showing for "n/a".
     function finishLoading(){ glLoading=false; refreshAvg(); paintRange(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
@@ -4869,7 +4937,7 @@ label.acctsetrow { align-items:center; }
         if(v==null) return;
         if(marketBasis && BASIS_RANK[basis] < BASIS_RANK[marketBasis]) return;   // never downgrade to a lower rung
         marketBasis=basis; $("fMkt").value=v;
-        var pb=$("priceBasis"); if(pb) pb.textContent="· "+BASIS_LABEL[basis];
+        var pb=$("priceBasis"); if(pb) pb.textContent="Based on the "+BASIS_LABEL[basis];
         updateSum();
       }
       // Sold → last-5 sold list + market (average of last 5 sold).
@@ -4878,7 +4946,7 @@ label.acctsetrow { align-items:center; }
           if(!r.ok){ if(!silent) toast(priceErr()); return; }
           var b=r.body||{}, sales=b.sales||[];
           setMarket((b.avg!=null?b.avg:b.market), basis);
-          if(sales.length){ salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }); renderSales(); }
+          if(sales.length){ soldUS=(basis==="ussold"); salesWork=sales.slice(0,5).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }); renderSales(); }
           refreshAvg();
           // The server already says when an answer is a kept copy rather than a fresh lookup (its daily
           // lookups are spent, or it served the shared answer). That was arriving and being thrown away, so
@@ -6655,17 +6723,52 @@ label.acctsetrow { align-items:center; }
     var t=unitOf(id, mode); if(t>0) pts.push({d:today, v:+t});
     return pts;
   }
-  // The card sheet's week change and 7 and 30 day ranges. A line with too few days behind it is left out.
-  function priceRangeLines(pts, today){
-    var out=[], cents=function(v){ return Math.round(v*Math.pow(10,CUR.dec)); };
-    if(!pts.length) return out;
-    var last=pts[pts.length-1], weekAgo=dayKeyAdd(today,-7), base=null;
+  // The card sheet's week change and 7 and 30 day ranges, as parts rather than finished sentences, so
+  // the panel can colour the change and draw the points. Null means the saved history cannot support
+  // any of it, which is the normal state for a card whose prices nobody has pulled yet.
+  // A figure with too few days behind it is left out rather than guessed at.
+  function priceTrend(pts, today){
+    if(!pts.length) return null;
+    var cents=function(v){ return Math.round(v*Math.pow(10,CUR.dec)); };
+    var last=pts[pts.length-1], weekAgo=dayKeyAdd(today,-7), base=null, out={dir:"", change:"", rows:[], pts:pts};
     pts.forEach(function(p){ if(p.d<=weekAgo) base=p; });
     if(base){ var diff=cents(last.v)-cents(base.v);
-      out.push(diff>0 ? 'Up '+money(last.v-base.v)+' this week' : (diff<0 ? 'Down '+money(base.v-last.v)+' this week' : 'Unchanged this week')); }
+      out.dir=diff>0?"up":(diff<0?"down":"flat");
+      out.change=diff>0 ? money(last.v-base.v) : (diff<0 ? money(base.v-last.v) : ""); }
     [7,30].forEach(function(n){ var from=dayKeyAdd(today,1-n), vs=pts.filter(function(p){ return p.d>=from && p.d<=today; }).map(function(p){ return p.v; });
-      if(vs.length>=2) out.push('Last '+n+' days: '+money(Math.min.apply(null,vs))+' to '+money(Math.max.apply(null,vs))); });
-    return out;
+      if(vs.length>=2) out.rows.push({label:n+" days", value:money(Math.min.apply(null,vs))+" to "+money(Math.max.apply(null,vs))}); });
+    return (out.dir || out.rows.length || pts.length>=2) ? out : null;
+  }
+  // The line itself. Deliberately bare: no axes, no grid, no labels. At 42px tall they would be noise,
+  // and the figures underneath carry the actual numbers. Each gradient needs its own id because two of
+  // these can exist at once (a card sheet open over a sealed one).
+  var _sparkSeq=0;
+  function trendSparkHtml(pts, dir){
+    pts=pts.slice(-30);                       // a month is as much as reads at this size
+    if(pts.length<2) return "";
+    var W=150, H=42, pad=4, n=pts.length, vs=pts.map(function(p){ return p.v; }),
+        mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs), rg=(mx-mn)||1,
+        X=function(i){ return pad+(i/(n-1))*(W-pad*2); },
+        Y=function(v){ return pad+(H-pad*2)-((v-mn)/rg)*(H-pad*2); };
+    var line=pts.map(function(p,i){ return (i?"L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1); }).join(" "),
+        area=line+" L"+X(n-1).toFixed(1)+" "+H+" L"+X(0).toFixed(1)+" "+H+" Z",
+        col=(dir==="up")?"var(--el-Grass)":((dir==="down")?"var(--el-Fire)":"var(--accent)"),
+        uid="pxspark"+(_sparkSeq++);
+    return '<svg class="pxspark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true" focusable="false">'+
+      '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'+
+        '<stop offset="0" stop-color="'+col+'" stop-opacity=".32"/>'+
+        '<stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+
+      '<path d="'+area+'" fill="url(#'+uid+')"/>'+
+      '<path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '<circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(pts[n-1].v).toFixed(1)+'" r="2.4" fill="'+col+'"/></svg>';
+  }
+  function priceTrendHtml(t){
+    var head="";
+    if(t.dir==="up") head='<div class="pxdelta pxup"><span class="pxarrow">\u25b2</span>'+esc(t.change)+'</div><div class="pxcap">this week</div>';
+    else if(t.dir==="down") head='<div class="pxdelta pxdown"><span class="pxarrow">\u25bc</span>'+esc(t.change)+'</div><div class="pxcap">this week</div>';
+    else if(t.dir==="flat") head='<div class="pxdelta pxflat">Unchanged</div><div class="pxcap">this week</div>';
+    return trendSparkHtml(t.pts, t.dir)+head+t.rows.map(function(r){
+      return '<div class="pxrow"><span class="pxlab">'+esc(r.label)+'</span><span class="pxval">'+esc(r.value)+'</span></div>'; }).join("");
   }
   // Today reads the books directly, so today's page always agrees with the headline value.
   function todayPriceMap(mode){ var out={}, sm=sealMap();
