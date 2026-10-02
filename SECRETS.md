@@ -173,12 +173,14 @@ infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-ch
 
 Rotate the token from the developer console if it ever reaches a log or a file.
 
-## xAI API key (English headlines for the Japanese account)
+## xAI API key (English text for the Japanese account)
 
 `tools/fetch_x_posts.py` follows both official accounts, and @PalworldOCG posts in
-Japanese. `tools/translate_posts.py` turns those headlines into English so the feed does
-not show Japanese text to an English reader. It translates the headline only: every post
-is already fetched through the official X API, so nothing here can invent a post.
+Japanese. `tools/translate_posts.py` turns those posts into English so the feed does
+not show Japanese text to an English reader. It translates both the headline and the body
+a reader sees under it, each on its own, so a field that was already English is never
+rewritten. It translates text only: every post is already fetched through the official X
+API, so nothing here can invent a post.
 
 Everything about this is optional. Without the key the Japanese posts publish in their
 original form, which is exactly what happens today, and the step says so rather than
@@ -191,7 +193,8 @@ failing.
    with that value. Paste it into the dashboard rather than the CLI: `infisical secrets
    set` would put the key in your shell history. Never put it in `.env`, a workflow file
    or a GitHub secret.
-3. Optional: add `XAI_MODEL` to pin a model. The default is `grok-4.6`.
+3. Optional: add `XAI_MODEL` to pin a model. The default is `grok-4.3`; the module's
+   docstring records what each candidate model actually did on this feed.
 4. No workflow change is needed. The X step already runs under `infisical run`, so the
    key is injected the moment it exists.
 5. Check it locally without printing the value:
@@ -200,9 +203,10 @@ failing.
 infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-check
 ```
 
-   The run reports `translated N headline(s), M from cache, K left in the original`. Any
-   post it could not translate keeps its Japanese title, and `title_original` carries the
-   original either way.
+   The run reports `translated N post(s), M from cache, P part done, K left in the
+   original`. Any field it could not translate keeps its Japanese text, and
+   `title_original` and `summary_original` carry the originals either way. Only a complete
+   answer is cached, so a post that came back half translated is retried on the next run.
 
 The cache lives at `stage/sieve/translations.json` and is carried between CI runs by
 `actions/cache`. Deleting it costs one round of translation, nothing more.
