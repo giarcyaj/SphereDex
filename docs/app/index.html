@@ -4927,6 +4927,10 @@ label.acctsetrow { align-items:center; }
       var region=ebayReg();
       function fresh(){ return myGen===detailGen; }   // drop results if the user moved to another card
       function salesUrl(source, grade, reg){ reg=reg||region; return "/api/sales?name="+encodeURIComponent(c.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(c.id))+"&region="+encodeURIComponent(reg)+"&source="+encodeURIComponent(source)+(grade?"&grade="+encodeURIComponent(grade):"")+devQ(); }
+      // Graded prices come from the nightly sweep's own table rather than the metered sold provider:
+      // free, no quota, and it answers for every card at once instead of asking per card.
+      function gradedUrl(grader, grade, reg){ reg=reg||region;
+        return "/api/graded?num="+encodeURIComponent(edCode(c.id))+"&grader="+encodeURIComponent(grader)+"&grade="+encodeURIComponent(grade)+"&region="+encodeURIComponent(reg)+devQ(); }
       function busy(btn){ return busyBtn(btn); }
       var ps=$("pullSold"), pl=$("pullList"), pg=$("pullGraded");
       if(ps) ps.hidden=false; if(pl) pl.hidden=false;   // the graded fill button is shown by renderGrades
@@ -4981,7 +4985,7 @@ label.acctsetrow { align-items:center; }
       }
       // Top-grade sold (grade 10 of the default grading company) → headline avg + expandable rows.
       function doPsa(silent, reg){ var done=busy($("pullPsa")); var grd=(SETTINGS.defaultGrader||"PSA");
-        return salesGet(salesUrl("soldcomps",grd+" 10",reg), !silent).then(function(r){ done(); if(!fresh()) return;
+        return salesGet(gradedUrl(grd,"10",reg), !silent).then(function(r){ done(); if(!fresh()) return;
           if(!r.ok){ if(!silent) toast(priceErr()); return; }
           var b=r.body||{}, rows=(b.sales||[]).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; }).filter(function(x){return x.p>0;});
           var val=(b.avg!=null?b.avg:b.market), ph=$("psaHint"), gl=$("glPsa");
@@ -5007,7 +5011,7 @@ label.acctsetrow { align-items:center; }
         if(!grades.length){ toast("Add a graded slab first"); return; }
         var done=busy(pg), finc=0, filled=0, failed=false;
         grades.forEach(function(gk){
-          salesGet(salesUrl("soldcomps",gk), true).then(function(r){ if(!fresh()) return;
+          salesGet(gradedUrl(gk.split(" ")[0], gk.split(" ")[1]||"10"), true).then(function(r){ if(!fresh()) return;
             var b=(r&&r.body)||{}; if(!r||!r.ok) failed=true;
             if(b.market!=null){
               var val=(b.avg!=null?b.avg:b.market), gnum=gk.split(" ")[1];
@@ -10437,7 +10441,9 @@ label.acctsetrow { align-items:center; }
     if(rec && (peek || !(rec.failed && Date.now()-rec.at>60000))) return rec;   // a failed request may retry a minute after it failed
     if(peek) return null;
     rec=SCAN_GP[key]={at:Date.now(), done:false, failed:false, val:0};
-    var url="/api/sales?name="+encodeURIComponent(card.name+(edKw()?" "+edKw():""))+"&num="+encodeURIComponent(edCode(card.id))+"&region="+encodeURIComponent(reg)+"&source=soldcomps&grade="+encodeURIComponent(grader+" "+grade)+devQ();
+    // The sweep's table, like the card sheet's graded tile: free, no quota, and the scanner can value a
+    // slab on every frame without spending a metered lookup it would never get back.
+    var url="/api/graded?num="+encodeURIComponent(edCode(card.id))+"&grader="+encodeURIComponent(grader)+"&grade="+encodeURIComponent(grade)+"&region="+encodeURIComponent(reg)+devQ();
     var p; try{ p=salesGet(url); }catch(e){ p=Promise.reject(e); }
     rec.p=p.then(function(r){ var b=(r&&r.body)||{}, v=+(b.avg!=null?b.avg:b.market)||0;
       if(!salesFailed(r)) rec.val=(v>0)?v:0; else rec.failed=true;
