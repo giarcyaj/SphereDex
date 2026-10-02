@@ -677,6 +677,7 @@
 
   .setbrowse { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
   .setbrowsebar { margin:-3px 0 14px; }
+  .sealhidebar { margin:-2px 0 14px; }
   .setbrowse .empty { padding:34px 20px; overflow-wrap:anywhere; }
   .setcard { text-align:center; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; overflow:hidden;
     padding:0; color:var(--ink); cursor:pointer; transition:transform .16s, box-shadow .16s, border-color .16s; display:flex; flex-direction:column; box-shadow:var(--shadow); }
@@ -2588,6 +2589,7 @@ label.acctsetrow { align-items:center; }
         </select>
       </div>
     </div>
+    <div class="sealhidebar"><button class="chip solid" type="button" id="sealHideTog" aria-pressed="false">Hide unowned</button></div>
     <div class="sealedgrid" id="sealedGrid"></div>
   </section>
 
@@ -6231,9 +6233,13 @@ label.acctsetrow { align-items:center; }
     }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
   var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(lsGet("palvault-sealview")||"auto");
+  // Hide unowned keeps only the products you hold at least one of. A preorder has no count yet, so it
+  // goes too. Reads the map directly: sealItem() would create an empty entry for every product it is asked about.
+  function sealHideOn(){ return lsGet("palvault-sealhide")==="1"; }
+  function sealOwned(p){ var s=sealMap()[p.id]; return !!(s && (+s.qty||0)>0); }
   function sealedList(){
-    var q=fold(sealQ.trim());
-    var all=SEALED.filter(function(p){ return !q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1; });
+    var q=fold(sealQ.trim()), hide=sealHideOn();
+    var all=SEALED.filter(function(p){ return (!q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1) && (!hide || sealOwned(p)); });
     var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
     function relDate(p){ return monDateTime(sealDate(p)); }
     // Release-date sort: one chronological run of everything (released then upcoming), oldest first (reverse for newest first).
@@ -6258,7 +6264,16 @@ label.acctsetrow { align-items:center; }
     grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
     grid.innerHTML="";
     var seenPre=false, list=sealedList();
-    if(!list.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>'; }
+    var hideTog=$("sealHideTog");
+    if(hideTog){ hideTog.setAttribute("aria-pressed", sealHideOn()?"true":"false");
+      hideTog.onclick=function(){ lsSet("palvault-sealhide", sealHideOn()?"0":"1"); renderSealed(); }; }
+    if(!list.length){
+      // With the chip on and nothing held at all, say so; a search that simply missed keeps the usual line.
+      var noneHeld=sealHideOn() && !SEALED.some(sealOwned);
+      grid.innerHTML=noneHeld
+        ? '<div class="empty" style="grid-column:1/-1"><b>No owned products</b>Turn off Hide unowned to see them again.</div>'
+        : '<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>';
+    }
     list.forEach(function(p){
       if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Preorders · coming soon"; grid.appendChild(dv); }
       var el=document.createElement("div"); el.className="sealcard"+(p.pre?" preorder":"");
