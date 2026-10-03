@@ -1584,6 +1584,7 @@ label.acctsetrow { align-items:center; }
     .pdrow .pdc { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   }
   .deckadd { max-width:520px; margin-bottom:6px; }
+  .deckorderbar { margin:4px 0 10px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
   .decksug button { width:100%; text-align:left; border:none; background:transparent; color:var(--ink); padding:9px 13px; display:flex; align-items:center; gap:10px; font-size:.9rem; }
@@ -2551,6 +2552,7 @@ label.acctsetrow { align-items:center; }
     <div class="deckcomplete" id="deckCompletion" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
     <div class="decksug" id="deckSug" hidden></div>
+    <div class="deckorderbar" id="deckOrderBar" hidden><button class="chip solid" type="button" id="deckNeedFirst" aria-pressed="false">Need first</button></div>
     <div class="decklist" id="deckList"></div>
   </section>
 
@@ -7406,7 +7408,7 @@ label.acctsetrow { align-items:center; }
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck();
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
@@ -7450,6 +7452,16 @@ label.acctsetrow { align-items:center; }
     });
     var clear=$("deckFocusClear"); if(clear) clear.onclick=function(){ deckFocus=null; renderDecks(); };
     var shown=ids.filter(function(id){ return deckRowVisible(byNumberIdx[id.toUpperCase()]); });
+    // Need first lifts the rows you hold too few copies of (the same own < qty test that shows the
+    // Wishlist button) above the rest; each group keeps its set then card number order.
+    var needFirst=lsGet("palvault-deckneedfirst")==="1", nf=$("deckNeedFirst");
+    if(nf){ nf.setAttribute("aria-pressed", needFirst?"true":"false");
+      nf.onclick=function(){ lsSet("palvault-deckneedfirst", needFirst?"0":"1"); renderDecks(); }; }
+    if(needFirst){
+      var lack=[], rest=[];
+      shown.forEach(function(id){ var own=(activeCol().own[id]&&activeCol().own[id].qty)||0; (own<d.cards[id]?lack:rest).push(id); });
+      shown=lack.concat(rest);
+    }
     if(!ids.length){ wrap.innerHTML='<div class="empty"><b>This deck is empty</b>Search above to add cards.</div>'; return; }
     if(!shown.length){ wrap.innerHTML='<div class="empty"><b>Nothing in this slice</b>Tap the same stat again to show the whole deck.</div>'; return; }
     wrap.innerHTML="";
