@@ -6247,6 +6247,8 @@ label.acctsetrow { align-items:center; }
   // goes too. Reads the map directly: sealItem() would create an empty entry for every product it is asked about.
   function sealHideOn(){ return lsGet("palvault-sealhide")==="1"; }
   function sealOwned(p){ var s=sealMap()[p.id]; return !!(s && (+s.qty||0)>0); }
+  // Products held, not copies, across the whole catalogue so search and Hide unowned never change it.
+  function sealOwnedCount(){ return SEALED.filter(function(p){ return !p.pre && sealOwned(p); }).length; }
   function sealedList(){
     var q=fold(sealQ.trim()), hide=sealHideOn();
     var all=SEALED.filter(function(p){ return (!q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1) && (!hide || sealOwned(p)); });
@@ -6321,7 +6323,8 @@ label.acctsetrow { align-items:center; }
     });
     var bar=$("sealedBar"); if(bar) bar.innerHTML=
       '<div class="hs"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>'+
-      '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>';
+      '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>'+
+      '<div class="hs"><span class="n">'+sealOwnedCount()+'</span><span class="l">Owned</span></div>';
   }
 
   // ---- Sealed product detail sheet + region-aware buy links ----
