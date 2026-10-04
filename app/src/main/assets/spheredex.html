@@ -1591,6 +1591,8 @@ label.acctsetrow { align-items:center; }
   .decksug button:hover { background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .decksug img { width:26px; height:36px; object-fit:cover; border-radius:4px; flex:none; }
   .decksug .dnum { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); margin-left:auto; }
+  .decksug .dsown { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); white-space:nowrap; flex:none; }
+  .decksug .dsown.have { color:var(--el-Grass); }
   .decklist { display:flex; flex-direction:column; gap:8px; max-width:640px; }
   .deckrow { display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:8px 12px; }
   .deckrow img { width:32px; height:44px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
@@ -7854,7 +7856,8 @@ label.acctsetrow { align-items:center; }
       var matches=CARDS.filter(function(c){ return cardMatchesQuery(c, si.value); }).slice(0,7);
       if(!matches.length){ closeSug(); return; }
       sug.innerHTML=""; matches.forEach(function(c){ var b=document.createElement("button"); b.type="button";
-        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span>';
+        var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0;
+        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span><span class="dsown'+(own?' have':'')+'">own '+own+'</span>';
         b.onclick=function(){ if(!activeDeck()) newDeck(); var d=activeDeck(); d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderDecks(); si.value=""; closeSug(); si.focus(); };
         sug.appendChild(b); });
       sug.hidden=false;
