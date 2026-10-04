@@ -329,6 +329,7 @@
   .kv.dates dd { font-size:.8rem; }
   .deckuse { margin:10px 0 0; font-size:.82rem; color:var(--ink-soft); line-height:1.45; overflow-wrap:anywhere; }
   .deckuse .ic { width:14px; height:14px; margin-right:6px; }
+  .deckuse .deckusename { display:block; margin:2px 0 0 20px; color:var(--ink); font-weight:600; }
   .cname { font-family:var(--font-display); font-weight:750; font-size:.9rem; letter-spacing:-.01em; line-height:1.05; }
   .cname .suffix { color:var(--ink-faint); font-weight:600; font-size:.82em; }
   .crow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
@@ -7081,15 +7082,16 @@ label.acctsetrow { align-items:center; }
     return any ? n : -1; }
   function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
-  // How many of your decks list a card. A deck counts once however many copies it runs, and the line only
+  // Which of your decks list a card. A deck counts once however many copies it runs, and the line only
   // exists with Player tools on, since that is the only time Decks exist as a page.
-  function decksUsing(id){ var up=String(id).toUpperCase(), n=0;
-    decks().forEach(function(d){ var cs=(d&&d.cards)||{};
-      if(Object.keys(cs).some(function(k){ return k.toUpperCase()===up && (+cs[k]||0)>0; })) n++; });
-    return n; }
+  function decksUsing(id){ var up=String(id).toUpperCase();
+    return decks().filter(function(d){ var cs=(d&&d.cards)||{};
+      return Object.keys(cs).some(function(k){ return k.toUpperCase()===up && (+cs[k]||0)>0; }); }); }
+  // The deck names sit under the count, one per line in picker order; a deck with no name still counts.
   function deckUseLine(c){ if(!playerToolsOn()) return "";
-    var n=decksUsing(c.id);
-    return n ? '<p class="deckuse">'+icon("layers")+'Used in '+n+(n===1?' deck':' decks')+'</p>' : ""; }
+    var ds=decksUsing(c.id), n=ds.length;
+    return n ? '<p class="deckuse">'+icon("layers")+'Used in '+n+(n===1?' deck':' decks')+
+      ds.map(function(d){ var nm=String((d&&d.name)||"").trim(); return nm ? '<span class="deckusename">'+esc(nm)+'</span>' : ""; }).join("")+'</p>' : ""; }
   // Deck size for the picker: every copy the list runs, so a stub and a full deck tell apart without opening each.
   function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
     Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
