@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T06:10:00Z",
+  "updated_at": "2026-10-04T06:10:00Z",
   "entries": [
     {
       "pal": "Jetragon",
@@ -320,6 +320,16 @@
       "card_number": "EBP02-013",
       "source_url": "https://x.com/PalworldOCG_EN/status/2106202576467165196",
       "revealed_at": "2026-10-03T02:00:00Z"
+    },
+    {
+      "pal": "Eikthyrdeer",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Eikthyrdeer – Warden of the Woods",
+      "card_number": "EBP02-009",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2106564969664004482",
+      "revealed_at": "2026-10-04T02:00:01Z"
     }
   ]
 }
