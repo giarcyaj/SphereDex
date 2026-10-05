@@ -1663,6 +1663,10 @@ label.acctsetrow { align-items:center; }
   .editioncounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex-basis:100%;width:100%;margin-top:8px}
   .editioncounts p{grid-column:1/-1;margin:0;color:var(--ink-soft);font-size:.8rem}
   .editioncounts .field{min-width:0}.editioncounts label{font-size:.76rem}.editioncounts input{width:100%;min-width:0}
+  .copynotes .cnrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1.5px solid var(--line);border-radius:12px}
+  .copynotes .cnrow select{width:100%;min-width:0}.copynotes .cnnote{grid-column:1/-1}
+  .copynotes .cnact{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center}.copynotes .cnact>*{margin:0 8px 0 0}
+  .copynotes .cnadd{grid-column:1/-1;justify-self:start}
   /* notification bell + What's-new popup */
   .bellbtn { position:relative; padding:9px 11px; }
   .bellbtn svg { display:block; }
@@ -3598,6 +3602,47 @@ label.acctsetrow { align-items:center; }
     if(delta<0) n=-Math.min(b[key]||0,n);
     b[key]=(b[key]||0)+n; setRawCounts(e,b); return n;
   }
+  // Numbered copies: raw copies stay counts, and some of them can carry a serial out of the print run (372 of 750)
+  // or a misprint tag with a short note. They live in copyNotes on the holding, never outnumber the raw copies,
+  // and never change qty, the printing counts or any value. Older app versions simply ignore the array.
+  function copyNoteClean(n){
+    if(!n || typeof n!=="object") return null;
+    var dig=function(v){ return String(v==null?"":v).replace(/\D+/g,"").slice(0,7); };
+    var out={}, sr=dig(n.serial), rn=dig(n.run), nt=String(n.note==null?"":n.note).replace(/\s+/g," ").trim().slice(0,80), ed=rawEditionKey(n.ed==null?"unknown":n.ed);
+    if(sr) out.serial=sr; if(rn) out.run=rn; if(n.mis) out.mis=1; if(nt) out.note=nt; if(ed!=="unknown") out.ed=ed;
+    return (sr||rn||out.mis||nt) ? out : null;
+  }
+  function copyNotesList(e){
+    var q=rawCount(e&&e.qty), out=[];
+    ((e && Array.isArray(e.copyNotes))?e.copyNotes:[]).forEach(function(n){ var x=copyNoteClean(n); if(x && out.length<q) out.push(x); });
+    return out;
+  }
+  function setCopyNotes(e, list){
+    var q=rawCount(e&&e.qty), out=[];
+    (list||[]).forEach(function(n){ var x=copyNoteClean(n); if(x && out.length<q) out.push(x); });
+    if(out.length) e.copyNotes=out; else delete e.copyNotes;
+  }
+  function addCopyNote(e, n){
+    var l=copyNotesList(e), x=copyNoteClean(n);
+    if(!x || l.length>=rawCount(e&&e.qty)) return false;
+    l.push(x); e.copyNotes=l; return true;
+  }
+  function removeCopyNote(e, i){ var l=copyNotesList(e); if(i<0 || i>=l.length) return; l.splice(i,1); setCopyNotes(e,l); }
+  function copyNoteLabel(n){
+    var bits=[], num=(n.serial&&n.run) ? n.serial+" of "+n.run : (n.serial ? n.serial : (n.run ? "of "+n.run : ""));
+    if(num) bits.push(num);
+    if(n.mis) bits.push("Misprint");
+    if(n.note) bits.push(n.note);
+    if(n.ed && n.ed!=="unknown") bits.push(rawEditionLabel(n.ed));
+    return bits.join(" · ");
+  }
+  // The CSV Misprint cell: "Misprint", "Misprint: note", or just the note for an untagged copy.
+  function copyNoteCsvCell(n){ return n.mis ? ("Misprint"+(n.note?": "+n.note:"")) : (n.note||""); }
+  function copyNoteFromCsv(serial, run, cell, ed){
+    var n={serial:serial, run:run, ed:ed||"unknown"}, t=String(cell||"").trim(), m=t.match(/^misprint\b\s*:?\s*(.*)$/i);
+    if(m){ n.mis=1; n.note=m[1]; } else n.note=t;
+    return copyNoteClean(n);
+  }
   function mergeRawCounts(a,b,out){
     // A correction of unknown -> 1st is the same copy, not two copies. Keep one coherent breakdown
     // under the existing maximum-total merge policy; any unmatched extra copies remain unspecified.
@@ -4752,6 +4797,7 @@ label.acctsetrow { align-items:center; }
     var sphereDetail="";
     if(setTrack){ var setCards=setSphereCards(setTrack), setOwned=setCards.filter(function(x){ return has(o(x.id)); }).length;
       sphereDetail='<div class="setcontrib"><span class="rwsphere scorb" style="--rc:'+setTrack.sphere.c+'">'+sphereSVG(setTrack.sphere.c,"detail")+'</span><span class="sctxt"><b>Counts toward '+esc(setTrack.name)+' Sphere</b>Collecting this makes the set '+(setOwned+(has(s)?0:1))+' / '+setCards.length+' complete.</span><button type="button" id="viewSetSphere">View set</button></div>'; }
+    var cnWork = copyNotesList(s);   // numbered copies, blanks kept here until filled in
     var gwork = (s.graded||[]).filter(function(g){ return g && typeof g==="object"; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=g.value; return x; });
     $("mMain").innerHTML =
       '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
@@ -4861,6 +4907,13 @@ label.acctsetrow { align-items:center; }
       var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>Wishlist</span>'; }
       var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
+    // Refresh the numbered copy pills without rebuilding the editor underneath them (keeps focus while typing).
+    function paintOwnPills(){
+      var host=$("ownLine"); if(!host) return;
+      Array.prototype.forEach.call(host.querySelectorAll(".ownpill.cnpill"), function(el){ el.parentNode.removeChild(el); });
+      var anchor=host.querySelector(".editioncounts");
+      copyNotesList(s).forEach(function(n){ var sp=document.createElement("span"); sp.className="ownpill cnpill"; sp.style.paddingRight="12px"; sp.textContent=copyNoteLabel(n); if(anchor) host.insertBefore(sp,anchor); else host.appendChild(sp); });
+    }
     // Quick-remove line: shows current holdings once a card is in the collection.
     function paintOwn(){
       var host=$("ownLine"); if(!host) return;
@@ -4870,11 +4923,39 @@ label.acctsetrow { align-items:center; }
       // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
       // again anywhere in the app, so there was no way to check a slab against its label.
       gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      if(cnWork.length>q) cnWork=cnWork.slice(0,q);
+      copyNotesList(s).forEach(function(n){ parts.push('<span class="ownpill cnpill" style="padding-right:12px">'+esc(copyNoteLabel(n))+'</span>'); });
       host.hidden=!parts.length;
       host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
       if(q){
         host.innerHTML+='<div class="editioncounts"><p>Edit how many raw copies you have of each printing, for example to mark copies as Japanese or Chinese. Older unlabelled copies are kept under Not specified.</p>'+printingKeys(c).map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+(counts[ed]||0)+'"></div>';}).join('')+'</div>';
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
+      }
+      if(q){
+        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have.</p>';
+        cnWork.forEach(function(n,i){
+          var ed=rawEditionKey(n.ed==null?"unknown":n.ed);
+          cnHtml+='<div class="cnrow" data-cn="'+i+'">'+
+            '<div class="field"><label for="cnSerial'+i+'">Number</label><input id="cnSerial'+i+'" data-cnf="serial" type="text" inputmode="numeric" autocomplete="off" placeholder="372" value="'+esc(n.serial||"")+'"></div>'+
+            '<div class="field"><label for="cnRun'+i+'">Of</label><input id="cnRun'+i+'" data-cnf="run" type="text" inputmode="numeric" autocomplete="off" placeholder="750" value="'+esc(n.run||"")+'"></div>'+
+            '<div class="field"><label for="cnEd'+i+'">Printing</label><select id="cnEd'+i+'" data-cnf="ed">'+printingKeys(c).map(function(k){ return '<option value="'+k+'"'+(k===ed?' selected':'')+'>'+rawEditionLabel(k)+'</option>'; }).join("")+'</select></div>'+
+            '<div class="field cnnote"><label for="cnNote'+i+'">Note</label><input id="cnNote'+i+'" data-cnf="note" type="text" maxlength="80" autocomplete="off" placeholder="Optional" value="'+esc(n.note||"")+'"></div>'+
+            '<div class="cnact"><button class="chip solid" data-cnf="mis" type="button" aria-pressed="'+(n.mis?'true':'false')+'">Misprint</button><button class="btn" data-cnrm="'+i+'" type="button">Remove</button></div>'+
+          '</div>';
+        });
+        if(cnWork.length<q) cnHtml+='<button class="btn cnadd" id="cnAdd" type="button">Add serial</button>';
+        host.insertAdjacentHTML("beforeend", cnHtml+'</div>');
+        var cnStore=function(){ setCopyNotes(s,cnWork); persist(); paintOwnPills(); };
+        Array.prototype.forEach.call(host.querySelectorAll(".cnrow"), function(row){
+          var i=parseInt(row.getAttribute("data-cn"),10);
+          Array.prototype.forEach.call(row.querySelectorAll("[data-cnf]"), function(el){
+            var f=el.getAttribute("data-cnf");
+            if(f==="mis") el.onclick=function(){ cnWork[i].mis=cnWork[i].mis?0:1; el.setAttribute("aria-pressed",cnWork[i].mis?"true":"false"); cnStore(); };
+            else el.onchange=function(){ var v=el.value; if(f==="serial"||f==="run"){ v=String(v||"").replace(/\D+/g,"").slice(0,7); el.value=v; } cnWork[i][f]=v; cnStore(); };
+          });
+        });
+        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
+        var cnAdd=$("cnAdd"); if(cnAdd) cnAdd.onclick=function(){ if(cnWork.length<q){ cnWork.push({serial:"",run:"",ed:"unknown",note:""}); paintOwn(); var f=$("cnSerial"+(cnWork.length-1)); if(f) try{ f.focus(); }catch(e){} } };
       }
       if(trackPaidOn()){
         var paidBits=["unknown","1","2","jp","cn"].filter(function(ed){ return counts[ed]; }).map(function(ed){
@@ -5458,14 +5539,21 @@ label.acctsetrow { align-items:center; }
   function collectionCsv(col){
     col=col||activeCol();
     var map=(col&&col.own)||{}, seal=(col&&col.sealed)||{}, mode=priceMode(), code=(CUR&&CUR.code)||"";
-    var rows=[CSV_HEADER], inCat={}, prevOwn=own, swapped=(map!==own);
+    var rows=[CSV_HEADER.slice()], inCat={}, prevOwn=own, swapped=(map!==own);
+    // Serial, Run and Misprint columns are added at the end only when a holding has numbered copies, so every
+    // other export keeps exactly the same shape. Each numbered copy is an extra Card row with Quantity 0, which
+    // adds no copies on import (older versions skip it).
+    var withNotes=Object.keys(map).some(function(id){ var e=map[id]; return e && typeof e==="object" && copyNotesList(e).length; });
+    if(withNotes) rows[0]=rows[0].concat(["Serial","Run","Misprint"]);
     var cardRows=function(id, c){
       var e=map[id]; if(!e || typeof e!=="object") return;
       var nm=c?(c.name||""):"", setNm=(c && SETS[c.set])?SETS[c.set].name:"", rare=c?(RARE_NAME[c.rare]||c.rare||""):"";
       var q=Math.floor(+e.qty||0);
       if(q>0){ var u=unitOf(id, mode), us=csvNum(u), counts=rawCounts(e);
         ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return; var ts=csvNum(n*u);
-          rows.push([id, String(n), nm, "Card", setNm, rare, e.cond||"", csvEdition(ed), "", "", "", us, ts, (us||ts)?code:"", e.notes||"", csvPaid(e.paidRaw && e.paidRaw[ed])]); }); }
+          rows.push([id, String(n), nm, "Card", setNm, rare, e.cond||"", csvEdition(ed), "", "", "", us, ts, (us||ts)?code:"", e.notes||"", csvPaid(e.paidRaw && e.paidRaw[ed])]); });
+        copyNotesList(e).forEach(function(cn){
+          rows.push([id, "0", nm, "Card", setNm, rare, e.cond||"", csvEdition(cn.ed), "", "", "", "", "", "", "", "", cn.serial||"", cn.run||"", copyNoteCsvCell(cn)]); }); }
       (Array.isArray(e.graded)?e.graded:[]).forEach(function(g){ if(!g || typeof g!=="object") return; var v=csvNum(g.value);
         rows.push([id, "1", nm, "Graded", setNm, rare, "", csvEdition(g.edition), g.grader||"", (g.grade==null?"":g.grade), (g.cert==null?"":g.cert), v, v, v?code:"", "", csvPaid(g.paid)]); });
     };
@@ -5482,6 +5570,7 @@ label.acctsetrow { align-items:center; }
       var us=csvNum(u), ts=p.pre?"":csvNum(q*u);   // preorders carry no total, so the column sums to the portfolio value
       rows.push([p.id, String(q), title+(typ?" "+typ:""), p.pre?"Preorder":"Sealed", "", "", "", "", "", "", "", us, ts, (us||ts)?code:"", "", csvPaid(s.paid)]);
     });
+    if(withNotes) rows.forEach(function(r){ while(r.length<rows[0].length) r.push(""); });
     return "\uFEFF"+rows.map(function(r){ return r.map(function(v,i){ return csvCell(v, !!CSV_NUMCOL[i]); }).join(","); }).join("\r\n")+"\r\n";
   }
   // ---- CSV import ----
@@ -5532,6 +5621,12 @@ label.acctsetrow { align-items:center; }
         var num=cell(row,"number").replace(/^#/,""), type=cell(row,"type").toLowerCase()||"card";
         // Blank means 1; "2", "x2" or "2x" as the tolerant reader; 0 (or anything else) on a Card / Sealed row adds nothing.
         var qs=cell(row,"quantity"), mq=qs.match(/^x?\s*(\d+)\s*x?$/i), q=mq?parseInt(mq[1],10):(qs===""?1:NaN);
+        if(type==="card" && q===0 && (cell(row,"serial") || cell(row,"run") || cell(row,"misprint"))){
+          var nCard=byNumberIdx[num.toUpperCase()], cnote=nCard && copyNoteFromCsv(cell(row,"serial"), cell(row,"run"), cell(row,"misprint"), edOf(cell(row,"edition")));
+          if(!cnote){ skipped++; continue; }
+          var ne=own[nCard.id]; if(!ne){ ne=own[nCard.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; }
+          (ne.copyNotes=ne.copyNotes||[]).push(cnote); continue;
+        }
         if(type!=="graded" && !(q>0)){ skipped++; continue; }
         if(type==="sealed" || type==="preorder"){
           var sid=sealIds[num.toLowerCase()]; if(!sid){ skipped++; continue; }
@@ -5557,6 +5652,8 @@ label.acctsetrow { align-items:center; }
           var nt=cell(row,"notes",true); if(nt.trim()) e.notes=nt;
         }
       }
+      // Numbered copy rows can come before or after the rows that add the copies, so cap them once at the end.
+      Object.keys(own).forEach(function(id){ var x=own[id]; if(!x.copyNotes) return; setCopyNotes(x, x.copyNotes); if(!x.qty && !x.graded.length && !x.copyNotes){ delete own[id]; added--; } });
       return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:slabs, sealedItems:sealedItems };
     }
     lines.forEach(function(line){

@@ -214,7 +214,8 @@ function paidApp() {
   const names = [
     'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
     'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
-    'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
+    'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis',
+    'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'addCopyNote', 'removeCopyNote', 'copyNoteLabel', 'copyNoteCsvCell', 'copyNoteFromCsv'
   ];
   const code = names.map(appFunction).join('\n') + '\n' + ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
   vm.runInContext(code, vm.createContext(sandbox));
