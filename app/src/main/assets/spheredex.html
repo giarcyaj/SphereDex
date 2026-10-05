@@ -390,6 +390,17 @@
   .promoscope span { margin:4px 12px 4px 0; min-width:0; }
   .promoscope b { color:var(--ink); font-weight:700; }
   .promoscope .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
+  /* Value guess: folded to one line above the grid, opens into a rarity grid. Margins, not flex gap. */
+  .valueguess { margin:-4px 0 14px; padding:5px 6px 5px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface); font-size:.84rem; color:var(--ink-soft); overflow-wrap:anywhere; }
+  .valueguess .vghead { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .valueguess .vghead span { margin:4px 12px 4px 0; min-width:0; }
+  .valueguess b { color:var(--ink); font-weight:700; }
+  .valueguess .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
+  .valueguess .vgbody { padding:4px 7px 8px 0; }
+  .valueguess .vghelp { margin:2px 0 10px; }
+  .valueguess .vggrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .valueguess .vggrid .field { min-width:0; } .valueguess .vggrid label { font-size:.76rem; } .valueguess .vggrid input { width:100%; min-width:0; }
+  .valueguess .vgtotal { margin:12px 0 10px; font-size:1rem; color:var(--ink); }
 
   /* Modal */
   /* z-index 72 is deliberate and constrained on both sides. It MUST beat .navmenu (70), the floating
@@ -2566,6 +2577,7 @@ label.acctsetrow { align-items:center; }
 
   <p class="countline" id="countLine"></p>
   <div class="promoscope" id="promoScope" hidden></div>
+  <div class="valueguess" id="valueGuess" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="collectedSealedWrap" hidden>
     <h2 class="sech" style="margin-top:26px">Sealed products</h2>
@@ -4490,12 +4502,59 @@ label.acctsetrow { align-items:center; }
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
     paintPromoScope();
+    try{ renderValueGuess(); }catch(e){ reportError(e, "value guess"); }
     // Only refresh what is on screen. stats() updates the Collection dashboard (completion, sets, binder value).
     // Home and Releases are rebuilt lazily when the user navigates to them (see showPage), not on every edit,
     // and mutating callers own persistence (they call save() themselves) so render() no longer saves.
     stats(); updateFilterCount();
   }
 
+  // ---- Value guess: how many of each rarity you pulled, times this set's average price for that rarity ----
+  // A rough figure for a pile of pulls before anything is logged. Uses the same per card price as Sort by
+  // Value, skips cards with no price, and never touches the collection. Counts are kept only while the same
+  // set stays chosen. Shown on the Cards grid when exactly one set is chosen and prices are on.
+  var VG={key:"", counts:{}, open:false};
+  function valueGuessScopeCards(){
+    if(colMode()!=="col" || SETTINGS.mode==="collector") return null;
+    var chosen=FILTER_SETS.filter(function(x){ return filters.exps[x.key]; });
+    if(chosen.length!==1) return null;
+    var codes=setFilterCodes(), list=CARDS.filter(function(c){ return codes.indexOf(c.set)!==-1; });
+    return list.length ? {key:chosen[0].key+"|"+codes.join(","), name:chosen[0].name, cards:list} : null;
+  }
+  function valueGuessRareAvg(cards, rare){
+    var t=0, n=0;
+    cards.forEach(function(c){ if(c.rare!==rare) return; var u=+mktOf(c.id)||0; if(u>0){ t+=u; n++; } });
+    return n ? t/n : 0;
+  }
+  function valueGuessCount(v){ var n=parseInt(String(v==null?"":v).replace(/\D+/g,""),10); return (isFinite(n) && n>0) ? Math.min(999,n) : 0; }
+  function valueGuessTotal(avgs, counts){
+    var t=0; Object.keys(avgs).forEach(function(r){ t+=(+avgs[r]||0)*valueGuessCount(counts&&counts[r]); });
+    return t;
+  }
+  function renderValueGuess(){
+    var el=$("valueGuess"); if(!el) return;
+    var sc=valueGuessScopeCards();
+    if(!sc){ el.hidden=true; el.innerHTML=""; return; }
+    if(sc.key!==VG.key){ VG.key=sc.key; VG.counts={}; }
+    var seen={}; sc.cards.forEach(function(c){ seen[c.rare]=1; });
+    var rares=RARES.filter(function(r){ return seen[r]; }), avgs={};
+    rares.forEach(function(r){ avgs[r]=valueGuessRareAvg(sc.cards, r); });
+    var head='<div class="vghead"><span><b>Value guess</b> · '+esc(sc.name)+'</span><button type="button" class="tbtn" id="vgTog" aria-expanded="'+(VG.open?'true':'false')+'">'+(VG.open?'Hide':'Open')+'</button></div>';
+    if(!VG.open){ el.innerHTML=head; el.hidden=false; $("vgTog").onclick=function(){ VG.open=true; renderValueGuess(); }; return; }
+    el.innerHTML=head+'<div class="vgbody"><p class="vghelp">Type how many you pulled of each rarity. Estimate uses average prices in this set.</p>'+
+      '<div class="vggrid">'+rares.map(function(r){ var v=valueGuessCount(VG.counts[r]);
+        return '<div class="field"><label for="vg'+r+'">'+esc(RARE_NAME[r]||r)+'</label><input id="vg'+r+'" data-vg="'+r+'" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="0" value="'+(v?v:'')+'"></div>'; }).join("")+'</div>'+
+      '<p class="vgtotal">Estimate <b id="vgSum"></b></p>'+
+      '<button type="button" class="btn" id="vgScan">Scan to log them</button></div>';
+    el.hidden=false;
+    var paint=function(){ var sum=$("vgSum"); if(sum) sum.textContent=money(valueGuessTotal(avgs, VG.counts)); };
+    paint();
+    Array.prototype.forEach.call(el.querySelectorAll("[data-vg]"), function(input){
+      input.oninput=function(){ var r=input.getAttribute("data-vg"), n=valueGuessCount(input.value); VG.counts[r]=n; if(String(n||"")!==input.value && input.value!=="") input.value=n?String(n):""; paint(); };
+    });
+    $("vgTog").onclick=function(){ VG.open=false; renderValueGuess(); };
+    $("vgScan").onclick=function(){ showPage("scan"); };
+  }
   // "Shop tournament promos" plus Show all promos above the grid while a promo type narrows the Promo set.
   function paintPromoScope(){
     var el=$("promoScope"); if(!el) return;
