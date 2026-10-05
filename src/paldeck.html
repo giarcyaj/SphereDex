@@ -401,6 +401,26 @@
   .valueguess .vggrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
   .valueguess .vggrid .field { min-width:0; } .valueguess .vggrid label { font-size:.76rem; } .valueguess .vggrid input { width:100%; min-width:0; }
   .valueguess .vgtotal { margin:12px 0 10px; font-size:1rem; color:var(--ink); }
+  /* Printable deck list: a plain black on white sheet, the same on screen (for a screenshot) and on paper. */
+  .deckprint { position:fixed; left:0; top:0; right:0; bottom:0; z-index:205; overflow:auto; background:#fff; color:#111; -webkit-overflow-scrolling:touch; }
+  .deckprint .dpbar { position:sticky; top:0; display:flex; flex-wrap:wrap; align-items:center; padding:10px 16px; background:#f1f1f1; border-bottom:1px solid #ccc; }
+  .deckprint .dpbar button { margin:4px 8px 4px 0; padding:8px 14px; border-radius:10px; border:1.5px solid #999; background:#fff; color:#111; font:inherit; font-weight:650; cursor:pointer; }
+  .deckprint .dpbar p { flex-basis:100%; margin:4px 0 0; font-size:.8rem; color:#444; }
+  .deckprint .dppage { max-width:720px; margin:0 auto; padding:20px 16px 32px; font-size:.95rem; line-height:1.4; overflow-wrap:anywhere; }
+  .deckprint h1 { margin:0 0 4px; font-size:1.4rem; color:#111; }
+  .deckprint .dpsub { margin:0 0 16px; color:#333; font-size:.85rem; }
+  .deckprint h2 { margin:18px 0 2px; font-size:1.05rem; color:#111; border-bottom:1.5px solid #111; padding-bottom:3px; }
+  .deckprint .dpcount { margin:0 0 6px; color:#333; font-size:.82rem; }
+  .deckprint ol { list-style:none; margin:0; padding:0; }
+  .deckprint li { padding:3px 0; border-bottom:1px solid #ddd; }
+  .deckprint li b { display:inline-block; min-width:2em; }
+  .deckprint .dpnum { font-family:ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
+  .deckprint .dpfoot { margin-top:20px; color:#555; font-size:.78rem; }
+  @media print {
+    html.deckprinting body > *:not(#deckPrintSheet) { display:none !important; }
+    html.deckprinting #deckPrintSheet { position:static; overflow:visible; }
+    html.deckprinting #deckPrintSheet .dpbar { display:none !important; }
+  }
 
   /* Modal */
   /* z-index 72 is deliberate and constrained on both sides. It MUST beat .navmenu (70), the floating
@@ -2597,6 +2617,7 @@ label.acctsetrow { align-items:center; }
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
+        <button class="tbtn ghost" id="deckPrint" data-icon="news" title="A printable list of this deck">Print</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
         <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
       </div>
@@ -3010,6 +3031,8 @@ label.acctsetrow { align-items:center; }
     <div class="askbtns"><button type="button" id="globalSearchClose">Close</button></div>
   </div>
 </div>
+
+<div class="deckprint" id="deckPrintSheet" role="dialog" aria-modal="true" aria-label="Printable deck list" hidden></div>
 
 <div class="askscrim" id="deckIOScrim" hidden>
   <div class="askbox wide" role="dialog" aria-modal="true" aria-labelledby="deckIOTitle">
@@ -7715,7 +7738,7 @@ label.acctsetrow { align-items:center; }
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
@@ -8027,6 +8050,49 @@ label.acctsetrow { align-items:center; }
   (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
+  // ---- Printable deck list: a personal copy for a tournament table, never the official registration form ----
+  // Main deck and Soul cards in two blocks, one row per card (copies, number, name), sorted like the deck rows.
+  function deckPrintGroups(d){
+    var ids=Object.keys((d&&d.cards)||{}).filter(function(k){ return +d.cards[k]>0 && byNumberIdx[k.toUpperCase()]; });
+    ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return ca.setIdx-cb.setIdx || ca.seq-cb.seq; });
+    var main={title:"Main deck", rows:[], total:0}, soul={title:"Soul", rows:[], total:0};
+    ids.forEach(function(id){ var c=byNumberIdx[id.toUpperCase()], q=Math.floor(+d.cards[id]), g=(String(c.kind||"").toLowerCase()==="soul")?soul:main;
+      g.rows.push({qty:q, id:c.id, name:c.name||""}); g.total+=q; });
+    return [main, soul];
+  }
+  function deckPrintCountLabel(n){ return n+(n===1?" card":" cards"); }
+  function deckPrintLine(r){ return r.qty+" "+r.id+" "+r.name; }
+  function deckPrintText(d){
+    var lines=[(d&&d.name)||"Deck list", "Personal copy. Not the official registration form."];
+    deckPrintGroups(d).forEach(function(g){ lines.push("", g.title+" ("+deckPrintCountLabel(g.total)+")"); g.rows.forEach(function(r){ lines.push(deckPrintLine(r)); }); });
+    lines.push("", "SphereDex personal copy");
+    return lines.join("\n")+"\n";
+  }
+  // The print dialog only on the website: the Android and iPhone apps are web views where print is missing
+  // or does nothing, so there the same sheet stays on screen with Copy list (or a screenshot).
+  function deckPrintCanPrint(){ return /^https?:$/.test(location.protocol) && typeof window.print==="function"; }
+  function renderDeckPrint(d){
+    var el=$("deckPrintSheet"); if(!el) return null;
+    var canPrint=deckPrintCanPrint();
+    el.innerHTML='<div class="dpbar"><button type="button" id="dpClose">Close</button>'+(canPrint?'<button type="button" id="dpPrint">Print</button>':'')+'<button type="button" id="dpCopy">Copy list</button>'+
+      (canPrint?'':'<p>Print is not available here. Copy the list, or take a screenshot.</p>')+'</div>'+
+      '<div class="dppage"><h1>'+esc((d&&d.name)||"Deck list")+'</h1><p class="dpsub">Personal copy. Not the official registration form.</p>'+
+      deckPrintGroups(d).map(function(g){ return '<h2>'+esc(g.title)+'</h2><p class="dpcount">'+deckPrintCountLabel(g.total)+'</p><ol>'+
+        g.rows.map(function(r){ return '<li><b>'+r.qty+'</b><span class="dpnum">'+esc(r.id)+'</span>'+esc(r.name)+'</li>'; }).join("")+'</ol>'; }).join("")+
+      '<p class="dpfoot">SphereDex personal copy</p></div>';
+    return el;
+  }
+  function closeDeckPrint(){ var el=$("deckPrintSheet"); if(el){ el.hidden=true; el.innerHTML=""; } document.documentElement.classList.remove("deckprinting"); }
+  function startDeckPrint(d){
+    var el=renderDeckPrint(d); if(!el) return;
+    el.hidden=false; el.scrollTop=0;
+    document.documentElement.classList.add("deckprinting");
+    openOverlay(closeDeckPrint);
+    $("dpClose").onclick=function(){ dismissOverlay(); };
+    $("dpCopy").onclick=function(){ copyPlainText(deckPrintText(d), "Copied", "Copy list", "Clipboard access is not available here. Select this list and copy it."); };
+    var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
+    if(deckPrintCanPrint()) setTimeout(function(){ try{ window.print(); }catch(e){} }, 60);
+  }
   function deckToText(d){
     var ids=Object.keys(d.cards||{}).filter(function(k){ return d.cards[k]>0; });
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -8094,9 +8160,9 @@ label.acctsetrow { align-items:center; }
     sc.hidden=false;
     setTimeout(function(){ ta.focus(); ta.select(); }, 30);
   }
-  function copyPlainText(text, okMsg){
+  function copyPlainText(text, okMsg, boxTitle, boxHint){
     function done(){ toast(okMsg||"Copied"); }
-    function failed(){ showCopyBox(text, "Copy for TCGplayer", "Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry."); }
+    function failed(){ showCopyBox(text, boxTitle||"Copy for TCGplayer", boxHint||"Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry."); }
     function execCopy(){
       var ta=document.createElement("textarea");
       ta.value=text; ta.setAttribute("readonly","");
@@ -8161,6 +8227,7 @@ label.acctsetrow { align-items:center; }
       }});
     }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
+    var dpr=$("deckPrint"); if(dpr) dpr.onclick=function(){ var d=activeDeck(); if(d) startDeckPrint(d); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
     var si=$("deckSearch"), sug=$("deckSug");
