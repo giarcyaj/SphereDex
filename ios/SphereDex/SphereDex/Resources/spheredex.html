@@ -383,6 +383,13 @@
   .empty { text-align:center; padding:70px 20px; color:var(--ink-faint); grid-column:1/-1; }
   .empty b { font-family:var(--font-display); font-size:1.15rem; color:var(--ink-soft); display:block; margin-bottom:6px; }
   .countline { font-size:.8rem; color:var(--ink-faint); margin:0 0 12px; font-weight:600; }
+  /* One bar: the promo type on the left, Show all promos on the right, wrapping on narrow phones. Spaced with
+     margins rather than gap so old WebViews without flex gap lay it out the same. */
+  .promoscope { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; margin:-4px 0 14px; padding:5px 6px 5px 13px;
+    border:1.5px solid var(--line); border-radius:12px; background:var(--surface); font-size:.84rem; color:var(--ink-soft); }
+  .promoscope span { margin:4px 12px 4px 0; min-width:0; }
+  .promoscope b { color:var(--ink); font-weight:700; }
+  .promoscope .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
 
   /* Modal */
   /* z-index 72 is deliberate and constrained on both sides. It MUST beat .navmenu (70), the floating
@@ -2516,6 +2523,7 @@ label.acctsetrow { align-items:center; }
       <div class="chiprow" id="viewChips"><span class="grouplab">Show</span></div>
       <div class="chiprow" id="setChips"><span class="grouplab">Set</span></div>
       <div class="chiprow" id="prodChips" hidden><span class="grouplab">Product</span></div>
+      <div class="chiprow" id="promoChips" hidden><span class="grouplab">Promo type</span></div>
       <div class="chiprow" id="colorChips"><span class="grouplab">Color</span></div>
       <div class="chiprow" id="elChips"><span class="grouplab">Type</span></div>
       <div class="chiprow" id="kindChips"><span class="grouplab">Card</span></div>
@@ -2526,6 +2534,7 @@ label.acctsetrow { align-items:center; }
   </div>
 
   <p class="countline" id="countLine"></p>
+  <div class="promoscope" id="promoScope" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="collectedSealedWrap" hidden>
     <h2 class="sech" style="margin-top:26px">Sealed products</h2>
@@ -3184,6 +3193,25 @@ label.acctsetrow { align-items:center; }
   ];
   function filterSetOf(code){ for(var i=0;i<FILTER_SETS.length;i++){ if(FILTER_SETS[i].products.some(function(p){ return p.code===code; })) return FILTER_SETS[i]; } return null; }
   function setCodesOf(x){ return x.products.map(function(p){ return p.code; }); }
+  // Promo cards reach players four ways. Each Releases box opens the Promo set narrowed to one of them, and
+  // Filters offers the same choice as a Promo type row. Classified by card code rather than a hand kept count,
+  // so a new promo printing still lands in a type (Special when nothing else claims it).
+  var PROMO_TYPES = [
+    {key:"demo", title:"Demo & event promos", chip:"Demo & event", date:"2026 · dates vary", desc:"Demo session rewards and event exclusive Soul cards."},
+    {key:"tournament", title:"Shop tournament promos", chip:"Shop tournaments", date:"Aug to Oct 2026", desc:"Participation and champion prizes from official shop tournaments."},
+    {key:"masters", title:"Masters League 26/27", chip:"Masters League", date:"Nov 2026 to Mar 2027", desc:"Season participation, placement, and winner rewards."},
+    {key:"special", title:"Special promos & Soul cards", chip:"Special & Soul", date:"2026 · dates vary", desc:"Numbered promos, reprints, and Soul cards themed on a set or deck."}
+  ];
+  function promoTypeOf(c){
+    var id=(c&&c.id)||"";
+    if(id==="EPR-001"||id==="ESOUL-000"||id==="ESOUL-003"||id==="ESOUL-004") return "demo";
+    if(/^EPR-00[2-9]S?$/.test(id)||id==="ESOUL-008") return "tournament";
+    if(/^EPR-0(1[2-9]|20)$/.test(id)||/^ESOUL-01[456]$/.test(id)) return "masters";
+    return "special";
+  }
+  function promoTypeDef(k){ for(var i=0;i<PROMO_TYPES.length;i++){ if(PROMO_TYPES[i].key===k) return PROMO_TYPES[i]; } return null; }
+  // A promo type choice only narrows promo cards: every other card passes, so it can never hide a booster card.
+  function promoTypeAllows(c, keys){ return !keys.length || !c || c.set!=="PR2026" || keys.indexOf(promoTypeOf(c))!==-1; }
   var CURRENCIES = [{code:"USD",sym:"$",dec:2},{code:"EUR",sym:"€",dec:2},{code:"GBP",sym:"£",dec:2},{code:"JPY",sym:"¥",dec:0},{code:"CAD",sym:"CA$",dec:2},{code:"AUD",sym:"A$",dec:2}];
   // Each eBay marketplace maps to the currency its prices are quoted in.
   var REGION_CUR = { "co.uk":"GBP", "com":"USD", "de":"EUR", "com.au":"AUD", "ca":"CAD", "fr":"EUR", "it":"EUR", "es":"EUR" };
@@ -3755,7 +3783,7 @@ label.acctsetrow { align-items:center; }
                       : '<div class="apill nolink">'+inner+'</div>';
   }
   function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
-  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
   var sortDir = (parseInt(lsGet("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
   // and a single blended eBay search skews the number. The dropdown swaps which edition's prices show.
@@ -4185,6 +4213,16 @@ label.acctsetrow { align-items:center; }
       });
     });
     row.hidden=!any;
+    var pr=$("promoChips"); if(!pr) return;
+    Array.prototype.forEach.call(pr.querySelectorAll(".chip"), function(ch){ pr.removeChild(ch); });
+    var promoOn=setFilterCodes().indexOf("PR2026")!==-1;
+    if(!promoOn) filters.promos={};
+    else PROMO_TYPES.forEach(function(t){
+      var b = chip(esc(t.chip), "", "var(--accent)", !!filters.promos[t.key]); b.classList.add("solid"); b.title = t.title;
+      b.onclick = function(){ filters.promos[t.key]=!filters.promos[t.key]; b.setAttribute("aria-pressed",filters.promos[t.key]?"true":"false"); render(); };
+      pr.appendChild(b);
+    });
+    pr.hidden=!promoOn;
   }
   // Card set codes the Set filter allows: each chosen set's picked products, or all of its products when none are picked.
   function setFilterCodes(){ var out=[];
@@ -4253,6 +4291,7 @@ label.acctsetrow { align-items:center; }
   function visible(){
     var q = fold(filters.q.trim());
     var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), rares=keysOn(filters.rares), sets=setFilterCodes();
+    var promos=sets.indexOf("PR2026")!==-1 ? keysOn(filters.promos||{}) : [];
     var mode=colMode();
     RECENT=recentIds();
     var out = CARDS.filter(function(c){
@@ -4264,6 +4303,7 @@ label.acctsetrow { align-items:center; }
       var kws=keysOn(filters.keywords||{});
       if (kws.length && !kws.some(function(k){ return (c.keywords||[]).indexOf(k)!==-1; })) return false;
       if (sets.length && sets.indexOf(c.set)===-1) return false;
+      if (!promoTypeAllows(c, promos)) return false;
       if (cols.length && cols.indexOf(c.color)===-1) return false;
       if (kinds.length && kinds.indexOf(c.kind)===-1) return false;
       if (rares.length && rares.indexOf(c.rare)===-1) return false;
@@ -4375,12 +4415,24 @@ label.acctsetrow { align-items:center; }
     else if(m==="collected") $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " collected";
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
+    paintPromoScope();
     // Only refresh what is on screen. stats() updates the Collection dashboard (completion, sets, binder value).
     // Home and Releases are rebuilt lazily when the user navigates to them (see showPage), not on every edit,
     // and mutating callers own persistence (they call save() themselves) so render() no longer saves.
     stats(); updateFilterCount();
   }
 
+  // "Shop tournament promos" plus Show all promos above the grid while a promo type narrows the Promo set.
+  function paintPromoScope(){
+    var el=$("promoScope"); if(!el) return;
+    var keys=setFilterCodes().indexOf("PR2026")!==-1 ? keysOn(filters.promos||{}) : [];
+    var names=keys.map(function(k){ var t=promoTypeDef(k); return t?t.title:""; }).filter(Boolean);
+    el.hidden=!names.length;
+    if(!names.length){ el.innerHTML=""; return; }
+    var said=names.length>1 ? names.slice(0,-1).join(", ")+" and "+names[names.length-1] : names[0];
+    el.innerHTML='<span><b>'+esc(said)+'</b></span><button type="button" class="tbtn" id="promoAll">Show all promos</button>';
+    $("promoAll").onclick=function(){ filters.promos={}; syncSetChips(); render(); };
+  }
   function suffixOf(c){ var m=c.id.match(/-\d+([A-Z]+)$/); return m?m[1]:""; }
 
   function artHTML(c, hi){
@@ -8967,15 +9019,13 @@ label.acctsetrow { align-items:center; }
       return '<div class="achievement '+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'">'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+esc(b.how)+'</span></div>';
     }).join("");
   }
-  function openSetSphere(id, earned){
-    clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={};
-    filters.sets[id]=true; filters.view=earned?"all":"missing"; syncSetChips(); showPage("collection"); showCollGrid(true); render();
-  }
+  // openSet chooses the set as well as its product (a product pick alone is ignored by setFilterCodes) and
+  // repaints the Show and Set chips, so the grid, the chips and the Filters badge all agree.
+  function openSetSphere(id, earned){ openSet(id, earned?"all":"missing"); }
   function openRarity(r, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.rares[r]=true; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
@@ -9749,8 +9799,9 @@ label.acctsetrow { align-items:center; }
   // Enter the binder with the Missing filter already selected. Optional text narrows the result to one Pal.
   function openMissingCollection(query){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="missing";
-    var input=$("search"); if(input) input.value=query||"";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="missing";
+    filters.q=query||"";   // setting the box's value fires no input event, so the filter is set here too
+    var input=$("search"); if(input) input.value=filters.q;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(ch){ ch.setAttribute("aria-pressed",ch.textContent==="Missing"?"true":"false"); });
@@ -9761,7 +9812,8 @@ label.acctsetrow { align-items:center; }
     var set={};
     CARDS.forEach(function(c){ var t=addedAt(c.id); if(PREVIOUS_VISIT && t>PREVIOUS_VISIT && t<APP_OPENED_AT) set[c.id]=true; });
     SINCE_VISIT=set;
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
+    filters.q="";
     var input=$("search"); if(input) input.value="";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
@@ -9770,7 +9822,7 @@ label.acctsetrow { align-items:center; }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -9779,12 +9831,13 @@ label.acctsetrow { align-items:center; }
     var nf=$("setNoFade"); if(nf) nf.checked=false;
     showPage("collection"); showCollGrid(true); render();
   }
-  function openSet(k, view){
+  function openSet(k, view, promo){
     view=view||"all";
     clearSinceVisit();
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view=view;
     var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
+    if(k==="PR2026" && promoTypeDef(promo)) filters.promos[promo]=true;   // a Releases promo box opens on its own type
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     var vmap={all:"All",owned:"Owned",missing:"Missing",wish:"Wishlist",recent:"Recently added"};
@@ -9797,7 +9850,7 @@ label.acctsetrow { align-items:center; }
   function openSetGroup(sets, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view=view;
     FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
       var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
       filters.exps[x.key]=true; if(inSet.length<x.products.length) inSet.forEach(function(k){ filters.sets[k]=true; }); });
@@ -9869,22 +9922,10 @@ label.acctsetrow { align-items:center; }
     });
     // Keep promos at the very end of the timeline, separated by how players receive them.
     // Classify by card code rather than a hand-maintained count so new promo printings remain visible.
-    var promoDefs=[
-      {key:"demo",title:"Demo & event promos",date:"2026 · dates vary",desc:"Demo-session rewards and event-exclusive Soul cards."},
-      {key:"tournament",title:"Shop tournament promos",date:"Aug–Oct 2026",desc:"Participation and champion prizes from official shop tournaments."},
-      {key:"masters",title:"Masters League 26/27",date:"Nov 2026–Mar 2027",desc:"Season participation, placement, and winner rewards."},
-      {key:"special",title:"Special promos & Soul cards",date:"2026 · dates vary",desc:"Numbered promos, reprints, and set- or deck-themed Soul cards."}
-    ];
-    function promoCategory(c){
-      var id=c.id||"";
-      if(id==="EPR-001"||id==="ESOUL-000"||id==="ESOUL-003"||id==="ESOUL-004") return "demo";
-      if(/^EPR-00[2-9]S?$/.test(id)||id==="ESOUL-008") return "tournament";
-      if(/^EPR-0(1[2-9]|20)$/.test(id)||/^ESOUL-01[456]$/.test(id)) return "masters";
-      return "special";
-    }
+    var promoDefs=PROMO_TYPES;
     var promoCards=CARDS.filter(function(c){return c.set==="PR2026";}), promoMap={};
     promoDefs.forEach(function(g){promoMap[g.key]=[];});
-    promoCards.forEach(function(c){promoMap[promoCategory(c)].push(c);});
+    promoCards.forEach(function(c){promoMap[promoTypeOf(c)].push(c);});
     if(promoCards.length){
       tl.insertAdjacentHTML("beforeend",'<div class="releasegroup-label">Promo card releases</div>');
       promoDefs.forEach(function(g){
@@ -9893,8 +9934,8 @@ label.acctsetrow { align-items:center; }
         var art=cards.slice(0,3).map(function(c){return '<img src="'+esc(imgSrc(c))+'" alt="'+esc(c.name)+'">';}).join("");
         var row=document.createElement("div"); row.className="trow promorow clickable";
         row.innerHTML='<div class="tbox promo-release-art">'+art+'</div><div class="tinfo"><div class="treleasetop"><span class="tbadge live">✦ Promo release</span><span class="tdate">'+esc(g.date)+'</span></div><h3>'+esc(g.title)+' →</h3><div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(g.desc)+'</div><div class="tprog">'+owned+' / '+total+' collected · '+pct+'%</div><div class="treleasebar" aria-label="'+pct+' percent collected"><span style="width:'+pct+'%"></span></div><div class="treleaseactions"><button type="button" class="primary" data-action="view">View promos</button><button type="button" data-action="wish">Wishlist missing</button></div></div>';
-        row.onclick=function(){openSet("PR2026");};
-        row.querySelector('[data-action="view"]').onclick=function(e){e.stopPropagation();openSet("PR2026");};
+        row.onclick=function(){openSet("PR2026","all",g.key);};
+        row.querySelector('[data-action="view"]').onclick=function(e){e.stopPropagation();openSet("PR2026","all",g.key);};
         row.querySelector('[data-action="wish"]').onclick=function(e){e.stopPropagation();addMissingToWishlist(missingItems(cards));};
         tl.appendChild(row);
       });
@@ -10803,6 +10844,9 @@ label.acctsetrow { align-items:center; }
   window.SDOpenPush = function(url){
     try{
       if(!url) return;
+      // The app's own website belongs in the app. Backend builds before 2026-10-05 sent it as the tap link
+      // for the wishlist, weekly and milestone pushes, which opened the marketing page in the browser.
+      if(/^https?:\/\/(www\.)?spheredex\.app(\/(app(\/(index\.html)?)?)?)?\/?$/i.test(url)){ showPage("home"); return; }
       if(/^https?:\/\//i.test(url)){ window.open(url,"_blank","noopener"); return; }
       var cm=/^card:(.+)$/.exec(url);
       // Close anything above the card sheet (a lightbox, the scan sheet) with its own hide function first,
@@ -10841,7 +10885,7 @@ label.acctsetrow { align-items:center; }
     btn.onclick=function(){ var open=panel.hidden; panel.hidden=!open; btn.setAttribute("aria-expanded", open?"true":"false"); };
     $("doneFilters").onclick=function(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); };
     $("clearFilters").onclick=function(){
-      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.view="all";
+      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
       document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
       syncSetChips();
       var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -10849,7 +10893,7 @@ label.acctsetrow { align-items:center; }
     };
   })();
   function updateFilterCount(){
-    var n=0; ["exps","sets","colors","els","kinds","keywords","rares"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
+    var n=0; ["exps","sets","colors","els","kinds","keywords","rares","promos"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
     if(filters.view!=="all") n++;
     var fc=$("filterCount"); if(!fc) return; if(n){ fc.textContent=n; fc.hidden=false; } else { fc.hidden=true; }
   }
