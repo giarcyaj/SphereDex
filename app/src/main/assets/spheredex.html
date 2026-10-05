@@ -1288,6 +1288,7 @@ label.acctsetrow { align-items:center; }
     /* Deck controls: deck picker on its own row, action buttons in a tidy 3-up grid. */
     .deckctrls { flex-wrap:wrap; }
     .deckctrls > #deckSel { flex:1 1 100%; min-width:100%; }
+    #page-decks .deckctrls > .deckneedline { order:0; }
     .deckctrls > .tbtn { flex:1 1 calc(33.33% - 6px); min-width:0; justify-content:center; }
     /* Card detail: let the stat line wrap in the narrow column beside the art. */
     .statline { flex-wrap:wrap; gap:8px 14px; }
@@ -1492,6 +1493,9 @@ label.acctsetrow { align-items:center; }
   .deckhead { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
   .deckctrls { display:flex; gap:8px; align-items:center; }
   #deckSel { max-width:200px; }
+  /* The open deck's need, repeated under the picker since a closed select clips long names. Its own row. */
+  .deckctrls { flex-wrap:wrap; }
+  .deckctrls > .deckneedline { order:99; flex:1 1 100%; margin:0; font-size:.82rem; font-weight:600; color:var(--ink-soft); overflow-wrap:anywhere; }
   .deckstats { display:flex; gap:22px; flex-wrap:wrap; margin:14px 0 16px; }
   .deckstats .deckbreak { flex:1 0 100%; }
   .deckstats .hs { display:flex; flex-direction:column; gap:2px; }
@@ -2203,7 +2207,7 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .collectedbar .cbtogs{gap:0}.no-flexgap .collectedbar .cbtogs>*+*{margin-left:8px}
   .no-flexgap .ownchip{gap:0}.no-flexgap .ownchip>*+*{margin-left:6px}
   .no-flexgap .ownseal{gap:0}.no-flexgap .ownseal>*+*{margin-left:12px}
-  .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}
+  .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}.no-flexgap .deckctrls>.deckneedline{margin-left:0;margin-top:6px;margin-bottom:6px}
   .no-flexgap .decksug button{gap:0}.no-flexgap .decksug button>*+*{margin-left:10px}
   .no-flexgap .deckrow{gap:0}.no-flexgap .deckrow>*+*{margin-left:12px}
   .no-flexgap .npitem{gap:0}.no-flexgap .npitem>*+*{margin-left:8px}
@@ -2566,6 +2570,7 @@ label.acctsetrow { align-items:center; }
       <h2 class="sech" style="margin:0;flex:1 1 auto">Decks</h2>
       <div class="deckctrls">
         <select class="sortsel" id="deckSel" aria-label="Active deck"></select>
+        <p class="deckneedline" id="deckNeedLine" aria-live="polite" hidden></p>
         <button class="tbtn" id="deckNew" data-icon="plus">New</button>
         <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
@@ -7173,6 +7178,9 @@ label.acctsetrow { align-items:center; }
   function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
     Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
     return n+(n===1?" card":" cards"); }
+  // The open deck's need line under the picker: the same words as its picker option, hidden with no deck.
+  function renderDeckNeedLine(d){ var el=$("deckNeedLine"); if(!el) return;
+    var t=d ? deckNeedLabel(d) : ""; el.textContent=t; el.hidden=!t; }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
@@ -7545,7 +7553,7 @@ label.acctsetrow { align-items:center; }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
-    var d=activeDeck();
+    var d=activeDeck(); renderDeckNeedLine(d);
     ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
