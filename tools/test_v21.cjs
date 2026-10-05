@@ -919,3 +919,95 @@ test('Match and Portfolio stay on the phone screen', { skip: !canMeasureSignIn }
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+// ---- Promo types: each Releases promo box opens the Promo set narrowed to its own type ----
+const promoBox = {};
+vm.createContext(promoBox);
+vm.runInContext(appConstant('PROMO_TYPES') + '\n' + ['promoTypeOf', 'promoTypeDef', 'promoTypeAllows'].map(appFunction).join('\n'), promoBox);
+const promoIds = Array.from(source.matchAll(/\["(E[A-Z]+-\d+[A-Z]*)",[^\]]*"PR2026"\]/g), (m) => m[1]);
+
+test('promo cards sort into their four types by card code', () => {
+  const type = (id) => promoBox.promoTypeOf({ id, set: 'PR2026' });
+  assert.equal(type('EPR-001'), 'demo');
+  assert.equal(type('ESOUL-000'), 'demo');
+  assert.equal(type('EPR-002'), 'tournament');
+  assert.equal(type('EPR-009S'), 'tournament');
+  assert.equal(type('ESOUL-008'), 'tournament');
+  assert.equal(type('EPR-012'), 'masters');
+  assert.equal(type('EPR-020'), 'masters');
+  assert.equal(type('ESOUL-016'), 'masters');
+  assert.equal(type('EPR-010'), 'special');
+  // A promo nobody has classified yet still lands somewhere instead of vanishing from every box.
+  assert.equal(type('EPR-099'), 'special');
+});
+
+test('every promo in the catalogue has a type, and every type has cards', () => {
+  assert.ok(promoIds.length >= 20, 'found ' + promoIds.length + ' promo rows');
+  const keys = promoBox.PROMO_TYPES.map((t) => t.key);
+  const seen = {};
+  promoIds.forEach((id) => {
+    const k = promoBox.promoTypeOf({ id, set: 'PR2026' });
+    assert.ok(keys.includes(k), id + ' has no promo type');
+    seen[k] = (seen[k] || 0) + 1;
+  });
+  keys.forEach((k) => assert.ok(seen[k] > 0, 'no promo cards are typed ' + k));
+});
+
+test('a promo type only narrows promo cards', () => {
+  const allows = promoBox.promoTypeAllows;
+  const tourney = { id: 'EPR-002S', set: 'PR2026' }, demo = { id: 'EPR-001', set: 'PR2026' }, booster = { id: 'EBP01-001', set: 'EBP01' };
+  assert.equal(allows(demo, []), true);
+  assert.equal(allows(tourney, ['tournament']), true);
+  assert.equal(allows(demo, ['tournament']), false);
+  assert.equal(allows(demo, ['tournament', 'demo']), true);
+  assert.equal(allows(booster, ['tournament']), true);
+});
+
+test('the promo boxes open on their own type, and every filter reset clears it', () => {
+  assert.equal((source.match(/openSet\("PR2026","all",g\.key\)/g) || []).length, 2, 'row tap and View promos both pass the type');
+  assert.match(source, /if\(k==="PR2026" && promoTypeDef\(promo\)\) filters\.promos\[promo\]=true;/);
+  const resets = (source.match(/filters\.keywords=\{\};/g) || []).length;
+  const promoResets = (source.match(/filters\.keywords=\{\}; filters\.promos=\{\};/g) || []).length;
+  assert.ok(resets > 0 && promoResets === resets, promoResets + ' of ' + resets + ' filter resets clear the promo type');
+  assert.match(source, /\["exps","sets","colors","els","kinds","keywords","rares","promos"\]/, 'Filters counts a promo type choice');
+});
+
+test('promo type copy has no dashes', () => {
+  promoBox.PROMO_TYPES.forEach((t) => {
+    [t.title, t.chip, t.date, t.desc].forEach((text) => assert.doesNotMatch(text, /[-–—]/, t.key + ': ' + text));
+  });
+});
+
+test('a promo type can never stay on while hidden', () => {
+  // syncSetChips drops the choice whenever the Promo set leaves the Set filter, and the grid and the bar
+  // only read it while the Promo set is in scope, so no path can leave an invisible promo filter behind.
+  assert.match(appFunction('syncSetChips'), /var promoOn=setFilterCodes\(\)\.indexOf\("PR2026"\)!==-1;\s*if\(!promoOn\) filters\.promos=\{\};/);
+  const vis = appFunction('visible');
+  assert.match(vis, /var promos=sets\.indexOf\("PR2026"\)!==-1 \? keysOn\(filters\.promos\|\|\{\}\) : \[\];/);
+  assert.match(vis, /if \(!promoTypeAllows\(c, promos\)\) return false;/);
+  assert.match(appFunction('paintPromoScope'), /var keys=setFilterCodes\(\)\.indexOf\("PR2026"\)!==-1 \? keysOn\(filters\.promos\|\|\{\}\) : \[\];/);
+});
+
+test('shortcut openers leave no filter the screen does not show', () => {
+  // A product pick without its set is ignored by setFilterCodes, so the Set Sphere shortcut goes through openSet.
+  assert.match(appFunction('openSetSphere'), /^function openSetSphere\(id, earned\)\{ openSet\(id, earned\?"all":"missing"\); \}$/);
+  // Writing the search box fires no input event, so these openers set the search filter themselves.
+  assert.match(appFunction('openMissingCollection'), /filters\.q=query\|\|"";[^]*input\.value=filters\.q;/);
+  assert.match(appFunction('openSinceVisit'), /filters\.q="";/);
+});
+
+test('a push that links to the app website opens Home, not the browser', () => {
+  const at = source.indexOf('window.SDOpenPush = function(url){');
+  assert.ok(at > 0, 'SDOpenPush exists');
+  const body = source.slice(at, source.indexOf('\n  };', at));
+  const home = body.indexOf('showPage("home"); return;'), outside = body.indexOf('window.open(url');
+  assert.ok(home > 0 && outside > home, 'the site check runs before the outside link branch');
+  const tail = '/i.test(url)){ showPage("home"); return; }';
+  const end = body.indexOf(tail), start = body.lastIndexOf('if(/', end);
+  assert.ok(start > 0 && end > start, 'site pattern found');
+  const re = new RegExp(body.slice(start + 4, end), 'i');
+  ['https://spheredex.app', 'https://spheredex.app/', 'https://www.spheredex.app/', 'https://spheredex.app/app/', 'https://spheredex.app/app/index.html']
+    .forEach((u) => assert.ok(re.test(u), u + ' should open Home'));
+  ['https://spheredex.app/roadmap', 'https://spheredex.app.example.com/', 'https://en.palworld-official-cardgame.com/news/']
+    .forEach((u) => assert.ok(!re.test(u), u + ' should still open outside'));
+});
