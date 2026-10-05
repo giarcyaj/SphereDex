@@ -7413,6 +7413,13 @@ label.acctsetrow { align-items:center; }
     var keySel=$("deckKey");
     if(keySel) keySel.onchange=function(){ deckPractice.key=keySel.value; renderDeckLab(d); };
   }
+  // Unique cards in a deck you hold too few copies of (own < deck qty, the Need first test).
+  // Copies short do not add up: owning 2 of 4 counts once.
+  function deckNeedFirstCount(cards, own){
+    var n=0;
+    Object.keys(cards||{}).forEach(function(id){ var q=cards[id]; if(q>0 && ((own[id]&&own[id].qty)||0)<q) n++; });
+    return n;
+  }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
@@ -7465,6 +7472,8 @@ label.acctsetrow { align-items:center; }
     // Wishlist button) above the rest; each group keeps its set then card number order.
     var needFirst=lsGet("palvault-deckneedfirst")==="1", nf=$("deckNeedFirst");
     if(nf){ nf.setAttribute("aria-pressed", needFirst?"true":"false");
+      // The number counts the whole deck, so a stat focus slice never changes it.
+      nf.textContent="Need first "+deckNeedFirstCount(d.cards, activeCol().own);
       nf.onclick=function(){ lsSet("palvault-deckneedfirst", needFirst?"0":"1"); renderDecks(); }; }
     if(needFirst){
       var lack=[], rest=[];
