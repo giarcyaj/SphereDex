@@ -7086,6 +7086,10 @@ label.acctsetrow { align-items:center; }
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
   // Which of your decks list a card. A deck counts once however many copies it runs, and the line only
   // exists with Player tools on, since that is the only time Decks exist as a page.
+  // Copies the open deck already runs of a card (ids matched without case), for the add suggestions.
+  function deckAddRunQty(d, id){ var cs=(d&&d.cards)||{}, up=String(id).toUpperCase(), n=0;
+    Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(k.toUpperCase()===up && q>0) n+=q; });
+    return n; }
   function decksUsing(id){ var up=String(id).toUpperCase();
     return decks().filter(function(d){ var cs=(d&&d.cards)||{};
       return Object.keys(cs).some(function(k){ return k.toUpperCase()===up && (+cs[k]||0)>0; }); }); }
@@ -7869,8 +7873,8 @@ label.acctsetrow { align-items:center; }
       var matches=CARDS.filter(function(c){ return cardMatchesQuery(c, si.value); }).slice(0,7);
       if(!matches.length){ closeSug(); return; }
       sug.innerHTML=""; matches.forEach(function(c){ var b=document.createElement("button"); b.type="button";
-        var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0;
-        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span><span class="dsown'+(own?' have':'')+'">own '+own+'</span>';
+        var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0, runs=deckAddRunQty(activeDeck(), c.id);
+        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span><span class="dsown'+(own?' have':'')+'">own '+own+'</span>'+(runs?'<span class="dsown">runs '+runs+'</span>':'');
         b.onclick=function(){ if(!activeDeck()) newDeck(); var d=activeDeck(); d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderDecks(); si.value=""; closeSug(); si.focus(); };
         sug.appendChild(b); });
       sug.hidden=false;
