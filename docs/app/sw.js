@@ -8,7 +8,11 @@
 //
 // tools/rebuild.py stamps BUILD with the app version and a hash of the built page, so this file never has
 // to be bumped by hand, which is what left it on one literal name for the app's whole life.
+<<<<<<< HEAD
 const BUILD = '2.2-0121c5c6';
+=======
+const BUILD = '2.2-24e5a97c';
+>>>>>>> main
 const SHELL = 'spheredex-shell-' + BUILD;
 const ASSETS = 'spheredex-assets-v1';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest'];
