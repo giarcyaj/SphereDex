@@ -7994,7 +7994,16 @@ label.acctsetrow { align-items:center; }
       while(decks().some(function(k){ return k.id==="d"+t; })) t++;   // two quick taps must not share an id
       copy.id="d"+t; copy.name=name;
       decks().push(copy); STATE.activeDeck=copy.id; save(); renderDecks(); toast("Deck duplicated");
+      promptDeckNameAfterDupe(copy);
     };
+    // Straight after Duplicate, the Rename prompt opens on the copy with its generated name filled in, so the
+    // collector can name it in the same tap. Cancel keeps the copy under the generated name.
+    function promptDeckNameAfterDupe(copy){
+      openAsk({title:"Rename deck", value:copy.name, okText:"Rename", onOk:function(r){
+        var d=decks().filter(function(k){ return k.id===copy.id; })[0]; if(!d) return;
+        d.name=r; save(); renderDecks();
+      }});
+    }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
