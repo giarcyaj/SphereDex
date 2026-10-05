@@ -9659,6 +9659,8 @@ label.acctsetrow { align-items:center; }
     var hide=lsGet("palvault-hidefinished")==="1", shown=0;
     var tog=$("hideDoneTog");
     if(tog){ tog.setAttribute("aria-pressed", hide?"true":"false");
+      // The number counts every finished tile, hidden or not, so turning the chip on never changes it.
+      tog.textContent="Hide finished sets "+browseFinishedSetCount(sp);
       tog.onclick=function(){ lsSet("palvault-hidefinished", hide?"0":"1"); renderSetBrowse(); }; }
     if(!(hide && setsFinished(["PR2026"], sp))){ br.appendChild(oneSetTile("PR2026", sp)); shown++; }
     BROWSE_EXPANSIONS.forEach(function(x){
@@ -9676,6 +9678,13 @@ label.acctsetrow { align-items:center; }
   function setsFinished(keys, sp){
     var own=0, tot=0; (keys||[]).forEach(function(k){ own+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
     return tot>0 && own>=tot;
+  }
+  // How many Browse by set tiles Hide finished sets would drop: Promo plus each released expansion
+  // that setsFinished passes. All Cards and upcoming tiles never count.
+  function browseFinishedSetCount(sp){
+    var n=setsFinished(["PR2026"], sp)?1:0;
+    BROWSE_EXPANSIONS.forEach(function(x){ if(!x.upcoming && setsFinished(x.sets, sp)) n++; });
+    return n;
   }
   // A single released set tile (used for Promo Cards).
   function oneSetTile(k, sp){
