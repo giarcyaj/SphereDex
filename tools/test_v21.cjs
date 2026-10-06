@@ -213,7 +213,7 @@ function paidApp() {
   };
   const names = [
     'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
-    'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
+    'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
     'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
   ];
   const code = names.map(appFunction).join('\n') + '\n' + ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
@@ -1010,4 +1010,158 @@ test('a push that links to the app website opens Home, not the browser', () => {
     .forEach((u) => assert.ok(re.test(u), u + ' should open Home'));
   ['https://spheredex.app/roadmap', 'https://spheredex.app.example.com/', 'https://en.palworld-official-cardgame.com/news/']
     .forEach((u) => assert.ok(!re.test(u), u + ' should still open outside'));
+});
+
+// ---- Want list CSV: the wishlist and every Missing goal, exported for a spreadsheet ----
+function wantApp(overrides) {
+  const cards = [
+    { id: 'EBP01-001', name: 'Jormuntide Ignis – Savage Lava Dragon', kind: 'Pal', sub: 'Lucky Pal', rare: 'RR', set: 'EBP01', setIdx: 0, seq: 1 },
+    { id: 'EBP01-025SSP', name: 'Chillet – Dragon Whisperer', kind: 'Pal', sub: 'Normal Pal', rare: 'SSP', set: 'EBP01', setIdx: 0, seq: 25 },
+    { id: 'ESOUL-001', name: 'Soul', kind: 'Soul', sub: '', rare: 'TD', set: 'ETD01', setIdx: 1, seq: 1000 }
+  ];
+  const own = {};
+  const sandbox = Object.assign({
+    CARDS: cards, own: own,
+    SETS: { EBP01: { name: 'Dawn of Palpagos' }, ETD01: { name: 'Trial Deck Red Blue' } },
+    RARE_NAME: { RR: 'Double Rare', SSP: 'Super Special', TD: 'Trial Deck' },
+    SETTINGS: {}, CUR: { code: 'GBP', dec: 2 }, SEAL_ED: 'en',
+    STATE: { wishlist: {}, wishlistAt: {} },
+    priceMode: () => 'sold', unitOf: () => 4, marketPriceLabel: () => 'last sold',
+    toast() {}, saveTextFile() {}
+  }, overrides || {});
+  const names = ['rawCount', 'csvNum', 'csvCell', 'csvText', 'csvDay', 'wantSearch', 'wantListCsv',
+    'isWished', 'wishlistAt', 'wishlistWantItems', 'missingWantItems', 'ownsForCompletion', 'has',
+    'edKw', 'edCode'];
+  const code = names.map(appFunction).join('\n') + '\n' + ['WANT_HEADER', 'WANT_NUMCOL'].map(appConstant).join('\n');
+  vm.runInContext(code, vm.createContext(sandbox));
+  sandbox.cards = cards;
+  return sandbox;
+}
+const wantRows = (csv) => csv.replace(/^﻿/, '').trim().split('\r\n');
+
+test('the want list CSV carries the card type the TCGplayer copy throws away', () => {
+  const a = wantApp();
+  const csv = a.wantListCsv([{ card: a.cards[0], need: 2 }, { card: a.cards[2], need: 1 }]);
+  const rows = wantRows(csv);
+  assert.equal(rows[0], 'Bought,Number,Need,Have,Name,Card type,Subtype,Set,Rarity,Unit estimate,Line estimate,Currency,Price basis,Wishlisted,eBay search,Notes');
+  // A Pal and a Soul are told apart, which is the whole point of the request.
+  assert.match(rows[1], /^,EBP01-001,2,0,Jormuntide Ignis – Savage Lava Dragon,Pal,Lucky Pal,Dawn of Palpagos,Double Rare,4\.00,8\.00,GBP,last sold,,/);
+  assert.match(rows[2], /,ESOUL-001,1,0,Soul,Soul,,Trial Deck Red Blue,Trial Deck,/);
+  assert.equal(csv.charCodeAt(0), 0xFEFF, 'a BOM so Excel reads the accents');
+  assert.ok(csv.endsWith('\r\n'));
+  assert.equal(rows.length, 3);
+});
+
+test('the eBay search cell is a phrase eBay will not read as an exclusion', () => {
+  const a = wantApp();
+  // eBay reads a leading "-" as "exclude this word", so a printed en dash becomes a space, while the card
+  // number keeps its own hyphen because eBay reads that as part of the word.
+  assert.equal(a.wantSearch(a.cards[0]), 'Jormuntide Ignis Savage Lava Dragon EBP01-001 palworld card');
+  assert.equal(a.wantSearch({ id: 'X-1', name: 'A - B — C' }), 'A B C X-1 palworld card');
+  // The Japanese price toggle carries into the search, exactly as the app's own eBay links do.
+  const jp = wantApp({ SEAL_ED: 'jp' });
+  assert.equal(jp.wantSearch(jp.cards[1]), 'Chillet Dragon Whisperer BP01-025SSP Japanese palworld card');
+});
+
+test('the want list counts what you already hold and never creates a holding', () => {
+  const a = wantApp();
+  a.own['EBP01-001'] = { qty: 2, graded: [{ grader: 'PSA', grade: '10' }] };
+  const before = JSON.stringify(a.own);
+  const rows = wantRows(a.wantListCsv([{ card: a.cards[0], need: 1 }, { card: a.cards[1], need: 1 }]));
+  assert.equal(JSON.stringify(a.own), before, 'exporting is a pure read');
+  assert.match(rows[1], /^,EBP01-001,1,3,/, 'two raw copies plus one slab');
+  assert.match(rows[2], /^,EBP01-025SSP,1,0,/, 'a card you do not own reads 0, not blank');
+});
+
+test('collector mode blanks the money cells but keeps every column', () => {
+  const a = wantApp({ SETTINGS: { mode: 'collector' } });
+  const rows = wantRows(a.wantListCsv([{ card: a.cards[0], need: 2 }]));
+  assert.equal(rows[0].split(',').length, 16);
+  assert.equal(rows[1].split(',').length, 16, 'one shape in both price modes');
+  assert.match(rows[1], /Double Rare,,,,,/, 'no unit, line, currency or basis');
+  assert.match(rows[1], /palworld card/, 'a shopping list still helps you shop');
+});
+
+test('the wishlist date is a sortable day, and a wish from before dates existed stays blank', () => {
+  const a = wantApp();
+  a.STATE.wishlist['EBP01-001'] = true;
+  a.STATE.wishlistAt['EBP01-001'] = new Date(2026, 9, 6, 12).getTime();
+  a.STATE.wishlist['ESOUL-001'] = true;   // migrated: wished, but no date was recorded
+  const items = a.wishlistWantItems();
+  assert.deepEqual(JSON.parse(JSON.stringify(items.map((i) => i.card.id))), ['EBP01-001', 'ESOUL-001']);
+  assert.deepEqual(JSON.parse(JSON.stringify(items.map((i) => i.need))), [1, 1]);
+  const rows = wantRows(a.wantListCsv(items));
+  assert.match(rows[1], /,2026-10-06,/);
+  assert.equal(a.csvDay(0), '');
+  assert.equal(a.csvDay(undefined), '');
+  assert.ok(!/,1970-/.test(rows[2]), 'no 1970 for a wish with no date');
+});
+
+test('a Missing goal exports in card number order, whatever the screen is sorted by', () => {
+  const a = wantApp();
+  const data = { items: [{ card: a.cards[2], need: 1 }, { card: a.cards[1], need: 3 }, { card: a.cards[0], need: 1 }] };
+  const ids = (list) => JSON.parse(JSON.stringify(list.map((i) => i.card.id)));
+  const first = ids(a.missingWantItems('master', data));
+  assert.deepEqual(first, ['EBP01-001', 'EBP01-025SSP', 'ESOUL-001']);
+  data.items.reverse();   // the Sort control re-sorts the on screen list in place after the hero is built
+  assert.deepEqual(ids(a.missingWantItems('master', data)), first, 'the same file every time');
+  // Cards you already own drop out of every goal except a deck, where you may still need another copy.
+  a.own['EBP01-001'] = { qty: 1 };
+  assert.deepEqual(ids(a.missingWantItems('master', data)), ['EBP01-025SSP', 'ESOUL-001']);
+  assert.deepEqual(ids(a.missingWantItems('deck', data)), first);
+  assert.equal(a.missingWantItems('master', { items: [{ card: a.cards[1], need: 0 }] }).length, 0);
+  assert.equal(a.missingWantItems('master', null).length, 0);
+});
+
+test('a want list is refused on import instead of landing as cards you own', () => {
+  const a = paidApp();
+  const want = ['Bought,Number,Need,Have,Name', ',EBP01-001,2,0,Lamball'].join('\r\n');
+  const res = a.parseCsvCollection(want);
+  assert.equal(res.wantList, true);
+  assert.equal(res.added, 0);
+  assert.deepEqual(Object.keys(res.own), []);
+  // A real collection CSV is untouched by the new guard.
+  const real = a.parseCsvCollection(['Number,Quantity', 'EBP01-001,2'].join('\r\n'));
+  assert.equal(real.wantList, undefined);
+  assert.equal(real.added, 1);
+});
+
+test('want list copy has no dashes', () => {
+  const headers = appConstant('WANT_HEADER');
+  (headers.match(/"([^"]+)"/g) || []).forEach((h) => assert.doesNotMatch(h, /[-–—]/, h));
+  // Read the real strings out of the app, never a copy typed in here: a literal in a test drifts away from
+  // the app silently and then proves nothing.
+  const said = (fn) => (appFunction(fn).match(/toast\("[^"]*"/g) || []).map((m) => m.slice(7, -1));
+  const refusal = (appFunction('doImportCsv').match(/toast\("That is a want list[^"]*"/g) || []).map((m) => m.slice(7, -1));
+  const toasts = said('exportWantList').concat(refusal);
+  assert.ok(toasts.indexOf('Nothing to export yet') >= 0, JSON.stringify(toasts));
+  assert.ok(toasts.some((t) => /want list, not a collection/.test(t)), JSON.stringify(toasts));
+  assert.ok(toasts.length >= 3, JSON.stringify(toasts));
+  toasts.forEach((t) => assert.doesNotMatch(t, /[-–—]/, t));
+  // The one toast built from pieces, so it cannot be read whole above.
+  assert.match(appFunction('exportWantList'), /"Exported "\+n\+" card"\+\(n===1\?"":"s"\)/);
+  assert.equal((source.match(/>Spreadsheet \(CSV\)<\/button>/g) || []).length, 2, 'both buttons use the app house wording');
+});
+
+test('the Missing page exports what is on screen now, not what was there when the page drew', () => {
+  const a = wantApp();
+  const data = { items: [{ card: a.cards[0], need: 1 }, { card: a.cards[1], need: 1 }] };
+  assert.equal(a.missingWantItems('master', data).length, 2);
+  a.own['EBP01-001'] = { qty: 1 };   // collected from the list, which patches the page without re-rendering
+  assert.equal(a.missingWantItems('master', data).length, 1, 'a collected card leaves the list');
+  // So the click handlers must call it again rather than close over the render time snapshot.
+  const render = appFunction('renderMissing');
+  assert.match(render, /missingCsvAction[\s\S]*exportWantList\(missingWantItems\(missingGoal, activeMissingGoal\(\)\)/);
+  assert.match(render, /missingTcgAction[\s\S]*copyTcgplayerRows\(missingTcgRows\(missingGoal, activeMissingGoal\(\)\)\)/);
+});
+
+test('every new wrapping row carries the full no-flexgap fallback', () => {
+  // Old Android WebViews collapse flex gap. A wrapping row needs all three rules, or a wrapped line sits
+  // flush against the one above it.
+  ['modeexport', 'missingactions', 'missingfoot'].forEach((cls) => {
+    assert.match(source, new RegExp('\\.' + cls + ' \\{[^}]*flex-wrap:wrap'), cls + ' wraps');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '\\{gap:0\\}'), cls + ' clears the gap');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '>\\*\\+\\*\\{margin-left:\\d+px\\}'), cls + ' spaces along the row');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '>\\*\\{margin-bottom:\\d+px\\}'), cls + ' spaces wrapped lines');
+  });
 });
