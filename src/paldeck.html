@@ -7684,14 +7684,30 @@ label.acctsetrow { align-items:center; }
     var items=missingItems(CARDS.filter(function(c){ return isWished(c.id); }));
     return {items:items,remaining:items.length,total:wishCount(),owned:Math.max(0,wishCount()-items.length),percent:wishCount()?Math.round((wishCount()-items.length)/wishCount()*100):0};
   }
-  function activeMissingGoal(){
-    if(missingGoal==="master") return masterSetMissingGoal();
-    if(missingGoal==="set") return selectedSetMissingGoal();
-    if(missingGoal==="rarity") return selectedRarityMissingGoal();
-    if(missingGoal==="pal") return selectedPalMissingGoal();
-    if(missingGoal==="deck") return deckMissingGoal();
-    if(missingGoal==="wishlist") return wishlistMissingGoal();
+  function activeMissingGoal(goal){
+    var g=goal||missingGoal;
+    if(g==="master") return masterSetMissingGoal();
+    if(g==="set") return selectedSetMissingGoal();
+    if(g==="rarity") return selectedRarityMissingGoal();
+    if(g==="pal") return selectedPalMissingGoal();
+    if(g==="deck") return deckMissingGoal();
+    if(g==="wishlist") return wishlistMissingGoal();
     return nextSphereMissingGoal();
+  }
+  // Each tab carries how many unique cards its goal still lacks. The Pal goal lists every printing,
+  // owned or not, so it uses remaining; the deck goal counts copies, so it counts its cards instead.
+  function missingGoalCount(goal, data){
+    if(!data) return 0;
+    if(goal==="pal") return data.remaining||0;
+    return (data.items||[]).length;
+  }
+  function updateMissingTabCounts(){
+    var tabs=$("missingTabs"); if(!tabs) return;
+    Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){
+      var goal=button.getAttribute("data-goal"), base=button.getAttribute("data-label");
+      if(base===null){ base=button.textContent; button.setAttribute("data-label", base); }
+      button.textContent=base+" "+missingGoalCount(goal, activeMissingGoal(goal));
+    });
   }
   function missingCopy(goal, data){
     if(!data) return {eyebrow:goal==="deck"?"Deck completion":"Nothing missing",name:goal==="deck"?"Build a deck first":"Your collection is complete",count:"0",detail:"cards remaining",foot:"Choose another goal to keep collecting.",action:"Browse collection",actionType:"collection",title:"Cards to collect"};
@@ -7726,6 +7742,7 @@ label.acctsetrow { align-items:center; }
     var data=activeMissingGoal(), copy=missingCopy(missingGoal,data), items=(data&&data.items)||[];
     var sort=$("missingSort"); if(sort) sort.value=missingSort;
     Array.prototype.forEach.call($("missingTabs").querySelectorAll(".missingtab"), function(button){ var on=button.getAttribute("data-goal")===missingGoal; button.classList.toggle("on",on); button.setAttribute("aria-selected",on?"true":"false"); });
+    updateMissingTabCounts();
     $("missingIntro").textContent=missingGoal==="master"?"Every card you still need for your collection.":missingGoal==="sphere"?"Finish an official main-set list to earn its permanent Set Sphere.":missingGoal==="set"?"Your most achievable incomplete set, ready to finish.":missingGoal==="rarity"?"The closest rarity to completing in your collection.":missingGoal==="pal"?"The closest Pal to completing across its card variants.":missingGoal==="deck"?"The exact copies you still need for your active deck.":"Cards saved for a future collection goal.";
     $("missingListTitle").textContent=copy.title;
     var progress=data&&data.total?Math.min(100,pctOf(data.owned,data.total)):0;
@@ -7781,6 +7798,7 @@ label.acctsetrow { align-items:center; }
           var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
           var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
           var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+          updateMissingTabCounts();
         }catch(_e){}
         try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
         try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
@@ -10394,6 +10412,7 @@ label.acctsetrow { align-items:center; }
             var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
             var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
             var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+            updateMissingTabCounts();
           }
         }catch(_e){}
         try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
@@ -10421,6 +10440,7 @@ label.acctsetrow { align-items:center; }
         var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
         var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
         var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+        updateMissingTabCounts();
         if(card){
           Array.prototype.forEach.call(document.querySelectorAll("#missingList .missingrow"), function(row){
             if(row.getAttribute("data-cid")===card.id){
