@@ -1523,7 +1523,7 @@ label.acctsetrow { align-items:center; }
   .dlabacts .btn { min-height:44px; }
   .dlabacts .btn:disabled { opacity:.45; cursor:default; }
   .dflip { margin-top:8px; font-size:.8rem; color:var(--ink); }
-  .modeexport { margin:-6px 0 12px; }
+  .modeexport { margin:-6px 0 12px; display:flex; gap:8px; flex-wrap:wrap; }
   .modeexport[hidden] { display:none; }
   .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   .deckcurve, .deckkinds, .deckcolors { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
@@ -2258,6 +2258,9 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .bubpanel{gap:0}.no-flexgap .bubpanel>*+*{margin-top:10px}
   .no-flexgap #notifGroup{gap:0}.no-flexgap #notifGroup>*+*{margin-top:14px}
   .no-flexgap #scanSetGroup{gap:0}.no-flexgap #scanSetGroup>*+*{margin-top:14px}
+  .no-flexgap .modeexport{gap:0}.no-flexgap .modeexport>*+*{margin-left:8px}.no-flexgap .modeexport>*{margin-bottom:8px}
+  .no-flexgap .missingfoot{gap:0}.no-flexgap .missingfoot>*+*{margin-left:10px}.no-flexgap .missingfoot>*{margin-bottom:10px}
+  .no-flexgap .missingactions{gap:0}.no-flexgap .missingactions>*+*{margin-left:8px}.no-flexgap .missingactions>*{margin-bottom:8px}
 </style>
 
 <div class="wrap">
@@ -2441,7 +2444,7 @@ label.acctsetrow { align-items:center; }
   <div id="collGrid" hidden>
   <button class="backbtn" type="button" id="setsBack">&lsaquo; Browse by set</button>
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
-  <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button></div>
+  <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishCsvBtn">Spreadsheet (CSV)</button><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button></div>
   <div class="collectedbar" id="collectedBar" hidden>
     <span class="cbsub" id="collectedSub"></span>
     <span class="cbtogs">
@@ -5400,6 +5403,11 @@ label.acctsetrow { align-items:center; }
     return s; }
   function csvEdition(e){ e=(e==null)?"":String(e); return e==="1"?"1st":(e==="2"?"2nd":(e==="jp"?"Japanese":(e==="cn"?"Chinese":""))); }
   function csvFileName(col){ col=col||activeCol(); return fileSlug(col&&col.name,"collection")+"-"+todayKey()+".csv"; }
+  // The BOM, the formula guard and the CRLF rows, in one place, so both file shapes stay in step.
+  function csvText(rows, numcol){
+    numcol=numcol||{};
+    return "\uFEFF"+rows.map(function(r){ return r.map(function(v,i){ return csvCell(v, !!numcol[i]); }).join(","); }).join("\r\n")+"\r\n";
+  }
   // Pure read of one collection (no o(), no sealItem): nothing is created or changed by exporting.
   function collectionCsv(col){
     col=col||activeCol();
@@ -5428,7 +5436,59 @@ label.acctsetrow { align-items:center; }
       var us=csvNum(u), ts=p.pre?"":csvNum(q*u);   // preorders carry no total, so the column sums to the portfolio value
       rows.push([p.id, String(q), title+(typ?" "+typ:""), p.pre?"Preorder":"Sealed", "", "", "", "", "", "", "", us, ts, (us||ts)?code:"", "", csvPaid(s.paid)]);
     });
-    return "\uFEFF"+rows.map(function(r){ return r.map(function(v,i){ return csvCell(v, !!CSV_NUMCOL[i]); }).join(","); }).join("\r\n")+"\r\n";
+    return csvText(rows, CSV_NUMCOL);
+  }
+  // ---- Want list (CSV): the cards you still want, from your wishlist or any Missing goal ----
+  // Its own columns, not the collection export's. Bought and Notes are yours to fill in while you shop, Need
+  // and Have say how many to buy and how many you already hold, Card type and Subtype are what the TCGplayer
+  // copy throws away, and eBay search is a phrase to paste straight into eBay.
+  var WANT_HEADER=["Bought","Number","Need","Have","Name","Card type","Subtype","Set","Rarity","Unit estimate","Line estimate","Currency","Price basis","Wishlisted","eBay search","Notes"];
+  var WANT_NUMCOL={2:1,3:1,9:1,10:1};   // Need, Have, Unit estimate, Line estimate: numeric cells, never formula guarded
+  function csvDay(ms){
+    var t=+ms; if(!t) return "";
+    var d=new Date(t); if(isNaN(d.getTime())) return "";
+    var m=d.getMonth()+1, day=d.getDate();
+    return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day;   // sorts correctly in every spreadsheet
+  }
+  // What you paste into eBay's search box. A printed name keeps its en dash on the card, but eBay reads a
+  // leading dash as "exclude this word", so every dash in the NAME becomes a space. The card number keeps its
+  // own hyphen: eBay treats a hyphen inside a word as part of the word.
+  function wantSearch(c){
+    var name=String((c&&c.name)||"").replace(/[-\u2010-\u2015\u2212]/g," ");
+    var kw=(typeof edKw==="function" && edKw()) ? " "+edKw() : "";
+    return (name+" "+edCode(c&&c.id)+kw+" palworld card").replace(/\s+/g," ").trim();
+  }
+  // A pure read: own[id] directly, never o(), which would create an entry just by exporting.
+  function wantListCsv(items){
+    var rows=[WANT_HEADER], mode=priceMode(), code=(CUR&&CUR.code)||"";
+    // Collector mode hides every market value in the app, so the file hides them too. The columns stay, blank,
+    // so one spreadsheet template fits both modes. (The collection export predates this and always writes its
+    // value columns; leaving that alone keeps existing sheets pointing at the right columns.)
+    var money=!(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector");
+    (items||[]).forEach(function(item){
+      var c=item&&item.card; if(!c) return;
+      var need=Math.floor(+item.need||0); if(!(need>0)) return;
+      var e=(typeof own!=="undefined" && own) ? own[c.id] : null;
+      var have=e ? (rawCount(e.qty)+((e.graded&&e.graded.length)||0)) : 0;
+      var u=0; if(money){ try{ u=+unitOf(c.id, mode)||0; }catch(err){ u=0; } }
+      var us=csvNum(u), ts=csvNum(need*u), priced=!!(us||ts);
+      rows.push(["", c.id, String(need), String(have), c.name||"", c.kind||"", c.sub||"",
+        (SETS[c.set]&&SETS[c.set].name)||c.set||"", RARE_NAME[c.rare]||c.rare||"",
+        us, ts, priced?code:"", priced?marketPriceLabel(c.id, mode):"",
+        csvDay(wishlistAt(c.id)), wantSearch(c), ""]);
+    });
+    return csvText(rows, WANT_NUMCOL);
+  }
+  function exportWantList(items, slug){
+    var list=(items||[]).filter(function(item){ return item && item.card && Math.floor(+item.need||0)>0; });
+    if(!list.length){ toast("Nothing to export yet"); return; }
+    var text; try{ text=wantListCsv(list); }catch(e){ toast("Couldn't build the spreadsheet"); return; }
+    var n=list.length;
+    // No markBackupExport() here: a want list is not a backup of your collection, and stamping one would leave
+    // Settings claiming a backup that was never taken.
+    saveTextFile(fileSlug(slug,"want-list")+"-"+todayKey()+".csv", "text/csv", text, function(){
+      toast("Exported "+n+" card"+(n===1?"":"s"));
+    });
   }
   // ---- CSV import ----
   // RFC 4180 rows: quoted fields, doubled quotes, separators and line breaks inside quotes, CRLF or LF, BOM.
@@ -5466,6 +5526,9 @@ label.acctsetrow { align-items:center; }
     var rows=parseCsvRows(text, sep), hi=-1, colIx={};
     for(ri=0; ri<rows.length; ri++){ if(rows[ri].join("").trim()){ hi=ri; break; } }
     if(hi>=0) rows[hi].forEach(function(h, idx){ var k=String(h||"").trim().toLowerCase(); if(k && colIx[k]==null) colIx[k]=idx; });
+    if(hi>=0 && colIx.number!=null && colIx.quantity==null && colIx.need!=null){
+      return { own:{}, sealed:{}, added:0, skipped:0, cards:0, slabs:0, sealedItems:0, wantList:true };
+    }
     if(hi>=0 && colIx.number!=null && colIx.quantity!=null){
       var cell=function(r, k, keepSpace){ var ix=colIx[k]; if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
       var condOf={}; CARD_CONDS.forEach(function(c){ condOf[c.toLowerCase()]=c; });
@@ -5523,6 +5586,7 @@ label.acctsetrow { align-items:center; }
   function doImportCsv(){
     pickTextFile(".csv,.txt,text/csv,text/plain", function(text, f){ try{
       var res=parseCsvCollection(text);
+      if(res.wantList){ toast("That is a want list, not a collection. Import a file with Number and Quantity columns."); return; }
       if(!res.added){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
       var base=((f&&f.name)||"Imported").replace(/\.[^.]+$/,"");
       var nm=base+" (CSV)";
@@ -7280,26 +7344,36 @@ label.acctsetrow { align-items:center; }
     });
     return rows;
   }
-  function missingTcgRows(goal, data){
-    var rows=[];
+  // One definition of "still wanted", so the spreadsheet button and the TCGplayer button sitting next to each
+  // other can never disagree. Returns a COPY in card number order: renderMissing re-sorts the on screen list in
+  // place afterwards, and a file whose row order followed the Sort control could not be compared week to week.
+  // The Pal goal deliberately keeps printings you already own on screen, and they are dropped here, which is
+  // why the toast reports the exported count rather than the count you can see.
+  function missingWantItems(goal, data){
+    var out=[];
     ((data&&data.items)||[]).forEach(function(item){
       if(!item||!item.card) return;
-      var need=+item.need||0; if(!(need>0)) return;
+      var need=Math.floor(+item.need||0); if(!(need>0)) return;
       if(goal!=="deck" && ownsForCompletion(item.card)) return;
-      var p=tcgplayerSetNumber(item.card.set, item.card.id);
-      rows.push({qty:need, name:item.card.name, set:p.set, number:p.number});
+      out.push({card:item.card, need:need});
     });
-    return rows;
+    out.sort(function(a,b){ return (a.card.setIdx-b.card.setIdx) || (a.card.seq-b.card.seq) ||
+      (a.card.id<b.card.id?-1:(a.card.id>b.card.id?1:0)); });
+    return out;
   }
-  function wishlistTcgRows(){
-    var rows=[];
-    CARDS.forEach(function(c){
-      if(!isWished(c.id)) return;
-      var p=tcgplayerSetNumber(c.set, c.id);
-      rows.push({qty:1, name:c.name, set:p.set, number:p.number});
-    });
-    return rows;
+  // Every wished card, owned ones included: that is what the wishlist grid shows and what the button beside
+  // this one copies. The Missing page's wishlist goal is the unowned subset, and has its own button.
+  function wishlistWantItems(){
+    var out=[];
+    CARDS.forEach(function(c){ if(isWished(c.id)) out.push({card:c, need:1}); });
+    return out;
   }
+  function tcgRowOf(item){
+    var p=tcgplayerSetNumber(item.card.set, item.card.id);
+    return {qty:item.need, name:item.card.name, set:p.set, number:p.number};
+  }
+  function missingTcgRows(goal, data){ return missingWantItems(goal, data).map(tcgRowOf); }
+  function wishlistTcgRows(){ return wishlistWantItems().map(tcgRowOf); }
   var deckFocus=null, deckFocusDeck=null;
   function deckFocusOn(kind, value){
     if(deckFocus && deckFocus.k===kind && String(deckFocus.v)===String(value)) deckFocus=null;
@@ -7625,12 +7699,17 @@ label.acctsetrow { align-items:center; }
     var progress=data&&data.total?Math.min(100,pctOf(data.owned,data.total)):0;
         var sphereSilhouette=missingGoal==="sphere"&&data?'<div class="spherehero"><span class="rwsphere" style="--rc:'+data.track.sphere.c+';width:54px;height:54px;margin:0;">'+sphereSVG(data.track.sphere.c,data.track.id)+'</span><span class="spherelabel">'+esc(data.track.sphere.name)+'</span></div>':"";
     var eligibility=missingGoal==="sphere"?'Each official main-set printing counts once. Trial decks and promos do not count.':missingGoal==="master"?'Each catalogued printing counts once; raw or graded copies both qualify, while duplicates do not.':(missingGoal==="set"||missingGoal==="rarity"||missingGoal==="pal")?'Each unique printing counts once, whether raw or graded.':'';
-    var tcgRows=missingTcgRows(missingGoal, data);
+    var wantRows=missingWantItems(missingGoal, data), tcgRows=wantRows.map(tcgRowOf);
     hero.innerHTML='<div class="missingherohead"><div><div class="missingeyebrow">'+esc(copy.eyebrow)+'</div><div class="missingname">'+esc(copy.name)+'</div></div><div class="missingcount"><b>'+copy.count+'</b>'+esc(copy.detail)+'</div></div>'+
-      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
+      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(wantRows.length?'<button class="btn sec" id="missingCsvAction" type="button">Spreadsheet (CSV)</button>':'')+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
     var choice=$("missingChoice"); if(choice) choice.onchange=function(){ missingChoice[missingGoal]=choice.value; renderMissing(); };
     var bulk=$("missingBulkAction"); if(bulk) bulk.onclick=function(){ addMissingToWishlist(items); };
-    var missingTcg=$("missingTcgAction"); if(missingTcg) missingTcg.onclick=function(){ copyTcgplayerRows(tcgRows); };
+    // Read the list when the button is TAPPED, not when this hero was drawn: collecting a card from the list
+    // below patches this page in place rather than re-rendering it, so a snapshot would still carry cards you
+    // have since collected. Both buttons recompute, so the pair can never disagree.
+    var missingTcg=$("missingTcgAction"); if(missingTcg) missingTcg.onclick=function(){ copyTcgplayerRows(missingTcgRows(missingGoal, activeMissingGoal())); };
+    var missingCsv=$("missingCsvAction"); if(missingCsv) missingCsv.onclick=function(){
+      exportWantList(missingWantItems(missingGoal, activeMissingGoal()), "missing "+(missingGoal==="master"?"cards":copy.name)); };
     $("missingHeroAction").onclick=function(){
       if(copy.actionType==="master") openMissingCollection();
       else if(copy.actionType==="sphere" && data) openSet(data.set,"missing");
@@ -7692,7 +7771,7 @@ label.acctsetrow { align-items:center; }
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
   function deckToText(d){
