@@ -4691,8 +4691,10 @@ label.acctsetrow { align-items:center; }
   function setNavHTML(c){
     var nb=setNeighbours(c); if(!nb.prev && !nb.next) return "";
     function btn(x, cls, label){ return '<button class="btn sec setnavb '+cls+'" type="button" data-id="'+esc(x.id)+'"><span class="snlab">'+label+'</span><span class="snname">'+esc(x.name)+'</span></button>'; }
-    // Where this card sits in the walk the two buttons make, so a middle card is not guesswork.
-    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+'</p>' : '';
+    // Where this card sits in the walk the two buttons make, so a middle card is not guesswork. The set name
+    // says the walk is the card's set, not the filter the sheet was opened from; no name, no raw code.
+    var setNm=(SETS[c.set]&&SETS[c.set].name)||"";
+    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · '+esc(setNm):'')+'</p>' : '';
     return pos+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
   }
   function openDetail(c){
