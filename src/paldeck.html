@@ -7172,11 +7172,15 @@ label.acctsetrow { align-items:center; }
     return any ? n : -1; }
   function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
+  // Deck size for the picker: every copy the list runs, so a stub and a full deck tell apart without opening each.
+  function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
+    Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
+    return n+(n===1?" card":" cards"); }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
     var ad=activeDeck();
-    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
+    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+" · "+deckSizeLabel(d)+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
     sel.onchange=function(){ STATE.activeDeck=sel.value; save(); renderDecks(); };
   }
   function renderDeckCompletion(d){
