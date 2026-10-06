@@ -636,6 +636,10 @@
   #homeAway .awaylist li::before { content:"•"; color:var(--accent); font-weight:800; flex:none; }
   #homeAway .hcname { font-size:1.05rem; }
   #homeAway .hcmeta { font-size:.76rem; color:var(--ink-soft); margin-top:4px; }
+  /* The next exactly dated release, one quiet line above the Home cards; it opens Releases. */
+  .homenextrel { display:flex; align-items:center; width:100%; margin:0 0 12px; padding:2px 0; border:0; background:none; font:inherit; font-size:.85rem; font-weight:600; color:var(--ink-soft); text-align:left; cursor:pointer; overflow-wrap:anywhere; }
+  .homenextrel[hidden] { display:none; }
+  .homenextrel svg { width:14px; height:14px; flex:none; margin-right:6px; color:var(--accent-ink); }
   .homegrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; margin-bottom:13px; }
   .homegrid .homecard { margin:0; min-height:150px; display:flex; flex-direction:column; }
   .homegrid .hcname { font-size:1rem; } .homegrid .hcvalue { font-size:1.4rem; margin-top:14px; }
@@ -681,6 +685,9 @@
     box-shadow:0 0 0 1.5px #b9791f, inset 0 -1px 2px rgba(0,0,0,.3); }
 
   .setbrowse { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
+  .setbrowsebar { margin:-3px 0 14px; }
+  .sealhidebar { margin:-2px 0 14px; }
+  .setbrowse .empty { padding:34px 20px; overflow-wrap:anywhere; }
   .setcard { text-align:center; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; overflow:hidden;
     padding:0; color:var(--ink); cursor:pointer; transition:transform .16s, box-shadow .16s, border-color .16s; display:flex; flex-direction:column; box-shadow:var(--shadow); }
   .setcard:hover { transform:translateY(-4px); box-shadow:var(--shadow); border-color:var(--accent); }
@@ -2049,6 +2056,8 @@ label.acctsetrow { align-items:center; }
   .meditor > .dsec{ margin:2px 0 0; }
   .meditor > .ctmsg{ margin-top:0; }
   .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
+  .setpos{ margin:14px 0 0; font-size:.78rem; color:var(--ink-faint); text-align:center; overflow-wrap:anywhere; }
+  .setpos + .setnav{ margin-top:6px; }
   .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
   .setnav .snnext{ margin-left:auto; text-align:right; }
   .setnav .snlab{ display:block; font-weight:600; }
@@ -2355,6 +2364,7 @@ label.acctsetrow { align-items:center; }
   <section class="page active" id="page-home">
     <section class="featured" id="homeFeatured" hidden></section>
     <section class="homecard" id="homeAway" hidden></section>
+    <button class="homenextrel" type="button" id="homeNextRelease" hidden></button>
     <div class="homegrid uniform">
       <section class="homecard collection" id="homeCollection"></section>
       <section class="homecard priceui" id="homeMarket"></section>
@@ -2438,6 +2448,7 @@ label.acctsetrow { align-items:center; }
 
   <div id="collSets">
     <h2 class="sech">Browse by set</h2>
+    <div class="setbrowsebar"><button class="chip solid" type="button" id="hideDoneTog" aria-pressed="false">Hide finished sets</button></div>
     <div class="setbrowse" id="setBrowse"></div>
   </div>
 
@@ -2593,6 +2604,7 @@ label.acctsetrow { align-items:center; }
         </select>
       </div>
     </div>
+    <div class="sealhidebar"><button class="chip solid" type="button" id="sealHideTog" aria-pressed="false">Hide unowned</button></div>
     <div class="sealedgrid" id="sealedGrid"></div>
   </section>
 
@@ -4525,17 +4537,19 @@ label.acctsetrow { align-items:center; }
 
   // ---- Stats ----
   function stats(){
-    var printings=0, master=new Set(), chase=0, byColor={}, bySet={}, value=0, gradedCount=0;
+    var printings=0, master=new Set(), chase=0, byColor={}, bySet={}, value=0, gradedCount=0, copies=0;
     COLORS.forEach(function(c){ byColor[c]=0; });
     SET_ORDER.forEach(function(k){ bySet[k]=0; });
     CARDS.forEach(function(c){
       var s=o(c.id); value += cardValue(s); if(s.graded) gradedCount += s.graded.length;
+      copies += copiesOf(s);
       if (has(s)){ printings++; master.add(c.base); if(c.special) chase++; if(byColor[c.color]!=null) byColor[c.color]++; if(bySet[c.set]!=null) bySet[c.set]++; }
     });
     var pct = pctOf(printings,TOTAL);
     $("pctNum").textContent = pct+"%";
     $("xpfill").style.width = pct+"%";
-    $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected";
+    // Every copy held, raw and graded together, next to the unique count (left off an empty binder).
+    $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected"+(copies?(" · "+copies+(copies===1?" copy":" copies")):"");
     _masterN = master.size; _chaseN = chase;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
     var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;
@@ -4676,13 +4690,17 @@ label.acctsetrow { align-items:center; }
   function setNeighbours(c){
     var mates=CARDS.filter(function(x){ return x.set===c.set; }).sort(function(a,b){ return a.seq-b.seq || RARE_ORDER[a.rare]-RARE_ORDER[b.rare]; });
     var i=-1; mates.forEach(function(x,j){ if(x.id===c.id) i=j; });
-    if(i<0) return {prev:null, next:null};
-    return {prev:i>0?mates[i-1]:null, next:i<mates.length-1?mates[i+1]:null};
+    if(i<0) return {prev:null, next:null, pos:0, total:0};
+    return {prev:i>0?mates[i-1]:null, next:i<mates.length-1?mates[i+1]:null, pos:i+1, total:mates.length};
   }
   function setNavHTML(c){
     var nb=setNeighbours(c); if(!nb.prev && !nb.next) return "";
     function btn(x, cls, label){ return '<button class="btn sec setnavb '+cls+'" type="button" data-id="'+esc(x.id)+'"><span class="snlab">'+label+'</span><span class="snname">'+esc(x.name)+'</span></button>'; }
-    return '<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
+    // Where this card sits in the walk the two buttons make, so a middle card is not guesswork. The set name
+    // says the walk is the card's set, not the filter the sheet was opened from; no name, no raw code.
+    var setNm=(SETS[c.set]&&SETS[c.set].name)||"";
+    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · '+esc(setNm):'')+'</p>' : '';
+    return pos+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
   }
   function openDetail(c){
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
@@ -6343,9 +6361,15 @@ label.acctsetrow { align-items:center; }
     }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
   var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(lsGet("palvault-sealview")||"auto");
+  // Hide unowned keeps only the products you hold at least one of. A preorder has no count yet, so it
+  // goes too. Reads the map directly: sealItem() would create an empty entry for every product it is asked about.
+  function sealHideOn(){ return lsGet("palvault-sealhide")==="1"; }
+  function sealOwned(p){ var s=sealMap()[p.id]; return !!(s && (+s.qty||0)>0); }
+  // Products held, not copies, across the whole catalogue so search and Hide unowned never change it.
+  function sealOwnedCount(){ return SEALED.filter(function(p){ return !p.pre && sealOwned(p); }).length; }
   function sealedList(){
-    var q=fold(sealQ.trim());
-    var all=SEALED.filter(function(p){ return !q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1; });
+    var q=fold(sealQ.trim()), hide=sealHideOn();
+    var all=SEALED.filter(function(p){ return (!q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1) && (!hide || sealOwned(p)); });
     var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
     function relDate(p){ return monDateTime(sealDate(p)); }
     // Release-date sort: one chronological run of everything (released then upcoming), oldest first (reverse for newest first).
@@ -6370,7 +6394,16 @@ label.acctsetrow { align-items:center; }
     grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
     grid.innerHTML="";
     var seenPre=false, list=sealedList();
-    if(!list.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>'; }
+    var hideTog=$("sealHideTog");
+    if(hideTog){ hideTog.setAttribute("aria-pressed", sealHideOn()?"true":"false");
+      hideTog.onclick=function(){ lsSet("palvault-sealhide", sealHideOn()?"0":"1"); renderSealed(); }; }
+    if(!list.length){
+      // With the chip on and nothing held at all, say so; a search that simply missed keeps the usual line.
+      var noneHeld=sealHideOn() && !SEALED.some(sealOwned);
+      grid.innerHTML=noneHeld
+        ? '<div class="empty" style="grid-column:1/-1"><b>No owned products</b>Turn off Hide unowned to see them again.</div>'
+        : '<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>';
+    }
     list.forEach(function(p){
       if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Preorders · coming soon"; grid.appendChild(dv); }
       var el=document.createElement("div"); el.className="sealcard"+(p.pre?" preorder":"");
@@ -6408,7 +6441,8 @@ label.acctsetrow { align-items:center; }
     });
     var bar=$("sealedBar"); if(bar) bar.innerHTML=
       '<div class="hs"><span class="n">'+money(sealedValue())+'</span><span class="l">Sealed value</span></div>'+
-      '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>';
+      '<div class="hs"><span class="n">'+money(sealedValue()+cardsValue())+'</span><span class="l">Total portfolio</span></div>'+
+      '<div class="hs"><span class="n">'+sealOwnedCount()+'</span><span class="l">Owned</span></div>';
   }
 
   // ---- Sealed product detail sheet + region-aware buy links ----
@@ -7163,11 +7197,15 @@ label.acctsetrow { align-items:center; }
     return any ? n : -1; }
   function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
+  // Deck size for the picker: every copy the list runs, so a stub and a full deck tell apart without opening each.
+  function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
+    Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
+    return n+(n===1?" card":" cards"); }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
     var ad=activeDeck();
-    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
+    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+" · "+deckSizeLabel(d)+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
     sel.onchange=function(){ STATE.activeDeck=sel.value; save(); renderDecks(); };
   }
   function renderDeckCompletion(d){
@@ -7656,14 +7694,30 @@ label.acctsetrow { align-items:center; }
     var items=missingItems(CARDS.filter(function(c){ return isWished(c.id); }));
     return {items:items,remaining:items.length,total:wishCount(),owned:Math.max(0,wishCount()-items.length),percent:wishCount()?Math.round((wishCount()-items.length)/wishCount()*100):0};
   }
-  function activeMissingGoal(){
-    if(missingGoal==="master") return masterSetMissingGoal();
-    if(missingGoal==="set") return selectedSetMissingGoal();
-    if(missingGoal==="rarity") return selectedRarityMissingGoal();
-    if(missingGoal==="pal") return selectedPalMissingGoal();
-    if(missingGoal==="deck") return deckMissingGoal();
-    if(missingGoal==="wishlist") return wishlistMissingGoal();
+  function activeMissingGoal(goal){
+    var g=goal||missingGoal;
+    if(g==="master") return masterSetMissingGoal();
+    if(g==="set") return selectedSetMissingGoal();
+    if(g==="rarity") return selectedRarityMissingGoal();
+    if(g==="pal") return selectedPalMissingGoal();
+    if(g==="deck") return deckMissingGoal();
+    if(g==="wishlist") return wishlistMissingGoal();
     return nextSphereMissingGoal();
+  }
+  // Each tab carries how many unique cards its goal still lacks. The Pal goal lists every printing,
+  // owned or not, so it uses remaining; the deck goal counts copies, so it counts its cards instead.
+  function missingGoalCount(goal, data){
+    if(!data) return 0;
+    if(goal==="pal") return data.remaining||0;
+    return (data.items||[]).length;
+  }
+  function updateMissingTabCounts(){
+    var tabs=$("missingTabs"); if(!tabs) return;
+    Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){
+      var goal=button.getAttribute("data-goal"), base=button.getAttribute("data-label");
+      if(base===null){ base=button.textContent; button.setAttribute("data-label", base); }
+      button.textContent=base+" "+missingGoalCount(goal, activeMissingGoal(goal));
+    });
   }
   function missingCopy(goal, data){
     if(!data) return {eyebrow:goal==="deck"?"Deck completion":"Nothing missing",name:goal==="deck"?"Build a deck first":"Your collection is complete",count:"0",detail:"cards remaining",foot:"Choose another goal to keep collecting.",action:"Browse collection",actionType:"collection",title:"Cards to collect"};
@@ -7698,6 +7752,7 @@ label.acctsetrow { align-items:center; }
     var data=activeMissingGoal(), copy=missingCopy(missingGoal,data), items=(data&&data.items)||[];
     var sort=$("missingSort"); if(sort) sort.value=missingSort;
     Array.prototype.forEach.call($("missingTabs").querySelectorAll(".missingtab"), function(button){ var on=button.getAttribute("data-goal")===missingGoal; button.classList.toggle("on",on); button.setAttribute("aria-selected",on?"true":"false"); });
+    updateMissingTabCounts();
     $("missingIntro").textContent=missingGoal==="master"?"Every card you still need for your collection.":missingGoal==="sphere"?"Finish an official main-set list to earn its permanent Set Sphere.":missingGoal==="set"?"Your most achievable incomplete set, ready to finish.":missingGoal==="rarity"?"The closest rarity to completing in your collection.":missingGoal==="pal"?"The closest Pal to completing across its card variants.":missingGoal==="deck"?"The exact copies you still need for your active deck.":"Cards saved for a future collection goal.";
     $("missingListTitle").textContent=copy.title;
     var progress=data&&data.total?Math.min(100,pctOf(data.owned,data.total)):0;
@@ -7753,6 +7808,7 @@ label.acctsetrow { align-items:center; }
           var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
           var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
           var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+          updateMissingTabCounts();
         }catch(_e){}
         try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
         try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
@@ -7901,7 +7957,16 @@ label.acctsetrow { align-items:center; }
       while(decks().some(function(k){ return k.id==="d"+t; })) t++;   // two quick taps must not share an id
       copy.id="d"+t; copy.name=name;
       decks().push(copy); STATE.activeDeck=copy.id; save(); renderDecks(); toast("Deck duplicated");
+      promptDeckNameAfterDupe(copy);
     };
+    // Straight after Duplicate, the Rename prompt opens on the copy with its generated name filled in, so the
+    // collector can name it in the same tap. Cancel keeps the copy under the generated name.
+    function promptDeckNameAfterDupe(copy){
+      openAsk({title:"Rename deck", value:copy.name, okText:"Rename", onOk:function(r){
+        var d=decks().filter(function(k){ return k.id===copy.id; })[0]; if(!d) return;
+        d.name=r; save(); renderDecks();
+      }});
+    }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
@@ -9613,7 +9678,34 @@ label.acctsetrow { align-items:center; }
     var n=+pct||0; if(n<0) n=0; if(n>100) n=100;
     return '<div class="hctrack"><span style="width:'+n+'%"></span></div>';
   }
+  // Whole local days until a release. Needs an exact day ("Oct 30, 2026" or ISO); a month only date such as
+  // "Oct 2026" gives -1 rather than a guessed count. Past or undated releases give -1 too.
+  function releaseDaysUntil(d){
+    var s=String(d||""), t=null, iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if(iso) t=new Date(+iso[1], +iso[2]-1, +iso[3]);
+    else if(/[A-Za-z]{3}[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/.test(s)){ var ms=monDateTime(s); if(Number.isFinite(ms)) t=new Date(ms); }
+    if(!t||isNaN(t.getTime())) return -1;
+    var now=new Date(), today=new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var n=Math.round((t.getTime()-today.getTime())/86400000);   // round, not floor: a DST day is 23 or 25 hours
+    return n<0 ? -1 : n;
+  }
+  // The soonest exactly dated pre-order, named by its set (as the Releases timeline groups them), so a box
+  // and its packs on the same day are one line. A tie keeps the earlier product in SEALED.
+  function nextHomeReleaseGroup(){ var best=null;
+    (SEALED||[]).forEach(function(p){ if(!p||!p.pre) return;
+      var title=String(p.set||p.name||"").trim(); if(!title) return;
+      var pd=sealDate(p), n=releaseDaysUntil(pd); if(n<0) return;
+      if(!best || n<best.days) best={ title:title, date:pd, days:n }; });
+    return best; }
+  function homeReleaseCountdownCopy(name, n){
+    return name+(n===0 ? " today" : (n===1 ? " tomorrow" : " in "+n+" days")); }
+  function renderHomeNextRelease(){ var el=$("homeNextRelease"); if(!el) return;
+    var g=nextHomeReleaseGroup();
+    if(!g){ el.hidden=true; el.innerHTML=""; el.onclick=null; return; }
+    el.innerHTML=icon("calendar")+"<span>"+esc(homeReleaseCountdownCopy(g.title, g.days))+"</span>";
+    el.onclick=function(){ showPage("releases"); }; el.hidden=false; }
   function renderHome(){
+    try{ renderHomeNextRelease(); }catch(e){}
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=pctOf(ownedP,total);
     var rk=sphereRank(pct), sphere=nextSphereMissingGoal(), closest=closestSetMissingGoal(), deck=deckMissingGoal(), wish=wishlistMissingGoal(), value=binderValue(), closestIsSphere=!!(closest&&(SET_SPHERE_TRACKS||[]).some(function(t){return t.available&&t.id===closest.set;}));
@@ -9690,8 +9782,37 @@ label.acctsetrow { align-items:center; }
     all.onclick=function(){ openAllCards(); }; tapTarget(all);
     br.appendChild(all);
     // 2) Promo Cards, then 3) the expansions (Dawn of Palpagos merged, then the upcoming sets).
-    br.appendChild(oneSetTile("PR2026", sp));
-    BROWSE_EXPANSIONS.forEach(function(x){ br.appendChild(x.upcoming ? upcomingTile(x) : expansionTile(x, sp)); });
+    // Hide finished sets drops a tile once every card it counts is owned. All Cards is the way into the
+    // grid, not a set, so it always stays; an upcoming set has no cards yet and is never finished.
+    var hide=lsGet("palvault-hidefinished")==="1", shown=0;
+    var tog=$("hideDoneTog");
+    if(tog){ tog.setAttribute("aria-pressed", hide?"true":"false");
+      // The number counts every finished tile, hidden or not, so turning the chip on never changes it.
+      tog.textContent="Hide finished sets "+browseFinishedSetCount(sp);
+      tog.onclick=function(){ lsSet("palvault-hidefinished", hide?"0":"1"); renderSetBrowse(); }; }
+    if(!(hide && setsFinished(["PR2026"], sp))){ br.appendChild(oneSetTile("PR2026", sp)); shown++; }
+    BROWSE_EXPANSIONS.forEach(function(x){
+      if(x.upcoming){ br.appendChild(upcomingTile(x)); shown++; return; }
+      if(hide && setsFinished(x.sets, sp)) return;
+      br.appendChild(expansionTile(x, sp)); shown++;
+    });
+    if(hide && !shown){
+      var none=document.createElement("div"); none.className="empty";
+      none.innerHTML="<b>All sets are finished</b>Turn off Hide finished sets to see them again.";
+      br.appendChild(none);
+    }
+  }
+  // Finished = at least one owned copy of every card the tile counts, the same sum its N/M shows.
+  function setsFinished(keys, sp){
+    var own=0, tot=0; (keys||[]).forEach(function(k){ own+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
+    return tot>0 && own>=tot;
+  }
+  // How many Browse by set tiles Hide finished sets would drop: Promo plus each released expansion
+  // that setsFinished passes. All Cards and upcoming tiles never count.
+  function browseFinishedSetCount(sp){
+    var n=setsFinished(["PR2026"], sp)?1:0;
+    BROWSE_EXPANSIONS.forEach(function(x){ if(!x.upcoming && setsFinished(x.sets, sp)) n++; });
+    return n;
   }
   // A single released set tile (used for Promo Cards).
   function oneSetTile(k, sp){
@@ -9847,12 +9968,7 @@ label.acctsetrow { align-items:center; }
     // Whole local days until a release. Needs an exact day ("Oct 30, 2026" or ISO); a month only date such as
     // "Oct 2026" gets no countdown rather than a guessed one. Past or undated releases get none either.
     function releaseCountdown(d){
-      var s=String(d||""), t=null, iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-      if(iso) t=new Date(+iso[1], +iso[2]-1, +iso[3]);
-      else if(/[A-Za-z]{3}[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/.test(s)){ var ms=monDateTime(s); if(Number.isFinite(ms)) t=new Date(ms); }
-      if(!t||isNaN(t.getTime())) return "";
-      var now=new Date(), today=new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      var n=Math.round((t.getTime()-today.getTime())/86400000);   // round, not floor: a DST day is 23 or 25 hours
+      var n=releaseDaysUntil(d);
       if(n<0) return ""; if(n===0) return "Releases today"; if(n===1) return "Releases tomorrow"; return "Releases in "+n+" days";
     }
     // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
@@ -9927,8 +10043,11 @@ label.acctsetrow { align-items:center; }
     if(!hits.length){ var low=text.toLowerCase(); hits=CARDS.filter(function(c){ return newsHasWord(low, String(c.name||"").toLowerCase()); }); }
     return hits.length===1 ? hits[0] : null;
   }
+  // A reveal you already hold (a raw copy or a slab in the open collection) says so instead of offering the wishlist.
+  function newsRevealOwned(c){ return scanOwnCount(activeCol(), c.id)>0; }
   function newsWishHtml(c){
     var who='<span class="nwname">'+esc(c.name)+'</span>';
+    if(newsRevealOwned(c)) return '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('check')+'In collection</span>'+who+'</div>';
     return isWished(c.id) ? '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('starf')+'On Wishlist</span>'+who+'</div>'
       : '<div class="nwish" data-nw-card="'+esc(c.id)+'"><button type="button" class="nwbtn" data-news-wish="'+esc(c.id)+'">'+icon('star')+'Add to Wishlist</button>'+who+'</div>';
   }
@@ -10346,6 +10465,7 @@ label.acctsetrow { align-items:center; }
             var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
             var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
             var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+            updateMissingTabCounts();
           }
         }catch(_e){}
         try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
@@ -10373,6 +10493,7 @@ label.acctsetrow { align-items:center; }
         var tr=document.querySelector("#missingHero .missingtrack span"); if(tr) tr.style.width=prog2+"%";
         var foot=document.querySelector("#missingHero .missingfoot span"); if(foot&&data2){ if(missingGoal==="sphere") foot.textContent=data2.owned+" / "+data2.total+" official set cards collected"; else if(missingGoal==="pal") foot.textContent=data2.percent+"% complete · "+data2.owned+" / "+data2.total+" collected"; }
         var cnt=document.querySelector("#missingHero .missingcount b"); if(cnt&&data2) cnt.textContent=data2.remaining;
+        updateMissingTabCounts();
         if(card){
           Array.prototype.forEach.call(document.querySelectorAll("#missingList .missingrow"), function(row){
             if(row.getAttribute("data-cid")===card.id){
@@ -11547,6 +11668,7 @@ label.acctsetrow { align-items:center; }
     // this at one edge cached request every 15 minutes.
     try{ if(typeof primeNewsBell==="function") primeNewsBell(); }catch(e){}
     try{ if(typeof renderReleases==="function" && _curPage==="releases") renderReleases(); }catch(e){}   // release countdowns roll over at local midnight
+    try{ if(typeof renderHomeNextRelease==="function") renderHomeNextRelease(); }catch(e){}   // and so does the Home line
     try{ if(typeof renderDecks==="function" && _curPage==="decks") renderDecks(); }catch(e){}   // deck needs follow a collection synced from another device
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     checkAppVersion();
