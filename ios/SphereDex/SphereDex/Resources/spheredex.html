@@ -917,42 +917,16 @@
     .featart { top:16px; bottom:16px; right:16px; max-width:340px; } .featslide.pair .featart { max-width:320px; }
     .featbody, .featslide.pair .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featart-img.zoom { animation:none; } }
-  /* Version banners are 16:9 collages carrying their own title and labels. ONE rendered size everywhere,
-     so the lettering drawn into the art is the same physical size on a phone and on a laptop. Only a phone
-     too narrow to hold the box shrinks it. Show the whole frame, sharp, and keep this slide's copy off the
-     phones. Other slide kinds stay as they are. */
-  :root { --banner-w:336px; }   /* the art is drawn for 336x189, i.e. 1600x900 at 0.21 */
-  .featslide.release { display:flex; flex-direction:column; align-self:flex-start; height:auto;
-    flex:0 0 100%; width:100%; max-width:100%; min-width:0; color:var(--ink); background:var(--surface); }
-  .featslide.release .featbg { position:relative; inset:auto; flex:none; width:min(100%, var(--banner-w)); max-width:100%; min-width:0;
-    margin-inline:auto; aspect-ratio:16 / 9; height:auto; background:#0b1c27; }
-  .featslide.release .featbg img { inset:0; width:100%; height:100%; object-fit:contain; object-position:center center;
-    filter:none; }
-  .featslide.release .featbg::after { content:none; }
-  .featslide.release .featart { display:none; }
-  .featslide.release .featbody { position:relative; inset:auto; right:auto; width:100%; flex:none;
-    padding:10px 14px 14px; color:var(--ink); background:var(--surface); border-top:1px solid var(--line); }
-  .featslide.release .featbadge { color:var(--accent-ink);
-    background:color-mix(in srgb, var(--accent) 16%, transparent);
-    border-color:color-mix(in srgb, var(--accent) 40%, var(--line)); }
-  .featslide.release .feattitle { color:var(--ink); }
-  .featslide.release .featpoints, .featslide.release .featmeta { color:var(--ink-soft); }
-  .featured.banneropen { height:auto; }
-  .featured.banneropen .feattrack { height:auto; align-items:flex-start; }
-  .featured.banneropen .featslide { height:200px; }
-  .featured.banneropen .featslide.release { height:auto; }
-  @media (min-width:760px) {
-    .featured.banneropen { height:240px; }
-    .featured.banneropen .feattrack { height:100%; align-items:stretch; }
-    .featured.banneropen .featslide { height:100%; }
-    .featured.banneropen .featslide.release { height:100%; align-self:stretch; }
-    .featslide.release .featbg { position:absolute; inset:50% 16px auto auto; transform:translateY(-50%);
-      width:var(--banner-w); height:auto; aspect-ratio:16 / 9; margin-inline:0; }
-    .featslide.release .featbg img { object-position:center center; }
-    .featslide.release .featbody { position:absolute; left:0; top:0; bottom:0; width:calc(100% - var(--banner-w) - 36px); right:auto;
-      padding:18px 16px 18px 22px; border-top:0;
-      background:linear-gradient(90deg, var(--surface) 0%, var(--surface) 88%, transparent 100%); }
-  }
+  /* Version banners are 16:9 collages that already carry their own title, their three lines and the credit.
+     So the slide shows the banner and nothing else, inside the carousel's ordinary height, exactly like the
+     artwork on every other slide. The carousel is therefore ONE size whatever you swipe to, and the banner is
+     the same size on a phone and on a laptop. contain, never cover: the art has its labels at the edges and
+     must never be cropped. */
+  .featslide.release .featbg { background:#08151f; }
+  .featslide.release .featbg img { inset:0; width:100%; height:100%; object-fit:contain;
+    object-position:center center; filter:none; }
+  .featslide.release .featbg::after { content:none; }   /* no scrim: nothing is written over the art */
+  .featslide.release .featart, .featslide.release .featbody { display:none; }
   /* Card of the day: the biggest riser in the whole catalogue. Built to read as an in game HUD
      readout, so the gain IS the graphic rather than another line of prose: reward gold on the chip and
      the card rim, price up green for the figure, the aura and the spark. The whole slide is one tap
@@ -9361,11 +9335,12 @@ label.acctsetrow { align-items:center; }
     return out.slice(0,6);   // six headliner kinds since the card of the day; five silently dropped Next release
   }
 
+  // The update slide used to grow the carousel while it was the active one. It no longer does: every slide
+  // is the same height, so there is nothing to sync. Kept as a no op, and it still clears the old class from
+  // a page that was rendered before this build.
   function featSyncBanner(){
     var host=$("homeFeatured"); if(!host || !host.classList) return;
-    var s=(_featSlides||[])[_featIndex];
-    if(s && s.releaseArt) host.classList.add("banneropen");
-    else host.classList.remove("banneropen");
+    host.classList.remove("banneropen");
   }
   function featPaint(){
     var host=$("homeFeatured"), track=$("featTrack"); if(!host||!track) return;
@@ -9488,7 +9463,10 @@ label.acctsetrow { align-items:center; }
           '</span></button>';
       }
       var movers=(s.kind==="movers" && s.movers && s.movers.length) ? s.movers : null;
-      var bg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
+      // The release banner is the only slide whose words live in the image, so it is the only one that
+      // needs real alt text. Every other slide repeats its art in the copy beside it.
+      var bgAlt=(s.releaseArt && s.notes && s.notes.length) ? (s.title+". "+s.notes.join(". ")) : "";
+      var bg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="'+esc(bgAlt)+'" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
       var art="";
       if(movers){
         art='<span class="featart featart--card">'+movers.map(function(m){
@@ -9512,9 +9490,13 @@ label.acctsetrow { align-items:center; }
       } else {
         bodyMeta='<span class="featmeta">'+esc(s.meta)+'</span>';
       }
+      // A release slide is the banner and nothing else: its badge, title and three lines are already drawn
+      // into the art, so repeating them here would both say everything twice and make this slide taller
+      // than every other one. The alt text above carries the same words for a screen reader.
+      var body=s.releaseArt ? "" : ('<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
+        '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span>');
       return '<button class="featslide'+(on?" on":"")+(art?"":" noart")+(s.releaseArt?" release":"")+(movers&&movers.length>1?" pair":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
-        '>'+bg+art+'<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
-        '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span></button>';
+        '>'+bg+art+body+'</button>';
     }).join("");
     var dots=slides.length>1 ? '<span class="featdots">'+slides.map(function(s,i){
         return '<button class="featdot" type="button" data-i="'+i+'" aria-current="'+(i===_featIndex)+'" aria-label="Show slide '+(i+1)+' of '+slides.length+'"></button>';

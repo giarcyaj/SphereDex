@@ -536,7 +536,10 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   assert.ok(featHtml, 'features slide is marked release');
   assert.match(featHtml[0], /class="featbg"><img src="img\/UPDATE_2_1\.webp"/);
   assert.equal(featHtml[0].includes('class="featart'), false, 'the collage is the frame, not a side card');
-  assert.match(features.host.className, /\bbanneropen\b/);
+  assert.equal(featHtml[0].includes('class=\"featbody\"'), false, 'the banner already carries the copy, so it is not repeated');
+  assert.match(featHtml[0], /<img src=\"img\/UPDATE_2_1\.webp\" alt=\"[^\"]+\"/, 'the words that live only in the art reach a screen reader');
+  // Every slide is the same size now, so the carousel must never switch to the old growing mode.
+  assert.equal(/\bbanneropen\b/.test(features.host.className), false, 'the carousel keeps one height');
 
   const update = app({ ...base, APP_VERSION: '2.0', _latestAppVersion: '2.1' });
   const up = update.api.slides().find((s) => s.kind === 'update');
@@ -558,6 +561,9 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   assert.equal(/class="featslide[^"]*\brelease\b/.test(fallback.host.innerHTML), false);
   assert.match(fallback.host.innerHTML, /src="data:art-ebp01"/);
   assert.equal(/\bbanneropen\b/.test(fallback.host.className), false);
+  // The rule that made this one slide taller than the rest is gone from the stylesheet entirely.
+  assert.equal(/\.featured\.banneropen\s*\{/.test(source), false, 'no height override is left for the release slide');
+  assert.match(source, /\.featslide\.release \.featart, \.featslide\.release \.featbody \{ display:none; \}/);
 
   const copies = [
     'docs/app/img/UPDATE_2_1.webp',
