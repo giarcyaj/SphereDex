@@ -4530,17 +4530,19 @@ label.acctsetrow { align-items:center; }
 
   // ---- Stats ----
   function stats(){
-    var printings=0, master=new Set(), chase=0, byColor={}, bySet={}, value=0, gradedCount=0;
+    var printings=0, master=new Set(), chase=0, byColor={}, bySet={}, value=0, gradedCount=0, copies=0;
     COLORS.forEach(function(c){ byColor[c]=0; });
     SET_ORDER.forEach(function(k){ bySet[k]=0; });
     CARDS.forEach(function(c){
       var s=o(c.id); value += cardValue(s); if(s.graded) gradedCount += s.graded.length;
+      copies += copiesOf(s);
       if (has(s)){ printings++; master.add(c.base); if(c.special) chase++; if(byColor[c.color]!=null) byColor[c.color]++; if(bySet[c.set]!=null) bySet[c.set]++; }
     });
     var pct = pctOf(printings,TOTAL);
     $("pctNum").textContent = pct+"%";
     $("xpfill").style.width = pct+"%";
-    $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected";
+    // Every copy held, raw and graded together, next to the unique count (left off an empty binder).
+    $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected"+(copies?(" · "+copies+(copies===1?" copy":" copies")):"");
     _masterN = master.size; _chaseN = chase;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
     var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;
