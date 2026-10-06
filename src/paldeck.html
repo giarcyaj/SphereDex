@@ -681,6 +681,8 @@
     box-shadow:0 0 0 1.5px #b9791f, inset 0 -1px 2px rgba(0,0,0,.3); }
 
   .setbrowse { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
+  .setbrowsebar { margin:-3px 0 14px; }
+  .setbrowse .empty { padding:34px 20px; overflow-wrap:anywhere; }
   .setcard { text-align:center; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; overflow:hidden;
     padding:0; color:var(--ink); cursor:pointer; transition:transform .16s, box-shadow .16s, border-color .16s; display:flex; flex-direction:column; box-shadow:var(--shadow); }
   .setcard:hover { transform:translateY(-4px); box-shadow:var(--shadow); border-color:var(--accent); }
@@ -2438,6 +2440,7 @@ label.acctsetrow { align-items:center; }
 
   <div id="collSets">
     <h2 class="sech">Browse by set</h2>
+    <div class="setbrowsebar"><button class="chip solid" type="button" id="hideDoneTog" aria-pressed="false">Hide finished sets</button></div>
     <div class="setbrowse" id="setBrowse"></div>
   </div>
 
@@ -9690,8 +9693,28 @@ label.acctsetrow { align-items:center; }
     all.onclick=function(){ openAllCards(); }; tapTarget(all);
     br.appendChild(all);
     // 2) Promo Cards, then 3) the expansions (Dawn of Palpagos merged, then the upcoming sets).
-    br.appendChild(oneSetTile("PR2026", sp));
-    BROWSE_EXPANSIONS.forEach(function(x){ br.appendChild(x.upcoming ? upcomingTile(x) : expansionTile(x, sp)); });
+    // Hide finished sets drops a tile once every card it counts is owned. All Cards is the way into the
+    // grid, not a set, so it always stays; an upcoming set has no cards yet and is never finished.
+    var hide=lsGet("palvault-hidefinished")==="1", shown=0;
+    var tog=$("hideDoneTog");
+    if(tog){ tog.setAttribute("aria-pressed", hide?"true":"false");
+      tog.onclick=function(){ lsSet("palvault-hidefinished", hide?"0":"1"); renderSetBrowse(); }; }
+    if(!(hide && setsFinished(["PR2026"], sp))){ br.appendChild(oneSetTile("PR2026", sp)); shown++; }
+    BROWSE_EXPANSIONS.forEach(function(x){
+      if(x.upcoming){ br.appendChild(upcomingTile(x)); shown++; return; }
+      if(hide && setsFinished(x.sets, sp)) return;
+      br.appendChild(expansionTile(x, sp)); shown++;
+    });
+    if(hide && !shown){
+      var none=document.createElement("div"); none.className="empty";
+      none.innerHTML="<b>All sets are finished</b>Turn off Hide finished sets to see them again.";
+      br.appendChild(none);
+    }
+  }
+  // Finished = at least one owned copy of every card the tile counts, the same sum its N/M shows.
+  function setsFinished(keys, sp){
+    var own=0, tot=0; (keys||[]).forEach(function(k){ own+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
+    return tot>0 && own>=tot;
   }
   // A single released set tile (used for Promo Cards).
   function oneSetTile(k, sp){
