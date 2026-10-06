@@ -917,12 +917,15 @@
     .featart { top:16px; bottom:16px; right:16px; max-width:340px; } .featslide.pair .featart { max-width:320px; }
     .featbody, .featslide.pair .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featart-img.zoom { animation:none; } }
-  /* Version banners are 16:9 screenshot collages with their own title and labels. Show the whole
-     frame, sharp, and keep this slide's copy off the phones. Other slide kinds stay as they are. */
+  /* Version banners are 16:9 collages carrying their own title and labels. ONE rendered size everywhere,
+     so the lettering drawn into the art is the same physical size on a phone and on a laptop. Only a phone
+     too narrow to hold the box shrinks it. Show the whole frame, sharp, and keep this slide's copy off the
+     phones. Other slide kinds stay as they are. */
+  :root { --banner-w:336px; }   /* the art is drawn for 336x189, i.e. 1600x900 at 0.21 */
   .featslide.release { display:flex; flex-direction:column; align-self:flex-start; height:auto;
     flex:0 0 100%; width:100%; max-width:100%; min-width:0; color:var(--ink); background:var(--surface); }
-  .featslide.release .featbg { position:relative; inset:auto; flex:none; width:100%; max-width:100%; min-width:0;
-    aspect-ratio:16 / 9; height:auto; background:#0b1c27; }
+  .featslide.release .featbg { position:relative; inset:auto; flex:none; width:min(100%, var(--banner-w)); max-width:100%; min-width:0;
+    margin-inline:auto; aspect-ratio:16 / 9; height:auto; background:#0b1c27; }
   .featslide.release .featbg img { inset:0; width:100%; height:100%; object-fit:contain; object-position:center center;
     filter:none; }
   .featslide.release .featbg::after { content:none; }
@@ -943,9 +946,10 @@
     .featured.banneropen .feattrack { height:100%; align-items:stretch; }
     .featured.banneropen .featslide { height:100%; }
     .featured.banneropen .featslide.release { height:100%; align-self:stretch; }
-    .featslide.release .featbg { position:absolute; inset:0; width:auto; height:auto; aspect-ratio:auto; }
-    .featslide.release .featbg img { object-position:right center; }
-    .featslide.release .featbody { position:absolute; left:0; top:0; bottom:0; width:calc(100% - 440px); right:auto;
+    .featslide.release .featbg { position:absolute; inset:50% 16px auto auto; transform:translateY(-50%);
+      width:var(--banner-w); height:auto; aspect-ratio:16 / 9; margin-inline:0; }
+    .featslide.release .featbg img { object-position:center center; }
+    .featslide.release .featbody { position:absolute; left:0; top:0; bottom:0; width:calc(100% - var(--banner-w) - 36px); right:auto;
       padding:18px 16px 18px 22px; border-top:0;
       background:linear-gradient(90deg, var(--surface) 0%, var(--surface) 88%, transparent 100%); }
   }
@@ -3319,7 +3323,7 @@ label.acctsetrow { align-items:center; }
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.1.
-  var APP_VERSION = "2.2";
+  var APP_VERSION = "2.3";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -3349,13 +3353,19 @@ label.acctsetrow { align-items:center; }
       "Card of the day \u00b7 the biggest riser across every set, in that card\u2019s own colours",
       "Japanese and Chinese copies tracked as their own printings",
       "iPhone notifications fixed \u00b7 plus Previous and Next on every card sheet"
+    ],
+    "2.3": [
+      "Wishlist to spreadsheet \u00b7 and every missing list too, ready for eBay",
+      "Hide what you have finished \u00b7 on Cards and on Sealed",
+      "Counts where you need them \u00b7 copies, deck sizes, cards left and a release countdown"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
   // A version with no entry keeps today's set-art fallback. Paths are bundled img/ files.
   var RELEASE_ART = {
     "2.1": "img/UPDATE_2_1.webp",
-    "2.2": "img/UPDATE_2_2.webp"
+    "2.2": "img/UPDATE_2_2.webp",
+    "2.3": "img/UPDATE_2_3.webp"
   };
   // Where someone whose store build is newer than this one goes to get it. Both wrappers hand http(s)
   // links to the system (Android shouldOverrideUrlLoading / onCreateWindow, iOS decidePolicyFor), so
