@@ -10043,8 +10043,11 @@ label.acctsetrow { align-items:center; }
     if(!hits.length){ var low=text.toLowerCase(); hits=CARDS.filter(function(c){ return newsHasWord(low, String(c.name||"").toLowerCase()); }); }
     return hits.length===1 ? hits[0] : null;
   }
+  // A reveal you already hold (a raw copy or a slab in the open collection) says so instead of offering the wishlist.
+  function newsRevealOwned(c){ return scanOwnCount(activeCol(), c.id)>0; }
   function newsWishHtml(c){
     var who='<span class="nwname">'+esc(c.name)+'</span>';
+    if(newsRevealOwned(c)) return '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('check')+'In collection</span>'+who+'</div>';
     return isWished(c.id) ? '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('starf')+'On Wishlist</span>'+who+'</div>'
       : '<div class="nwish" data-nw-card="'+esc(c.id)+'"><button type="button" class="nwbtn" data-news-wish="'+esc(c.id)+'">'+icon('star')+'Add to Wishlist</button>'+who+'</div>';
   }
