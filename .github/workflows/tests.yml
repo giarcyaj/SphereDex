@@ -105,6 +105,9 @@ jobs:
       - name: Card price history chart
         run: node tools/test_price_chart.cjs
 
+      - name: Sealed stock at a glance
+        run: node tools/test_stock_glance.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 

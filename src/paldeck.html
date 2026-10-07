@@ -1836,6 +1836,14 @@ label.acctsetrow { align-items:center; }
   .pxstats b{ font-weight:600; }
   .pxstats span{ color:var(--muted); }
   .pxempty{ margin:18px 0; color:var(--muted); font-size:14px; }
+  /* Stock at a glance. A dot plus words: colour alone would fail anyone who cannot separate red from
+     green, and this is exactly the sort of line that matters most to them. */
+  .sdstock{ display:flex; align-items:center; gap:8px; margin:10px 0 0; font-size:13px; font-weight:600; }
+  .sdstock i{ width:9px; height:9px; border-radius:50%; flex:none; }
+  .sdstock.in{ color:var(--el-Grass); } .sdstock.in i{ background:var(--el-Grass); }
+  .sdstock.out{ color:var(--el-Fire); } .sdstock.out i{ background:var(--el-Fire); }
+  .sdstock.unk{ color:var(--r-SP,#ffb020); } .sdstock.unk i{ background:var(--r-SP,#ffb020); }
+  .sdstock small{ font-weight:500; color:var(--muted); }
   .pxsrc{ margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
@@ -6572,6 +6580,44 @@ label.acctsetrow { align-items:center; }
       vb.innerHTML=(+s.qty>0)?('<b>'+s.qty+'</b> &times; '+money(unit)+' <span style="color:var(--ink-faint)">('+mode+')</span> = <b>'+money((+s.qty||0)*unit)+'</b>')
                             :'You do not own any yet. Add some with the stepper below.'; }
   }
+  // What the stock checker last saw, for this device's market. Fetched once and reused: it changes every
+  // 30 minutes at most, so re asking on every sheet open would be noise.
+  var STOCK={ region:"", asOf:null, state:null, at:0 };
+  function fetchStock(){
+    var base=apiBase(); if(!base) return Promise.resolve(null);
+    var reg=ebayReg();
+    // Keep a reading for 10 minutes, and drop it the moment the market changes.
+    if(STOCK.state && STOCK.region===reg && (Date.now()-STOCK.at)<600000) return Promise.resolve(STOCK);
+    return fetch(base+"/api/stock?region="+encodeURIComponent(reg), {cache:"no-store"})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j || !j.state) return null;
+        STOCK={ region:reg, asOf:j.asOf||null, state:j.state, at:Date.now() };
+        return STOCK;
+      }).catch(function(){ return null; });
+  }
+  // A reading older than this is not trusted. The checker runs every 30 minutes, so two hours means it has
+  // missed four runs and something is wrong; saying "out of stock" off that would be a guess.
+  var STOCK_STALE_MS=2*60*60*1000;
+  function stockGlance(id){
+    var st=STOCK.state;
+    if(!st) return null;                                   // nothing fetched yet
+    var old=false;
+    if(STOCK.asOf){
+      var t=Date.parse(String(STOCK.asOf).replace(" ","T")+"Z");
+      old = !isNaN(t) && (Date.now()-t) > STOCK_STALE_MS;
+    } else old=true;
+    var v=st[id];
+    if(old) return { cls:"unk", text:"Stock unconfirmed", note:"last check was a while ago" };
+    if(v==="in")  return { cls:"in",  text:"In stock", note:"at a shop in your market" };
+    if(v==="out") return { cls:"out", text:"Out of stock", note:"at every shop we check" };
+    return { cls:"unk", text:"Check the shop", note:"we do not track this one" };
+  }
+  function stockGlanceHtml(id){
+    var g=stockGlance(id);
+    if(!g) return "";
+    return '<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(g.note)+'</small></p>';
+  }
   function openSealedDetail(p){
     var title=p.set||p.name, typ=(p.set&&p.name)?p.name:"", detail=p.sub||"";
     var subline=typ?(typ+(detail?" · "+detail:"")):detail;
@@ -6616,6 +6662,7 @@ label.acctsetrow { align-items:center; }
         '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales, "sold")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
+        '<div id="sdStock">'+stockGlanceHtml(p.id)+'</div>'+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
           '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
@@ -6642,6 +6689,9 @@ label.acctsetrow { align-items:center; }
     var saB=$("sdStockAlert"); if(saB) saB.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when this is in stock.":"Stock alert removed."); };
     if(apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000)) pullSealed(p, s, null);   // auto-load fresh prices on open (fills the spinner slots)
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, _wasOpen); if(!_wasOpen) openOverlay(closeModal);
+    // The sheet renders at once with whatever stock reading is already in hand, then fills the line in when
+    // the fetch lands. Nothing waits on the network to open.
+    fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id); });
   }
 
   // ---- Portfolio value-over-time chart ----
@@ -11846,6 +11896,9 @@ label.acctsetrow { align-items:center; }
     // Say which front this is, so the server can answer with the version THIS platform can install. The web
     // is current the moment a push lands, Google Play trails it by a review and the App Store trails that
     // again, so one shared number was always wrong for somebody.
+    // Warm the stock reading at launch. A sealed sheet then opens with the answer already in hand instead
+    // of flashing nothing and filling in a moment later, and the one request is shared by every sheet.
+    try{ fetchStock(); }catch(e){}
     fetch(apiBase()+"/api/version?v="+encodeURIComponent(APP_VERSION)+"&p="+(isIosApp()?"ios":(isAndroidApp()?"android":"web")),{cache:"no-store"})
       .then(function(r){ return r.ok? r.json() : null; })
       .then(function(j){
