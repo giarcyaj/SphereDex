@@ -102,6 +102,9 @@ jobs:
       - name: Card language, Japanese text mapping and scanner edition
         run: node tools/test_card_language.cjs
 
+      - name: Card price history chart
+        run: node tools/test_price_chart.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 

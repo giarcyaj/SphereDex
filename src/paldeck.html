@@ -1815,6 +1815,24 @@ label.acctsetrow { align-items:center; }
   .obicon .ic{ width:1.7rem; height:1.7rem; color:var(--accent-ink); }
 
   /* Ask / confirm modal */
+  /* The mini graph is a button now, so it has to look like one without shouting. */
+  .pxsparkbtn{ display:block; width:100%; padding:0; border:0; background:none; cursor:pointer; border-radius:8px; }
+  .pxsparkbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .pxsparkbtn:hover .pxspark{ opacity:.85; }
+  .pxsince{ margin:2px 0 0; font-size:11px; color:var(--muted); letter-spacing:.02em; text-align:center; }
+  .pxmore{ margin:6px 0 0; font-size:11px; font-weight:600; color:var(--accent); text-align:center; }
+  /* The full chart, opened from the mini graph. Second level over the card sheet, like the price alert. */
+  .pxfull{ width:min(680px,100%); max-height:86vh; overflow:auto; }
+  .pxfull h3{ margin:0 0 2px; }
+  .pxfullsub{ margin:0 0 14px; font-size:13px; color:var(--muted); }
+  .pxkey{ display:flex; flex-wrap:wrap; gap:14px; margin:12px 0 0; font-size:12px; color:var(--soft,var(--muted)); }
+  .pxkey span{ display:inline-flex; align-items:center; gap:6px; }
+  .pxkey i{ width:14px; height:3px; border-radius:2px; display:inline-block; }
+  .pxstats{ display:flex; flex-wrap:wrap; gap:8px 22px; margin:14px 0 0; font-size:13px; }
+  .pxstats div{ display:flex; gap:7px; }
+  .pxstats b{ font-weight:600; }
+  .pxstats span{ color:var(--muted); }
+  .pxempty{ margin:18px 0; color:var(--muted); font-size:14px; }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
   .askscrim[hidden]{ display:none; }
@@ -2972,6 +2990,15 @@ label.acctsetrow { align-items:center; }
       <button type="button" class="fiopt" id="fileIOOpt2"><b id="fileIOOpt2L"></b><span id="fileIOOpt2S"></span></button>
     </div>
     <div class="askbtns"><button type="button" id="fileIOCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="pxScrim" hidden>
+  <div class="askbox pxfull" role="dialog" aria-modal="true" aria-labelledby="pxFullTitle">
+    <h3 id="pxFullTitle">Price history</h3>
+    <p class="pxfullsub" id="pxFullSub"></p>
+    <div id="pxFullBody"></div>
+    <div class="askbtns"><button type="button" class="ok" id="pxFullClose">Done</button></div>
   </div>
 </div>
 
@@ -5012,6 +5039,7 @@ label.acctsetrow { align-items:center; }
       var t=(SEAL_ED==="jp") ? null : priceTrend(cardPricePoints(c.id, priceMode()), todayKey());
       el.innerHTML=t?priceTrendHtml(t):"";
       el.hidden=!t;                 // the [hidden] attribute is what frees the column again, see .pxtrend css
+      var open=$("pxOpenFull"); if(open) open.onclick=function(){ openPriceChart(c); };
     }
     paintRange();
     fetchPriceHistory().then(function(got){ if(got) paintRange(); });
@@ -5188,7 +5216,7 @@ label.acctsetrow { align-items:center; }
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
   }
-  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); var ps=$("paScrim"); if(ps) ps.hidden=true; }   // the price alert dialog belongs to the sheet
+  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); var ps=$("paScrim"); if(ps) ps.hidden=true; var px=$("pxScrim"); if(px) px.hidden=true; }   // the price alert dialog belongs to the sheet
   // Every sheet shares one .modal, which keeps its old scroll offset: start a newly opened sheet at the top
   // (a re-render of the same sheet, like a qty step or stock alert tap, keeps its place). Call after adding "open".
   var _sheetKey="";
@@ -6967,13 +6995,97 @@ label.acctsetrow { align-items:center; }
       '<path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>'+
       '<circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(pts[n-1].v).toFixed(1)+'" r="2.4" fill="'+col+'"/></svg>';
   }
+  // How far back this card's history actually reaches, in the reader's own date format. Naming the real
+  // first date is the only honest caption: today it says a fortnight ago, and it will say 30 July by itself
+  // once the launch backfill lands, with no copy change.
+  function pxSinceLabel(pts){
+    if(!pts || !pts.length) return "";
+    var d=pts[0].d; if(!d) return "";
+    try{ return "Since "+fmtFull(d); }catch(e){ return "Since "+d; }
+  }
+  // ---- the full price history chart -------------------------------------------------------------------
+  // Unlike the thumbnail, this one positions every reading by its DATE. The thumbnail spaces readings evenly
+  // because at 42px tall nothing else reads, but at this size a five day gap drawn the same width as a one
+  // day gap is simply a wrong picture, and the launch backfill will arrive with exactly those gaps.
+  function pxDayNum(d){ var p=String(d||"").split("-"); return Date.UTC(+p[0], (+p[1])-1, +p[2])/86400000; }
+  function pxSeriesPath(pts, x, y){
+    return pts.map(function(p,i){ return (i?"L":"M")+x(pxDayNum(p.d)).toFixed(1)+" "+y(p.v).toFixed(1); }).join(" ");
+  }
+  function fullPriceChartHtml(id){
+    var live=cardPricePoints(id, "live"), sold=cardPricePoints(id, "sold");
+    var all=live.concat(sold);
+    if(all.length<2) return '<p class="pxempty">There is not enough price history for this card yet. It builds up a day at a time.</p>';
+
+    var W=640, H=260, padL=52, padR=14, padT=16, padB=34;
+    var ds=all.map(function(p){ return pxDayNum(p.d); }), vs=all.map(function(p){ return p.v; });
+    var d0=Math.min.apply(null,ds), d1=Math.max.apply(null,ds), dr=(d1-d0)||1;
+    var v0=Math.min.apply(null,vs), v1=Math.max.apply(null,vs), vr=(v1-v0)||(v1||1);
+    // A flat line would otherwise sit on the floor of the box; give it room so it reads as flat, not as zero.
+    if(v1===v0){ v0=Math.max(0, v0-(v0*0.1||1)); v1=v1+(v1*0.1||1); vr=v1-v0; }
+    var X=function(d){ return padL+((d-d0)/dr)*(W-padL-padR); };
+    var Y=function(v){ return padT+(H-padT-padB)-((v-v0)/vr)*(H-padT-padB); };
+
+    var grid="", labels="", i, gy, gv;
+    for(i=0;i<=3;i++){
+      gv=v0+(vr*i/3); gy=Y(gv);
+      grid+='<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" stroke="var(--line)" stroke-width="1" opacity=".5"/>';
+      labels+='<text x="'+(padL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+esc(money(gv))+'</text>';
+    }
+    var series="";
+    if(sold.length>1) series+='<path d="'+pxSeriesPath(sold,X,Y)+'" fill="none" stroke="var(--el-Grass)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    if(live.length>1) series+='<path d="'+pxSeriesPath(live,X,Y)+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    // A single reading draws no line, so mark it rather than showing an empty box.
+    if(sold.length===1) series+='<circle cx="'+X(pxDayNum(sold[0].d)).toFixed(1)+'" cy="'+Y(sold[0].v).toFixed(1)+'" r="3" fill="var(--el-Grass)"/>';
+    if(live.length===1) series+='<circle cx="'+X(pxDayNum(live[0].d)).toFixed(1)+'" cy="'+Y(live[0].v).toFixed(1)+'" r="3" fill="var(--accent)"/>';
+
+    var firstD=all.reduce(function(a,p){ return (!a || p.d<a)?p.d:a; }, null);
+    var lastD=all.reduce(function(a,p){ return (!a || p.d>a)?p.d:a; }, null);
+    var xlab='<text x="'+padL+'" y="'+(H-10)+'" font-size="11" fill="var(--muted)">'+esc(fmtFull(firstD))+'</text>'
+      + '<text x="'+(W-padR)+'" y="'+(H-10)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+esc(fmtFull(lastD))+'</text>';
+
+    var key='<div class="pxkey">'
+      + (live.length?'<span><i style="background:var(--accent)"></i>Live listings</span>':'')
+      + (sold.length?'<span><i style="background:var(--el-Grass)"></i>Last sold</span>':'')
+      + '</div>';
+
+    var stats='<div class="pxstats">'
+      + '<div><span>Lowest</span><b>'+esc(money(Math.min.apply(null,vs)))+'</b></div>'
+      + '<div><span>Highest</span><b>'+esc(money(Math.max.apply(null,vs)))+'</b></div>'
+      + '<div><span>Readings</span><b>'+all.length+'</b></div>'
+      + '</div>';
+
+    return '<svg class="pxchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Price history for this card" style="width:100%;height:auto">'
+      + grid + labels + series + xlab + '</svg>' + key + stats;
+  }
+  // Done, the scrim itself and Escape all close it; the back button is handled with the other overlays.
+  function wirePriceChart(){
+    var sc=$("pxScrim"); if(!sc || sc._wired) return; sc._wired=true;
+    var shut=function(){ sc.hidden=true; };
+    var done=$("pxFullClose"); if(done) done.onclick=shut;
+    sc.addEventListener("click", function(e){ if(e.target===sc) shut(); });
+  }
+  function openPriceChart(c){
+    var sc=$("pxScrim"); if(!sc || !c) return;
+    var t=$("pxFullTitle"), sub=$("pxFullSub"), body=$("pxFullBody");
+    if(t) t.textContent=c.name;
+    if(sub) sub.textContent="Price history, "+(priceMode()==="sold"?"last sold":"live listings")+" and sold together.";
+    if(body) body.innerHTML=fullPriceChartHtml(c.id);
+    wirePriceChart();
+    sc.hidden=false;
+    pushAppEntry({sd:_curPage, ov:_ovStack.length});
+  }
   function priceTrendHtml(t){
     var head="";
     if(t.dir==="up") head='<div class="pxdelta pxup"><span class="pxarrow">\u25b2</span>'+esc(t.change)+'</div><div class="pxcap">this week</div>';
     else if(t.dir==="down") head='<div class="pxdelta pxdown"><span class="pxarrow">\u25bc</span>'+esc(t.change)+'</div><div class="pxcap">this week</div>';
     else if(t.dir==="flat") head='<div class="pxdelta pxflat">Unchanged</div><div class="pxcap">this week</div>';
-    return trendSparkHtml(t.pts, t.dir)+head+t.rows.map(function(r){
-      return '<div class="pxrow"><span class="pxlab">'+esc(r.label)+'</span><span class="pxval">'+esc(r.value)+'</span></div>'; }).join("");
+    var spark=trendSparkHtml(t.pts, t.dir);
+    if(!spark) return head;
+    // The two range rows that used to sit here claimed windows the data did not cover. The full chart says
+    // it properly instead, so this is just a way in to it.
+    return '<button type="button" class="pxsparkbtn" id="pxOpenFull" aria-label="See the full price history">'
+      + spark + '<p class="pxsince">'+esc(pxSinceLabel(t.pts))+'</p></button>'
+      + head + '<p class="pxmore">See full history</p>';
   }
   // Today reads the books directly, so today's page always agrees with the headline value.
   function todayPriceMap(mode){ var out={}, sm=sealMap();
@@ -8249,7 +8361,7 @@ label.acctsetrow { align-items:center; }
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","pxScrim","paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -8262,6 +8374,7 @@ label.acctsetrow { align-items:center; }
     if(_navDepth>0) _navDepth--;   // the browser consumed one of the entries this app pushed
     // The price alert dialog sits on the card sheet but owns no history entry: back closes just the dialog
     // and puts the sheet's entry back, so _ovStack and history stay in step.
+    var px=$("pxScrim"); if(px && !px.hidden){ px.hidden=true; pushAppEntry({sd:_curPage, ov:_ovStack.length}); return; }
     var ps=$("paScrim"); if(ps && !ps.hidden){ ps.hidden=true; pushAppEntry({sd:_curPage, ov:_ovStack.length}); return; }
     if(_ovStack.length){ var top=_ovStack.pop(); try{ top.hide(); }catch(e){} return; }
     if(closeTopOverlay()){ pushAppEntry({sd:_curPage}); return; }
