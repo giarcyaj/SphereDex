@@ -2550,6 +2550,7 @@ label.acctsetrow { align-items:center; }
       <div class="setpills" id="setPills"></div>
     </div>
   </section>
+  <div class="modeexport" id="colShare"><button class="btn sec" type="button" id="copySummaryBtn">Copy summary</button></div>
 
   <div class="controls">
     <div class="searchrow">
@@ -4711,7 +4712,7 @@ label.acctsetrow { align-items:center; }
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected"+(copies?(" · "+copies+(copies===1?" copy":" copies")):"");
     // How long the wishlist is, so you do not have to open it to find out.
     var wm=$("wishMeta"); if(wm) wm.textContent = wishCount()+" on wishlist";
-    _masterN = master.size; _chaseN = chase;
+    _masterN = master.size; _chaseN = chase; _ownN = printings; _copiesN = copies;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
     var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;
     _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
@@ -4744,7 +4745,7 @@ label.acctsetrow { align-items:center; }
     }
   }
   // Merged Base set / Chase cards counter: tap the panel to switch which one it shows.
-  var _masterN=0, _chaseN=0, _promoN=0, _promoT=0, _setsN=0, _setsT=0, _rewardsN=0, _rewardsT=6;
+  var _ownN=0, _copiesN=0, _masterN=0, _chaseN=0, _promoN=0, _promoT=0, _setsN=0, _setsT=0, _rewardsN=0, _rewardsT=6;
   var DUAL_ORDER=["sets","chase","promo","rewards"], dualMetric="sets";
   var DUAL_META={
     sets:   ["Sets completed",   function(){return _setsN;},    function(){return _setsT;}],
@@ -8066,7 +8067,7 @@ label.acctsetrow { align-items:center; }
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var share=$("copySummaryBtn"); if(share) share.onclick=function(){ copyPlainText(collectionSummaryText(), "Copied collection summary", "Collection summary", "Select the text, then copy."); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
   // ---- Printable deck list: a personal copy for a tournament table, never the official registration form ----
@@ -8161,7 +8162,7 @@ label.acctsetrow { align-items:center; }
     function fallback(){ var ta=$("deckIOText"); if(ta){ ta.focus(); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("Select the text and copy it"); } } }
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done, fallback); } else fallback();
   }
-  function showCopyBox(text, title, hint){
+  function showCopyBox(text, title, hint, okMsg){
     var sc=$("deckIOScrim"); if(!sc) return;
     var ta=$("deckIOText"), act=$("deckIOAction"), alt=$("deckIOAlt"), cancel=$("deckIOCancel");
     function close(){ sc.hidden=true; act.onclick=alt.onclick=cancel.onclick=sc.onclick=null; }
@@ -8173,15 +8174,21 @@ label.acctsetrow { align-items:center; }
     act.onclick=function(){
       ta.focus(); ta.select();
       var ok=false; try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
-      toast(ok?"Copied for TCGplayer":"Select the text and copy it");
+      toast(ok?(okMsg||"Copied for TCGplayer"):"Select the text and copy it");
     };
     alt.hidden=true;
     sc.hidden=false;
     setTimeout(function(){ ta.focus(); ta.select(); }, 30);
   }
+  // A short plain text snapshot of the Collection dashboard to paste into a chat or post. Binder value stays
+  // out: collector mode can hide prices, and a shared number would go stale.
+  function collectionSummaryText(){
+    return [_ownN+" of "+TOTAL+" cards collected", _copiesN+(_copiesN===1?" copy":" copies"), pctOf(_ownN,TOTAL)+" percent complete",
+      wishCount()+" on wishlist", _setsN+" of "+_setsT+" sets completed"].join("\n");
+  }
   function copyPlainText(text, okMsg, boxTitle, boxHint){
     function done(){ toast(okMsg||"Copied"); }
-    function failed(){ showCopyBox(text, boxTitle||"Copy for TCGplayer", boxHint||"Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry."); }
+    function failed(){ showCopyBox(text, boxTitle||"Copy for TCGplayer", boxHint||"Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry.", okMsg); }
     function execCopy(){
       var ta=document.createElement("textarea");
       ta.value=text; ta.setAttribute("readonly","");
@@ -8400,6 +8407,7 @@ label.acctsetrow { align-items:center; }
     if(head){ head.hidden=(m==="col"); head.textContent=titles[m]||""; }
     var wishExport=$("wishExport"); if(wishExport) wishExport.hidden=!(m==="wish" && wishCount()>0);
     if(dash){ dash.hidden=(m!=="col"); }
+    var share=$("colShare"); if(share) share.hidden=(m!=="col");
     var cb=$("collectedBar"); if(cb) cb.hidden=(m!=="collected");
     var sb=$("setsBack"); if(sb) sb.innerHTML=(m==="col")?"&lsaquo; Browse by set":"&lsaquo; Back";
     if(m==="collected") syncCollectedTogs();
