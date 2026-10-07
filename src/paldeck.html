@@ -11621,7 +11621,10 @@ label.acctsetrow { align-items:center; }
     verAt=Date.now();
     // Sending our version lets the server count how many people are on which build, which is how a fix is
     // known to have reached anyone. It is a version string and nothing else.
-    fetch(apiBase()+"/api/version?v="+encodeURIComponent(APP_VERSION),{cache:"no-store"})
+    // Say which front this is, so the server can answer with the version THIS platform can install. The web
+    // is current the moment a push lands, Google Play trails it by a review and the App Store trails that
+    // again, so one shared number was always wrong for somebody.
+    fetch(apiBase()+"/api/version?v="+encodeURIComponent(APP_VERSION)+"&p="+(isIosApp()?"ios":(isAndroidApp()?"android":"web")),{cache:"no-store"})
       .then(function(r){ return r.ok? r.json() : null; })
       .then(function(j){
         var latest=j && j.app ? String(j.app) : "";
