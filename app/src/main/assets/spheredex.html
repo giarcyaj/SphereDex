@@ -2123,6 +2123,7 @@ label.acctsetrow { align-items:center; }
   .setpos{ margin:14px 0 0; font-size:.78rem; color:var(--ink-faint); text-align:center; overflow-wrap:anywhere; }
   .setpos + .setnav{ margin-top:6px; }
   .setpos + .setpos{ margin-top:2px; }
+  .setposlink{ background:none; border:0; padding:0; margin:0; font:inherit; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; overflow-wrap:anywhere; }
   .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
   .setnav .snnext{ margin-left:auto; text-align:right; }
   .setnav .snlab{ display:block; font-weight:600; }
@@ -4864,7 +4865,8 @@ label.acctsetrow { align-items:center; }
     // Where this card sits in the walk the two buttons make, so a middle card is not guesswork. The set name
     // says the walk is the card's set, not the filter the sheet was opened from; no name, no raw code.
     var setNm=(SETS[c.set]&&SETS[c.set].name)||"";
-    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · '+esc(setNm):'')+'</p>' : '';
+    // The set name opens Cards on that whole set; with no name there is nothing to tap.
+    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · <button type="button" class="setposlink" data-set="'+esc(c.set)+'">'+esc(setNm)+'</button>':'')+'</p>' : '';
     return pos+ownLine+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
   }
   function openDetail(c){
@@ -5340,6 +5342,12 @@ label.acctsetrow { align-items:center; }
         openDetail(n);
       };
     });
+    // Set name under Card N of M: keep any edit, close the sheet, then show the whole set in Cards.
+    var spl=$("mMain").querySelector(".setposlink");
+    if(spl) spl.onclick=function(){
+      var k=spl.getAttribute("data-set"); if(!k || !SETS[k]) return;
+      persist(); dismissOverlay(); openSet(k, "all");
+    };
     var _wasOpen=scrim.classList.contains("open");
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
