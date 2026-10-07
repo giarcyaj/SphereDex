@@ -1680,6 +1680,7 @@ label.acctsetrow { align-items:center; }
   .nwbtn { cursor:pointer; color:var(--accent-ink); background:var(--surface-2); border:1.5px solid var(--accent); }
   .nwstate { color:var(--ink-soft); border:1.5px dashed var(--line); }
   .nwname { font-size:.78rem; color:var(--ink-faint); min-width:0; }
+  .nwopen { background:none; border:0; padding:4px 0; margin:0; font-family:inherit; font-weight:600; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; text-align:left; overflow-wrap:anywhere; }
   /* Palworld TCG digest (docs/news/palworld-tcg.json). Margins, not flex gap, so the badges stay apart on older WebViews. */
   .tcgnewshead { margin-top:28px; }
   .nmeta { display:flex; flex-wrap:wrap; align-items:center; margin:0 0 2px; }
@@ -10317,7 +10318,7 @@ label.acctsetrow { align-items:center; }
   // A reveal you already hold (a raw copy or a slab in the open collection) says so instead of offering the wishlist.
   function newsRevealOwned(c){ return scanOwnCount(activeCol(), c.id)>0; }
   function newsWishHtml(c){
-    var who='<span class="nwname">'+esc(c.name)+'</span>';
+    var who='<button type="button" class="nwname nwopen" data-news-open="'+esc(c.id)+'">'+esc(c.name)+'</button>';   // opens the card sheet
     if(newsRevealOwned(c)) return '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('check')+'In collection</span>'+who+'</div>';
     return isWished(c.id) ? '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('starf')+'On Wishlist</span>'+who+'</div>'
       : '<div class="nwish" data-nw-card="'+esc(c.id)+'"><button type="button" class="nwbtn" data-news-wish="'+esc(c.id)+'">'+icon('star')+'Add to Wishlist</button>'+who+'</div>';
@@ -10333,7 +10334,12 @@ label.acctsetrow { align-items:center; }
       var c=cardById(b.getAttribute("data-news-wish")); if(!c) return;
       if(!isWished(c.id)){ toggleWish(c.id); save(); render(); toast("Added to wishlist"); }
       // The same card can sit in both lists, so every control for it flips.
-      Array.prototype.forEach.call(document.querySelectorAll('.nwish[data-nw-card="'+c.id+'"]'), function(n){ n.outerHTML=newsWishHtml(c); });
+      Array.prototype.forEach.call(document.querySelectorAll('.nwish[data-nw-card="'+c.id+'"]'), function(n){ var p=n.parentNode; n.outerHTML=newsWishHtml(c); if(p) wireNewsWish(p); });
+    }; });
+    // The card name opens its sheet (price, copies) instead of sending you to search Cards for it.
+    Array.prototype.forEach.call(host.querySelectorAll("[data-news-open]"), function(b){ b.onclick=function(e){
+      e.preventDefault(); e.stopPropagation();
+      var c=cardById(b.getAttribute("data-news-open")); if(c) openDetail(c);
     }; });
   }
   function renderNews(){
