@@ -6053,18 +6053,9 @@ label.acctsetrow { align-items:center; }
   function fmt(n){ n=+n||0; return n.toLocaleString(fmtLocale(),{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}); }
 
   // The donation link is hidden inside the iOS app (App Store guideline 3.1.1 restricts external donation links).
-  // TCGplayer only feeds the sold book, so it is credited when the book in use actually holds TCGplayer prices.
-  // Before the first fetch there is nothing to look at, and sold mode is the only one it can appear in.
-  function tcgInUse(){
-    var src=priceMode()==="sold" ? PRICESRC_SOLD : PRICESRC, ids=Object.keys(src);
-    if(!ids.length) return priceMode()==="sold";
-    for(var i=0;i<ids.length;i++) if(src[ids[i]]==="tcgplayer") return true;
-    return false;
-  }
   function renderFoot(){
-  var tcg = tcgInUse();
   var _bmc = window.IS_IOS ? '' : '<br><a class="bmc" href="https://ko-fi.com/spheredex" target="_blank" rel="noopener" aria-label="Support SphereDex on Ko-fi"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M15 10h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M6.5 3c-.9.9-.9 1.8 0 2.7"/><path d="M10 3c-.9.9-.9 1.8 0 2.7"/><path d="M4 21h11"/></svg><span>Support on Ko-fi</span></a>';
-  $("foot").innerHTML = '<strong>Features and data may change.</strong> Back up your collection. Fan made tracker for the Palworld TCG, not affiliated with or endorsed by Pocketpair / Bushiroad. Card data and artwork © Pocketpair / Bushiroad. Card rules text and glossary from <a href="https://palworldtcg.gg" target="_blank" rel="noopener">palworldtcg.gg</a>. Pal artwork from <a href="https://palworld.wiki.gg" target="_blank" rel="noopener">Palworld Wiki</a> (CC BY SA). Prices via '+(tcg?'eBay and TCGplayer':'eBay')+', plus <a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a>. <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates By Exchange Rate API</a>. Your collection saves on your device, with optional free cloud sync.<div class="footlinks"><a href="https://spheredex.app/roadmap.html" target="_blank" rel="noopener">Roadmap</a><span class="sep">·</span><a href="https://spheredex.app/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="sep">·</span><a href="https://spheredex.app/app/licenses/" target="_blank" rel="noopener">Licences</a><span class="sep">\u00b7</span><a class="soc" href="https://x.com/SphereDex" target="_blank" rel="noopener" aria-label="SphereDex on X" title="Follow on X"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a class="soc" href="https://bsky.app/profile/spheredex.bsky.social" target="_blank" rel="noopener" aria-label="SphereDex on Bluesky" title="Follow on Bluesky"><svg viewBox="0 0 568 501" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M123.121 33.6637C188.241 82.5526 258.281 181.681 284 234.873c25.719-53.192 95.759-152.32 160.879-201.2093C491.866-1.66323 568-28.9153 568 57.9464c0 17.3443-9.945 145.713-15.778 166.555-20.275 72.453-94.155 90.933-159.875 79.748C507.222 323.8 536.444 388.628 473 453.456c-120.536 123.154-173.249-30.937-186.748-70.425-2.174-6.726-3.192-9.81-3.252-7.906-.06-1.904-1.078 1.18-3.252 7.906-13.499 39.488-66.212 193.579-186.748 70.425-63.444-64.828-34.222-129.656 80.653-149.198-65.72 11.185-139.6-7.295-159.875-79.748C8.945 203.659-1 75.2904-1 57.9464-1-28.9153 75.134-1.66323 123.121 33.6637Z"/></svg></a></div>'+_bmc+'<br><span class="footver">'+(V2_PREVIEW?'V2.0 PREVIEW · IN PROGRESS':'v'+APP_VERSION)+'</span>';
+  $("foot").innerHTML = '<strong>Features and data may change.</strong> Back up your collection. Fan made tracker for the Palworld TCG, not affiliated with or endorsed by Pocketpair / Bushiroad. Card data and artwork © Pocketpair / Bushiroad.<div class="footlinks"><a href="https://spheredex.app/roadmap.html" target="_blank" rel="noopener">Roadmap</a><span class="sep">·</span><a href="https://spheredex.app/privacy.html" target="_blank" rel="noopener">Privacy</a><span class="sep">·</span><a href="https://spheredex.app/app/licenses/" target="_blank" rel="noopener">Data sources and licences</a><span class="sep">\u00b7</span><a class="soc" href="https://x.com/SphereDex" target="_blank" rel="noopener" aria-label="SphereDex on X" title="Follow on X"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a class="soc" href="https://bsky.app/profile/spheredex.bsky.social" target="_blank" rel="noopener" aria-label="SphereDex on Bluesky" title="Follow on Bluesky"><svg viewBox="0 0 568 501" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M123.121 33.6637C188.241 82.5526 258.281 181.681 284 234.873c25.719-53.192 95.759-152.32 160.879-201.2093C491.866-1.66323 568-28.9153 568 57.9464c0 17.3443-9.945 145.713-15.778 166.555-20.275 72.453-94.155 90.933-159.875 79.748C507.222 323.8 536.444 388.628 473 453.456c-120.536 123.154-173.249-30.937-186.748-70.425-2.174-6.726-3.192-9.81-3.252-7.906-.06-1.904-1.078 1.18-3.252 7.906-13.499 39.488-66.212 193.579-186.748 70.425-63.444-64.828-34.222-129.656 80.653-149.198-65.72 11.185-139.6-7.295-159.875-79.748C8.945 203.659-1 75.2904-1 57.9464-1-28.9153 75.134-1.66323 123.121 33.6637Z"/></svg></a></div>'+_bmc+'<br><span class="footver">'+(V2_PREVIEW?'V2.0 PREVIEW · IN PROGRESS':'v'+APP_VERSION)+'</span>';
   }
   renderFoot();
 
@@ -7024,8 +7015,10 @@ label.acctsetrow { align-items:center; }
   function pxSeriesPath(pts, x, y){
     return pts.map(function(p,i){ return (i?"L":"M")+x(pxDayNum(p.d)).toFixed(1)+" "+y(p.v).toFixed(1); }).join(" ");
   }
-  // Name the source behind each line. The footer credits every source in general; a chart is where a
-  // particular figure is on display, so it says which one produced these.
+  // Name the source behind each line. The footer carries only the disclaimer and the rights holders now,
+  // with everything else on the licences page, so this is where a figure on display says where it came
+  // from. Exchange Rate API asks for credit on the pages its rates are used on, which is why a converted
+  // figure names them here rather than only in a list a tap away.
   // Provider names only. The series are already named by the key above, so repeating "live listings from
   // eBay live listings" would just read badly.
   var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", palworld:"Palworld Prices" };
@@ -7040,7 +7033,7 @@ label.acctsetrow { align-items:center; }
       if(!bits.length) return "";
       text=bits.join(". ")+".";
     }
-    if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars.";
+    if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
     return text;
   }
   function fullPriceChartHtml(id){

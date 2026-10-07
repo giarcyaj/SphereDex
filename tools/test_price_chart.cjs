@@ -206,6 +206,47 @@ test('the chart names where these particular prices came from', () => {
   assert.match(sandbox.fullPriceChartHtml('EBP01-002'), /class="pxsrc"/);
 });
 
+// ---- where the credits live -----------------------------------------------------------------------------
+// The footer carries only the disclaimer and the rights holders. Every source credit moved to the licences
+// page, which the footer links from every screen. That is a deliberate choice and it only holds while the
+// page actually carries them, so these fail if a credit is dropped rather than moved.
+
+test('the footer is the disclaimer and the rights holders, and nothing else', () => {
+  const foot = /\$\("foot"\)\.innerHTML = '([^]*?)<div class="footlinks"/.exec(source);
+  assert.ok(foot, 'the footer is built in one place');
+  const prose = foot[1].replace(/<[^>]+>/g, '');
+  assert.match(prose, /not affiliated with or endorsed by Pocketpair \/ Bushiroad/);
+  assert.match(prose, /Card data and artwork . Pocketpair \/ Bushiroad/);
+  for (const gone of ['palworldtcg', 'Palworld Wiki', 'Palworld Prices', 'Exchange Rate API', 'TCGplayer']) {
+    assert.ok(!prose.includes(gone), gone + ' belongs on the licences page now, not in the footer');
+  }
+});
+
+test('the footer still points at the licences page, and says what is on it', () => {
+  assert.match(source, /href="https:\/\/spheredex\.app\/app\/licenses\/"[^>]*>Data sources and licences</,
+    'a link called just "Licences" would not tell anyone the credits are there');
+});
+
+test('every source with a licence obligation is named on the licences page', () => {
+  const page = fs.readFileSync(path.join(root, 'docs', 'app', 'licenses', 'index.html'), 'utf8');
+  // Each of these asks for attribution in its own terms, verified against the provider directly.
+  const required = [
+    ['palworldtcg.gg', 'quote our content with attribution'],
+    ['Palworld Prices', 'visible attribution and a link back'],
+    ['Exchange Rate API', 'attribution on the pages using the rates'],
+    ['Palworld Wiki', 'CC BY SA'],
+    ['Chakra Petch', 'SIL Open Font License'],
+    ['Baloo 2', 'SIL Open Font License'],
+  ];
+  for (const [name, why] of required) {
+    assert.ok(page.includes(name), name + ' must be credited (' + why + ')');
+  }
+  assert.match(page, /OFL-chakrapetch\.txt/, 'the font licence text ships, not just the font name');
+  assert.match(page, /OFL-baloo2\.txt/);
+  assert.match(page, /exchangerate-api\.com/, 'Exchange Rate API is linked, not only named');
+  assert.match(page, /palworldprices\.com/, 'Palworld Prices gets its required link back');
+});
+
 test('there is a close X as well as the Done button', () => {
   assert.match(source, /id="pxFullX"[^>]*aria-label="Close"/);
   assert.match(source, /var x=\$\("pxFullX"\); if\(x\) x\.onclick=shut;/);
