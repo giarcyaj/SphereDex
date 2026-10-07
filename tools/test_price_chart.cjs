@@ -35,10 +35,22 @@ const sandbox = {
   MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   priceMode: () => 'live',
   _sparkSeq: 0,
+  // The chart names where a card's prices came from, so the sandbox needs the same lookups the app has.
+  PRICESRC: { 'EBP01-002': 'ebay-active' },
+  PRICESRC_SOLD: { 'EBP01-002': 'openwebninja' },
+  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
+  isConverted: () => false,
 };
 vm.createContext(sandbox);
+function appConstant(name) {
+  const match = new RegExp('\\bvar\\s+' + name + '\\s*=[^;]+;').exec(source);
+  assert.ok(match, 'App constant exists: ' + name);
+  return match[0];
+}
+vm.runInContext(appConstant('PX_SRC_NAME'), sandbox);
 vm.runInContext(
-  ['fmtFull', 'pxDayNum', 'pxSeriesPath', 'pxSinceLabel', 'trendSparkHtml', 'priceTrendHtml', 'fullPriceChartHtml']
+  ['fmtFull', 'pxDayNum', 'pxTickLabel', 'pxSeriesPath', 'pxSinceLabel', 'pxSourceLine', 'trendSparkHtml',
+    'priceTrendHtml', 'fullPriceChartHtml']
     .map(appFunction).join('\n'),
   sandbox
 );
@@ -145,6 +157,59 @@ test('a perfectly flat price still draws inside the box rather than along its fl
 });
 
 // ---- the overlay ----------------------------------------------------------------------------------------
+
+test('dates run across the bottom, not just at the two ends', () => {
+  sandbox.cardPricePoints = (id, mode) => (mode === 'live'
+    ? pts([['2026-07-30', 2], ['2026-08-20', 3], ['2026-09-15', 2.4], ['2026-10-07', 2.5]]) : []);
+  const html = sandbox.fullPriceChartHtml('EBP01-002');
+  const labels = html.match(/<text[^>]*y="250"[^>]*>([^<]+)<\/text>/g) || [];
+  assert.ok(labels.length >= 4, 'a 70 day span gets at least four date ticks, got ' + labels.length);
+});
+
+test('the number of date ticks comes down with the span, so a short history does not repeat a day', () => {
+  const span = (from, to) => {
+    sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([[from, 2], [to, 3]]) : []);
+    const html = sandbox.fullPriceChartHtml('EBP01-002');
+    return (html.match(/<text[^>]*y="250"/g) || []).length;
+  };
+  const fortnight = span('2026-09-24', '2026-10-07');
+  const halfYear = span('2026-04-07', '2026-10-07');
+  assert.ok(halfYear > fortnight, 'a longer span gets more ticks: ' + fortnight + ' vs ' + halfYear);
+  assert.ok(fortnight >= 2, 'even a fortnight is labelled at both ends');
+});
+
+test('a long span drops the day from the tick and shows the month, so labels do not collide', () => {
+  const short = sandbox.pxTickLabel(sandbox.pxDayNum('2026-10-07'), 30);
+  const long = sandbox.pxTickLabel(sandbox.pxDayNum('2026-10-07'), 400);
+  assert.match(short, /^Oct \d+$/);
+  assert.match(long, /^Oct \d{2}$/, 'over a year it reads as month and year');
+});
+
+test('axis text uses the theme ink, so it is readable in dark and light alike', () => {
+  sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([['2026-09-24', 2], ['2026-10-07', 3]]) : []);
+  const html = sandbox.fullPriceChartHtml('EBP01-002');
+  assert.ok(!/<text[^>]*fill="var\(--muted\)"/.test(html), 'no axis label is left in the muted grey');
+  assert.match(html, /<text[^>]*fill="var\(--ink\)"/);
+});
+
+test('the chart names where these particular prices came from', () => {
+  // The footer credits every source in general. A chart is where a figure is actually on display, which is
+  // what the licences that ask for visible attribution are really about.
+  // Both series come from eBay here, so it says that once rather than naming eBay twice.
+  assert.equal(sandbox.pxSourceLine('EBP01-002'), 'Live listings and last sold from eBay.');
+  sandbox.PRICESRC['EBP01-003'] = 'tcgplayer';
+  sandbox.PRICESRC_SOLD['EBP01-003'] = 'openwebninja';
+  assert.equal(sandbox.pxSourceLine('EBP01-003'),
+    'Live listings from TCGplayer. Last sold from eBay.', 'two different sources are both named');
+  assert.equal(sandbox.pxSourceLine('NOT-A-CARD'), '', 'a card with no known source claims nothing');
+  sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([['2026-09-24', 2], ['2026-10-07', 3]]) : []);
+  assert.match(sandbox.fullPriceChartHtml('EBP01-002'), /class="pxsrc"/);
+});
+
+test('there is a close X as well as the Done button', () => {
+  assert.match(source, /id="pxFullX"[^>]*aria-label="Close"/);
+  assert.match(source, /var x=\$\("pxFullX"\); if\(x\) x\.onclick=shut;/);
+});
 
 test('the chart closes with the back button, Escape and the card sheet that owns it', () => {
   assert.match(source, /"upScrim","globalSearchScrim","pxScrim","paScrim"/, 'Escape reaches it');

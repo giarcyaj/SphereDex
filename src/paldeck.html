@@ -1822,7 +1822,10 @@ label.acctsetrow { align-items:center; }
   .pxsince{ margin:2px 0 0; font-size:11px; color:var(--muted); letter-spacing:.02em; text-align:center; }
   .pxmore{ margin:6px 0 0; font-size:11px; font-weight:600; color:var(--accent); text-align:center; }
   /* The full chart, opened from the mini graph. Second level over the card sheet, like the price alert. */
-  .pxfull{ width:min(680px,100%); max-height:86vh; overflow:auto; }
+  /* overflow-x hidden: the chart is width:100% of a flexible box, and a stray pixel of SVG was enough to
+     put a horizontal scrollbar across the dialog. */
+  .pxfull{ width:min(680px,100%); max-height:86vh; overflow-y:auto; overflow-x:hidden; }
+  .pxchart{ display:block; max-width:100%; }
   .pxfull h3{ margin:0 0 2px; }
   .pxfullsub{ margin:0 0 14px; font-size:13px; color:var(--muted); }
   .pxkey{ display:flex; flex-wrap:wrap; gap:14px; margin:12px 0 0; font-size:12px; color:var(--soft,var(--muted)); }
@@ -1833,6 +1836,7 @@ label.acctsetrow { align-items:center; }
   .pxstats b{ font-weight:600; }
   .pxstats span{ color:var(--muted); }
   .pxempty{ margin:18px 0; color:var(--muted); font-size:14px; }
+  .pxsrc{ margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
   .askscrim[hidden]{ display:none; }
@@ -2995,6 +2999,7 @@ label.acctsetrow { align-items:center; }
 
 <div class="askscrim" id="pxScrim" hidden>
   <div class="askbox pxfull" role="dialog" aria-modal="true" aria-labelledby="pxFullTitle">
+    <div class="mclosewrap"><button class="mclose" id="pxFullX" type="button" aria-label="Close">✕</button></div>
     <h3 id="pxFullTitle">Price history</h3>
     <p class="pxfullsub" id="pxFullSub"></p>
     <div id="pxFullBody"></div>
@@ -7008,8 +7013,35 @@ label.acctsetrow { align-items:center; }
   // because at 42px tall nothing else reads, but at this size a five day gap drawn the same width as a one
   // day gap is simply a wrong picture, and the launch backfill will arrive with exactly those gaps.
   function pxDayNum(d){ var p=String(d||"").split("-"); return Date.UTC(+p[0], (+p[1])-1, +p[2])/86400000; }
+  // A tick label short enough to repeat across the axis. Over a long span the year stops mattering and the
+  // day gets in the way, so it drops to the month.
+  function pxTickLabel(dayNum, span){
+    var dt=new Date(dayNum*86400000);
+    var mon=MONTHS[dt.getUTCMonth()];
+    if(span>=200) return mon+" "+String(dt.getUTCFullYear()).slice(2);
+    return mon+" "+dt.getUTCDate();
+  }
   function pxSeriesPath(pts, x, y){
     return pts.map(function(p,i){ return (i?"L":"M")+x(pxDayNum(p.d)).toFixed(1)+" "+y(p.v).toFixed(1); }).join(" ");
+  }
+  // Name the source behind each line. The footer credits every source in general; a chart is where a
+  // particular figure is on display, so it says which one produced these.
+  // Provider names only. The series are already named by the key above, so repeating "live listings from
+  // eBay live listings" would just read badly.
+  var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", palworld:"Palworld Prices" };
+  function pxSourceLine(id){
+    var live=PX_SRC_NAME[srcKind(PRICESRC[id])]||"", sold=PX_SRC_NAME[srcKind(PRICESRC_SOLD[id])]||"";
+    var text="";
+    if(live && sold && live===sold) text="Live listings and last sold from "+live+".";
+    else {
+      var bits=[];
+      if(live) bits.push("Live listings from "+live);
+      if(sold) bits.push("Last sold from "+sold);
+      if(!bits.length) return "";
+      text=bits.join(". ")+".";
+    }
+    if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars.";
+    return text;
   }
   function fullPriceChartHtml(id){
     var live=cardPricePoints(id, "live"), sold=cardPricePoints(id, "sold");
@@ -7029,7 +7061,7 @@ label.acctsetrow { align-items:center; }
     for(i=0;i<=3;i++){
       gv=v0+(vr*i/3); gy=Y(gv);
       grid+='<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" stroke="var(--line)" stroke-width="1" opacity=".5"/>';
-      labels+='<text x="'+(padL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+esc(money(gv))+'</text>';
+      labels+='<text x="'+(padL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--ink)">'+esc(money(gv))+'</text>';
     }
     var series="";
     if(sold.length>1) series+='<path d="'+pxSeriesPath(sold,X,Y)+'" fill="none" stroke="var(--el-Grass)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
@@ -7038,10 +7070,17 @@ label.acctsetrow { align-items:center; }
     if(sold.length===1) series+='<circle cx="'+X(pxDayNum(sold[0].d)).toFixed(1)+'" cy="'+Y(sold[0].v).toFixed(1)+'" r="3" fill="var(--el-Grass)"/>';
     if(live.length===1) series+='<circle cx="'+X(pxDayNum(live[0].d)).toFixed(1)+'" cy="'+Y(live[0].v).toFixed(1)+'" r="3" fill="var(--accent)"/>';
 
-    var firstD=all.reduce(function(a,p){ return (!a || p.d<a)?p.d:a; }, null);
-    var lastD=all.reduce(function(a,p){ return (!a || p.d>a)?p.d:a; }, null);
-    var xlab='<text x="'+padL+'" y="'+(H-10)+'" font-size="11" fill="var(--muted)">'+esc(fmtFull(firstD))+'</text>'
-      + '<text x="'+(W-padR)+'" y="'+(H-10)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+esc(fmtFull(lastD))+'</text>';
+    // Dates across the bottom rather than only the two ends, so a point can be placed in time by eye.
+    // The count comes down with the span: five ticks over a fortnight would repeat the same day.
+    var span=dr+1, ticks=span>=120?6:(span>=45?5:(span>=14?4:(span>=5?3:2)));
+    var xlab="", t, td, tx, anchor;
+    for(i=0;i<ticks;i++){
+      td=Math.round(d0+(dr*i/(ticks-1))); tx=X(td);
+      anchor=(i===0)?"start":((i===ticks-1)?"end":"middle");
+      // Keep the end labels inside the box instead of hanging off the edge.
+      grid+='<line x1="'+tx.toFixed(1)+'" y1="'+padT+'" x2="'+tx.toFixed(1)+'" y2="'+(H-padB)+'" stroke="var(--line)" stroke-width="1" opacity=".25"/>';
+      xlab+='<text x="'+tx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="'+anchor+'" font-size="12" fill="var(--ink)">'+esc(pxTickLabel(td, span))+'</text>';
+    }
 
     var key='<div class="pxkey">'
       + (live.length?'<span><i style="background:var(--accent)"></i>Live listings</span>':'')
@@ -7054,14 +7093,17 @@ label.acctsetrow { align-items:center; }
       + '<div><span>Readings</span><b>'+all.length+'</b></div>'
       + '</div>';
 
+    var src=pxSourceLine(id);
     return '<svg class="pxchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Price history for this card" style="width:100%;height:auto">'
-      + grid + labels + series + xlab + '</svg>' + key + stats;
+      + grid + labels + series + xlab + '</svg>' + key + stats
+      + (src ? '<p class="pxsrc">'+esc(src)+'</p>' : '');
   }
   // Done, the scrim itself and Escape all close it; the back button is handled with the other overlays.
   function wirePriceChart(){
     var sc=$("pxScrim"); if(!sc || sc._wired) return; sc._wired=true;
     var shut=function(){ sc.hidden=true; };
     var done=$("pxFullClose"); if(done) done.onclick=shut;
+    var x=$("pxFullX"); if(x) x.onclick=shut;
     sc.addEventListener("click", function(e){ if(e.target===sc) shut(); });
   }
   function openPriceChart(c){
