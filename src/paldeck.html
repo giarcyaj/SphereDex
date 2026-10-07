@@ -2121,6 +2121,7 @@ label.acctsetrow { align-items:center; }
   .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
   .setpos{ margin:14px 0 0; font-size:.78rem; color:var(--ink-faint); text-align:center; overflow-wrap:anywhere; }
   .setpos + .setnav{ margin-top:6px; }
+  .setpos + .setpos{ margin-top:2px; }
   .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
   .setnav .snnext{ margin-left:auto; text-align:right; }
   .setnav .snlab{ display:block; font-weight:600; }
@@ -4851,14 +4852,19 @@ label.acctsetrow { align-items:center; }
     if(i<0) return {prev:null, next:null, pos:0, total:0};
     return {prev:i>0?mates[i-1]:null, next:i<mates.length-1?mates[i+1]:null, pos:i+1, total:mates.length};
   }
+  // How many different cards of one set you hold (any copy, raw or graded, counts once), and the set's size.
+  function setCatalogCount(set){ var n=0; CARDS.forEach(function(x){ if(set && x.set===set) n++; }); return n; }
+  function uniqueOwnedInSet(set){ var n=0; CARDS.forEach(function(x){ var s=own[x.id]; if(set && x.set===set && s && copiesOf(s)>0) n++; }); return n; }
+  function setOwnText(c){ var t=setCatalogCount(c.set); return t ? uniqueOwnedInSet(c.set)+" of "+t+" in this set" : ""; }
   function setNavHTML(c){
-    var nb=setNeighbours(c); if(!nb.prev && !nb.next) return "";
+    var ownTxt=setOwnText(c), ownLine=ownTxt ? '<p class="setpos" id="setOwnLine">'+ownTxt+'</p>' : '';
+    var nb=setNeighbours(c); if(!nb.prev && !nb.next) return ownLine;
     function btn(x, cls, label){ return '<button class="btn sec setnavb '+cls+'" type="button" data-id="'+esc(x.id)+'"><span class="snlab">'+label+'</span><span class="snname">'+esc(x.name)+'</span></button>'; }
     // Where this card sits in the walk the two buttons make, so a middle card is not guesswork. The set name
     // says the walk is the card's set, not the filter the sheet was opened from; no name, no raw code.
     var setNm=(SETS[c.set]&&SETS[c.set].name)||"";
     var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · '+esc(setNm):'')+'</p>' : '';
-    return pos+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
+    return pos+ownLine+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
   }
   function openDetail(c){
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
@@ -5074,6 +5080,7 @@ label.acctsetrow { align-items:center; }
       s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=+g.value||0; return x; });   // keeps cert / edition
       save(); render(); buildColSel();
+      var sol=$("setOwnLine"); if(sol) sol.textContent=setOwnText(c);   // the first or last copy moves the set count
     }
     paintBubbles();
     $("bubColl").onclick=function(){ togglePanel("panelColl"); paintBubbles(); if(panelOpen("panelColl")) $("panelColl").scrollIntoView({block:"nearest",behavior:"smooth"}); };
