@@ -2528,6 +2528,7 @@ label.acctsetrow { align-items:center; }
       <div class="xprow"><span class="lab">Master set completion</span><span class="pct" id="pctNum">0%</span></div>
       <div class="xpbar"><div class="xpfill" id="xpfill" style="width:0"></div></div>
       <div class="meta" id="ownMeta">0 of 255 cards collected</div>
+      <div class="meta" id="wishMeta">0 on wishlist</div>
     </div>
     <div class="panel" id="valPanel" role="button" tabindex="0" title="Tap to switch: last 5 sold / live listings">
       <div class="lab" id="valLab">Binder value</div>
@@ -4705,6 +4706,8 @@ label.acctsetrow { align-items:center; }
     $("xpfill").style.width = pct+"%";
     // Every copy held, raw and graded together, next to the unique count (left off an empty binder).
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected"+(copies?(" · "+copies+(copies===1?" copy":" copies")):"");
+    // How long the wishlist is, so you do not have to open it to find out.
+    var wm=$("wishMeta"); if(wm) wm.textContent = wishCount()+" on wishlist";
     _masterN = master.size; _chaseN = chase;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
     var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;

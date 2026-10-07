@@ -9,7 +9,7 @@
 // tools/rebuild.py stamps BUILD with the app version and a hash of the built page, so this file never has
 // to be bumped by hand, which is what left it on one literal name for the app's whole life.
 <<<<<<< HEAD
-const BUILD = '2.2-c8f5a6f9';
+const BUILD = '2.2-2a885d16';
 =======
 const BUILD = '2.2-24e5a97c';
 >>>>>>> main
