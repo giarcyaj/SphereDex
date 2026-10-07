@@ -1,0 +1,1635 @@
+{
+ "cards": {
+  "EBP01-001": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "荒ぶる溶岩竜 – アグニドラ",
+   "sourceNumber": "BP01-001",
+   "text": "【起】【ターン１回】［③］または［手札を２枚捨てる］このカードをスタンドする。"
+  },
+  "EBP01-001OSR": {
+   "match": "number and stats agree",
+   "name": "荒ぶる溶岩竜 – アグニドラ",
+   "sourceNumber": "BP01-001OSR",
+   "text": "【起】【ターン１回】［③］または［手札を２枚捨てる］このカードをスタンドする。"
+  },
+  "EBP01-001SSP": {
+   "match": "number and stats agree",
+   "name": "荒ぶる溶岩竜 – アグニドラ",
+   "sourceNumber": "BP01-001SSP",
+   "text": "【起】【ターン１回】［③］または［手札を２枚捨てる］このカードをスタンドする。"
+  },
+  "EBP01-002": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "業火の翼 – スザク",
+   "sourceNumber": "BP01-002",
+   "text": "【永】あなたの赤のカードがパルにバトルダメージ以外の【ダメージ】を与える際、かわりに＋200した【ダメージ】を与える(自分の能力も強化する)。\n【自】【登場時】パルを１枚まで選び、700【ダメージ】。"
+  },
+  "EBP01-002OSR": {
+   "match": "number and stats agree",
+   "name": "業火の翼 – スザク",
+   "sourceNumber": "BP01-002OSR",
+   "text": "【永】あなたの赤のカードがパルにバトルダメージ以外の【ダメージ】を与える際、かわりに＋200した【ダメージ】を与える(自分の能力も強化する)。\n【自】【登場時】パルを１枚まで選び、700【ダメージ】。"
+  },
+  "EBP01-002SP": {
+   "match": "number and stats agree",
+   "name": "業火の翼 – スザク",
+   "sourceNumber": "BP01-002SP",
+   "text": "【永】あなたの赤のカードがパルにバトルダメージ以外の【ダメージ】を与える際、かわりに＋200した【ダメージ】を与える(自分の能力も強化する)。\n【自】【登場時】パルを１枚まで選び、700【ダメージ】。"
+  },
+  "EBP01-003": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "赤い怒りんぼ – シャーマンダー",
+   "sourceNumber": "BP01-003",
+   "text": "【永】あなたの他の赤のパルすべての【戦闘力】＋300。"
+  },
+  "EBP01-003SR": {
+   "match": "number and stats agree",
+   "name": "赤い怒りんぼ – シャーマンダー",
+   "sourceNumber": "BP01-003SR",
+   "text": "【永】あなたの他の赤のパルすべての【戦闘力】＋300。"
+  },
+  "EBP01-004": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "刹那の刃 – ツジギリ",
+   "sourceNumber": "BP01-004",
+   "text": "【自】このカードがアタックしたバトル終了時、このカードを手札に戻してよい。\n【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-004SR": {
+   "match": "number and stats agree",
+   "name": "刹那の刃 – ツジギリ",
+   "sourceNumber": "BP01-004SR",
+   "text": "【自】このカードがアタックしたバトル終了時、このカードを手札に戻してよい。\n【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-005": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "鉱石の暴食獣 – ボルカノン",
+   "sourceNumber": "BP01-005",
+   "text": "【自】【登場時】【素材】を３個得る。\n【起】【ターン１回】［【素材】を３個消費］あなたの山札を上から５枚見て、◇８以下のギアを１枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-005SR": {
+   "match": "number and stats agree",
+   "name": "鉱石の暴食獣 – ボルカノン",
+   "sourceNumber": "BP01-005SR",
+   "text": "【自】【登場時】【素材】を３個得る。\n【起】【ターン１回】［【素材】を３個消費］あなたの山札を上から５枚見て、◇８以下のギアを１枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-006": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "勇気のともし火 – キツネビ",
+   "sourceNumber": "BP01-006",
+   "text": "【自】勇敢300（【アタック時】ターン終了時まで、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-006SR": {
+   "match": "number and stats agree",
+   "name": "勇気のともし火 – キツネビ",
+   "sourceNumber": "BP01-006SR",
+   "text": "【自】勇敢300（【アタック時】ターン終了時まで、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-007": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "竜を穿つ牙 – シラヌイ",
+   "sourceNumber": "BP01-007",
+   "text": "【自】【登場時】◇７以上のパルを１枚まで選び、1200【ダメージ】。"
+  },
+  "EBP01-007SR": {
+   "match": "number and stats agree",
+   "name": "竜を穿つ牙 – シラヌイ",
+   "sourceNumber": "BP01-007SR",
+   "text": "【自】【登場時】◇７以上のパルを１枚まで選び、1200【ダメージ】。"
+  },
+  "EBP01-008": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "触るな危険 – ボルトラ",
+   "sourceNumber": "BP01-008",
+   "text": "【自】【登場時】スタンド状態のパルを１枚まで選び、500【ダメージ】。"
+  },
+  "EBP01-009": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "勇猛迅雷 – ライコーン",
+   "sourceNumber": "BP01-009",
+   "text": "【自】勇敢300（【アタック時】ターン終了時まで、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-010": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "炎撃の翼 – イグニクス",
+   "sourceNumber": "BP01-010",
+   "text": "【自】【アタック時】あなたの赤のパルをすべて選び、ターン終了時まで、【戦闘力】＋500/【打撃力】＋１。"
+  },
+  "EBP01-011": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "健気な種火 – ヒノコジカ",
+   "sourceNumber": "BP01-011",
+   "text": "【自】まじめ400（【アサイン時】パルを１枚選び、ターン終了時まで、【戦闘力】＋400）"
+  },
+  "EBP01-012": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "灼熱のナミダ – ラヴィ",
+   "sourceNumber": "BP01-012",
+   "text": "【自】【登場時】【素材】を２個得る。"
+  },
+  "EBP01-013": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "烈火の優駿 – サラブレイズ",
+   "sourceNumber": "BP01-013"
+  },
+  "EBP01-014": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "立ちはだかる獄炎 – ゴクエンオ",
+   "sourceNumber": "BP01-014",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-015": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "設置型マシンガン",
+   "sourceNumber": "BP01-015",
+   "text": "【起】【ターン１回】［【素材】をX個消費、パルを１枚アサイン］〈パルを１枚選び、500【ダメージ】。〉をX回行う。"
+  },
+  "EBP01-015SP": {
+   "match": "number and stats agree",
+   "name": "設置型マシンガン",
+   "sourceNumber": "BP01-015SP",
+   "text": "【起】【ターン１回】［【素材】をX個消費、パルを１枚アサイン］〈パルを１枚選び、500【ダメージ】。〉をX回行う。"
+  },
+  "EBP01-016": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "原始的な炉",
+   "sourceNumber": "BP01-016",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【素材】を３個得て、１枚引く。\n【起】【ターン１回】［【素材】をX個消費］ターン終了時まで、あなたが次に手札からギアをプレイするためのコストはX減る。この能力で◇０以下にはならない。"
+  },
+  "EBP01-017": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "聖火台",
+   "sourceNumber": "BP01-017",
+   "text": "【永】あなたの赤のパルすべての【戦闘力】＋200。\n【自】あなたの赤のパルが登場した時、【素材】を１個得る。"
+  },
+  "EBP01-018": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "警鐘",
+   "sourceNumber": "BP01-018",
+   "text": "【起】【ターン１回】［①、パルを１枚アサイン］そのターンにアサインしたパルをすべてスタンドする。ターン終了時まで、あなたはパルでアサインできず、可能な限りアタックする（この能力を発動した後に登場したパルも含む）。"
+  },
+  "EBP01-019": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "キツネビのハーネス",
+   "sourceNumber": "BP01-019",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。それのメインネームが《キツネビ》なら、ターン終了時まで、〈〉内の能力を与える。〈【自】【アタック時】パルを１枚まで選び、700【ダメージ】〉。"
+  },
+  "EBP01-019SR": {
+   "match": "number and stats agree",
+   "name": "キツネビのハーネス",
+   "sourceNumber": "BP01-019SR",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。それのメインネームが《キツネビ》なら、ターン終了時まで、〈〉内の能力を与える。〈【自】【アタック時】パルを１枚まで選び、700【ダメージ】〉。"
+  },
+  "EBP01-020": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ポンプ式ショットガン",
+   "sourceNumber": "BP01-020",
+   "text": "【自】【登場時】相手のパルをすべて選び、1200【ダメージ】。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。"
+  },
+  "EBP01-020SR": {
+   "match": "number and stats agree",
+   "name": "ポンプ式ショットガン",
+   "sourceNumber": "BP01-020SR",
+   "text": "【自】【登場時】相手のパルをすべて選び、1200【ダメージ】。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。"
+  },
+  "EBP01-021": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ジャンクハンドガン",
+   "sourceNumber": "BP01-021",
+   "text": "【自】【登場時】パルを１枚まで選び、500【ダメージ】。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。"
+  },
+  "EBP01-022": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "石のつるはし",
+   "sourceNumber": "BP01-022",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200し、【素材】を１個得る。"
+  },
+  "EBP01-023": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "アクセルの作戦",
+   "sourceNumber": "BP01-023",
+   "text": "以下から１つ選ぶ。\n・パルを１枚選び、1500【ダメージ】。\n・パルをX枚まで選び、スタンドする。Xはあなたのギアの数。\n・相手の◇５以上のパルをすべて選び、ターン終了時まで、それらはブロックできない。"
+  },
+  "EBP01-023OSR": {
+   "match": "number and stats agree",
+   "name": "アクセルの作戦",
+   "sourceNumber": "BP01-023OSR",
+   "text": "以下から１つ選ぶ。\n・パルを１枚選び、1500【ダメージ】。\n・パルをX枚まで選び、スタンドする。Xはあなたのギアの数。\n・相手の◇５以上のパルをすべて選び、ターン終了時まで、それらはブロックできない。"
+  },
+  "EBP01-023SP": {
+   "match": "number and stats agree",
+   "name": "アクセルの作戦",
+   "sourceNumber": "BP01-023SP",
+   "text": "以下から１つ選ぶ。\n・パルを１枚選び、1500【ダメージ】。\n・パルをX枚まで選び、スタンドする。Xはあなたのギアの数。\n・相手の◇５以上のパルをすべて選び、ターン終了時まで、それらはブロックできない。"
+  },
+  "EBP01-024": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "宝箱発見！",
+   "sourceNumber": "BP01-024",
+   "text": "あなたの山札を上から５枚見て、赤の建築物か、赤のギアを１枚まで選んで手札に加え、残りのカードと山札を切る。０枚選んだ時、【素材】を３個得る。"
+  },
+  "EBP01-025": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "竜を呼ぶ声 – オコチョ",
+   "sourceNumber": "BP01-025",
+   "text": "【自】【登場時】あなたの山札を上から１枚公開し、それが◇８以下の【竜】のパルなら、登場させてよい。登場させないなら、手札に加える。"
+  },
+  "EBP01-025OSR": {
+   "match": "number and stats agree",
+   "name": "竜を呼ぶ声 – オコチョ",
+   "sourceNumber": "BP01-025OSR",
+   "text": "【自】【登場時】あなたの山札を上から１枚公開し、それが◇８以下の【竜】のパルなら、登場させてよい。登場させないなら、手札に加える。"
+  },
+  "EBP01-025SSP": {
+   "match": "number and stats agree",
+   "name": "竜を呼ぶ声 – オコチョ",
+   "sourceNumber": "BP01-025SSP",
+   "text": "【自】【登場時】あなたの山札を上から１枚公開し、それが◇８以下の【竜】のパルなら、登場させてよい。登場させないなら、手札に加える。"
+  },
+  "EBP01-026": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ペコペコガンナー – ペコドン",
+   "sourceNumber": "BP01-026",
+   "text": "【自】【登場時】◇６以下のパルを１枚まで選び、レストする。このカードが拠点にいる限り、それはスタンドしない。"
+  },
+  "EBP01-026OSR": {
+   "match": "number and stats agree",
+   "name": "ペコペコガンナー – ペコドン",
+   "sourceNumber": "BP01-026OSR",
+   "text": "【自】【登場時】◇６以下のパルを１枚まで選び、レストする。このカードが拠点にいる限り、それはスタンドしない。"
+  },
+  "EBP01-026SP": {
+   "match": "number and stats agree",
+   "name": "ペコペコガンナー – ペコドン",
+   "sourceNumber": "BP01-026SP",
+   "text": "【自】【登場時】◇６以下のパルを１枚まで選び、レストする。このカードが拠点にいる限り、それはスタンドしない。"
+  },
+  "EBP01-027": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "逆巻く海竜 – レヴィドラ",
+   "sourceNumber": "BP01-027",
+   "text": "【自】【登場時】１枚引き、◇７以下のパルを１枚まで選び、レストする。それは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "EBP01-027OSR": {
+   "match": "number and stats agree",
+   "name": "逆巻く海竜 – レヴィドラ",
+   "sourceNumber": "BP01-027OSR",
+   "text": "【自】【登場時】１枚引き、◇７以下のパルを１枚まで選び、レストする。それは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "EBP01-027SP": {
+   "match": "number and stats agree",
+   "name": "逆巻く海竜 – レヴィドラ",
+   "sourceNumber": "BP01-027SP",
+   "text": "【自】【登場時】１枚引き、◇７以下のパルを１枚まで選び、レストする。それは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "EBP01-028": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "空への憧れ – ペンタマ",
+   "sourceNumber": "BP01-028",
+   "text": "【自】このカードが墓地に置かれた時、１枚引く。"
+  },
+  "EBP01-028SR": {
+   "match": "number and stats agree",
+   "name": "空への憧れ – ペンタマ",
+   "sourceNumber": "BP01-028SR",
+   "text": "【自】このカードが墓地に置かれた時、１枚引く。"
+  },
+  "EBP01-029": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "水竜の舞 – アズレーン",
+   "sourceNumber": "BP01-029",
+   "text": "【自】【登場時】１枚引き、パルを１枚まで選び、レストする。"
+  },
+  "EBP01-029SR": {
+   "match": "number and stats agree",
+   "name": "水竜の舞 – アズレーン",
+   "sourceNumber": "BP01-029SR",
+   "text": "【自】【登場時】１枚引き、パルを１枚まで選び、レストする。"
+  },
+  "EBP01-030": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "氷塊の暴食獣 – フロスカノン",
+   "sourceNumber": "BP01-030",
+   "text": "【自】【登場時】１枚引く。\n【起】【ターン１回】［手札を１枚捨てる］あなたの山札を上から５枚見て、◇６以下の建築物を２枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-030SR": {
+   "match": "number and stats agree",
+   "name": "氷塊の暴食獣 – フロスカノン",
+   "sourceNumber": "BP01-030SR",
+   "text": "【自】【登場時】１枚引く。\n【起】【ターン１回】［手札を１枚捨てる］あなたの山札を上から５枚見て、◇６以下の建築物を２枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-031": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "大海原の大戦士 – キャプペン",
+   "sourceNumber": "BP01-031",
+   "text": "【永】あなたのメインネームが《ペンタマ》のパルすべての【戦闘力】＋700。"
+  },
+  "EBP01-031SR": {
+   "match": "number and stats agree",
+   "name": "大海原の大戦士 – キャプペン",
+   "sourceNumber": "BP01-031SR",
+   "text": "【永】あなたのメインネームが《ペンタマ》のパルすべての【戦闘力】＋700。"
+  },
+  "EBP01-032": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ノリノリサーファー – カモノスケ",
+   "sourceNumber": "BP01-032",
+   "text": "【自】このカードがアタックされた時、ターン終了時まで、このカードの【戦闘力】＋300。"
+  },
+  "EBP01-033": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "雪山の番人 – ヒエティ",
+   "sourceNumber": "BP01-033",
+   "text": "【永】このカードがレスト状態なら、相手のパルすべての【打撃力】－１。"
+  },
+  "EBP01-034": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "降り注ぐ元気 – チョロゾウ",
+   "sourceNumber": "BP01-034",
+   "text": "【自】まじめ400（【アサイン時】パルを１枚選び、ターン終了時まで、【戦闘力】＋400）"
+  },
+  "EBP01-035": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "金運招来 – チルテト",
+   "sourceNumber": "BP01-035",
+   "text": "【自】このカードが「牧場」の建築物にアサインした時、１枚引く。"
+  },
+  "EBP01-036": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "くるりと宙返り – ルミカイト",
+   "sourceNumber": "BP01-036",
+   "text": "【自】【アタック時】１枚引き、あなたの手札を１枚選び、捨てる。"
+  },
+  "EBP01-037": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "スイスイスイマー – シーペント",
+   "sourceNumber": "BP01-037"
+  },
+  "EBP01-038": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "凍てつく試練 – ツンドラー",
+   "sourceNumber": "BP01-038",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-039": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "アンティークなカーテン",
+   "sourceNumber": "BP01-039",
+   "text": "【自】【登場時】相手のパルをX枚まで選び、手札に戻す。Xは、あなたのカード名に《アンティーク》を含む建築物の、異なるカード名の数（たとえば、すでに《アンティークな鏡》が４枚ある状態で、《アンティークなカーテン》を出すと、２枚まで戻せる）。"
+  },
+  "EBP01-039SR": {
+   "match": "number and stats agree",
+   "name": "アンティークなカーテン",
+   "sourceNumber": "BP01-039SR",
+   "text": "【自】【登場時】相手のパルをX枚まで選び、手札に戻す。Xは、あなたのカード名に《アンティーク》を含む建築物の、異なるカード名の数（たとえば、すでに《アンティークな鏡》が４枚ある状態で、《アンティークなカーテン》を出すと、２枚まで戻せる）。"
+  },
+  "EBP01-040": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "アンティークなドレッサー",
+   "sourceNumber": "BP01-040",
+   "text": "【起】【ターン１回】［手札を１枚捨てる］カード名を１つ宣言する。あなたのカードをすべて選び、ターン終了時まで、それらに宣言したカード名を追加する。\n【起】【ターン１回】［手札をX枚捨てる］あなたのパルをX枚選び、ターン終了時まで、【戦闘力】＋1000/【打撃力】＋１。"
+  },
+  "EBP01-041": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "温泉",
+   "sourceNumber": "BP01-041",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］◇６以下のパルを２枚まで選び、レストする。それらは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "EBP01-042": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "アンティークな鏡",
+   "sourceNumber": "BP01-042",
+   "text": "【自】【登場時】１枚引く。"
+  },
+  "EBP01-043": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "スフィア製作台",
+   "sourceNumber": "BP01-043",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］２枚引き、あなたの手札を１枚選び、捨てる。"
+  },
+  "EBP01-044": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ペンタマのロケットランチャー",
+   "sourceNumber": "BP01-044",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。それのメインネームが《ペンタマ》なら、かわりに【戦闘力】＋500し、ターン終了時まで〈〉内の能力を与える。〈【起】［このカードをレスト］相手のパルをすべて選び、X【ダメージ】。Xはこのカードの【戦闘力】。このカードを墓地に置く〉。"
+  },
+  "EBP01-044SR": {
+   "match": "number and stats agree",
+   "name": "ペンタマのロケットランチャー",
+   "sourceNumber": "BP01-044SR",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。それのメインネームが《ペンタマ》なら、かわりに【戦闘力】＋500し、ターン終了時まで〈〉内の能力を与える。〈【起】［このカードをレスト］相手のパルをすべて選び、X【ダメージ】。Xはこのカードの【戦闘力】。このカードを墓地に置く〉。"
+  },
+  "EBP01-045": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "グラップリングガン",
+   "sourceNumber": "BP01-045",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200し、〈〉内の能力を与える。〈【自】警戒（あなたのターン終了時、このカードをスタンドする）〉。"
+  },
+  "EBP01-046": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ヴィクターの作戦",
+   "sourceNumber": "BP01-046",
+   "text": "以下から１つ選ぶ。\n・あなたの山札を上から５枚見て、カードを１枚選んで手札に加え、残りのカードと山札を切る。\n・パルを１枚選び、手札に戻す。\n・X枚引く。Xはあなたの建築物の数。"
+  },
+  "EBP01-046OSR": {
+   "match": "number and stats agree",
+   "name": "ヴィクターの作戦",
+   "sourceNumber": "BP01-046OSR",
+   "text": "以下から１つ選ぶ。\n・あなたの山札を上から５枚見て、カードを１枚選んで手札に加え、残りのカードと山札を切る。\n・パルを１枚選び、手札に戻す。\n・X枚引く。Xはあなたの建築物の数。"
+  },
+  "EBP01-046SP": {
+   "match": "number and stats agree",
+   "name": "ヴィクターの作戦",
+   "sourceNumber": "BP01-046SP",
+   "text": "以下から１つ選ぶ。\n・あなたの山札を上から５枚見て、カードを１枚選んで手札に加え、残りのカードと山札を切る。\n・パルを１枚選び、手札に戻す。\n・X枚引く。Xはあなたの建築物の数。"
+  },
+  "EBP01-047": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "パルスフィア",
+   "sourceNumber": "BP01-047",
+   "text": "３枚引く。"
+  },
+  "EBP01-047SR": {
+   "match": "number and stats agree",
+   "name": "パルスフィア",
+   "sourceNumber": "BP01-047SR",
+   "text": "３枚引く。"
+  },
+  "EBP01-048": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "オーロラの導き",
+   "sourceNumber": "BP01-048",
+   "text": "１枚引き、あなたの手札を１枚まで選び、山札の上に置く。"
+  },
+  "EBP01-049": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "女神の祝福 – リリクイン",
+   "sourceNumber": "BP01-049",
+   "text": "【自】【登場時】【食材】を３個得る。\n【起】【ターン１回】［【食材】を３個消費］あなたの山札を上から５枚見て、◇６以下のパルを１枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-049OSR": {
+   "match": "number and stats agree",
+   "name": "女神の祝福 – リリクイン",
+   "sourceNumber": "BP01-049OSR",
+   "text": "【自】【登場時】【食材】を３個得る。\n【起】【ターン１回】［【食材】を３個消費］あなたの山札を上から５枚見て、◇６以下のパルを１枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-049SSP": {
+   "match": "number and stats agree",
+   "name": "女神の祝福 – リリクイン",
+   "sourceNumber": "BP01-049SSP",
+   "text": "【自】【登場時】【食材】を３個得る。\n【起】【ターン１回】［【食材】を３個消費］あなたの山札を上から５枚見て、◇６以下のパルを１枚まで選んで登場させ、残りのカードと山札を切る。"
+  },
+  "EBP01-050": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "轟く剛矛 – ドリタス",
+   "sourceNumber": "BP01-050",
+   "text": "【永】あなたのソウルが10枚以上なら、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EBP01-050OSR": {
+   "match": "number and stats agree",
+   "name": "轟く剛矛 – ドリタス",
+   "sourceNumber": "BP01-050OSR",
+   "text": "【永】あなたのソウルが10枚以上なら、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EBP01-050SP": {
+   "match": "number and stats agree",
+   "name": "轟く剛矛 – ドリタス",
+   "sourceNumber": "BP01-050SP",
+   "text": "【永】あなたのソウルが10枚以上なら、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EBP01-051": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "甘い祝福 – フラリーナ",
+   "sourceNumber": "BP01-051",
+   "text": "【自】【登場時】ライフを１得て、ソウルを２枚選び、スタンドする。"
+  },
+  "EBP01-051OSR": {
+   "match": "number and stats agree",
+   "name": "甘い祝福 – フラリーナ",
+   "sourceNumber": "BP01-051OSR",
+   "text": "【自】【登場時】ライフを１得て、ソウルを２枚選び、スタンドする。"
+  },
+  "EBP01-051SP": {
+   "match": "number and stats agree",
+   "name": "甘い祝福 – フラリーナ",
+   "sourceNumber": "BP01-051SP",
+   "text": "【自】【登場時】ライフを１得て、ソウルを２枚選び、スタンドする。"
+  },
+  "EBP01-052": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "猪突粉砕 – イノボウ",
+   "sourceNumber": "BP01-052",
+   "text": "【自】このカードが建築物にアタックした時、ターン終了時まで、このカードの【戦闘力】＋800。"
+  },
+  "EBP01-052SR": {
+   "match": "number and stats agree",
+   "name": "猪突粉砕 – イノボウ",
+   "sourceNumber": "BP01-052SR",
+   "text": "【自】このカードが建築物にアタックした時、ターン終了時まで、このカードの【戦闘力】＋800。"
+  },
+  "EBP01-053": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "花園の女王 – クインビーナ",
+   "sourceNumber": "BP01-053",
+   "text": "【永】あなたのメインネームが《ビーナイト》のパル１枚につき、このカードの【戦闘力】＋300。\n【起】［【食材】を１個消費］あなたの山札を上から１枚見て、それがメインネームが《ビーナイト》のパルなら、コストを◇２減らしてプレイしてよい。この能力で◇０以下にはならない。"
+  },
+  "EBP01-053SR": {
+   "match": "number and stats agree",
+   "name": "花園の女王 – クインビーナ",
+   "sourceNumber": "BP01-053SR",
+   "text": "【永】あなたのメインネームが《ビーナイト》のパル１枚につき、このカードの【戦闘力】＋300。\n【起】［【食材】を１個消費］あなたの山札を上から１枚見て、それがメインネームが《ビーナイト》のパルなら、コストを◇２減らしてプレイしてよい。この能力で◇０以下にはならない。"
+  },
+  "EBP01-054": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "黒鉄の要塞 – グラクレス",
+   "sourceNumber": "BP01-054",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）"
+  },
+  "EBP01-054SR": {
+   "match": "number and stats agree",
+   "name": "黒鉄の要塞 – グラクレス",
+   "sourceNumber": "BP01-054SR",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）"
+  },
+  "EBP01-055": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "魅惑の花形 – ヴィオレッタ",
+   "sourceNumber": "BP01-055",
+   "text": "【起】【ターン１回】［手札を１枚捨てる］そのターンに、このカードがアサインしていたら、このカードをスタンドする。"
+  },
+  "EBP01-055SR": {
+   "match": "number and stats agree",
+   "name": "魅惑の花形 – ヴィオレッタ",
+   "sourceNumber": "BP01-055SR",
+   "text": "【起】【ターン１回】［手札を１枚捨てる］そのターンに、このカードがアサインしていたら、このカードをスタンドする。"
+  },
+  "EBP01-056": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "期待の新入り – クルリス",
+   "sourceNumber": "BP01-056"
+  },
+  "EBP01-056SR": {
+   "match": "number and stats agree",
+   "name": "期待の新入り – クルリス",
+   "sourceNumber": "BP01-056SR",
+   "text": "(バニラ）"
+  },
+  "EBP01-057": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "芳醇な恵み – トドドドン",
+   "sourceNumber": "BP01-057",
+   "text": "【自】【登場時】【食材】を２個得る。\n【自】このカードが「牧場」の建築物にアサインした時、あなたのソウルを１枚レスト状態で増やす。"
+  },
+  "EBP01-058": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "不思議な樹液 – ナエモチ",
+   "sourceNumber": "BP01-058",
+   "text": "【自】【登場時】ターン終了時まで、このカードの【戦闘力】＋300し、〈〉内の能力を得る。〈【永】襲撃（このカードはスタンド状態のパルをアタックできる）〉。"
+  },
+  "EBP01-059": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "唸る鋭矛 – ドリタス",
+   "sourceNumber": "BP01-059",
+   "text": "【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EBP01-060": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ウキウキワーカー – エテッパ",
+   "sourceNumber": "BP01-060",
+   "text": "【自】まじめ400（【アサイン時】パルを１枚選び、ターン終了時まで、【戦闘力】＋400）"
+  },
+  "EBP01-061": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "花園の騎士 – ビーナイト",
+   "sourceNumber": "BP01-061",
+   "text": "【永】このカードと同名のカードは、デッキに好きな枚数入れられる。\n【自】【登場時】【食材】を１個得る。あなたの「牧場」の建築物があるなら、ターン終了時まで、このカードの【戦闘力】＋500。"
+  },
+  "EBP01-062": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "南国の番人 – トロピティ",
+   "sourceNumber": "BP01-062",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-063": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "配合牧場",
+   "sourceNumber": "BP01-063",
+   "text": "【起】【ターン１回】［【食材】を２個消費］あなたの山札を上から１枚公開し、それが◇８以下のパルなら手札に加え、そうでないなら墓地に置く。\n【起】【ターン１回】［【食材】を２個消費、パルを２枚アサイン］あなたの手札から◇８以下のパルを１枚選び、登場させる。"
+  },
+  "EBP01-063SR": {
+   "match": "number and stats agree",
+   "name": "配合牧場",
+   "sourceNumber": "BP01-063SR",
+   "text": "【起】【ターン１回】［【食材】を２個消費］あなたの山札を上から１枚公開し、それが◇８以下のパルなら手札に加え、そうでないなら墓地に置く。\n【起】【ターン１回】［【食材】を２個消費、パルを２枚アサイン］あなたの手札から◇８以下のパルを１枚選び、登場させる。"
+  },
+  "EBP01-064": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "コーラ自動販売機",
+   "sourceNumber": "BP01-064",
+   "text": "【起】【ターン１回】［【食材】をX個消費、パルを１枚アサイン］ソウルを１枚選び、スタンドする。さらに、ソウルをXの３倍の枚数まで選び、スタンドする。"
+  },
+  "EBP01-064SR": {
+   "match": "number and stats agree",
+   "name": "コーラ自動販売機",
+   "sourceNumber": "BP01-064SR",
+   "text": "【起】【ターン１回】［【食材】をX個消費、パルを１枚アサイン］ソウルを１枚選び、スタンドする。さらに、ソウルをXの３倍の枚数まで選び、スタンドする。"
+  },
+  "EBP01-065": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "エサ箱",
+   "sourceNumber": "BP01-065",
+   "text": "【起】【ターン１回】［【食材】を１個消費］あなたのソウルを１枚レスト状態で増やす。増やす前のソウルが10枚以上なら、ソウルを２枚選び、スタンドする。"
+  },
+  "EBP01-066": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "家畜牧場",
+   "sourceNumber": "BP01-066",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【素材】か【食材】いずれかを３個得て、１枚引く。"
+  },
+  "EBP01-067": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "パル通行止めの道路標識",
+   "sourceNumber": "BP01-067",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］次の相手のターン終了時まで、このカードにアサインしたパルに〈〉内の能力を与える。〈【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）〉。"
+  },
+  "EBP01-068": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ドリタスのハチマキ",
+   "sourceNumber": "BP01-068",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。それのメインネームが《ドリタス》なら、【素材】か【食材】いずれかを２個得る。"
+  },
+  "EBP01-069": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "農業の帽子",
+   "sourceNumber": "BP01-069",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200し、【食材】を１個得る。"
+  },
+  "EBP01-070": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "リリィの作戦",
+   "sourceNumber": "BP01-070",
+   "text": "以下から１つ選ぶ。\n・あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000。\n・建築物かギアを１枚選び、墓地に置く。\n・あなたのソウルを１枚レスト状態で増やす。"
+  },
+  "EBP01-070OSR": {
+   "match": "number and stats agree",
+   "name": "リリィの作戦",
+   "sourceNumber": "BP01-070OSR",
+   "text": "以下から１つ選ぶ。\n・あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000。\n・建築物かギアを１枚選び、墓地に置く。\n・あなたのソウルを１枚レスト状態で増やす。"
+  },
+  "EBP01-070SP": {
+   "match": "number and stats agree",
+   "name": "リリィの作戦",
+   "sourceNumber": "BP01-070SP",
+   "text": "以下から１つ選ぶ。\n・あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000。\n・建築物かギアを１枚選び、墓地に置く。\n・あなたのソウルを１枚レスト状態で増やす。"
+  },
+  "EBP01-071": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "タマゴ発見！",
+   "sourceNumber": "BP01-071",
+   "text": "あなたの山札を上から５枚見て、パルを１枚まで選んで手札に加え、残りのカードと山札を切る。０枚選んだ時、【食材】を３個得る。"
+  },
+  "EBP01-072": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "花精霊の祝福",
+   "sourceNumber": "BP01-072",
+   "text": "ライフを１得て、１枚引く。"
+  },
+  "EBP01-073": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "闇夜の翼 – ヘルガルダ",
+   "sourceNumber": "BP01-073",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【自】あなたの〈夜行性〉を持つパルが登場した時、夜なら、それのコスト以下のパルを１枚まで選び、墓地に置く。１枚以上置いたら、そのターン終了時、このカードをレストする。"
+  },
+  "EBP01-073OSR": {
+   "match": "number and stats agree",
+   "name": "闇夜の翼 – ヘルガルダ",
+   "sourceNumber": "BP01-073OSR",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【自】あなたの〈夜行性〉を持つパルが登場した時、夜なら、それのコスト以下のパルを１枚まで選び、墓地に置く。１枚以上置いたら、そのターン終了時、このカードをレストする。"
+  },
+  "EBP01-073SSP": {
+   "match": "number and stats agree",
+   "name": "闇夜の翼 – ヘルガルダ",
+   "sourceNumber": "BP01-073SSP",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【自】あなたの〈夜行性〉を持つパルが登場した時、夜なら、それのコスト以下のパルを１枚まで選び、墓地に置く。１枚以上置いたら、そのターン終了時、このカードをレストする。"
+  },
+  "EBP01-074": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "絶望の遺伝子 – ゼノグリフ",
+   "sourceNumber": "BP01-074",
+   "text": "【永】このカードがレスト状態の間、夜である。\n【永】夜なら、あなたのパルの【自】は２回発動する。\n【自】あなたのターン終了時、あなたのパルを１枚まで選び、解体する。１枚以上解体したら、相手は自分のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-074OSR": {
+   "match": "number and stats agree",
+   "name": "絶望の遺伝子 – ゼノグリフ",
+   "sourceNumber": "BP01-074OSR",
+   "text": "【永】このカードがレスト状態の間、夜である。\n【永】夜なら、あなたのパルの【自】は２回発動する。\n【自】あなたのターン終了時、あなたのパルを１枚まで選び、解体する。１枚以上解体したら、相手は自分のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-074SP": {
+   "match": "number and stats agree",
+   "name": "絶望の遺伝子 – ゼノグリフ",
+   "sourceNumber": "BP01-074SP",
+   "text": "【永】このカードがレスト状態の間、夜である。\n【永】夜なら、あなたのパルの【自】は２回発動する。\n【自】あなたのターン終了時、あなたのパルを１枚まで選び、解体する。１枚以上解体したら、相手は自分のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-075": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "深淵の魔導師 – クレメーオ",
+   "sourceNumber": "BP01-075",
+   "text": "【起】【ターン１回】［他のパルを１枚解体］ターン終了時まで、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【自】あなたのパルが解体された時、あなたの墓地のコストXのノーマルパルを１枚まで選び、レスト状態で登場させる。Xは解体されたパルのコスト－１の数。"
+  },
+  "EBP01-075OSR": {
+   "match": "number and stats agree",
+   "name": "深淵の魔導師 – クレメーオ",
+   "sourceNumber": "BP01-075OSR",
+   "text": "【起】【ターン１回】［他のパルを１枚解体］ターン終了時まで、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【自】あなたのパルが解体された時、あなたの墓地のコストXのノーマルパルを１枚まで選び、レスト状態で登場させる。Xは解体されたパルのコスト－１の数。"
+  },
+  "EBP01-075SP": {
+   "match": "number and stats agree",
+   "name": "深淵の魔導師 – クレメーオ",
+   "sourceNumber": "BP01-075SP",
+   "text": "【起】【ターン１回】［他のパルを１枚解体］ターン終了時まで、このカードの【戦闘力】＋1000/【打撃力】＋１。\n【自】あなたのパルが解体された時、あなたの墓地のコストXのノーマルパルを１枚まで選び、レスト状態で登場させる。Xは解体されたパルのコスト－１の数。"
+  },
+  "EBP01-076": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "そこにいる！？ – ニャンバット",
+   "sourceNumber": "BP01-076",
+   "text": "【自】【登場時】あなたの山札を上から３枚公開し、パルを１枚まで選んで手札に加え、残りのカードを墓地に置く。"
+  },
+  "EBP01-076SR": {
+   "match": "number and stats agree",
+   "name": "そこにいる！？ – ニャンバット",
+   "sourceNumber": "BP01-076SR",
+   "text": "【自】【登場時】あなたの山札を上から３枚公開し、パルを１枚まで選んで手札に加え、残りのカードを墓地に置く。"
+  },
+  "EBP01-077": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "蒼炎の優駿 – サラブラック",
+   "sourceNumber": "BP01-077",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-077SR": {
+   "match": "number and stats agree",
+   "name": "蒼炎の優駿 – サラブラック",
+   "sourceNumber": "BP01-077SR",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EBP01-078": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "女神の冥加 – ルナクイン",
+   "sourceNumber": "BP01-078",
+   "text": "【起】［このカードをレスト、手札を１枚捨てる］あなたの墓地の◇６以下のパルを１枚選び、レスト状態で登場させる。"
+  },
+  "EBP01-078SR": {
+   "match": "number and stats agree",
+   "name": "女神の冥加 – ルナクイン",
+   "sourceNumber": "BP01-078SR",
+   "text": "【起】［このカードをレスト、手札を１枚捨てる］あなたの墓地の◇６以下のパルを１枚選び、レスト状態で登場させる。"
+  },
+  "EBP01-079": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夜になったら本気出す – ンダコアラ",
+   "sourceNumber": "BP01-079",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-079SR": {
+   "match": "number and stats agree",
+   "name": "夜になったら本気出す – ンダコアラ",
+   "sourceNumber": "BP01-079SR",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-080": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夢の始まり – ネムラム",
+   "sourceNumber": "BP01-080",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-080SR": {
+   "match": "number and stats agree",
+   "name": "夢の始まり – ネムラム",
+   "sourceNumber": "BP01-080SR",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-081": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ハート泥棒 – ラブマンダー",
+   "sourceNumber": "BP01-081",
+   "text": "【自】【アタック時】あなたの手札を１枚捨ててもよい。捨てたら、ライフを１得る。"
+  },
+  "EBP01-081SR": {
+   "match": "number and stats agree",
+   "name": "ハート泥棒 – ラブマンダー",
+   "sourceNumber": "BP01-081SR",
+   "text": "【自】【アタック時】あなたの手札を１枚捨ててもよい。捨てたら、ライフを１得る。"
+  },
+  "EBP01-082": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夢の続き – ネムラム",
+   "sourceNumber": "BP01-082",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EBP01-083": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "天空の襲撃者 – カバネドリ",
+   "sourceNumber": "BP01-083",
+   "text": "【自】【登場時】パルを１枚まで選び、ターン終了時まで、【戦闘力】－300（【戦闘力】は０以下になっても墓地に置かれない）。"
+  },
+  "EBP01-084": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "闇に潜む蠍 – デスティング",
+   "sourceNumber": "BP01-084",
+   "text": "【自】相打ち（このカードがバトル中に墓地に置かれた時、バトル相手のパルを墓地に置く）\n【自】このカードが墓地に置かれた時、あなたの墓地のノーマルパルを１枚まで選び、手札に戻す。"
+  },
+  "EBP01-085": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "逢魔時の使者 – ソルレイス",
+   "sourceNumber": "BP01-085",
+   "text": "【永】このカードがレスト状態の間、夜である。\n【永】夜なら、相手のパルすべての【戦闘力】－200（【戦闘力】は０以下になっても墓地に置かれない）。"
+  },
+  "EBP01-086": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "無口なあの子 – ルナティ",
+   "sourceNumber": "BP01-086"
+  },
+  "EBP01-087": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "閃く月光 – ツキカゲ",
+   "sourceNumber": "BP01-087",
+   "text": "【自】【登場時】夜なら、スタンド状態の◇６以下のパルを１枚まで選び、墓地に置く。"
+  },
+  "EBP01-088": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "設置ランプ",
+   "sourceNumber": "BP01-088",
+   "text": "【起】【ターン１回】［山札を上から３枚墓地に置く］次の相手のターン終了時まで、夜になる。\n【永】あなたのパルすべてに〈〉内の能力を与える。〈【永】夜行性（夜なら、このカードの【戦闘力】＋300）〉。"
+  },
+  "EBP01-088SR": {
+   "match": "number and stats agree",
+   "name": "設置ランプ",
+   "sourceNumber": "BP01-088SR",
+   "text": "【起】【ターン１回】［山札を上から３枚墓地に置く］次の相手のターン終了時まで、夜になる。\n【永】あなたのパルすべてに〈〉内の能力を与える。〈【永】夜行性（夜なら、このカードの【戦闘力】＋300）〉。"
+  },
+  "EBP01-089": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "低質なベッド",
+   "sourceNumber": "BP01-089",
+   "text": "【起】【ターン１回】［山札を上から３枚墓地に置く］次の相手のターン終了時まで、夜になる。\n【自】あなたのターン終了時、あなたのレスト状態の〈夜行性〉を持つパルがいるなら、１枚引く。"
+  },
+  "EBP01-090": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "中世の製薬台",
+   "sourceNumber": "BP01-090",
+   "text": "【起】【ターン１回】［③、パルを１枚アサイン］あなたの墓地のコストX以下のパルを１枚選び、レスト状態で登場させる。Xはアサインしたパルのコスト＋２の数。"
+  },
+  "EBP01-091": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "木の壁",
+   "sourceNumber": "BP01-091",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）\n【自】このカードが墓地に置かれた時、１枚引く。"
+  },
+  "EBP01-092": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "鑑賞用ケージ",
+   "sourceNumber": "BP01-092",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］アサインしたパルを追放する。コストX以下のパルを１枚選び、追放する。Xはアサインしたパルのコスト＋２の数。\n【自】このカードが拠点から離れた時、このカードが追放しているパルをすべてオーナーの手札に戻す。"
+  },
+  "EBP01-093": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "肉切り包丁",
+   "sourceNumber": "BP01-093",
+   "text": "【起】［このカードをレスト、パルを１枚解体］あなたの山札を上から３枚公開し、カードを１枚選んで手札に加え、残りのカードを墓地に置く。"
+  },
+  "EBP01-093SR": {
+   "match": "number and stats agree",
+   "name": "肉切り包丁",
+   "sourceNumber": "BP01-093SR",
+   "text": "【起】［このカードをレスト、パルを１枚解体］あなたの山札を上から３枚公開し、カードを１枚選んで手札に加え、残りのカードを墓地に置く。"
+  },
+  "EBP01-094": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ネムラムの首輪",
+   "sourceNumber": "BP01-094",
+   "text": "【自】【登場時】あなたの手札のメインネームが《ネムラム》のパルを１枚まで選び、登場させる。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。次の相手のターン終了時まで、夜になる。"
+  },
+  "EBP01-095": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ゾーイの作戦",
+   "sourceNumber": "BP01-095",
+   "text": "以下から１つ選ぶ。\n・相手の【素材】か【食材】を合わせて５個まで選び、相手はそれらを失う。\n・あなたの墓地のパルを１枚まで選び、手札に戻す。相手は自分の手札を１枚選び、捨てる。\n・あなたのパルを１枚選び、解体する。１枚以上解体したら、相手のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-095OSR": {
+   "match": "number and stats agree",
+   "name": "ゾーイの作戦",
+   "sourceNumber": "BP01-095OSR",
+   "text": "以下から１つ選ぶ。\n・相手の【素材】か【食材】を合わせて５個まで選び、相手はそれらを失う。\n・あなたの墓地のパルを１枚まで選び、手札に戻す。相手は自分の手札を１枚選び、捨てる。\n・あなたのパルを１枚選び、解体する。１枚以上解体したら、相手のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-095SP": {
+   "match": "number and stats agree",
+   "name": "ゾーイの作戦",
+   "sourceNumber": "BP01-095SP",
+   "text": "以下から１つ選ぶ。\n・相手の【素材】か【食材】を合わせて５個まで選び、相手はそれらを失う。\n・あなたの墓地のパルを１枚まで選び、手札に戻す。相手は自分の手札を１枚選び、捨てる。\n・あなたのパルを１枚選び、解体する。１枚以上解体したら、相手のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-096": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ダークキャノン",
+   "sourceNumber": "BP01-096",
+   "text": "◇５以下のパルを１枚選び、墓地に置く。"
+  },
+  "EBP01-097": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "闇商人",
+   "sourceNumber": "BP01-097",
+   "text": "あなたの墓地の〈妨害〉を持たないパルを２枚まで選び、手札に戻す。次の相手のターン終了時まで、夜になる。"
+  },
+  "EBP01-098": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "優しい輝き – シルフィア",
+   "sourceNumber": "BP01-098",
+   "text": "【自】【アタック時】あなたの手札を１枚公開してもよい。【竜】のパルを公開したら、ターン終了時まで、このカードの【戦闘力】＋500。"
+  },
+  "EBP01-099": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "誇り高き牙 – ガウルフ",
+   "sourceNumber": "BP01-099"
+  },
+  "EBP01-100": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "冒険の始まり",
+   "sourceNumber": "BP01-100",
+   "text": "あなたがこのゲーム中、他のカードをプレイしていないなら、２枚引く。\nあなたの、カード名に《始まりの》を含む異なるカード名のパルが３種類以上あるなら、あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000/【打撃力】＋５。"
+  },
+  "EBP01-100SR": {
+   "match": "number and stats agree",
+   "name": "冒険の始まり",
+   "sourceNumber": "BP01-100SR",
+   "text": "あなたがこのゲーム中、他のカードをプレイしていないなら、２枚引く。\nあなたの、カード名に《始まりの》を含む異なるカード名のパルが３種類以上あるなら、あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000/【打撃力】＋５。"
+  },
+  "EPR-001": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "始まりのパル – モコロン",
+   "sourceNumber": "PR-017",
+   "text": "【永】このカードは◇４以上のパルにアタックされない。"
+  },
+  "EPR-002": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "灼熱のナミダ – ラヴィ",
+   "sourceNumber": "PR-001",
+   "text": "【自】【登場時】【素材】を２個得る。"
+  },
+  "EPR-002S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "灼熱のナミダ – ラヴィ",
+   "sourceNumber": "BP01-012",
+   "text": "【自】【登場時】【素材】を２個得る。"
+  },
+  "EPR-003": {
+   "match": "re solved on cost, power and strike",
+   "name": "立ちはだかる獄炎 – ゴクエンオ",
+   "sourceNumber": "PR-002",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EPR-003S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "立ちはだかる獄炎 – ゴクエンオ",
+   "sourceNumber": "BP01-014",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EPR-004": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "ノリノリサーファー – カモノスケ",
+   "sourceNumber": "PR-003",
+   "text": "【自】このカードがアタックされた時、ターン終了時まで、このカードの【戦闘力】＋300。"
+  },
+  "EPR-004S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ノリノリサーファー – カモノスケ",
+   "sourceNumber": "BP01-032",
+   "text": "【自】このカードがアタックされた時、ターン終了時まで、このカードの【戦闘力】＋300。"
+  },
+  "EPR-005": {
+   "match": "re solved on cost, power and strike",
+   "name": "凍てつく試練 – ツンドラー",
+   "sourceNumber": "PR-004",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EPR-005S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "凍てつく試練 – ツンドラー",
+   "sourceNumber": "BP01-038",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "EPR-006": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "不思議な樹液 – ナエモチ",
+   "sourceNumber": "PR-005",
+   "text": "【自】【登場時】ターン終了時まで、このカードの【戦闘力】＋300し、〈〉内の能力を得る。〈【永】襲撃（このカードはスタンド状態のパルをアタックできる）〉。"
+  },
+  "EPR-006S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "不思議な樹液 – ナエモチ",
+   "sourceNumber": "BP01-058",
+   "text": "【自】【登場時】ターン終了時まで、このカードの【戦闘力】＋300し、〈〉内の能力を得る。〈【永】襲撃（このカードはスタンド状態のパルをアタックできる）〉。"
+  },
+  "EPR-007": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "唸る鋭矛 – ドリタス",
+   "sourceNumber": "PR-006",
+   "text": "【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EPR-007S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "唸る鋭矛 – ドリタス",
+   "sourceNumber": "BP01-059",
+   "text": "【起】【ターン１回】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500し、〈〉内の能力を得る。〈【自】突破（このカードのアタック中にバトル相手のパルが墓地に置かれた時、相手プレイヤーにも【ダメージ】）〉。"
+  },
+  "EPR-008": {
+   "match": "re solved on stats plus colour, element and aptitude",
+   "name": "夢の続き – ネムラム",
+   "sourceNumber": "PR-007",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EPR-008S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夢の続き – ネムラム",
+   "sourceNumber": "BP01-082",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EPR-009": {
+   "match": "re solved on cost, power and strike",
+   "name": "閃く月光 – ツキカゲ",
+   "sourceNumber": "PR-008",
+   "text": "【自】【登場時】夜なら、スタンド状態の◇６以下のパルを１枚まで選び、墓地に置く。"
+  },
+  "EPR-009S": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "閃く月光 – ツキカゲ",
+   "sourceNumber": "BP01-087",
+   "text": "【自】【登場時】夜なら、スタンド状態の◇６以下のパルを１枚まで選び、墓地に置く。"
+  },
+  "EPR-010": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "荒ぶる溶岩竜 – アグニドラ",
+   "sourceNumber": "BP01-001",
+   "text": "【起】【ターン１回】［③］または［手札を２枚捨てる］このカードをスタンドする。"
+  },
+  "EPR-011": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ハート泥棒 – ラブマンダー",
+   "sourceNumber": "BP01-081",
+   "text": "【自】【アタック時】あなたの手札を１枚捨ててもよい。捨てたら、ライフを１得る。"
+  },
+  "EPR-012": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "勇気のともし火 – キツネビ",
+   "sourceNumber": "BP01-006",
+   "text": "【自】勇敢300（【アタック時】ターン終了時まで、このカードの【戦闘力】＋300）"
+  },
+  "EPR-013": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "宝箱発見！",
+   "sourceNumber": "BP01-024",
+   "text": "あなたの山札を上から５枚見て、赤の建築物か、赤のギアを１枚まで選んで手札に加え、残りのカードと山札を切る。０枚選んだ時、【素材】を３個得る。"
+  },
+  "EPR-014": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "空への憧れ – ペンタマ",
+   "sourceNumber": "BP01-028",
+   "text": "【自】このカードが墓地に置かれた時、１枚引く。"
+  },
+  "EPR-015": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "タマゴ発見！",
+   "sourceNumber": "BP01-071",
+   "text": "あなたの山札を上から５枚見て、パルを１枚まで選んで手札に加え、残りのカードと山札を切る。０枚選んだ時、【食材】を３個得る。"
+  },
+  "EPR-016": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夜になったら本気出す – ンダコアラ",
+   "sourceNumber": "BP01-079",
+   "text": "【永】夜行性（夜なら、このカードの【戦闘力】＋300）\n【永】夜行性（夜なら、このカードの【戦闘力】＋300）"
+  },
+  "EPR-017": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "お宝の予感 – ダリザード",
+   "sourceNumber": "TD02-014",
+   "text": "【自】このカードが墓地に置かれた時、相手は自分の手札を１枚選び、捨てる。"
+  },
+  "EPR-018": {
+   "match": "re solved after a Japanese name collision",
+   "name": "始まりのパル – モコロン",
+   "sourceNumber": "PR-017",
+   "text": "【永】このカードは◇４以上のパルにアタックされない。"
+  },
+  "EPR-019": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "始まりのパル – タマコッコ",
+   "sourceNumber": "TD02-024",
+   "text": "【自】このカードが墓地に置かれた時、【食材】を１個得る。"
+  },
+  "EPR-020": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "始まりのパル – ツッパニャン",
+   "sourceNumber": "TD02-023",
+   "text": "【永】このカードは◇３以下のパルにアタックされない。"
+  },
+  "ESOUL-000": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-000"
+  },
+  "ESOUL-001": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-001",
+   "text": "(あなたのターン中、メインフェイズに１回だけソウルを３枚レストして１枚引くことができる。)"
+  },
+  "ESOUL-002": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-002"
+  },
+  "ESOUL-003": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-003"
+  },
+  "ESOUL-005": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-005"
+  },
+  "ESOUL-006": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-006"
+  },
+  "ESOUL-007": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-007"
+  },
+  "ESOUL-008": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-008"
+  },
+  "ESOUL-014": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-014"
+  },
+  "ESOUL-015": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-015"
+  },
+  "ESOUL-016": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-016"
+  },
+  "ETD01-001": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "爆走重戦車 – エレパンダ",
+   "sourceNumber": "TD01-001",
+   "text": "【永】襲撃（このカードはスタンド状態のパルをアタックできる）"
+  },
+  "ETD01-001TSP": {
+   "match": "number and stats agree",
+   "name": "爆走重戦車 – エレパンダ",
+   "sourceNumber": "TD01-001TSP",
+   "text": "【永】襲撃（このカードはスタンド状態のパルをアタックできる）"
+  },
+  "ETD01-001TSR": {
+   "match": "number and stats agree",
+   "name": "爆走重戦車 – エレパンダ",
+   "sourceNumber": "TD01-001TSR",
+   "text": "【永】襲撃（このカードはスタンド状態のパルをアタックできる）"
+  },
+  "ETD01-002": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "刺激的で純真 – パチグリ",
+   "sourceNumber": "TD01-002"
+  },
+  "ETD01-003": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "溶岩日和 – マグピス",
+   "sourceNumber": "TD01-003"
+  },
+  "ETD01-004": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ほかほかだっこ – キツネビ",
+   "sourceNumber": "TD01-004",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "ETD01-005": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "熱々の落し物 – ブルフェルノ",
+   "sourceNumber": "TD01-005",
+   "text": "【自】【登場時】【素材】を２個得る。"
+  },
+  "ETD01-005TSR": {
+   "match": "number and stats agree",
+   "name": "熱々の落し物 – ブルフェルノ",
+   "sourceNumber": "TD01-005TSR",
+   "text": "【自】【登場時】【素材】を２個得る。"
+  },
+  "ETD01-006": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "特攻隊長 – ライゾー",
+   "sourceNumber": "TD01-006",
+   "text": "【起】［【素材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500。"
+  },
+  "ETD01-007": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "マグマを統べる者 – ボルカイザー",
+   "sourceNumber": "TD01-007",
+   "text": "【自】【登場時】パルを１枚まで選び、1000【ダメージ】。"
+  },
+  "ETD01-007TSR": {
+   "match": "number and stats agree",
+   "name": "マグマを統べる者 – ボルカイザー",
+   "sourceNumber": "TD01-007TSR",
+   "text": "【自】【登場時】パルを１枚まで選び、1000【ダメージ】。"
+  },
+  "ETD01-008": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "採石場",
+   "sourceNumber": "TD01-008",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【素材】を３個得て、１枚引く。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD01-008TSR": {
+   "match": "number and stats agree",
+   "name": "採石場",
+   "sourceNumber": "TD01-008TSR",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【素材】を３個得て、１枚引く。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD01-009": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "武器製作台",
+   "sourceNumber": "TD01-009",
+   "text": "【起】【ターン１回】［【素材】を１個消費、パルを１枚アサイン］パルを１枚まで選び、800【ダメージ】。あなたのパルをすべて選び、ターン終了時まで、【打撃力】＋１。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD01-010": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "シングルショットライフル",
+   "sourceNumber": "TD01-010",
+   "text": "【自】【登場時】パルを１枚まで選び、1500【ダメージ】。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。"
+  },
+  "ETD01-011": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ファイアーブレス",
+   "sourceNumber": "TD01-011",
+   "text": "パルを１枚選び、500【ダメージ】。"
+  },
+  "ETD01-011TSR": {
+   "match": "number and stats agree",
+   "name": "ファイアーブレス",
+   "sourceNumber": "TD01-011TSR",
+   "text": "パルを１枚選び、500【ダメージ】。"
+  },
+  "ETD01-012": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "優しい波紋 – シルティア",
+   "sourceNumber": "TD01-012",
+   "text": "【自】【登場時】２枚引き、あなたの手札を１枚選び、山札の上に置く。"
+  },
+  "ETD01-012TSP": {
+   "match": "number and stats agree",
+   "name": "優しい波紋 – シルティア",
+   "sourceNumber": "TD01-012TSP",
+   "text": "【自】【登場時】２枚引き、あなたの手札を１枚選び、山札の上に置く。"
+  },
+  "ETD01-012TSR": {
+   "match": "number and stats agree",
+   "name": "優しい波紋 – シルティア",
+   "sourceNumber": "TD01-012TSR",
+   "text": "【自】【登場時】２枚引き、あなたの手札を１枚選び、山札の上に置く。"
+  },
+  "ETD01-013": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "堅物で純真 – コチグリ",
+   "sourceNumber": "TD01-013"
+  },
+  "ETD01-014": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "よく飛ぶ砲弾 – ペンタマ",
+   "sourceNumber": "TD01-014"
+  },
+  "ETD01-014TSR": {
+   "match": "number and stats agree",
+   "name": "よく飛ぶ砲弾 – ペンタマ",
+   "sourceNumber": "TD01-014TSR"
+  },
+  "ETD01-015": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "凍夜にさまよう – オバケナワ",
+   "sourceNumber": "TD01-015",
+   "text": "【自】【登場時】◇３以下のパルを１枚まで選び、レストする。"
+  },
+  "ETD01-016": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "冷たい眼差し – ツララジカ",
+   "sourceNumber": "TD01-016",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "ETD01-017": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "流水の理 – シヴァ",
+   "sourceNumber": "TD01-017",
+   "text": "【自】警戒（あなたのターン終了時、このカードをスタンドする）"
+  },
+  "ETD01-017TSR": {
+   "match": "number and stats agree",
+   "name": "流水の理 – シヴァ",
+   "sourceNumber": "TD01-017TSR",
+   "text": "【自】警戒（あなたのターン終了時、このカードをスタンドする）"
+  },
+  "ETD01-018": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "氷原に轟く者 – ブリザモス",
+   "sourceNumber": "TD01-018",
+   "text": "【永】あなたの建築物１枚につき、このカードの【戦闘力】＋200。\n【起】［手札の建築物を１枚捨てる］ターン終了時まで、このカードの【打撃力】＋１。"
+  },
+  "ETD01-018TSR": {
+   "match": "number and stats agree",
+   "name": "氷原に轟く者 – ブリザモス",
+   "sourceNumber": "TD01-018TSR",
+   "text": "【永】あなたの建築物１枚につき、このカードの【戦闘力】＋200。\n【起】［手札の建築物を１枚捨てる］ターン終了時まで、このカードの【打撃力】＋１。"
+  },
+  "ETD01-019": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "アンティークな木の椅子",
+   "sourceNumber": "TD01-019",
+   "text": "【自】【登場時】パルを１枚まで選び、ターン終了時まで、【戦闘力】＋1000。"
+  },
+  "ETD01-020": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "原始的な作業台",
+   "sourceNumber": "TD01-020",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］あなたの山札を上から１枚公開し、それが◇６以下の、建築物かギアなら、登場させてよい。登場させないなら、手札に加える。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD01-021": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "単発型スフィアランチャー",
+   "sourceNumber": "TD01-021",
+   "text": "【自】【登場時】１枚引く。\n【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200。"
+  },
+  "ETD01-022": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "コールドブレス",
+   "sourceNumber": "TD01-022",
+   "text": "パルを１枚選び、ターン終了時まで、【打撃力】－３。それは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "ETD01-022TSR": {
+   "match": "number and stats agree",
+   "name": "コールドブレス",
+   "sourceNumber": "TD01-022TSR",
+   "text": "パルを１枚選び、ターン終了時まで、【打撃力】－３。それは次の相手のスタンドフェイズ中、スタンドしない。"
+  },
+  "ETD01-023": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "始まりのパル – モコロン",
+   "sourceNumber": "TD01-023",
+   "text": "【永】このカードは◇４以上のパルにアタックされない。"
+  },
+  "ETD01-023TSR": {
+   "match": "number and stats agree",
+   "name": "始まりのパル – モコロン",
+   "sourceNumber": "TD01-023TSR",
+   "text": "【永】このカードは◇４以上のパルにアタックされない。"
+  },
+  "ETD01-024": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "小さな姫君 – ヒメウサ",
+   "sourceNumber": "TD01-024",
+   "text": "【自】このカードが墓地に置かれた時、【素材】を１個得る。"
+  },
+  "ETD01-024TSR": {
+   "match": "number and stats agree",
+   "name": "小さな姫君 – ヒメウサ",
+   "sourceNumber": "TD01-024TSR",
+   "text": "【自】このカードが墓地に置かれた時、【素材】を１個得る。"
+  },
+  "ETD02-001": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "親衛隊長 – ササゾー",
+   "sourceNumber": "TD02-001"
+  },
+  "ETD02-001TSP": {
+   "match": "number and stats agree",
+   "name": "親衛隊長 – ササゾー",
+   "sourceNumber": "TD02-001TSP"
+  },
+  "ETD02-001TSR": {
+   "match": "number and stats agree",
+   "name": "親衛隊長 – ササゾー",
+   "sourceNumber": "TD02-001TSR"
+  },
+  "ETD02-002": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "夢見る双葉 – ナエモチ",
+   "sourceNumber": "TD02-002"
+  },
+  "ETD02-003": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "おやつの時間 – ポプリーナ",
+   "sourceNumber": "TD02-003",
+   "text": "【自】【登場時】【食材】を２個得る。"
+  },
+  "ETD02-003TSR": {
+   "match": "number and stats agree",
+   "name": "おやつの時間 – ポプリーナ",
+   "sourceNumber": "TD02-003TSR",
+   "text": "【自】【登場時】【食材】を２個得る。"
+  },
+  "ETD02-004": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "華やかな香気 – アロアリュー",
+   "sourceNumber": "TD02-004",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "ETD02-005": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "自然の守護者 – ヤマガミ",
+   "sourceNumber": "TD02-005",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）\n【起】［【食材】を２個消費］ターン終了時まで、このカードの【戦闘力】＋500。"
+  },
+  "ETD02-006": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "溢れる愛情 – ラブラドン",
+   "sourceNumber": "TD02-006",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）"
+  },
+  "ETD02-006TSR": {
+   "match": "number and stats agree",
+   "name": "溢れる愛情 – ラブラドン",
+   "sourceNumber": "TD02-006TSR",
+   "text": "【永】挑発（相手は挑発を持つカードを優先してアタック先に選ぶ）"
+  },
+  "ETD02-007": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "大地に轟く者 – グランモス",
+   "sourceNumber": "TD02-007",
+   "text": "【自】このカードが墓地に置かれた時、【食材】を３個得る。"
+  },
+  "ETD02-007TSR": {
+   "match": "number and stats agree",
+   "name": "大地に轟く者 – グランモス",
+   "sourceNumber": "TD02-007TSR",
+   "text": "【自】このカードが墓地に置かれた時、【食材】を３個得る。"
+  },
+  "ETD02-008": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ベリー農園",
+   "sourceNumber": "TD02-008",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【食材】を３個得て、１枚引く。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD02-008TSR": {
+   "match": "number and stats agree",
+   "name": "ベリー農園",
+   "sourceNumber": "TD02-008TSR",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］【食材】を３個得て、１枚引く。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD02-009": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "キャンプファイア",
+   "sourceNumber": "TD02-009",
+   "text": "【起】【ターン１回】［【食材】を２個消費、パルを１枚アサイン］あなたはライフを１得て、あなたのパルをすべて選び、ターン終了時まで、【戦闘力】＋1000。（あなたのスタンドしているパルをレストすることでアサインできる）"
+  },
+  "ETD02-010": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "精錬金属の槍",
+   "sourceNumber": "TD02-010",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋900。"
+  },
+  "ETD02-011": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "ストーンブラスト",
+   "sourceNumber": "TD02-011",
+   "text": "パルを１枚選び、ターン終了時まで、【戦闘力】＋500。"
+  },
+  "ETD02-012": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "死を呼ぶ鎧竜 – ジオラーヴァ",
+   "sourceNumber": "TD02-012",
+   "text": "【自】【登場時】パルを１枚まで選び、ターン終了時まで、【戦闘力】－1000（【戦闘力】は０以下になっても墓地に置かれない）。\r\n【自】【アタック時】【戦闘力】300以下のパルをすべて選び、墓地に置く（あなたのパルも選ぶ）。"
+  },
+  "ETD02-012TSP": {
+   "match": "number and stats agree",
+   "name": "死を呼ぶ鎧竜 – ジオラーヴァ",
+   "sourceNumber": "TD02-012TSP",
+   "text": "【自】【登場時】パルを１枚まで選び、ターン終了時まで、【戦闘力】－1000（【戦闘力】は０以下になっても墓地に置かれない）。\n【自】【アタック時】【戦闘力】300以下のパルをすべて選び、墓地に置く（あなたのパルも選ぶ）。"
+  },
+  "ETD02-012TSR": {
+   "match": "number and stats agree",
+   "name": "死を呼ぶ鎧竜 – ジオラーヴァ",
+   "sourceNumber": "TD02-012TSR",
+   "text": "【自】【登場時】パルを１枚まで選び、ターン終了時まで、【戦闘力】－1000（【戦闘力】は０以下になっても墓地に置かれない）。\n【自】【アタック時】【戦闘力】300以下のパルをすべて選び、墓地に置く（あなたのパルも選ぶ）。"
+  },
+  "ETD02-013": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "叡智の結晶 – ホウロック",
+   "sourceNumber": "TD02-013"
+  },
+  "ETD02-014": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "お宝の予感 – ダリザード",
+   "sourceNumber": "TD02-014",
+   "text": "【自】このカードが墓地に置かれた時、相手は自分の手札を１枚選び、捨てる。"
+  },
+  "ETD02-014TSR": {
+   "match": "number and stats agree",
+   "name": "お宝の予感 – ダリザード",
+   "sourceNumber": "TD02-014TSR",
+   "text": "【自】このカードが墓地に置かれた時、相手は自分の手札を１枚選び、捨てる。"
+  },
+  "ETD02-015": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "暗躍する影 – マスクロウ",
+   "sourceNumber": "TD02-015",
+   "text": "【永】隠密（このカードはブロックされない）"
+  },
+  "ETD02-016": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "待ち伏せる狩人 – ヘルゴート",
+   "sourceNumber": "TD02-016"
+  },
+  "ETD02-016TSR": {
+   "match": "number and stats agree",
+   "name": "待ち伏せる狩人 – ヘルゴート",
+   "sourceNumber": "TD02-016TSR"
+  },
+  "ETD02-017": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "立ちはだかる黒炎 – シンエンオ",
+   "sourceNumber": "TD02-017",
+   "text": "【起】妨害（【手札】【クイック】［①、このカードを捨てる］または［このカードと他の手札を１枚捨てる］相手のアタックを失敗させる。バトルダメージは発生しない）"
+  },
+  "ETD02-018": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "命を盗む者 – ヤミトバリ",
+   "sourceNumber": "TD02-018",
+   "text": "【永】隠密（このカードはブロックされない）\n【自】【アタック時】ライフを１得る。"
+  },
+  "ETD02-018TSR": {
+   "match": "number and stats agree",
+   "name": "命を盗む者 – ヤミトバリ",
+   "sourceNumber": "TD02-018TSR",
+   "text": "【永】隠密（このカードはブロックされない）\n【自】【アタック時】ライフを１得る。"
+  },
+  "ETD02-019": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "宙吊り罠",
+   "sourceNumber": "TD02-019",
+   "text": "【起】【ターン１回】［パルを１枚アサイン］このカードが追放しているパルが追放領域にないなら、パルを１枚選び、追放する。（あなたのスタンドしているパルをレストすることでアサインできる）\n【自】このカードが拠点から離れた時、このカードが追放したパルをオーナーの拠点にレスト状態で登場させる。"
+  },
+  "ETD02-020": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "マスクロウ帽",
+   "sourceNumber": "TD02-020",
+   "text": "【起】［このカードをレスト］パルを１枚選び、ターン終了時まで、【戦闘力】＋200し、〈〉内の能力を与える。〈【永】隠密（このカードはブロックされない）〉。"
+  },
+  "ETD02-021": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "暗闇からの一撃",
+   "sourceNumber": "TD02-021",
+   "text": "パルを１枚選び、墓地に置く。"
+  },
+  "ETD02-021TSR": {
+   "match": "number and stats agree",
+   "name": "暗闇からの一撃",
+   "sourceNumber": "TD02-021TSR",
+   "text": "パルを１枚選び、墓地に置く。"
+  },
+  "ETD02-022": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "医薬品",
+   "sourceNumber": "TD02-022",
+   "text": "あなたの墓地の◇８以下のパルを１枚選び、レスト状態で登場させる。"
+  },
+  "ETD02-023": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "始まりのパル – ツッパニャン",
+   "sourceNumber": "TD02-023",
+   "text": "【永】このカードは◇３以下のパルにアタックされない。"
+  },
+  "ETD02-023TSR": {
+   "match": "number and stats agree",
+   "name": "始まりのパル – ツッパニャン",
+   "sourceNumber": "TD02-023TSR",
+   "text": "【永】このカードは◇３以下のパルにアタックされない。"
+  },
+  "ETD02-024": {
+   "match": "card-text.json mapping, stats agree",
+   "name": "始まりのパル – タマコッコ",
+   "sourceNumber": "TD02-024",
+   "text": "【自】このカードが墓地に置かれた時、【食材】を１個得る。"
+  },
+  "ETD02-024TSR": {
+   "match": "number and stats agree",
+   "name": "始まりのパル – タマコッコ",
+   "sourceNumber": "TD02-024TSR",
+   "text": "【自】このカードが墓地に置かれた時、【食材】を１個得る。"
+  }
+ },
+ "readme": "Printed Japanese card names and rules text, keyed by SphereDex card number. Baked by tools/bake_card_text_ja.py from the official Palworld card game site's public card list. Every entry is verified against the English card on cost, power and strike, because the English and Japanese promo series do not run in step and a number based mapping silently puts the wrong Pal's name and effect on a card. match records how each one was resolved. Card text and names belong to Bushiroad / Pocketpair.",
+ "source": "https://palworld-official-cardgame.com/"
+}

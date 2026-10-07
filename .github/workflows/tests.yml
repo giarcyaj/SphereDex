@@ -99,6 +99,9 @@ jobs:
       - name: Deck legality, stats, effect search and purchase price
         run: node tools/test_v21.cjs
 
+      - name: Card language, Japanese text mapping and scanner edition
+        run: node tools/test_card_language.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 
