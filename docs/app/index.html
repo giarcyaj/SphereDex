@@ -1842,8 +1842,12 @@ label.acctsetrow { align-items:center; }
   .sdstock i{ width:9px; height:9px; border-radius:50%; flex:none; }
   .sdstock.in{ color:var(--el-Grass); } .sdstock.in i{ background:var(--el-Grass); }
   .sdstock.out{ color:var(--el-Fire); } .sdstock.out i{ background:var(--el-Fire); }
-  .sdstock.unk{ color:var(--r-SP,#ffb020); } .sdstock.unk i{ background:var(--r-SP,#ffb020); }
-  .sdstock small{ font-weight:500; color:var(--muted); }
+  /* --r-SP is a green, so the amber state was reading almost the same as in stock. The Electric element
+     colour is the app's own amber and is defined in both themes. */
+  .sdstock.unk{ color:var(--el-Electric,#f5b83d); } .sdstock.unk i{ background:var(--el-Electric,#f5b83d); }
+  /* --muted does not exist, so this inherited the state colour and the small print shouted as loudly as
+     the verdict. --ink-faint is the real quiet text token. */
+  .sdstock small{ font-weight:500; color:var(--ink-faint); }
   .pxsrc{ margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
