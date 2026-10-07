@@ -2381,8 +2381,8 @@ label.acctsetrow { align-items:center; }
     <h2 class="sech">Missing cards</h2>
     <p class="qsub" id="missingIntro">Choose a collecting goal and see the cards that move it forward.</p>
     <div class="missingtabs" id="missingTabs" role="tablist" aria-label="Missing card goals">
-      <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="master">Master set</button>
-      <button class="missingtab on" type="button" role="tab" aria-selected="true" data-goal="sphere">Next Sphere</button>
+      <button class="missingtab on" type="button" role="tab" aria-selected="true" data-goal="master">Master set</button>
+      <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="sphere">Next Sphere</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="set">Closest set</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="rarity">Rarity</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="pal">Pal</button>
@@ -7790,7 +7790,11 @@ label.acctsetrow { align-items:center; }
   // ---- Missing cards: goal-led collection view ------------------------------------------------------
   // This reads the same collection, wishlist, set and deck data used everywhere else; it stores no
   // duplicate progress state. A card added from its detail sheet is therefore reflected here immediately.
-  var missingGoal="sphere", missingChoice={set:"",rarity:"",pal:""}, missingSort="priority";
+  // Master set in card number order is the default. The Sphere is SphereDex's own reward layer rather than
+  // anything the card game gives you, so leading with it assumed a priority most people have not chosen;
+  // "every card I still need, in the order they are printed" is the question a collector actually arrives
+  // with. The Sphere is still one tab away.
+  var missingGoal="master", missingChoice={set:"",rarity:"",pal:""}, missingSort="number";
   function missingItems(cards, extra){ return cards.filter(function(c){ return !ownsForCompletion(c); }).map(function(c){
     var item={card:c, need:1}; if(extra&&extra[c.id]) item.need=extra[c.id]; return item;
   }); }
@@ -7941,7 +7945,7 @@ label.acctsetrow { align-items:center; }
     }});
   }
   function renderMissing(){
-    if(missingGoal==="deck" && !playerToolsOn()) missingGoal="sphere";
+    if(missingGoal==="deck" && !playerToolsOn()) missingGoal="master";
     var hero=$("missingHero"), list=$("missingList"); if(!hero||!list) return;
     var data=activeMissingGoal(), copy=missingCopy(missingGoal,data), items=(data&&data.items)||[];
     var sort=$("missingSort"); if(sort) sort.value=missingSort;
