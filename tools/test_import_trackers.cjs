@@ -43,7 +43,7 @@ const functionNames = [
   'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection',
   'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty',
-  'importCardId', 'importPreview', 'importWhat'
+  'importCardId', 'importPreview', 'importWhat', 'importToast', 'importName'
 ];
 const constantNames = [
   'RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS',
@@ -305,6 +305,62 @@ test('the preview lists what will be added, in catalogue order, before anything 
   assert.match(source, /"fileIOScrim","csvPrevScrim"\]/, 'Back and Escape close the preview too');
 });
 
+test('the closing toast uses the preview wording and counts each left out row once', () => {
+  const res = A.parseCsvCollection(csv([
+    'Number,Quantity',
+    'BP01-001,10',
+    'BP01-002,6',
+    'BP01-003,0',
+    'BP02-001,1',
+    'Lamball,1'
+  ]));
+  assert.equal(res.cards, 16);
+  assert.equal(res.zero, 1);
+  assert.equal(res.unmatched.length, 2);
+  assert.equal(res.skipped, 3, 'skipped still includes quantity 0 rows');
+  assert.equal(A.importToast(res), 'Imported 16 cards · 2 couldn\'t be matched', 'quantity 0 rows are not counted as unmatched');
+  assert.equal(A.importToast(A.parseCsvCollection('Number,Quantity\nBP01-001,1\nBP01-002,0\n')), 'Imported 1 card');
+  const preview = appFunction('openCsvPreview');
+  assert.match(preview, /couldn't be matched/, 'the preview and the toast share one wording');
+  assert.doesNotMatch(appFunction('doImportCsv'), /skipped/, 'no "lines skipped" toast any more');
+  assert.match(appFunction('doImportCsv'), /toast\(importToast\(res\)\)/);
+});
+
+test('an imported collection is named after the file, short enough for the header', () => {
+  assert.equal(A.importName('palworldtcg-collection.csv'), 'palworldtcg-collection');
+  assert.equal(A.importName('My  Pals.txt'), 'My Pals');
+  assert.equal(A.importName(''), 'Imported collection');
+  assert.equal(A.importName(undefined), 'Imported collection');
+  assert.equal(A.importName('.csv'), 'Imported collection');
+  const long = A.importName('a very long export file name from some tracker 2026 10 08.csv');
+  assert.ok(long.length <= 32, long);
+  assert.match(long, /…$/);
+  assert.doesNotMatch(appFunction('doImportCsv'), /\(CSV\)/, 'no " (CSV)" suffix');
+});
+
+test('the header keeps one row with any collection name', () => {
+  // Layout can't be measured here, so guard the rules that make it work.
+  assert.match(source, /#colSel \{[^}]*min-width:0;[^}]*white-space:nowrap;[^}]*text-overflow:ellipsis;/);
+  const narrow = /@media \(max-width:899px\)\{([^]*?)\n  \}/.exec(source.slice(source.indexOf('Below 900px the toolbar')));
+  assert.ok(narrow, 'the narrow header rule exists');
+  assert.match(narrow[1], /\.mastutil \{ flex-wrap:nowrap; \}/);
+  assert.match(narrow[1], /\.mastutil \.colwrap \{ flex:1 1 0%; min-width:0; \}/);
+  assert.match(narrow[1], /\.mastutil #colSel \{ width:100%; max-width:none; \}/);
+  assert.match(source, /\.mastutil #curSel \{ flex:0 0 auto; \}/, 'the currency picker keeps its size');
+  assert.match(source, /header\.mast \.tbtn\.ghost \{ flex:0 0 auto;/, 'the bell and theme buttons keep their size');
+  assert.match(source, /\.no-flexgap \.mastutil\{gap:0\}\.no-flexgap \.mastutil>\*\+\*\{margin-left:6px\}/, 'old WebView fallback');
+});
+
+test('the import chooser names the trackers it reads, briefly', () => {
+  const m = /setOpt\(b2, 2, "Spreadsheet \(CSV\)", "([^"]+)", doImportCsv\)/.exec(appFunction('openFileIO'));
+  assert.ok(m, 'the CSV import option exists');
+  assert.match(m[1], /palworldtcg\.gg/);
+  assert.match(m[1], /Palify/);
+  assert.match(m[1], /Pal Collector/);
+  assert.ok(m[1].length <= 60, 'fits in two short lines on a phone: ' + m[1]);
+  assert.doesNotMatch(m[1], /[-–—]/);
+});
+
 test('import copy has no dashes', () => {
   const literals = fn => (appFunction(fn).match(/"(?:[^"\\]|\\.)*"/g) || []).map(s => s.slice(1, -1));
   const copy = [].concat(
@@ -312,6 +368,8 @@ test('import copy has no dashes', () => {
     (appFunction('parseCsvCollection').match(/miss\([^)]*?"([^"]+)"/g) || []).map(s => s.replace(/^[^"]*"/, '').replace(/"$/, '')),
     literals('openCsvPreview').filter(s => !/[<>=]/.test(s) || /Row |and /.test(s)),
     literals('importWhat'),
+    literals('importToast'),
+    literals('importName').filter(s => /[a-z] [a-z]/i.test(s)),
     ['Check your import', 'Will be added', 'Not matched']
   );
   assert.ok(copy.length >= 12, JSON.stringify(copy));

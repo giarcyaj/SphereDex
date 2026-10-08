@@ -140,8 +140,13 @@
     header.mast select.tbtn { padding-right:20px; }
   }
   /* Below 900px the toolbar has a row to itself, so the collection picker takes the free width instead of
-     truncating its name beside empty space. */
-  @media (max-width:899px){ .mastutil .colwrap { flex:1 1 auto; } .mastutil #colSel { width:100%; max-width:none; } }
+     truncating its name beside empty space. It never wraps: the picker starts from zero width and shrinks, so a
+     long collection name is cut with an ellipsis while the currency, bell and theme controls keep their size. */
+  @media (max-width:899px){
+    .mastutil { flex-wrap:nowrap; }
+    .mastutil .colwrap { flex:1 1 0%; min-width:0; }
+    .mastutil #colSel { width:100%; max-width:none; }
+  }
   .modehead { margin:2px 0 14px; display:flex; align-items:center; gap:9px; }
   .tbtn.on { border-color:var(--accent); color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .tbtn.sortdir { font-variant-numeric:tabular-nums; min-width:74px; justify-content:center; }
@@ -586,7 +591,7 @@
 
   .colwrap { position:relative; display:flex; }
   #colSel, #colSel option { font-size:.76rem; }
-  #colSel { max-width:150px; min-width:0; overflow:hidden; }
+  #colSel { max-width:150px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   #curSel { font-size:.76rem; }
   .colmenu { position:absolute; top:calc(100% + 6px); right:0; z-index:30; background:var(--surface); border:1.5px solid var(--line-strong);
     border-radius:12px; box-shadow:var(--shadow); padding:6px; display:flex; flex-direction:column; min-width:186px; }
@@ -5396,7 +5401,7 @@ label.acctsetrow { align-items:center; }
       $("fileIOTitle").textContent="Import a collection";
       hint.textContent="It is added as a new collection"; hint.hidden=false;
       setOpt(b1, 1, "Backup (JSON)", "A file exported from SphereDex", doImport);
-      setOpt(b2, 2, "Spreadsheet (CSV)", "Card numbers and quantities, or a SphereDex CSV", doImportCsv);
+      setOpt(b2, 2, "Spreadsheet (CSV)", "From palworldtcg.gg, Palify, Pal Collector or SphereDex", doImportCsv);
     }
     cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
     sc.hidden=false;
@@ -5761,6 +5766,18 @@ label.acctsetrow { align-items:center; }
     if(res.sealedItems) parts.push(res.sealedItems+" sealed item"+(res.sealedItems>1?"s":""));
     return parts.length>1 ? (parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1]) : (parts[0]||"nothing");
   }
+  // The closing toast uses the preview's wording. Only unmatched rows are counted: rows with a quantity of 0 are
+  // checklist rows the user does not own, explained once in the preview and not reported again as a problem.
+  function importToast(res){
+    var miss=(res.unmatched||[]).length;
+    return "Imported "+importWhat(res)+(miss?(" · "+miss+" couldn't be matched"):"");
+  }
+  // A new collection is named after the file, without its extension and cut short so the header picker stays tidy.
+  function importName(fileName){
+    var base=String(fileName||"").replace(/\.[^.]+$/,"").replace(/\s+/g," ").trim();
+    if(base.length>32) base=base.slice(0,31).trim()+"…";
+    return base||"Imported collection";
+  }
   // Nothing is written until the user taps Import: Cancel, the scrim, Back or Escape all leave every collection as it was.
   function openCsvPreview(res, nm, onImport){
     var sc=$("csvPrevScrim"); if(!sc){ onImport(); return; }
@@ -5799,11 +5816,10 @@ label.acctsetrow { align-items:center; }
       var res=parseCsvCollection(text);
       if(res.wantList){ toast("That is a want list, not a collection. Import a file with Number and Quantity columns."); return; }
       if(!res.added && !(res.unmatched&&res.unmatched.length)){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
-      var base=((f&&f.name)||"Imported").replace(/\.[^.]+$/,"");
-      var nm=base+" (CSV)";
+      var nm=importName(f&&f.name);
       openCsvPreview(res, nm, function(){ try{
         var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:res.sealed||{} }); switchCol(id);
-        toast("Imported "+importWhat(res)+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
+        toast(importToast(res));
       }catch(e){ toast("That file couldn't be read"); } });
     }catch(e){ toast("That file couldn't be read"); } });
   }
