@@ -6565,11 +6565,14 @@ label.acctsetrow { align-items:center; }
     if(hideTog){ hideTog.setAttribute("aria-pressed", sealHideOn()?"true":"false");
       hideTog.onclick=function(){ lsSet("palvault-sealhide", sealHideOn()?"0":"1"); renderSealed(); }; }
     if(!list.length){
-      // With the chip on and nothing held at all, say so; a search that simply missed keeps the usual line.
-      var noneHeld=sealHideOn() && !SEALED.some(sealOwned);
+      // With the chip on and nothing held at all, say so and offer the way back; a search that simply
+      // missed keeps the usual line. Show all goes through the chip so its state stays in step.
+      var noneHeld=sealHideOn() && !sealOwnedCount();
       grid.innerHTML=noneHeld
-        ? '<div class="empty" style="grid-column:1/-1"><b>No owned products</b>Turn off Hide unowned to see them again.</div>'
+        ? '<div class="empty" style="grid-column:1/-1"><b>None owned</b><button class="btn" type="button" id="sealShowAll">Show all</button></div>'
         : '<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>';
+      var showAll=$("sealShowAll");
+      if(showAll && hideTog) showAll.onclick=function(){ hideTog.click(); };
     }
     list.forEach(function(p){
       if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Preorders · coming soon"; grid.appendChild(dv); }
