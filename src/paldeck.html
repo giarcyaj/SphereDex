@@ -330,6 +330,7 @@
   .deckuse { margin:10px 0 0; font-size:.82rem; color:var(--ink-soft); line-height:1.45; overflow-wrap:anywhere; }
   .deckuse .ic { width:14px; height:14px; margin-right:6px; }
   .deckuse .deckusename { display:block; margin:2px 0 0 20px; color:var(--ink); font-weight:600; }
+  .deckuse button.deckusename { background:none; border:0; padding:0; font:inherit; font-weight:600; text-align:left; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; overflow-wrap:anywhere; }
   .cname { font-family:var(--font-display); font-weight:750; font-size:.9rem; letter-spacing:-.01em; line-height:1.05; }
   .cname .suffix { color:var(--ink-faint); font-weight:600; font-size:.82em; }
   .crow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
@@ -5343,6 +5344,14 @@ label.acctsetrow { align-items:center; }
         openDetail(n);
       };
     });
+    // A deck name under Used in N decks: keep any edit, close the sheet, then open Decks on that deck the
+    // way the picker does. A deck deleted since the sheet was drawn does nothing.
+    Array.prototype.forEach.call($("mMain").querySelectorAll("button.deckusename"), function(db){
+      db.onclick=function(){
+        var id=db.getAttribute("data-deck"), d=decks().filter(function(x){ return x.id===id; })[0]; if(!d) return;
+        persist(); dismissOverlay(); STATE.activeDeck=d.id; save(); showPage("decks");
+      };
+    });
     // Set name under Card N of M: keep any edit, close the sheet, then show the whole set in Cards.
     var spl=$("mMain").querySelector(".setposlink");
     if(spl) spl.onclick=function(){
@@ -7377,10 +7386,12 @@ label.acctsetrow { align-items:center; }
     return decks().filter(function(d){ var cs=(d&&d.cards)||{};
       return Object.keys(cs).some(function(k){ return k.toUpperCase()===up && (+cs[k]||0)>0; }); }); }
   // The deck names sit under the count, one per line in picker order; a deck with no name still counts.
+  // A name with a deck id is a button that opens that deck; without one it stays plain text.
   function deckUseLine(c){ if(!playerToolsOn()) return "";
     var ds=decksUsing(c.id), n=ds.length;
     return n ? '<p class="deckuse">'+icon("layers")+'Used in '+n+(n===1?' deck':' decks')+
-      ds.map(function(d){ var nm=String((d&&d.name)||"").trim(); return nm ? '<span class="deckusename">'+esc(nm)+'</span>' : ""; }).join("")+'</p>' : ""; }
+      ds.map(function(d){ var nm=String((d&&d.name)||"").trim(); if(!nm) return "";
+        return d.id ? '<button type="button" class="deckusename" data-deck="'+esc(d.id)+'">'+esc(nm)+'</button>' : '<span class="deckusename">'+esc(nm)+'</span>'; }).join("")+'</p>' : ""; }
   // Deck size for the picker: every copy the list runs, so a stub and a full deck tell apart without opening each.
   function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
     Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
