@@ -7,6 +7,7 @@ name: Tests
 #   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
+#      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
 #      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
@@ -104,6 +105,9 @@ jobs:
 
       - name: PalDex upcoming cards
         run: node tools/test_upcoming_cards.cjs
+
+      - name: Tournament decks and staples
+        run: node tools/test_tournament_decks.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)
