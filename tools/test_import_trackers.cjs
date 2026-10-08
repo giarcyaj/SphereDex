@@ -243,6 +243,29 @@ test('header synonyms, delimiters, a BOM and quoted fields', () => {
   assert.equal(semicolonsWin.own['EBP01-001'].qty, 3, 'the separator the header uses most');
 });
 
+test('a card number column wins over a generic Number row counter, in either column order', () => {
+  const expectCards = (text, label) => {
+    const res = A.parseCsvCollection(text);
+    assert.deepEqual(Object.keys(res.own).sort(), ['EBP01-001', 'EBP01-045'], label);
+    assert.equal(res.own['EBP01-045'].qty, 2, label);
+    assert.equal(res.own['EBP01-001'].qty, 3, label);
+    assert.deepEqual(plain(res.unmatched), [], label);
+  };
+  expectCards(csv(['Number,Card Number,Qty', '1,BP01-045,2', '2,BP01-001,3']), 'counter first');
+  expectCards(csv(['Card Number,Number,Qty', 'BP01-045,1,2', 'BP01-001,2,3']), 'counter second');
+  expectCards(csv(['#,card_number,Quantity', '1,BP01-045,2', '2,BP01-001,3']), 'a # counter beside card_number');
+  expectCards(csv(['ID,Card ID,Qty', '17,BP01-045,2', '18,BP01-001,3']), 'an ID counter beside Card ID');
+  expectCards(csv(['No,Code,Card No,Qty', '1,x,BP01-045,2', '2,y,BP01-001,3']), 'No and Code beside Card No');
+  // SphereDex's own export has a Number column and no card number column: read exactly as before.
+  const own = A.parseCsvCollection(csv(['Number,Quantity', 'BP01-045,2', 'BP01-001,3']));
+  assert.deepEqual(Object.keys(own.own).sort(), ['EBP01-001', 'EBP01-045']);
+  assert.equal(own.own['EBP01-045'].qty, 2);
+  assert.equal(own.own['EBP01-001'].qty, 3);
+  assert.deepEqual(plain(own.unmatched), []);
+  // A SphereDex want list (Number with Need, no Quantity) is still recognised.
+  assert.equal(A.parseCsvCollection(csv(['Number,Name,Need', 'BP01-045,x,1'])).wantList, true);
+});
+
 test('a SphereDex CSV still round trips exactly', () => {
   const a = app();
   a.col.own['EBP01-001'] = { qty: 4, rawEditions: { '1': 1, '2': 1, jp: 1, unknown: 1 }, cond: 'Lightly Played', notes: 'Binder, page 2', paidRaw: { jp: 3 }, graded: [{ grader: 'PSA', grade: '9.5', value: 40, cert: '123', edition: 'cn', paid: 20 }] };

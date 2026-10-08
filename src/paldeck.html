@@ -5562,9 +5562,10 @@ label.acctsetrow { align-items:center; }
     jp:"jp", ja:"jp", jpn:"jp", japanese:"jp", "日本語":"jp", "日文":"jp",
     cn:"cn", zh:"cn", chi:"cn", zho:"cn", chs:"cn", chinese:"cn", "简体中文":"cn", "中文":"cn", "简中":"cn"};
   var IMPORT_LANG_QUALIFIERS={us:1, gb:1, uk:1, simplified:1, hans:1, language:1};
-  // Header names per column, most specific first. Headers are compared after importHeaderKey.
+  // Header names per column, most specific first. Headers are compared after importHeaderKey. A generic
+  // "Number", "Code" or "ID" may be a row counter, so any card number header wins over it whatever the column order.
   var IMPORT_COLS={
-    number:["number", "card number", "cardnumber", "card no", "card num", "card #", "card code", "collector number", "code", "card id", "id", "no", "#"],
+    number:["card number", "cardnumber", "card no", "card num", "card #", "card code", "collector number", "card id", "number", "code", "id", "no", "#"],
     quantity:["quantity", "qty", "count", "owned", "amount", "copies", "quantity owned", "owned quantity", "owned count", "number owned"],
     language:["language", "lang", "card language", "languages"],
     parallel:["parallel", "variant", "variation", "finish", "foil", "treatment"],
