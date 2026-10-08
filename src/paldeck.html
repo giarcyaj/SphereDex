@@ -4487,7 +4487,7 @@ label.acctsetrow { align-items:center; }
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
         : (wishMode && !wishCount())
-        ? "<b>Your wishlist is empty</b>Tap the star on any card to add it here."
+        ? "<b>Your wishlist is empty</b>Tap the star on any card to add it here.<div style=\"margin-top:12px\"><button class=\"btn\" type=\"button\" id=\"wishBrowse\">Browse cards</button></div>"
         : (favMode && !Object.keys(STATE.fav).length)
         ? "<b>No favourites yet</b>Open a card and tap the heart to keep it here."
         : noSlabs
@@ -4496,6 +4496,8 @@ label.acctsetrow { align-items:center; }
         ? "<b>No extras</b>Cards you own two or more copies of show up here, ready to trade."
         : (soonMsg() || "<b>No cards match those filters</b>Clear a colour, type, or rarity to widen the search.");
       grid.appendChild(e);
+      // An empty wishlist offers the way to the catalogue, the same place the Collection tab opens.
+      var wb=e.querySelector("#wishBrowse"); if(wb) wb.onclick=function(){ showPage("collection"); };
     } else if (viewMode==="binder9" || viewMode==="binder12"){
       grid.classList.add("binder");
       var per=viewMode==="binder9"?9:12, cols=viewMode==="binder9"?3:4;
