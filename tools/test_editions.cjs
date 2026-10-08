@@ -31,10 +31,12 @@ const functionNames = [
   'changeRaw', 'mergeRawCounts', 'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
   'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
-  'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
+  'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn',
+  'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty', 'importCardId'
 ];
 const appCode = functionNames.map(appFunction).join('\n') + '\n' +
-  ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX'].map(appConstant).join('\n');
+  ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX',
+    'IMPORT_PARALLELS', 'IMPORT_BASE_WORDS', 'IMPORT_PARALLEL_WORDS', 'IMPORT_LANGS', 'IMPORT_LANG_QUALIFIERS', 'IMPORT_COLS'].map(appConstant).join('\n');
 const card = { id: 'EBP01-001', name: 'Lamball', set: 'EBP01', rare: 'C', base: 'EBP01-001' };
 const variant = { ...card, id: 'EBP01-001-SR', rare: 'SR' };
 function app() {

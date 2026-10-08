@@ -1836,6 +1836,21 @@ label.acctsetrow { align-items:center; }
   .fiopt b{ font-weight:700; font-size:1rem; }
   .fiopt span{ color:var(--ink-soft); font-size:.85rem; line-height:1.35; }
   .fiopt:hover, .fiopt:focus-visible{ border-color:var(--accent); outline:none; }
+  /* CSV import preview: what will be added and what could not be matched, before anything is written. Grid and
+     margins only (no flex gap), so old WebViews need no .no-flexgap fallback. */
+  .askbox.csvprevbox{ max-height:calc(100vh - 40px); display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; }
+  .csvprevlist{ overflow-y:auto; overscroll-behavior:contain; margin:0 0 16px; min-height:0; }
+  .csvprevh{ font-weight:700; font-size:.85rem; color:var(--ink-soft); margin:10px 0 6px; }
+  .csvprevh:first-child{ margin-top:0; }
+  .csvprevrows{ list-style:none; margin:0; padding:0; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+  .csvprevrows li{ display:grid; grid-template-columns:auto auto minmax(0,1fr); column-gap:10px; align-items:baseline; padding:7px 12px; font-size:.86rem; border-top:1px solid var(--line); }
+  .csvprevrows li:first-child{ border-top:0; }
+  .csvprevrows code{ font-family:var(--font-mono); font-size:.8rem; }
+  .csvprevrows span{ color:var(--ink-soft); overflow-wrap:anywhere; }
+  .csvprevrows i{ font-style:normal; color:var(--accent-ink); }
+  .csvprevq{ font-weight:700; white-space:nowrap; }
+  .csvprevrows.miss .csvprevq{ color:var(--ink-soft); font-weight:600; }
+  .csvprevrows li.csvprevmore{ display:block; color:var(--ink-soft); }
   /* Price alerts (native push only): the card sheet's alert dialog + the Settings list. Grid gaps and plain
      margins only (no flex gap), so old WebViews need no .no-flexgap fallback. */
   #paScrim{ padding-bottom:calc(20px + var(--kb, 0px)); }
@@ -2963,6 +2978,15 @@ label.acctsetrow { align-items:center; }
       <button type="button" class="fiopt" id="fileIOOpt2"><b id="fileIOOpt2L"></b><span id="fileIOOpt2S"></span></button>
     </div>
     <div class="askbtns"><button type="button" id="fileIOCancel">Cancel</button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="csvPrevScrim" hidden>
+  <div class="askbox wide csvprevbox" role="dialog" aria-modal="true" aria-labelledby="csvPrevTitle">
+    <h3 id="csvPrevTitle">Check your import</h3>
+    <p id="csvPrevSum"></p>
+    <div class="csvprevlist" id="csvPrevList"></div>
+    <div class="askbtns"><button type="button" id="csvPrevCancel">Cancel</button><button type="button" class="ok" id="csvPrevOk">Import</button></div>
   </div>
 </div>
 
@@ -5518,53 +5542,194 @@ label.acctsetrow { align-items:center; }
   }
   // Undo the export's formula guard: a leading apostrophe followed by = + - @ tab or CR.
   function csvUnguard(s){ s=(s==null)?"":String(s); return /^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s; }
-  // Turn a CSV into {own, sealed}. A SphereDex CSV (header row with Number and Quantity) is read by column
-  // name in any order: Card rows add copies, Graded rows add slabs, Sealed / Preorder rows add sealed
-  // products. Anything else uses the tolerant reader: one card per line, columns split on comma /
-  // semicolon / tab (or spaces when the line has none); a known card number is the id and a bare number (or "x2") the quantity.
+  // ---- Importing from other trackers (palworldtcg.gg, Palify, Pal Collector) ----
+  // A SphereDex id is the English printed code: "E", the set code, a three digit number and any parallel letters
+  // with no separator (EBP01-001, EBP01-001OSR, ETD01-012TSP, EPR-002S, ESOUL-001). Japanese and Chinese
+  // printings share that id and are told apart by edition. Other trackers print the number without the "E"
+  // (BP01-001, SOUL-001) and the parallel after a separator (BP01-001-OSR) or in a column of its own.
+  var IMPORT_PARALLELS={SR:1, OSR:1, SP:1, SSP:1, TSR:1, TSP:1, S:1};
+  // Rarity and variant words that mean the regular printing. SphereDex's own export writes RARE_NAME words.
+  var IMPORT_BASE_WORDS={C:1, U:1, R:1, RR:1, TD:1, PR:1, SSS:1, COMMON:1, UNCOMMON:1, RARE:1, "DOUBLE RARE":1, "TRIAL DECK":1,
+    PROMO:1, SOUL:1, NORMAL:1, BASE:1, REGULAR:1, STANDARD:1, NONE:1, NO:1, N:1, FALSE:1, "NON FOIL":1, NONFOIL:1, "NON HOLO":1};
+  var IMPORT_PARALLEL_WORDS={"SUPER RARE":"SR", "SPECIAL":"SP", "SUPER SPECIAL":"SSP", "ALT ART":"OSR", "ALTERNATE ART":"OSR",
+    "TRIAL SUPER RARE":"TSR", "TRIAL SPECIAL":"TSP"};
+  var IMPORT_LANGS={en:"en", eng:"en", english:"en", "英語":"en", "英文":"en",
+    jp:"jp", ja:"jp", jpn:"jp", japanese:"jp", "日本語":"jp", "日文":"jp",
+    cn:"cn", zh:"cn", chi:"cn", zho:"cn", chs:"cn", chinese:"cn", "简体中文":"cn", "中文":"cn", "简中":"cn"};
+  var IMPORT_LANG_QUALIFIERS={us:1, gb:1, uk:1, simplified:1, hans:1, language:1};
+  // Header names per column, most specific first. Headers are compared after importHeaderKey.
+  var IMPORT_COLS={
+    number:["number", "card number", "cardnumber", "card no", "card num", "card #", "card code", "collector number", "code", "card id", "id", "no", "#"],
+    quantity:["quantity", "qty", "count", "owned", "amount", "copies", "quantity owned", "owned quantity", "owned count", "number owned"],
+    language:["language", "lang", "card language", "languages"],
+    parallel:["parallel", "variant", "variation", "finish", "foil", "treatment"],
+    rarity:["rarity", "rarity code"],
+    set:["set code", "set", "set id", "expansion code"]
+  };
+  function importOwn(map, k){ return Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined; }
+  function importHeaderKey(h){ return String(h==null?"":h).replace(/^﻿/,"").toLowerCase().replace(/[_\-.:]+/g," ").replace(/\s+/g," ").trim(); }
+  // {number:ix, quantity:ix, ...} from a header map of importHeaderKey(name) -> column index.
+  function importRoles(colIx){
+    var out={};
+    Object.keys(IMPORT_COLS).forEach(function(role){
+      IMPORT_COLS[role].some(function(k){ var ix=importOwn(colIx, k); if(ix!=null){ out[role]=ix; return true; } return false; });
+    });
+    return out;
+  }
+  // "BP01-045", "EBP01-045", "bp01-45", "BP01-001-OSR", "BP01-001OSR", "BP01-001_SSP", "EPR-002S" -> {base, par}.
+  function importSplitNumber(raw){
+    var s=String(raw==null?"":raw).trim().toUpperCase().replace(/^#/,"");
+    var m=s.match(/^E?([A-Z]+\d*)\s*[-_ ]\s*(\d{1,3})(?:\s*[-_ .\/]?\s*\(?([A-Z]{1,3})\)?)?$/);
+    if(!m) return null;
+    var n=m[2]; while(n.length<3) n="0"+n;
+    return { base:"E"+m[1]+"-"+n, par:m[3]||"" };
+  }
+  // A rarity or variant cell -> {code:""} for the regular printing, {code:"OSR"} for a parallel, {bad:text} when it
+  // names something SphereDex cannot place. A rarity column holds many base words, so unknown words there mean the
+  // regular printing; a parallel or variant column is strict, because guessing there files the copy as the wrong card.
+  function importParallel(v, strict){
+    var text=String(v==null?"":v).trim(), s=text.toUpperCase().replace(/[_\-]+/g," ").replace(/\s+/g," ");
+    if(!s || importOwn(IMPORT_BASE_WORDS, s)) return {code:""};
+    var bare=s.replace(/[^A-Z]/g,"");
+    if(importOwn(IMPORT_PARALLELS, bare)) return {code:bare};
+    var word=importOwn(IMPORT_PARALLEL_WORDS, s); if(word) return {code:word};
+    var m=s.match(/(?:^|[^A-Z])(OSR|SSP|TSR|TSP|SR|SP)(?![A-Z])/); if(m) return {code:m[1]};
+    if(/^ALT(ERNATE)? ART\b/.test(s)) return {code:"OSR"};
+    return (strict || /PARALLEL|FOIL|HOLO/.test(s)) ? {bad:text} : {code:""};
+  }
+  // A language cell -> "en", "jp", "cn", or null when it names a language SphereDex has no edition for
+  // (Korean, Traditional Chinese...). Blank is English, as a file with no language column always was.
+  function importLang(v){
+    var s=String(v==null?"":v).trim().toLowerCase(); if(!s) return "en";
+    var found=null, ok=true;
+    s.split(/[\s()\[\]\/,_.\-]+/).forEach(function(t){
+      if(!t || !ok) return;
+      var l=importOwn(IMPORT_LANGS, t);
+      if(l){ if(found && found!==l) ok=false; found=l; }
+      else if(!importOwn(IMPORT_LANG_QUALIFIERS, t)) ok=false;
+    });
+    return (ok && found) ? found : null;
+  }
+  // Blank is one copy; "2", "x2", "2x" or "2.0" are two; yes / true (an owned checkbox) is one; no / false is none.
+  function importQty(v){
+    var s=String(v==null?"":v).trim(); if(s==="") return 1;
+    var m=s.match(/^x?\s*(\d+)(?:\.0+)?\s*x?$/i); if(m) return parseInt(m[1],10);
+    if(/^(yes|y|true)$/i.test(s)) return 1;
+    if(/^(no|n|false)$/i.test(s)) return 0;
+    return NaN;
+  }
+  // Card number (plus the parallel read from its own column, if any) -> {id} or {reason}. Only ids already in the
+  // catalogue are returned: a card SphereDex does not have yet is reported, never mapped onto a near neighbour.
+  function importCardId(raw, colPar){
+    var s=String(raw==null?"":raw).trim().replace(/^#/,""); if(!s) return {reason:"No card number"};
+    var exact=byNumberIdx[s.toUpperCase()], sp=importSplitNumber(s);
+    if(exact && (!sp || sp.par)) return {id:exact.id};
+    if(!sp) return {reason:"Not a card number"};
+    var par=sp.par;
+    if(!par && colPar){
+      if(colPar.bad!=null) return {reason:"Parallel “"+colPar.bad+"” not recognised"};
+      par=colPar.code||"";
+    }
+    if(par && !importOwn(IMPORT_PARALLELS, par)) return {reason:"Unknown parallel “"+par+"”"};
+    var hit=byNumberIdx[sp.base+par];
+    if(hit) return {id:hit.id};
+    if(par && byNumberIdx[sp.base]) return {reason:"No "+par+" version in SphereDex"};
+    if(exact) return {id:exact.id};
+    return {reason:"Not in SphereDex yet"};
+  }
+  // What an import adds, for the preview: one line per card and printing (and per slab and sealed product),
+  // in catalogue order. Pure: reads the parsed result only.
+  function importPreview(res){
+    var lines=[], sealedList=(typeof SEALED!=="undefined" && SEALED) || [];
+    Object.keys((res&&res.own)||{}).forEach(function(id){
+      var e=res.own[id], c=byNumberIdx[id.toUpperCase()]||null, counts=rawCounts(e), nm=c?(c.name||""):"";
+      ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(n) lines.push({id:id, name:nm, qty:n, what:ed==="unknown"?"":rawEditionLabel(ed), card:c}); });
+      (Array.isArray(e.graded)?e.graded:[]).forEach(function(g){
+        var what=("Graded "+(g.grader||"")+" "+(g.grade==null?"":g.grade)).replace(/\s+/g," ").trim();
+        if(g.edition) what+=" · "+rawEditionLabel(g.edition);
+        lines.push({id:id, name:nm, qty:1, what:what, card:c});
+      });
+    });
+    var rank=function(l){ var c=l.card; return c ? [c.setIdx==null?999:c.setIdx, c.seq==null?999:c.seq] : [9999, 0]; };
+    lines.sort(function(a,b){ var ra=rank(a), rb=rank(b); return (ra[0]-rb[0]) || (ra[1]-rb[1]) || (a.id<b.id?-1:(a.id>b.id?1:0)); });
+    Object.keys((res&&res.sealed)||{}).forEach(function(sid){
+      var p=null; sealedList.some(function(x){ if(x.id===sid){ p=x; return true; } return false; });
+      var nm=p ? ((p.set||p.name||"")+((p.set&&p.name)?" "+p.name:"")) : sid;
+      lines.push({id:sid, name:nm, qty:Math.floor(+res.sealed[sid].qty||0), what:(p&&p.pre)?"Preorder":"Sealed", card:null});
+    });
+    return lines.map(function(l){ return {id:l.id, name:l.name, qty:l.qty, what:l.what}; });
+  }
+  // Turn a CSV into {own, sealed}. A file whose header row names a card number column (Number, Card Number,
+  // card_number, Code, ID...) is read by column name in any order: SphereDex's own export (Card rows add copies,
+  // Graded rows add slabs, Sealed / Preorder rows add sealed products) and other trackers' exports alike, with an
+  // optional quantity, language and rarity / parallel column. Anything else uses the tolerant reader: one card per
+  // line, columns split on comma / semicolon / tab (or spaces when the line has none); a known card number is the
+  // id and a bare number (or "x2") the quantity. Rows that add nothing are listed in unmatched with a reason,
+  // except quantity 0 rows (a checklist export lists every card), which are only counted in zero.
   function parseCsvCollection(text){
     text=(text==null)?"":String(text); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    var own={}, sealed={}, added=0, skipped=0, cards=0, slabs=0, sealedItems=0;
+    var own={}, sealed={}, added=0, skipped=0, cards=0, slabs=0, sealedItems=0, unmatched=[], zero=0;
     var lines=text.split(/\r\n|\n|\r/), firstLine="", li, ri;
     for(li=0; li<lines.length; li++){ if(lines[li].trim()){ firstLine=lines[li]; break; } }
-    // Excel in some locales saves with ";" (or tabs) instead of commas; follow the header line.
-    var sep=(firstLine.indexOf(",")<0 && firstLine.indexOf(";")>=0) ? ";" : ((firstLine.indexOf(",")<0 && firstLine.indexOf("\t")>=0) ? "\t" : ",");
+    // Excel in some locales saves with ";" (or tabs) instead of commas; follow whichever the header line uses most.
+    var count=function(ch){ return firstLine.split(ch).length-1; }, nComma=count(","), nSemi=count(";"), nTab=count("\t");
+    var sep=(nSemi>nComma && nSemi>=nTab) ? ";" : ((nTab>nComma && nTab>nSemi) ? "\t" : ",");
     var rows=parseCsvRows(text, sep), hi=-1, colIx={};
     for(ri=0; ri<rows.length; ri++){ if(rows[ri].join("").trim()){ hi=ri; break; } }
-    if(hi>=0) rows[hi].forEach(function(h, idx){ var k=String(h||"").trim().toLowerCase(); if(k && colIx[k]==null) colIx[k]=idx; });
+    if(hi>=0) rows[hi].forEach(function(h, idx){ var k=importHeaderKey(h); if(k && colIx[k]==null) colIx[k]=idx; });
     if(hi>=0 && colIx.number!=null && colIx.quantity==null && colIx.need!=null){
-      return { own:{}, sealed:{}, added:0, skipped:0, cards:0, slabs:0, sealedItems:0, wantList:true };
+      return { own:{}, sealed:{}, added:0, skipped:0, cards:0, slabs:0, sealedItems:0, unmatched:[], zero:0, wantList:true };
     }
-    if(hi>=0 && colIx.number!=null && colIx.quantity!=null){
-      var cell=function(r, k, keepSpace){ var ix=colIx[k]; if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
+    var role=(hi>=0) ? importRoles(colIx) : {};
+    if(hi>=0 && role.number!=null){
+      var at=function(r, ix, keepSpace){ if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
+      var cell=function(r, k, keepSpace){ return at(r, colIx[k], keepSpace); };
       var condOf={}; CARD_CONDS.forEach(function(c){ condOf[c.toLowerCase()]=c; });
       var sealIds={}; SEALED.forEach(function(p){ sealIds[p.id.toLowerCase()]=p.id; });
       var edOf=function(v){ v=String(v||"").toLowerCase(); return (v==="1st"||v==="1")?"1":((v==="2nd"||v==="2")?"2":((v==="japanese"||v==="jp")?"jp":((v==="chinese"||v==="cn")?"cn":""))); };
       var numOf=function(v){ v=String(v||"").replace(/\s+/g,""); if(/^-?\d+,\d+$/.test(v)) v=v.replace(",","."); return parseFloat(v); };
       var paidOfCell=function(r){ if(colIx.paid==null) return null; return paidNumber(cell(r,"paid")); };
+      var miss=function(r, raw, reason){ skipped++; unmatched.push({row:r+1, raw:raw, reason:reason}); };
+      // The parallel from its own column: a strict parallel / variant column first, then a rarity column.
+      var parOf=function(r){
+        var p=(role.parallel!=null) ? importParallel(at(r, role.parallel), true) : null;
+        if(p && (p.bad!=null || p.code)) return p;
+        var q=(role.rarity!=null) ? importParallel(at(r, role.rarity), false) : null;
+        return (q && (q.bad!=null || q.code)) ? q : (p||q);
+      };
       for(ri=hi+1; ri<rows.length; ri++){
         var row=rows[ri]; if(!row.join("").trim()) continue;
-        var num=cell(row,"number").replace(/^#/,""), type=cell(row,"type").toLowerCase()||"card";
+        var num=at(row, role.number).replace(/^#/,""), type=cell(row,"type").toLowerCase()||"card";
+        // A bare "45" next to a set code column ("BP01") is that set's card 45.
+        var setCode=at(row, role.set);
+        if(/^\d{1,3}[A-Za-z]{0,3}$/.test(num) && /^[A-Za-z]{1,5}\d{0,3}$/.test(setCode)) num=setCode+"-"+num;
         // Blank means 1; "2", "x2" or "2x" as the tolerant reader; 0 (or anything else) on a Card / Sealed row adds nothing.
-        var qs=cell(row,"quantity"), mq=qs.match(/^x?\s*(\d+)\s*x?$/i), q=mq?parseInt(mq[1],10):(qs===""?1:NaN);
-        if(type!=="graded" && !(q>0)){ skipped++; continue; }
+        var qs=at(row, role.quantity), q=importQty(qs);
+        if(type!=="graded" && !(q>0)){
+          if(q===0){ skipped++; zero++; } else miss(ri, num, "Quantity “"+qs+"” not readable");
+          continue;
+        }
         if(type==="sealed" || type==="preorder"){
-          var sid=sealIds[num.toLowerCase()]; if(!sid){ skipped++; continue; }
+          var sid=sealIds[num.toLowerCase()]; if(!sid){ miss(ri, num, "Sealed product not in SphereDex"); continue; }
           if(!sealed[sid]){ sealed[sid]={qty:0,rrp:0,mkt:0,last:0,avg:0}; added++; }
           sealed[sid].qty+=q; var sealPaid=paidOfCell(row); if(sealPaid!=null) sealed[sid].paid=sealPaid; sealedItems+=q; continue;
         }
-        var card=byNumberIdx[num.toUpperCase()]; if(!card){ skipped++; continue; }
+        var hit=importCardId(num, parOf(row)); if(!hit.id){ miss(ri, num, hit.reason); continue; }
+        // A Language column puts Japanese and Chinese copies in those editions; English leaves the Edition column in charge.
+        var langCell=at(row, role.language), lang=importLang(langCell);
+        if(lang===null){ miss(ri, num, "Language “"+langCell+"” not supported"); continue; }
+        var card=byNumberIdx[hit.id.toUpperCase()];
         var e=own[card.id]; if(!e){ e=own[card.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; }
         if(type==="graded"){
           var gr=cell(row,"grade"); if(/^\d+,\d+$/.test(gr)) gr=gr.replace(",",".");   // decimal comma half grades ("9,5")
           var slab={grader:cell(row,"grader")||SETTINGS.defaultGrader||"PSA", grade:gr, value:numOf(cell(row,"unit value"))||0};
-          var cert=cell(row,"cert"), sed=edOf(cell(row,"edition"));
+          var cert=cell(row,"cert"), sed=(lang==="en")?edOf(cell(row,"edition")):lang;
           if(cert) slab.cert=cert;
           if(sed) slab.edition=sed;
           var slabPaid=paidOfCell(row); if(slabPaid!=null) slab.paid=slabPaid;
           e.graded.push(slab); slabs++;
         } else {
-          var rawEd=edOf(cell(row,"edition"));
+          var rawEd=(lang==="en")?edOf(cell(row,"edition")):lang;
           changeRaw(e,q,rawEd); cards+=q;
           var rawPaid=paidOfCell(row);
           if(rawPaid!=null){ if(!e.paidRaw || typeof e.paidRaw!=="object") e.paidRaw={}; e.paidRaw[rawEditionKey(rawEd)]=rawPaid; }
@@ -5572,37 +5737,74 @@ label.acctsetrow { align-items:center; }
           var nt=cell(row,"notes",true); if(nt.trim()) e.notes=nt;
         }
       }
-      return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:slabs, sealedItems:sealedItems };
+      return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:slabs, sealedItems:sealedItems, unmatched:unmatched, zero:zero };
     }
-    lines.forEach(function(line){
+    lines.forEach(function(line, lineIx){
       line=line.trim(); if(!line || /^#(\s|$)/.test(line)) return;   // blanks and "# " comment lines (a SphereDex decklist title)
       // A line with no comma, semicolon or tab splits on spaces too ("EBP01-001 2", or a decklist's "4 EBP01-001 Name").
-      var toks=line.split(/[,;\t]/.test(line) ? /[,;\t]+/ : /[\s,;\t]+/), id=null, qty=null;
+      var toks=line.split(/[,;\t]/.test(line) ? /[,;\t]+/ : /[\s,;\t]+/), id=null, qty=null, why=null, near=null;
       toks.forEach(function(t){
         t=(t||"").trim().replace(/^"+|"+$/g,"").trim(); if(!t) return;
-        var up=t.toUpperCase().replace(/^#/,"");
-        if(!id && byNumberIdx[up]){ id=byNumberIdx[up].id; return; }
+        if(!id){ var hit=importCardId(t, null); if(hit.id){ id=hit.id; return; } if(!why && importSplitNumber(t)){ why=hit.reason; near=t; } }
         var mq=t.match(/^x?\s*(\d+)\s*x?$/i); if(qty==null && mq){ qty=parseInt(mq[1],10); }
       });
       if(id){ if(!(qty>0)) qty=1; if(!own[id]){ own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; } changeRaw(own[id],qty); cards+=qty; }
-      else skipped++;
+      else { skipped++; unmatched.push({row:lineIx+1, raw:near||(line.length>40?line.slice(0,40)+"…":line), reason:why||"No card number found"}); }
     });
-    return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:0, sealedItems:0 };
+    return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:0, sealedItems:0, unmatched:unmatched, zero:zero };
+  }
+  // "30 cards, 2 slabs and 1 sealed item" for the preview and the closing toast.
+  function importWhat(res){
+    var parts=[];
+    if(res.cards) parts.push(res.cards+" card"+(res.cards>1?"s":""));
+    if(res.slabs) parts.push(res.slabs+" slab"+(res.slabs>1?"s":""));
+    if(res.sealedItems) parts.push(res.sealedItems+" sealed item"+(res.sealedItems>1?"s":""));
+    return parts.length>1 ? (parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1]) : (parts[0]||"nothing");
+  }
+  // Nothing is written until the user taps Import: Cancel, the scrim, Back or Escape all leave every collection as it was.
+  function openCsvPreview(res, nm, onImport){
+    var sc=$("csvPrevScrim"); if(!sc){ onImport(); return; }
+    var ok=$("csvPrevOk"), cancel=$("csvPrevCancel"), list=$("csvPrevList"), MAX=400;
+    var close=function(){ sc.hidden=true; ok.onclick=cancel.onclick=sc.onclick=null; list.innerHTML=""; };
+    var items=importPreview(res), miss=res.unmatched||[], html="";
+    var sum=res.added ? ("Adds "+importWhat(res)+" as a new collection, “"+nm+"”.") : "Nothing in this file matched a card in SphereDex.";
+    if(miss.length) sum+=" "+miss.length+" row"+(miss.length>1?"s":"")+" couldn't be matched and will be left out.";
+    if(res.zero) sum+=" "+res.zero+" row"+(res.zero>1?"s":"")+" with a quantity of 0 "+(res.zero>1?"are":"is")+" left out.";
+    $("csvPrevSum").textContent=sum;
+    if(items.length){
+      html+='<div class="csvprevh">Will be added</div><ul class="csvprevrows">';
+      items.slice(0,MAX).forEach(function(l){
+        html+='<li><b class="csvprevq">'+l.qty+'×</b><code>'+esc(l.id)+'</code><span>'+esc(l.name||"")+(l.what?' <i>'+esc(l.what)+'</i>':'')+'</span></li>';
+      });
+      if(items.length>MAX) html+='<li class="csvprevmore">and '+(items.length-MAX)+' more</li>';
+      html+='</ul>';
+    }
+    if(miss.length){
+      html+='<div class="csvprevh">Not matched</div><ul class="csvprevrows miss">';
+      miss.slice(0,MAX).forEach(function(m){
+        html+='<li><b class="csvprevq">Row '+m.row+'</b><code>'+esc(m.raw||"(blank)")+'</code><span>'+esc(m.reason)+'</span></li>';
+      });
+      if(miss.length>MAX) html+='<li class="csvprevmore">and '+(miss.length-MAX)+' more</li>';
+      html+='</ul>';
+    }
+    list.innerHTML=html; list.scrollTop=0;
+    ok.disabled=!res.added;
+    ok.onclick=function(){ close(); onImport(); };
+    cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    sc.hidden=false;
+    setTimeout(function(){ try{ (res.added?ok:cancel).focus(); }catch(e){} }, 30);
   }
   function doImportCsv(){
     pickTextFile(".csv,.txt,text/csv,text/plain", function(text, f){ try{
       var res=parseCsvCollection(text);
       if(res.wantList){ toast("That is a want list, not a collection. Import a file with Number and Quantity columns."); return; }
-      if(!res.added){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
+      if(!res.added && !(res.unmatched&&res.unmatched.length)){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
       var base=((f&&f.name)||"Imported").replace(/\.[^.]+$/,"");
       var nm=base+" (CSV)";
-      var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:res.sealed||{} }); switchCol(id);
-      var parts=[];
-      if(res.cards) parts.push(res.cards+" card"+(res.cards>1?"s":""));
-      if(res.slabs) parts.push(res.slabs+" slab"+(res.slabs>1?"s":""));
-      if(res.sealedItems) parts.push(res.sealedItems+" sealed item"+(res.sealedItems>1?"s":""));
-      var what=parts.length>1 ? (parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1]) : (parts[0]||"a collection");
-      toast("Imported "+what+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
+      openCsvPreview(res, nm, function(){ try{
+        var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:res.sealed||{} }); switchCol(id);
+        toast("Imported "+importWhat(res)+(res.skipped?(" · "+res.skipped+" line"+(res.skipped>1?"s":"")+" skipped"):""));
+      }catch(e){ toast("That file couldn't be read"); } });
     }catch(e){ toast("That file couldn't be read"); } });
   }
   function applyTheme(){
@@ -8186,7 +8388,7 @@ label.acctsetrow { align-items:center; }
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -10933,7 +11135,7 @@ label.acctsetrow { align-items:center; }
     var Q_INFO={
       scan:"Point the camera at a card, or at the grading label on a slab. SphereDex recognises it right on your device (images are never uploaded) and shows a quick check before you add it. Keep scanning (on by default, in Settings) brings the camera back for the next card, so you can add a whole stack.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
-      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. It lands as a new collection named after the file."
+      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. Exports from palworldtcg.gg, Palify and Pal Collector are accepted too, with Japanese and Chinese cards read from a Language column. You see a preview before anything is added, and it lands as a new collection named after the file."
     };
     var cur=null, panel=$("qInfoPanel");
     Array.prototype.forEach.call(document.querySelectorAll(".qinfobtn"), function(b){
