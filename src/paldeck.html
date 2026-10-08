@@ -4015,9 +4015,11 @@ label.acctsetrow { align-items:center; }
   // spheredex-backend/src/stock.ts: the regions listed in STOCK_SOURCES (40 shops across all
   // 8 markets) and the ids in STOCK_PRODUCTS (9 sealed products). The backend matches every
   // product against every market's shops and alerts per market, so the client gate is only
-  // "does my market have shops" - list ALL 9 ids for every market present here. Add a market
+  // "does my market have shops" - list ALL 10 ids for every market present here. Add a market
   // to this map only after stock.ts has shops for it, and vice versa, in the same change.
-  var STOCK_ALL_IDS=["box-ebp01","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"];
+    // A preorder product belongs here as soon as the checker polls it: the sheet then says whether its pre
+    // orders are actually open, per market, instead of leaving the buyer to try every shop.
+  var STOCK_ALL_IDS=["box-ebp01","box-ebp01-2e","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"];
   var STOCK_TRACKED={
     "co.uk":STOCK_ALL_IDS, "com":STOCK_ALL_IDS, "ca":STOCK_ALL_IDS, "com.au":STOCK_ALL_IDS,
     "de":STOCK_ALL_IDS, "fr":STOCK_ALL_IDS, "it":STOCK_ALL_IDS, "es":STOCK_ALL_IDS
@@ -6603,7 +6605,10 @@ label.acctsetrow { align-items:center; }
   // A reading older than this is not trusted. The checker runs every 30 minutes, so two hours means it has
   // missed four runs and something is wrong; saying "out of stock" off that would be a guess.
   var STOCK_STALE_MS=2*60*60*1000;
-  function stockGlance(id){
+  // pre = this product has not come out yet. A shop having it then means its pre orders are open, which is
+  // a different sentence from "in stock" and has to read as one: nobody can hold a Legends Awaken box in
+  // October. The caller passes p.pre, so the words always agree with the sheet they sit on.
+  function stockGlance(id, pre){
     var st=STOCK.state;
     if(!st) return null;                                   // nothing fetched yet
     var old=false;
@@ -6613,12 +6618,17 @@ label.acctsetrow { align-items:center; }
     } else old=true;
     var v=st[id];
     if(old) return { cls:"unk", text:"Stock unconfirmed", note:"last check was a while ago" };
+    if(pre){
+      if(v==="in")  return { cls:"in",  text:"Pre order open", note:"at a shop in your market" };
+      if(v==="out") return { cls:"out", text:"No pre orders open", note:"at any shop we check" };
+      return { cls:"unk", text:"Check the shops", note:"we do not track this one yet" };
+    }
     if(v==="in")  return { cls:"in",  text:"In stock", note:"at a shop in your market" };
     if(v==="out") return { cls:"out", text:"Out of stock", note:"at every shop we check" };
     return { cls:"unk", text:"Check the shop", note:"we do not track this one" };
   }
-  function stockGlanceHtml(id){
-    var g=stockGlance(id);
+  function stockGlanceHtml(id, pre){
+    var g=stockGlance(id, pre);
     if(!g) return "";
     return '<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(g.note)+'</small></p>';
   }
@@ -6635,6 +6645,7 @@ label.acctsetrow { align-items:center; }
           '<h2>'+esc(title)+'</h2>'+
           '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Preorder</span></div>'+
           '<div class="predate big">Releases '+esc(sealDate(p)||"soon")+'</div>'+
+          '<div id="sdStock">'+stockGlanceHtml(p.id, true)+'</div>'+
           '<div class="meditor">'+
             '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
@@ -6643,8 +6654,9 @@ label.acctsetrow { align-items:center; }
           '</div>'+
         '</div>';
       var c0=$("mClose"); if(c0) c0.onclick=function(){ dismissOverlay(); };
-      var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when this is in stock.":"Stock alert removed."); };
+      var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when you can pre order this.":"Stock alert removed."); };
       var w0=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, w0); if(!w0) openOverlay(closeModal);
+      fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id, true); });
       return;
     }
     var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
@@ -6666,7 +6678,7 @@ label.acctsetrow { align-items:center; }
         '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales, "sold")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
-        '<div id="sdStock">'+stockGlanceHtml(p.id)+'</div>'+
+        '<div id="sdStock">'+stockGlanceHtml(p.id, false)+'</div>'+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
           '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
@@ -6695,7 +6707,7 @@ label.acctsetrow { align-items:center; }
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, _wasOpen); if(!_wasOpen) openOverlay(closeModal);
     // The sheet renders at once with whatever stock reading is already in hand, then fills the line in when
     // the fetch lands. Nothing waits on the network to open.
-    fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id); });
+    fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id, false); });
   }
 
   // ---- Portfolio value-over-time chart ----

@@ -91,3 +91,77 @@ test('the colour is never the only signal', () => {
   assert.match(sb.stockGlanceHtml('box-ebp01'), /In stock/);
   assert.match(sb.stockGlanceHtml('pack-ebp01'), /Out of stock/);
 });
+
+// ---- preorder wording --------------------------------------------------------------------------------
+// A product that has not come out cannot be in stock. Five of the ten polled products are unreleased on
+// 8 Oct 2026, two of them until 18 December, so this is the common case and not an edge one.
+test('an open preorder says so, and never says in stock', () => {
+  const sb = sandbox(stamp(5 * 60000), { 'box-bp02': 'in' });
+  const g = sb.stockGlance('box-bp02', true);
+  assert.equal(g.cls, 'in');
+  assert.equal(g.text, 'Pre order open');
+  assert.doesNotMatch(sb.stockGlanceHtml('box-bp02', true), /In stock/);
+});
+
+test('no shop taking preorders reads red, worded as preorders', () => {
+  const sb = sandbox(stamp(5 * 60000), { 'box-ebp01-2e': 'out' });
+  const g = sb.stockGlance('box-ebp01-2e', true);
+  assert.equal(g.cls, 'out');
+  assert.equal(g.text, 'No pre orders open');
+  assert.doesNotMatch(g.text, /Out of stock/);
+});
+
+test('the same reading reads differently on a released and an unreleased product', () => {
+  const sb = sandbox(stamp(60000), { 'box-ebp01': 'in', 'box-bp02': 'in' });
+  assert.equal(sb.stockGlance('box-ebp01', false).text, 'In stock');
+  assert.equal(sb.stockGlance('box-bp02', true).text, 'Pre order open');
+});
+
+test('a stale reading is amber for a preorder too', () => {
+  const sb = sandbox(stamp(3 * HOUR), { 'box-bp02': 'in' });
+  assert.equal(sb.stockGlance('box-bp02', true).cls, 'unk');
+});
+
+test('an untracked preorder product says go and look, not sold out', () => {
+  const sb = sandbox(stamp(60000), { 'box-bp02': 'in' });
+  const g = sb.stockGlance('box-bp03', true);
+  assert.equal(g.cls, 'unk');
+  assert.match(g.note, /do not track/);
+});
+
+test('no user facing string in the glance carries a dash', () => {
+  // Craig's style rule, and "Pre-order" is exactly where it would slip in.
+  const sb = sandbox(stamp(60000), { a: 'in', b: 'out' });
+  for (const pre of [true, false]) {
+    for (const id of ['a', 'b', 'missing']) {
+      const g = sb.stockGlance(id, pre);
+      assert.doesNotMatch(g.text + ' ' + g.note, /[-\u2010-\u2015]/, JSON.stringify(g));
+    }
+  }
+});
+
+// ---- the two sheets stay in step ---------------------------------------------------------------------
+test('the preorder sheet shows the line, and asks for preorder wording', () => {
+  // The preorder branch of openSealedDetail returns early, so it needs its own copy of the line. It had
+  // none: that is why a preorder showed no stock state at all.
+  const open = source.indexOf('function openSealedDetail(');
+  const pre = source.slice(open, source.indexOf('var s=sealItem(p.id)', open));
+  assert.match(pre, /stockGlanceHtml\(p\.id,\s*true\)/, 'preorder sheet renders the glance as a preorder');
+  assert.match(pre, /fetchStock\(\)\.then/, 'preorder sheet also fills the line in when the fetch lands');
+  assert.match(pre, /notified when you can pre order this/, 'the bell toast matches what it will send');
+});
+
+test('the released sheet passes preorder false explicitly', () => {
+  const rel = source.slice(source.indexOf('var s=sealItem(p.id)', source.indexOf('function openSealedDetail(')));
+  assert.match(rel, /stockGlanceHtml\(p\.id,\s*false\)/);
+});
+
+test('the 2nd Edition box is polled and its id matches the backend', () => {
+  const m = /var STOCK_ALL_IDS=\[([^\]]+)\]/.exec(source);
+  assert.ok(m, 'STOCK_ALL_IDS exists');
+  const ids = m[1].split(',').map((s) => s.trim().replace(/"/g, ''));
+  assert.ok(ids.includes('box-ebp01-2e'), 'the 2nd Edition box is in the polled list');
+  assert.equal(ids.length, 10);
+  // Every polled id must be a real sealed product, or the bell appears for nothing.
+  for (const id of ids) assert.ok(source.includes('id:"' + id + '"'), 'sealed product exists: ' + id);
+});
