@@ -39,6 +39,22 @@ function appArray(name) {
   throw new Error('Unterminated ' + name);
 }
 
+// `function NAME(...){...}` from the app, brace matched outside strings.
+function appFunction(name) {
+  const at = source.indexOf('function ' + name + '(');
+  assert.ok(at !== -1, 'App function exists: ' + name);
+  assert.equal(source.indexOf('function ' + name + '(', at + 1), -1, name + ' is defined once');
+  let depth = 0, quote = null;
+  for (let j = source.indexOf('{', at); j < source.length; j++) {
+    const ch = source[j];
+    if (quote) { if (ch === '\\') j++; else if (ch === quote) quote = null; continue; }
+    if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return source.slice(at, j + 1);
+  }
+  throw new Error('Unterminated ' + name);
+}
+
 const block = extractBlock();
 const CARD_IDS = new Set(appArray('RAW').concat(appArray('RAW2')).map(function(row) { return row[0]; }));
 
@@ -213,20 +229,105 @@ test('the staples filter narrows Cards, Wishlist and Missing lists the same way'
   const shown = ctx.tdFilter(missing, true, function(item) { return item.card; }, stats);
   assert.deepEqual(shown.map(function(item) { return item.card.id; }), ['EBP01-025', 'EBP01-025OSR', 'EBP01-095']);
 
-  // Wiring: the Cards grid and the Wishlist mode share visible() and the Filters sheet; Missing has its own chip.
-  const visibleFn = source.slice(source.indexOf('function visible(){'), source.indexOf('function visible(){') + 4000);
+  // Wiring: the Cards grid and the Wishlist mode share visible() and the Filters sheet, but the staples toggle
+  // is kept per mode; Missing has its own chip.
+  const visibleFn = appFunction('visible');
   assert.match(visibleFn, /if \(wishMode && !isWished\(c\.id\)\) return false;/);
-  assert.match(visibleFn, /if \(filters\.staples && !tdIsStapleCard\(c\)\) return false;/);
+  assert.match(visibleFn, /if \(staplesOn\(mode\) && !tdIsStapleCard\(c\)\) return false;/);
   assert.match(source, /<div class="filterpanel" id="filterPanel" hidden>[\s\S]*?id="stapleChips"[\s\S]*?id="clearFilters"/);
-  assert.match(source, /var filters = \{[^\n]*staples:false/);
-  assert.match(source, /if\(filters\.staples\) n\+\+;/);
+  assert.match(source, /var filters = \{[^\n]*staples:\{\}/);
+  assert.match(appFunction('updateFilterCount'), /if\(staplesOn\(\)\) n\+\+;/);
+  assert.match(appFunction('updateFilterCount'), /\$\("stapleChip"\)[^\n]*aria-pressed", staplesOn\(\)/, 'the chip shows the state of the mode on screen');
   const resets = source.split('filters.keywords={}; filters.promos={};').length - 1;
   assert.ok(resets > 0);
-  assert.equal(source.split('filters.keywords={}; filters.promos={}; filters.staples=false;').length - 1, resets, 'every filter reset clears staples');
+  assert.equal(source.split('filters.keywords={}; filters.promos={}; filters.staples={};').length - 1, resets, 'every filter reset clears staples in every mode');
+  assert.equal(/filters\.staples\s*(?:&&|\?|\)|=\s*!)/.test(source), false, 'nothing reads filters.staples as one shared flag');
   assert.match(source, /id="missingStaples"[^>]*hidden>Tournament staples</);
   assert.match(source, /var shown=tdFilter\(items, missingStaples, function\(item\)\{ return item\.card; \}\);/);
   assert.match(source, /tdSheetHtml\(c\)\+/);
   assert.match(source, /if\(typeof tdLoad==="function"\) tdLoad\(\);/);
+});
+
+// The real visible(), colMode() and staples helpers from the app, over a small stub binder.
+function loadGrid() {
+  const filtersDecl = /var filters = \{[^\n]*\};/.exec(source);
+  assert.ok(filtersDecl, 'filters declaration');
+  const wished = { 'EBP01-001': 1, 'EBP01-025': 1, 'EBP01-095': 1 };
+  const staple = { 'EBP01-025': 1, 'EBP01-095': 1 };
+  const card = function(id, i) { return { id: id, name: id, set: 'EBP01', color: 'red', kind: 'pal', rare: 'C', els: [], keywords: [], setIdx: 0, seq: i }; };
+  const sandbox = {
+    CARDS: ['EBP01-001', 'EBP01-025', 'EBP01-095', 'EBP01-099'].map(card),
+    wishMode: false, favMode: false, gradedMode: false, collectedMode: false,
+    RECENT: {}, SINCE_VISIT: {}, RARE_ORDER: { C: 0 }, sortDir: 1, ownShowGraded: true,
+    fold: function(s) { return String(s).toLowerCase(); },
+    keysOn: function(obj) { return Object.keys(obj).filter(function(k) { return obj[k]; }); },
+    setFilterCodes: function() { return []; },
+    promoTypeAllows: function() { return true; },
+    cardMatchesQuery: function(c, q) { return c.id.toLowerCase().indexOf(q.toLowerCase()) !== -1; },
+    tdIsStapleCard: function(c) { return !!staple[c.id]; },
+    isWished: function(id) { return !!wished[id]; },
+    isFav: function() { return false; },
+    o: function() { return {}; }, has: function() { return false; },
+    rawCount: function() { return 0; }, copiesOf: function() { return 0; },
+    recentIds: function() { return {}; }, recentFilterOn: function() { return false; }, sinceVisitOn: function() { return false; },
+    addedAt: function() { return 0; }, mktOf: function() { return 0; }
+  };
+  vm.createContext(sandbox);
+  vm.runInContext([filtersDecl[0], appFunction('colMode'), appFunction('staplesOn'), appFunction('setStaples'), appFunction('visible'), appFunction('wishCountText')].join('\n'), sandbox);
+  sandbox.ids = function() { return vm.runInContext('visible()', sandbox).map(function(c) { return c.id; }); };
+  sandbox.mode = function(m) { vm.runInContext('wishMode=' + (m === 'wish') + '; favMode=' + (m === 'fav') + ';', sandbox); };
+  return sandbox;
+}
+
+test('Tournament staples on in Cards does not filter Wishlist, and the reverse', function() {
+  const g = loadGrid();
+  g.mode('col');
+  assert.deepEqual(g.ids(), ['EBP01-001', 'EBP01-025', 'EBP01-095', 'EBP01-099']);
+  vm.runInContext('setStaples(true)', g);
+  assert.deepEqual(g.ids(), ['EBP01-025', 'EBP01-095'], 'Cards narrows to staples');
+  g.mode('wish');
+  assert.equal(vm.runInContext('staplesOn()', g), false);
+  assert.deepEqual(g.ids(), ['EBP01-001', 'EBP01-025', 'EBP01-095'], 'Wishlist opens whole');
+  g.mode('fav');
+  assert.equal(vm.runInContext('staplesOn()', g), false, 'other modes stay off too');
+
+  const h = loadGrid();
+  h.mode('wish');
+  vm.runInContext('setStaples(true)', h);
+  assert.deepEqual(h.ids(), ['EBP01-025', 'EBP01-095'], 'Wishlist narrows to staples');
+  h.mode('col');
+  assert.deepEqual(h.ids(), ['EBP01-001', 'EBP01-025', 'EBP01-095', 'EBP01-099'], 'Cards stays whole');
+  h.mode('wish');
+  assert.deepEqual(h.ids(), ['EBP01-025', 'EBP01-095'], 'Wishlist remembers its own toggle');
+
+  // Every other filter is still shared between the modes, as before.
+  vm.runInContext('filters.q="025"', h);
+  h.mode('col');
+  assert.deepEqual(h.ids(), ['EBP01-025']);
+  vm.runInContext('filters.q=""; filters.staples={}', h);
+  h.mode('wish');
+  assert.deepEqual(h.ids(), ['EBP01-001', 'EBP01-025', 'EBP01-095'], 'a reset clears the toggle in every mode');
+});
+
+test('the Wishlist count line says when it shows only part of the wishlist', function() {
+  const g = loadGrid();
+  assert.equal(g.wishCountText(8, 8, '$40.10'), '8 on your wishlist · est. $40.10', 'unfiltered wording is unchanged');
+  assert.equal(g.wishCountText(0, 0, '$0.00'), '0 on your wishlist · est. $0.00');
+  assert.equal(g.wishCountText(4, 8, '$18.55'), '4 of 8 on your wishlist · est. $18.55 for the 4 shown');
+  assert.equal(g.wishCountText(1, 8, '$2.00'), '1 of 8 on your wishlist · est. $2.00 for the 1 shown');
+  assert.equal(g.wishCountText(0, 8, '$0.00'), '0 of 8 on your wishlist shown');
+  [g.wishCountText(8, 8, '$1'), g.wishCountText(4, 8, '$1'), g.wishCountText(0, 8, '$1')].forEach(function(copy) {
+    assert.equal(DASHES.test(copy), false, 'no dash in: ' + copy);
+  });
+
+  // The Wishlist mode feeds it the shown cards and the whole wishlist present in the card table.
+  const count = appFunction('renderCountAndStats');
+  assert.match(count, /if\(m==="wish"\) \$\("countLine"\)\.textContent = wishCountText\(cards\.length, CARDS\.filter\(function\(c\)\{ return isWished\(c\.id\); \}\)\.length, money\(cards\.reduce\(/);
+  g.mode('wish');
+  vm.runInContext('setStaples(true)', g);
+  const shown = g.ids().length;
+  const total = g.CARDS.filter(function(c) { return g.isWished(c.id); }).length;
+  assert.equal(g.wishCountText(shown, total, '$5.00'), '2 of 3 on your wishlist · est. $5.00 for the 2 shown');
 });
 
 test('the published file is sound: real cards, positive counts, sources, no repeats', function() {

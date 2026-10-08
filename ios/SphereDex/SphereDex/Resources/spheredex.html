@@ -3772,7 +3772,11 @@ label.acctsetrow { align-items:center; }
                       : '<div class="apill nolink">'+inner+'</div>';
   }
   function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
-  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, staples:false, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, staples:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  // Tournament staples is the one filter kept per Collection mode (staples[colMode()]), so turning it on in
+  // Cards never silently narrows Wishlist, Favourites or Graded. Every other filter stays shared.
+  function staplesOn(mode){ return !!filters.staples[mode||colMode()]; }
+  function setStaples(on, mode){ filters.staples[mode||colMode()]=!!on; }
   var sortDir = (parseInt(lsGet("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
   // and a single blended eBay search skews the number. The dropdown swaps which edition's prices show.
@@ -4186,8 +4190,8 @@ label.acctsetrow { align-items:center; }
     }
     var stHost=$("stapleChips");
     if(stHost){
-      var sb = chip("Tournament staples", "", "var(--accent)", !!filters.staples); sb.classList.add("solid"); sb.title = tdRuleText();
-      sb.onclick = function(){ filters.staples=!filters.staples; sb.setAttribute("aria-pressed", filters.staples?"true":"false"); render(); };
+      var sb = chip("Tournament staples", "", "var(--accent)", staplesOn()); sb.classList.add("solid"); sb.id = "stapleChip"; sb.title = tdRuleText();
+      sb.onclick = function(){ setStaples(!staplesOn()); sb.setAttribute("aria-pressed", staplesOn()?"true":"false"); render(); };
       stHost.appendChild(sb);
       stHost.hidden=!tdAvailable();
     }
@@ -4195,7 +4199,7 @@ label.acctsetrow { align-items:center; }
   // A live deck file arrived after the first paint: show or hide the staple chips and redraw any list using them.
   function tdChanged(){
     var st=$("stapleChips"); if(st) st.hidden=!tdAvailable();
-    if(!tdAvailable()){ filters.staples=false; missingStaples=false; }
+    if(!tdAvailable()){ filters.staples={}; missingStaples=false; }
     if(typeof render==="function") render();
     if(typeof renderMissing==="function") renderMissing();
   }
@@ -4307,7 +4311,7 @@ label.acctsetrow { align-items:center; }
       if (kws.length && !kws.some(function(k){ return (c.keywords||[]).indexOf(k)!==-1; })) return false;
       if (sets.length && sets.indexOf(c.set)===-1) return false;
       if (!promoTypeAllows(c, promos)) return false;
-      if (filters.staples && !tdIsStapleCard(c)) return false;
+      if (staplesOn(mode) && !tdIsStapleCard(c)) return false;
       if (cols.length && cols.indexOf(c.color)===-1) return false;
       if (kinds.length && kinds.indexOf(c.kind)===-1) return false;
       if (rares.length && rares.indexOf(c.rare)===-1) return false;
@@ -4407,9 +4411,16 @@ label.acctsetrow { align-items:center; }
     }
     try{ renderCountAndStats(cards); }catch(e){ reportError(e, "count/stats"); }
   }
+  // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
+  // estimate says it covers only the cards shown.
+  function wishCountText(shown, total, est){
+    if(shown>=total) return shown + " on your wishlist · est. " + est;
+    if(!shown) return "0 of " + total + " on your wishlist shown";
+    return shown + " of " + total + " on your wishlist · est. " + est + " for the " + shown + " shown";
+  }
   function renderCountAndStats(cards){
     var m=colMode();
-    if(m==="wish") $("countLine").textContent = cards.length + " on your wishlist · est. " + money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0));
+    if(m==="wish") $("countLine").textContent = wishCountText(cards.length, CARDS.filter(function(c){ return isWished(c.id); }).length, money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0)));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
     else if(sinceVisitOn()) $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " added since your last visit";
@@ -9193,7 +9204,7 @@ label.acctsetrow { align-items:center; }
   function openRarity(r, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.rares[r]=true; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
@@ -10002,7 +10013,7 @@ label.acctsetrow { align-items:center; }
   // Enter the binder with the Missing filter already selected. Optional text narrows the result to one Pal.
   function openMissingCollection(query){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view="missing";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="missing";
     filters.q=query||"";   // setting the box's value fires no input event, so the filter is set here too
     var input=$("search"); if(input) input.value=filters.q;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10015,7 +10026,7 @@ label.acctsetrow { align-items:center; }
     var set={};
     CARDS.forEach(function(c){ var t=addedAt(c.id); if(PREVIOUS_VISIT && t>PREVIOUS_VISIT && t<APP_OPENED_AT) set[c.id]=true; });
     SINCE_VISIT=set;
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     filters.q="";
     var input=$("search"); if(input) input.value="";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10025,7 +10036,7 @@ label.acctsetrow { align-items:center; }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -10038,7 +10049,7 @@ label.acctsetrow { align-items:center; }
     view=view||"all";
     clearSinceVisit();
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
     if(k==="PR2026" && promoTypeDef(promo)) filters.promos[promo]=true;   // a Releases promo box opens on its own type
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10053,7 +10064,7 @@ label.acctsetrow { align-items:center; }
   function openSetGroup(sets, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
       var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
       filters.exps[x.key]=true; if(inSet.length<x.products.length) inSet.forEach(function(k){ filters.sets[k]=true; }); });
@@ -11086,7 +11097,7 @@ label.acctsetrow { align-items:center; }
     btn.onclick=function(){ var open=panel.hidden; panel.hidden=!open; btn.setAttribute("aria-expanded", open?"true":"false"); };
     $("doneFilters").onclick=function(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); };
     $("clearFilters").onclick=function(){
-      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples=false; filters.view="all";
+      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
       document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
       syncSetChips();
       var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -11096,7 +11107,8 @@ label.acctsetrow { align-items:center; }
   function updateFilterCount(){
     var n=0; ["exps","sets","colors","els","kinds","keywords","rares","promos"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
     if(filters.view!=="all") n++;
-    if(filters.staples) n++;
+    if(staplesOn()) n++;
+    var st=$("stapleChip"); if(st) st.setAttribute("aria-pressed", staplesOn()?"true":"false");   // the chip follows the mode now showing
     var fc=$("filterCount"); if(!fc) return; if(n){ fc.textContent=n; fc.hidden=false; } else { fc.hidden=true; }
   }
 
