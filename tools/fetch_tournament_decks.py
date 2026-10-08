@@ -13,8 +13,10 @@ Usage
 
 The event is appended to the file, or replaced in place when an event with the
 same source_url is already there. A deck that cannot be fetched, or that has no
-card details (an image only recipe, say), is left out and reported on stderr so
-it can be typed in by hand. Nothing is ever guessed.
+card details (an image only recipe, say), keeps its saved copy unchanged when the
+event already has one (with a warning on stderr). Otherwise it is left out and
+reported on stderr so it can be typed in by hand, and the script exits 1 so the
+gap is noticed. Nothing is ever guessed.
 
 card_type values, as the page script reads them:
   a Pals, b Structures, g Gear, e Events (labels from the page's DRM_FRONT config)
@@ -138,26 +140,44 @@ def deck_from_detail(payload, recipe_id):
     return out, ""
 
 
-def build_event(page_url, page, get_json, held_date="", held_source=""):
-    """Event dict plus the decks that had to be skipped (each a dict with the reason)."""
+def saved_decks(doc, page_url):
+    """Decks already saved for this event page, by recipe id."""
+    for e in doc.get("events") or []:
+        if e.get("source_url") == page_url:
+            return {d["source_id"]: d for d in e.get("decks") or [] if isinstance(d, dict) and "source_id" in d}
+    return {}
+
+
+def build_event(page_url, page, get_json, held_date="", held_source="", saved=None):
+    """Event dict plus the decks that could not be fetched (each a dict with the reason).
+
+    saved maps recipe id to the deck already in the file for this event. A recipe
+    that fails but is in saved keeps that deck unchanged (its skip entry has
+    kept=True), so a re-run never drops a deck because of a bad download.
+    """
     title = parse_title(page)
     published = parse_published(page)
+    saved = saved or {}
     decks, skipped = [], []
     for rid in parse_recipe_ids(page):
         url = DETAIL_URL.format(id=rid)
         try:
             payload = get_json(url)
         except Exception as e:
-            skipped.append({"source_id": rid, "source_url": url, "reason": "fetch failed: %s" % e})
-            continue
-        deck, why = deck_from_detail(payload, rid)
+            payload, deck, why = None, None, "fetch failed: %s" % e
+        else:
+            deck, why = deck_from_detail(payload, rid)
         if deck is None:
             info = payload.get("deck") if isinstance(payload, dict) and isinstance(payload.get("deck"), dict) else {}
+            old = saved.get(rid)
             skipped.append({
-                "source_id": rid, "source_url": url, "reason": why,
-                "placement": str(info.get("ranking") or ""), "player": str(info.get("handlename") or ""),
+                "source_id": rid, "source_url": url, "reason": why, "kept": old is not None,
+                "placement": str(info.get("ranking") or (old or {}).get("placement") or ""),
+                "player": str(info.get("handlename") or (old or {}).get("player") or ""),
             })
-            continue
+            if old is None:
+                continue
+            deck = old
         decks.append(deck)
     event = {"name": title, "date": held_date or published, "date_kind": "held" if held_date else "published"}
     if held_date and held_source:
@@ -198,26 +218,32 @@ def main(argv=None):
     if args.held_date and not re.match(r"^\d{4}-\d{2}-\d{2}$", args.held_date):
         ap.error("--held-date must be YYYY-MM-DD")
 
-    page = fetch(args.page_url)
-    event, skipped = build_event(args.page_url, page, lambda u: json.loads(fetch(u)),
-                                 args.held_date, args.held_date_source)
-    for s in skipped:
-        sys.stderr.write("SKIPPED (type in by hand): %s | %s | %s | id %s | %s | %s\n" % (
-            event["name"], s.get("placement", ""), s.get("player", ""), s["source_id"], s["source_url"], s["reason"]))
-    if not event["decks"]:
-        sys.exit("no decks with card details on " + args.page_url)
-    if args.dry_run:
-        sys.stdout.write(dump(event))
-        return 0
     doc = {"readme": README, "events": []}
     if os.path.exists(args.out):
         with io.open(args.out, encoding="utf-8") as f:
             doc = json.load(f)
+    page = fetch(args.page_url)
+    event, skipped = build_event(args.page_url, page, lambda u: json.loads(fetch(u)),
+                                 args.held_date, args.held_date_source, saved_decks(doc, args.page_url))
+    for s in skipped:
+        label = "KEPT SAVED COPY (fetch failed, saved deck unchanged)" if s["kept"] else "SKIPPED (type in by hand)"
+        sys.stderr.write("%s: %s | %s | %s | id %s | %s | %s\n" % (
+            label, event["name"], s["placement"], s["player"], s["source_id"], s["source_url"], s["reason"]))
+    missing = sum(1 for s in skipped if not s["kept"])
+    if not event["decks"]:
+        sys.exit("no decks with card details on " + args.page_url)
+    if args.dry_run:
+        sys.stdout.write(dump(event))
+        return 1 if missing else 0
     doc["readme"] = README
     merge_event(doc, event)
     with io.open(args.out, "w", encoding="utf-8", newline="\n") as f:
         f.write(dump(doc))
-    sys.stderr.write("%s: %d decks written, %d skipped\n" % (event["name"], len(event["decks"]), len(skipped)))
+    sys.stderr.write("%s: %d decks written, %d kept from the saved file, %d missing\n" % (
+        event["name"], len(event["decks"]), len(skipped) - missing, missing))
+    if missing:
+        sys.stderr.write("%d recipe(s) could not be fetched and are not in the file; type them in by hand\n" % missing)
+        return 1
     return 0
 
 

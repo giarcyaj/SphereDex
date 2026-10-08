@@ -1,9 +1,12 @@
 """Tests for the tournament deck transcriber. Saved fixtures only, no network."""
+import contextlib
+import io
 import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import fetch_tournament_decks as ftd
 
@@ -128,6 +131,111 @@ class BuildEventTests(unittest.TestCase):
             with open(out, "w", encoding="utf-8", newline="\n") as f:
                 f.write(text)
             self.assertEqual(json.loads(Path(out).read_text(encoding="utf-8")), json.loads(text))
+
+
+def recipe_for(rid):
+    """The saved recipe, relabelled so each id gives a different deck."""
+    payload = recipe()
+    payload["deck"]["ranking"] = "Place %d" % rid
+    payload["deck"]["handlename"] = "Player %d" % rid
+    payload["details"][0]["num"] = rid % 4 + 1
+    return payload
+
+
+class RerunTests(unittest.TestCase):
+    """main() run again on an event already in the file. Fetches are faked, no network."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = os.path.join(self.tmp.name, "decks.json")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def save(self, decks):
+        event, _ = ftd.build_event(PAGE_URL, page(), lambda url: recipe_for(int(url.rsplit("=", 1)[1])))
+        event["decks"] = [d for d in event["decks"] if d["source_id"] in decks]
+        other = {"name": "Other", "source_url": "https://other.invalid", "decks": []}
+        doc = {"readme": ftd.README, "events": [other, event]}
+        with open(self.out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(ftd.dump(doc))
+        return doc
+
+    def run_main(self, recipe_text):
+        def fake_fetch(url, tries=3):
+            if url == PAGE_URL:
+                return page()
+            text = recipe_text(int(url.rsplit("=", 1)[1]))
+            if isinstance(text, Exception):
+                raise text
+            return text
+
+        err = io.StringIO()
+        with mock.patch.object(ftd, "fetch", fake_fetch), contextlib.redirect_stderr(err):
+            code = ftd.main([PAGE_URL, "--out", self.out])
+        return code, err.getvalue(), json.loads(Path(self.out).read_text(encoding="utf-8"))
+
+    def test_a_saved_deck_that_fails_is_kept_unchanged_with_a_warning(self):
+        before = self.save([34, 35, 36])
+        old_35 = before["events"][1]["decks"][1]
+        failures = {
+            "network": OSError("timed out"),
+            "bad json": "<html>maintenance</html>",
+            "no success": json.dumps({"success": False}),
+            "no cards": json.dumps(dict(recipe_for(35), details=[])),
+        }
+        for label, failure in failures.items():
+            with self.subTest(label):
+                self.save([34, 35, 36])
+
+                def recipe_text(rid):
+                    if rid == 35:
+                        return failure
+                    fresh = recipe_for(rid)
+                    fresh["deck"]["handlename"] = "New %d" % rid
+                    return json.dumps(fresh)
+
+                code, err, after = self.run_main(recipe_text)
+                self.assertEqual(code, 0)
+                decks = after["events"][1]["decks"]
+                self.assertEqual([d["source_id"] for d in decks], [34, 35, 36])
+                self.assertEqual(decks[1], old_35)
+                self.assertEqual([decks[0]["player"], decks[2]["player"]], ["New 34", "New 36"])
+                self.assertEqual(after["events"][0]["name"], "Other")
+                self.assertIn("KEPT SAVED COPY", err)
+                self.assertIn("id 35", err)
+                self.assertIn("Place 35 | Player 35", err)
+                self.assertIn("Grand Challengers Cup", err)
+                self.assertNotIn("SKIPPED", err)
+
+    def test_a_new_recipe_that_fails_is_reported_and_exits_non_zero(self):
+        self.save([34, 36])
+
+        def recipe_text(rid):
+            return OSError("timed out") if rid == 35 else json.dumps(recipe_for(rid))
+
+        code, err, after = self.run_main(recipe_text)
+        self.assertEqual(code, 1)
+        self.assertEqual([d["source_id"] for d in after["events"][1]["decks"]], [34, 36])
+        self.assertIn("SKIPPED (type in by hand)", err)
+        self.assertIn("id 35", err)
+        self.assertNotIn("KEPT SAVED COPY", err)
+
+    def test_a_full_rerun_replaces_every_deck_in_page_order(self):
+        self.save([36, 34, 35])
+
+        def recipe_text(rid):
+            fresh = recipe_for(rid)
+            fresh["deck"]["handlename"] = "New %d" % rid
+            return json.dumps(fresh)
+
+        code, err, after = self.run_main(recipe_text)
+        self.assertEqual(code, 0)
+        decks = after["events"][1]["decks"]
+        self.assertEqual([d["source_id"] for d in decks], [34, 35, 36])
+        self.assertEqual([d["player"] for d in decks], ["New 34", "New 35", "New 36"])
+        self.assertNotIn("SKIPPED", err)
+        self.assertNotIn("KEPT", err)
 
 
 if __name__ == "__main__":
