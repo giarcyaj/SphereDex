@@ -10307,15 +10307,14 @@ label.acctsetrow { align-items:center; }
     var c=CARDS.filter(function(x){ return x.set===setKey; })[0];
     return c ? imgSrc(c) : "";
   }
-  // Which release the "What's new" slide describes. The web is always on the newest build, so it is this one.
-  // An iOS or Android build can be on a phone before its store offers it (TestFlight, review, the window
-  // before the server is bumped), so it shows its own lines only once the server says this platform's latest
-  // has reached it. Until then, or with no answer yet, it stays on the newest release the store does offer.
+  // Which release the "What's new" slide describes. A build can be live before the server is bumped for its
+  // platform: an iOS or Android build on a phone before its store offers it (TestFlight, review), and the web
+  // build once it deploys ahead of the backend. So every platform, web included, shows its own lines only once
+  // the server says this platform's latest has reached it. Until then, or with no answer yet, it stays on the
+  // newest release the server does offer.
   function featVersion(){
     var own=typeof APP_VERSION==="string" ? APP_VERSION : "";
-    var native=false;
-    try{ native=(typeof isIosApp==="function" && isIosApp()) || (typeof isAndroidApp==="function" && isAndroidApp()); }catch(e){}
-    if(!native || !own || typeof verNum!=="function") return own;
+    if(!own || typeof verNum!=="function") return own;
     var latest=typeof _latestAppVersion==="string" ? _latestAppVersion : "";
     if(latest && verNum(latest) >= verNum(own)) return own;
     var best="";

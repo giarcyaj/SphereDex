@@ -169,7 +169,8 @@ function app(opts) {
     imgSrc: (c) => 'img:' + c.id,
     showPage: (p) => shown.push(p), openSet: (k) => shown.push('set:' + k), toast: (m) => toasts.push(m),
     OFFICIAL_NEWS: 'https://example.test/news',
-    APP_VERSION: '1.11', verNum: (s) => parseFloat(String(s)) || 0, _latestAppVersion: undefined,
+    // The server reports this build as live by default, so its own release slide shows on every platform.
+    APP_VERSION: '1.11', verNum: (s) => parseFloat(String(s)) || 0, _latestAppVersion: '1.11',
     updateNotesFor: (v) => ['Note A for ' + v, 'Note B'],
     SET_ORDER: ['EBP01', 'EBP02', 'PR2026', 'LA02'],
     SET_META: {
@@ -282,12 +283,14 @@ test('latest update features stay on screen, and a newer store build says an upd
   const ahead = app({
     APP_VERSION: '2.0',
     _latestAppVersion: '1.10',
-    RELEASE_HIGHLIGHTS: { '2.0': ['Home headliners', 'Pal pages', 'Deck tools'] },
+    RELEASE_HIGHLIGHTS: { '2.0': ['Home headliners', 'Pal pages', 'Deck tools'], '1.10': ['Binder view', 'Set totals', 'Search'] },
     updateNotesFor: () => ['Price alerts', 'Sort', 'Filter'],
   });
   const own = ahead.api.slides().find((s) => s.kind === 'features');
   assert.ok(own, 'a build ahead of the store record still shows a features slide');
-  assert.deepEqual(JSON.parse(JSON.stringify(own.notes)), ['Home headliners', 'Pal pages', 'Deck tools']);
+  // Its own lines wait for the server, so it shows the newest release the server does offer.
+  assert.equal(own.version, '1.10');
+  assert.deepEqual(JSON.parse(JSON.stringify(own.notes)), ['Binder view', 'Set totals', 'Search']);
   assert.equal(ahead.api.slides().some((s) => s.kind === 'update'), false);
 });
 
@@ -551,7 +554,7 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   update.api.render();
   assert.match(update.host.innerHTML, /<button class="featslide[^"]*\brelease\b[\s\S]*?src="img\/UPDATE_2_1\.webp"/);
 
-  const fallback = app({ ...base, APP_VERSION: '9.9', _latestAppVersion: '' });
+  const fallback = app({ ...base, APP_VERSION: '9.9', _latestAppVersion: '9.9' });
   const own = fallback.api.slides().find((s) => s.kind === 'features');
   assert.ok(own, 'an unmapped version still shows a features slide');
   assert.equal(own.releaseArt, false);
@@ -623,13 +626,25 @@ test('in the iOS and Android apps the 2.4 slide waits until the store offers 2.4
   }
 });
 
-test('the web shows its own release slide whatever the store says', () => {
+test('on the web the 2.4 slide waits until the server says the web is on 2.4', () => {
   const t = releaseTables();
   for (const platform of [{}, { isIosApp: () => false, isAndroidApp: () => false }]) {
-    for (const latest of ['2.3', '2.4', '', undefined]) {
-      const s = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: latest }));
-      assert.equal(s.version, '2.4', 'web with store ' + latest);
-      assert.equal(s.art, 'img/UPDATE_2_4.webp');
+    const early = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: '2.3' }));
+    assert.ok(early, 'a features slide still shows');
+    assert.equal(early.version, '2.3');
+    assert.equal(early.title, 'What’s new in 2.3');
+    assert.deepEqual([...early.notes], [...t.RELEASE_HIGHLIGHTS['2.3'].slice(0, 3)]);
+    assert.equal(early.art, 'img/UPDATE_2_3.webp');
+
+    const live = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: '2.4' }));
+    assert.equal(live.version, '2.4');
+    assert.equal(live.title, 'What’s new in 2.4');
+    assert.equal(live.art, 'img/UPDATE_2_4.webp');
+
+    for (const unknown of ['', undefined]) {
+      const none = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: unknown }));
+      assert.equal(none.version, '2.3', 'web with no answer falls back to the newest release below this build');
+      assert.equal(none.art, 'img/UPDATE_2_3.webp');
     }
   }
 });
