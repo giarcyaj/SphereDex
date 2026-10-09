@@ -3406,8 +3406,8 @@ label.acctsetrow { align-items:center; }
   var LS_OK=(function(){ try{ localStorage.setItem("palvault-probe","1"); localStorage.removeItem("palvault-probe"); return true; }catch(e){ return false; } })();
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
-  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.1.
-  var APP_VERSION = "2.3";
+  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.
+  var APP_VERSION = "2.4";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -3442,6 +3442,11 @@ label.acctsetrow { align-items:center; }
       "Wishlist to spreadsheet \u00b7 and every missing list too, ready for eBay",
       "Hide what you have finished \u00b7 on Cards and on Sealed",
       "Counts where you need them \u00b7 copies, deck sizes, cards left and a release countdown"
+    ],
+    "2.4": [
+      "Japanese card names, and the scanner reads a Japanese card",
+      "Price history on its own page, and stock at a glance",
+      "Import from other trackers, and a Tournament staples filter"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
