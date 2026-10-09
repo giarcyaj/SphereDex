@@ -771,6 +771,7 @@
   .missingtab:hover { border-color:var(--accent); color:var(--accent-ink); }
   .missingtab.on { color:#082129; border-color:var(--accent); background:var(--accent); }
   .missingsort { display:flex; justify-content:flex-end; margin:-3px 0 12px; }
+  .missingsort .chip { margin-right:auto; }
   .missingsort select { max-width:190px; border:1.5px solid var(--line-strong); background:var(--surface); color:var(--ink); border-radius:8px; padding:7px 9px; font:inherit; font-size:.76rem; }
   .missinghero { background:var(--surface); border:1.5px solid var(--line-strong); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow); }
   .missingherohead { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
@@ -1555,6 +1556,8 @@ label.acctsetrow { align-items:center; }
   .rulestext { margin:0; font-size:.88rem; line-height:1.45; color:var(--ink); white-space:pre-wrap; }
   .kwnote { margin:8px 0 0; padding:8px 10px; border-radius:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-soft); font-size:.8rem; line-height:1.4; }
   .kwnote b { color:var(--ink); }
+  .tdline { margin:10px 0 0; color:var(--ink-soft); font-size:.8rem; line-height:1.4; }
+  .tdline .tdstaple { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; border:1px solid var(--line-strong); color:var(--ink); font:700 .7rem var(--font-display); white-space:nowrap; }
   .pcost { margin:12px 0 0; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); display:flex; flex-direction:column; gap:6px; }
   .pcost .prow { display:flex; justify-content:space-between; gap:12px; align-items:baseline; font-size:.9rem; }
   .pcost .prow b { text-align:right; }
@@ -2421,7 +2424,7 @@ label.acctsetrow { align-items:center; }
       <button class="missingtab deckui" type="button" role="tab" aria-selected="false" data-goal="deck">Deck</button>
       <button class="missingtab" type="button" role="tab" aria-selected="false" data-goal="wishlist">Wishlist</button>
     </div>
-    <div class="missingsort"><select id="missingSort" aria-label="Sort missing cards"><option value="priority">Sort: goal priority</option><option value="number">Sort: card number</option><option value="price">Sort: market estimate</option><option value="wish">Sort: wishlist first</option></select></div>
+    <div class="missingsort"><button class="chip solid" id="missingStaples" type="button" aria-pressed="false" hidden>Tournament staples</button><select id="missingSort" aria-label="Sort missing cards"><option value="priority">Sort: goal priority</option><option value="number">Sort: card number</option><option value="price">Sort: market estimate</option><option value="wish">Sort: wishlist first</option></select></div>
     <section class="missinghero" id="missingHero" aria-live="polite"></section>
     <h2 class="sech" id="missingListTitle" style="margin-top:24px">Cards to collect</h2>
     <div class="missinglist" id="missingList"></div>
@@ -2557,6 +2560,7 @@ label.acctsetrow { align-items:center; }
     </div>
     <div class="filterpanel" id="filterPanel" hidden>
       <div class="chiprow" id="viewChips"><span class="grouplab">Show</span></div>
+      <div class="chiprow" id="stapleChips" hidden><span class="grouplab">Tournament</span></div>
       <div class="chiprow" id="setChips"><span class="grouplab">Set</span></div>
       <div class="chiprow" id="prodChips" hidden><span class="grouplab">Product</span></div>
       <div class="chiprow" id="promoChips" hidden><span class="grouplab">Promo type</span></div>
@@ -3889,7 +3893,11 @@ label.acctsetrow { align-items:center; }
                       : '<div class="apill nolink">'+inner+'</div>';
   }
   function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
-  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, staples:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  // Tournament staples is the one filter kept per Collection mode (staples[colMode()]), so turning it on in
+  // Cards never silently narrows Wishlist, Favourites or Graded. Every other filter stays shared.
+  function staplesOn(mode){ return !!filters.staples[mode||colMode()]; }
+  function setStaples(on, mode){ filters.staples[mode||colMode()]=!!on; }
   var sortDir = (parseInt(lsGet("palvault-sortdir"),10)===-1) ? -1 : 1; // 1 = as-listed, -1 = reversed
   // Sealed prices are kept per edition (English / Japanese) because Japanese sealed sells for a lot less,
   // and a single blended eBay search skews the number. The dropdown swaps which edition's prices show.
@@ -4307,6 +4315,20 @@ label.acctsetrow { align-items:center; }
       });
       kwHost.hidden=!kwHost.querySelector(".chip");
     }
+    var stHost=$("stapleChips");
+    if(stHost){
+      var sb = chip("Tournament staples", "", "var(--accent)", staplesOn()); sb.classList.add("solid"); sb.id = "stapleChip"; sb.title = tdRuleText();
+      sb.onclick = function(){ setStaples(!staplesOn()); sb.setAttribute("aria-pressed", staplesOn()?"true":"false"); render(); };
+      stHost.appendChild(sb);
+      stHost.hidden=!tdAvailable();
+    }
+  }
+  // A live deck file arrived after the first paint: show or hide the staple chips and redraw any list using them.
+  function tdChanged(){
+    var st=$("stapleChips"); if(st) st.hidden=!tdAvailable();
+    if(!tdAvailable()){ filters.staples={}; missingStaples=false; }
+    if(typeof render==="function") render();
+    if(typeof renderMissing==="function") renderMissing();
   }
 
   function keysOn(obj){ return Object.keys(obj).filter(function(k){return obj[k];}); }
@@ -4424,6 +4446,7 @@ label.acctsetrow { align-items:center; }
       if (kws.length && !kws.some(function(k){ return (c.keywords||[]).indexOf(k)!==-1; })) return false;
       if (sets.length && sets.indexOf(c.set)===-1) return false;
       if (!promoTypeAllows(c, promos)) return false;
+      if (staplesOn(mode) && !tdIsStapleCard(c)) return false;
       if (cols.length && cols.indexOf(c.color)===-1) return false;
       if (kinds.length && kinds.indexOf(c.kind)===-1) return false;
       if (rares.length && rares.indexOf(c.rare)===-1) return false;
@@ -4525,9 +4548,16 @@ label.acctsetrow { align-items:center; }
     }
     try{ renderCountAndStats(cards); }catch(e){ reportError(e, "count/stats"); }
   }
+  // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
+  // estimate says it covers only the cards shown.
+  function wishCountText(shown, total, est){
+    if(shown>=total) return shown + " on your wishlist · est. " + est;
+    if(!shown) return "0 of " + total + " on your wishlist shown";
+    return shown + " of " + total + " on your wishlist · est. " + est + " for the " + shown + " shown";
+  }
   function renderCountAndStats(cards){
     var m=colMode();
-    if(m==="wish") $("countLine").textContent = cards.length + " on your wishlist · est. " + money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0));
+    if(m==="wish") $("countLine").textContent = wishCountText(cards.length, CARDS.filter(function(c){ return isWished(c.id); }).length, money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0)));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
     else if(sinceVisitOn()) $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " added since your last visit";
@@ -4861,6 +4891,7 @@ label.acctsetrow { align-items:center; }
       (statBoxes.length?'<div class="statline">'+statBoxes.join("")+'</div>':'')+
       rulesBlock(c)+
       kv+
+      tdSheetHtml(c)+
       dateAddedHtml+
       promoContext(c)+
       '<div class="meditor">'+
@@ -8078,8 +8109,9 @@ label.acctsetrow { align-items:center; }
   // Master set in card number order is the default. The Sphere is SphereDex's own reward layer rather than
   // anything the card game gives you, so leading with it assumed a priority most people have not chosen;
   // "every card I still need, in the order they are printed" is the question a collector actually arrives
-  // with. The Sphere is still one tab away.
+  // with. The Sphere is still one tab away. missingStaples is the Tournament staples filter, off until tapped.
   var missingGoal="master", missingChoice={set:"",rarity:"",pal:""}, missingSort="number";
+  var missingStaples=false;
   function missingItems(cards, extra){ return cards.filter(function(c){ return !ownsForCompletion(c); }).map(function(c){
     var item={card:c, need:1}; if(extra&&extra[c.id]) item.need=extra[c.id]; return item;
   }); }
@@ -8234,6 +8266,8 @@ label.acctsetrow { align-items:center; }
     var hero=$("missingHero"), list=$("missingList"); if(!hero||!list) return;
     var data=activeMissingGoal(), copy=missingCopy(missingGoal,data), items=(data&&data.items)||[];
     var sort=$("missingSort"); if(sort) sort.value=missingSort;
+    if(!tdAvailable()) missingStaples=false;
+    var stapleBtn=$("missingStaples"); if(stapleBtn){ stapleBtn.hidden=!tdAvailable(); stapleBtn.setAttribute("aria-pressed", missingStaples?"true":"false"); stapleBtn.title=tdRuleText(); }
     Array.prototype.forEach.call($("missingTabs").querySelectorAll(".missingtab"), function(button){ var on=button.getAttribute("data-goal")===missingGoal; button.classList.toggle("on",on); button.setAttribute("aria-selected",on?"true":"false"); });
     updateMissingTabCounts();
     $("missingIntro").textContent=missingGoal==="master"?"Every card you still need for your collection.":missingGoal==="sphere"?"Finish an official main-set list to earn its permanent Set Sphere.":missingGoal==="set"?"Your most achievable incomplete set, ready to finish.":missingGoal==="rarity"?"The closest rarity to completing in your collection.":missingGoal==="pal"?"The closest Pal to completing across its card variants.":missingGoal==="deck"?"The exact copies you still need for your active deck.":"Cards saved for a future collection goal.";
@@ -8263,8 +8297,11 @@ label.acctsetrow { align-items:center; }
       else showPage("collection");
     };
     if(!items.length){ list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"No cards to show for this goal yet.")+'</div>'; return; }
+    // The Tournament staples chip narrows this list only; the goal, its count and its exports stay whole.
+    var shown=tdFilter(items, missingStaples, function(item){ return item.card; });
+    if(!shown.length){ list.innerHTML='<div class="missingempty">No tournament staples left for this goal.</div>'; return; }
     list.innerHTML="";
-    items.sort(function(a,b){
+    shown.sort(function(a,b){
       if(missingSort==="number") return a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
       if(missingSort==="price") return mktOf(b.card.id)-mktOf(a.card.id) || a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
       if(missingSort==="wish") return (isWished(b.card.id)?1:0)-(isWished(a.card.id)?1:0) || a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
@@ -8314,7 +8351,7 @@ label.acctsetrow { align-items:center; }
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var staples=$("missingStaples"); if(staples) staples.onclick=function(){ missingStaples=!missingStaples; renderMissing(); }; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
   function deckToText(d){
@@ -9240,6 +9277,114 @@ label.acctsetrow { align-items:center; }
   upcomingUse(UPCOMING_CARDS_FALLBACK);
   /* UPCOMING CARDS END */
 
+  // Winning tournament decks. Live file docs/paldex/tournament-decks.json is fetched from
+  // TOURNAMENT_DECKS_URL (tools/fetch_tournament_decks.py writes it). TOURNAMENT_DECKS_FALLBACK is the copy
+  // shipped in the app for when that fetch fails. The card sheet line and the Tournament staples filter both
+  // read these counts: each deck counts a base card once, whatever its copies or zone, and a parallel
+  // printing (OSR, SSP, SP, SR...) shares its base card's figure, as CARD_TEXT does.
+  /* TOURNAMENT DECKS BEGIN */
+  var TOURNAMENT_DECKS_URL = "https://spheredex.app/paldex/tournament-decks.json";
+  var TOURNAMENT_DECKS_LS = "palvault-tournament-decks";
+  var TOURNAMENT_DECKS_TTL = 30*24*60*60*1000;
+  // The staple rule, and the only place it is set: a card is a tournament staple when it is in at least
+  // `share` of the transcribed winning decks AND in at least `minDecks` of them.
+  var TOURNAMENT_STAPLE = { share:0.25, minDecks:2 };
+  var TOURNAMENT_DECKS_FALLBACK = {"readme":"Winning deck recipes from official Palworld OFFICIAL CARD GAME events, transcribed from the official deck recipe pages by tools/fetch_tournament_decks.py. Every card count comes from the official recipe JSON; a deck with no card list is left out, never guessed. To add an event, run the script with the event page URL (it appends a new object to events). date is the day the event was held when date_kind is \"held\" (date_source says where that is stated), or the day the recipes were published when date_kind is \"published\". zone is the official card_type: pal, structure, gear, event, or the raw code for anything else. SphereDex counts a deck as containing a card when it lists it in any zone, and parallel printings share their base card's figure. Card names and decks belong to Pocketpair / Bushiroad.","events":[{"name":"Masters League 26/27 Kyoto","date":"2026-09-22","date_kind":"held","date_source":"https://x.com/PalworldOCG/status/2104481241642971382","published":"2026-10-05","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/ml26-27_kyoto","decks":[{"placement":"Block A Champion","player":"隼人","deck_code":"5BUN7","source_id":22,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=22","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":4,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block A Runner-up","player":"ケニウス","deck_code":"79DU3","source_id":23,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=23","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":3,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block A 3rd place","player":"れれれ","deck_code":"191J7","source_id":24,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=24","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"}]},{"placement":"Block B Champion","player":"とぅるえん","deck_code":"1JGK9","source_id":25,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=25","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block B Runner-up","player":"けーやん","deck_code":"2TR59","source_id":26,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=26","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":3,"zone":"pal"},{"number":"ETD02-014TSR","count":1,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":3,"zone":"structure"},{"number":"ETD01-008TSR","count":1,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD01-010","count":2,"zone":"gear"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-095OSR","count":1,"zone":"event"}]},{"placement":"Block B 3rd place","player":"Y","deck_code":"2WW5M","source_id":27,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=27","cards":[{"number":"EBP01-027","count":4,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Champion","player":"あぴ","deck_code":"35C6P","source_id":28,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=28","cards":[{"number":"EBP01-078","count":4,"zone":"pal"},{"number":"ETD02-012TSR","count":4,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025SSP","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028SR","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"ETD02-021TSR","count":4,"zone":"event"},{"number":"EBP01-046OSR","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Runner-up","player":"マルタ","deck_code":"3VQQK","source_id":29,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=29","cards":[{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":3,"zone":"pal"},{"number":"ETD02-012TSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":3,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C 3rd place","player":"Ura","deck_code":"3YVQX","source_id":30,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=30","cards":[{"number":"EBP01-001","count":2,"zone":"pal"},{"number":"EBP01-005","count":4,"zone":"pal"},{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-045","count":2,"zone":"gear"},{"number":"ETD01-010","count":4,"zone":"gear"},{"number":"EBP01-019","count":2,"zone":"gear"},{"number":"EBP01-023","count":1,"zone":"event"},{"number":"EBP01-046","count":1,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block D Champion","player":"横入れ失礼します","deck_code":"411R9","source_id":31,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=31","cards":[{"number":"EBP01-001","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-019","count":4,"zone":"gear"},{"number":"EBP01-023","count":4,"zone":"event"},{"number":"EBP01-047","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block D Runner-up","player":"kamori-k","deck_code":"4AGSB","source_id":32,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=32","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":1,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block D 3rd place","player":"にしおの手下B","deck_code":"41VA7","source_id":33,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=33","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]}]},{"name":"Grand Challengers Cup – Bushiroad EXPO 2026 in Kuala Lumpur","date":"2026-10-04","date_kind":"held","date_source":"https://en.bushiroad.com/events/bushiroad-expo-2026-ao/","published":"2026-10-07","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/grand-challengers-cup_expokl26","decks":[{"placement":"Champion","player":"Heng","deck_code":"2MVSF","source_id":34,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=34","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":3,"zone":"pal"},{"number":"EBP01-025OSR","count":1,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":3,"zone":"pal"},{"number":"EBP01-028SR","count":1,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":2,"zone":"gear"},{"number":"EBP01-044SR","count":1,"zone":"gear"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Runner-up","player":"Siongyik","deck_code":"1JUVM","source_id":35,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=35","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":1,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012TSR","count":3,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":3,"zone":"event"}]},{"placement":"3rd place","player":"Jdub","deck_code":"3XK47","source_id":36,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=36","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":1,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":3,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":2,"zone":"event"},{"number":"EBP01-095OSR","count":2,"zone":"event"}]}]}]};
+  var _tdStats = null;
+  var _tdReq = 0;
+  function tdBase(num){ return String(num==null?"":num).trim().toUpperCase().replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,""); }
+  // Each usable deck becomes the list of base numbers it contains. A deck with no cards, or with any row that
+  // is not a card number and a whole count of at least 1, is dropped whole rather than counted in part.
+  function tdNormalise(feed){
+    if(!feed || typeof feed!=="object" || !Array.isArray(feed.events)) return null;
+    var decks=[], seen=Object.create(null);
+    feed.events.forEach(function(ev){
+      if(!ev || typeof ev!=="object" || !Array.isArray(ev.decks)) return;
+      var evKey=String(ev.source_url||ev.name||"").trim();
+      ev.decks.forEach(function(d){
+        if(!d || typeof d!=="object" || !Array.isArray(d.cards)) return;
+        var bases=[], have=Object.create(null), ok=true;
+        d.cards.forEach(function(row){
+          var num=row && typeof row==="object" ? tdBase(row.number) : "", n=row && row.count;
+          if(!num || typeof n!=="number" || n<1 || Math.floor(n)!==n){ ok=false; return; }
+          if(!have[num]){ have[num]=1; bases.push(num); }
+        });
+        if(!ok || !bases.length) return;
+        var id=d.source_id!=null ? "#"+d.source_id : String(d.placement||"")+"\n"+String(d.player||"");
+        if(seen[evKey+"\n"+id]) return;
+        seen[evKey+"\n"+id]=1;
+        decks.push(bases);
+      });
+    });
+    return { decks:decks };
+  }
+  function tdCount(norm){
+    var counts=Object.create(null), total=0;
+    ((norm && norm.decks) || []).forEach(function(bases){
+      total++;
+      bases.forEach(function(b){ counts[b]=(counts[b]||0)+1; });
+    });
+    return { total:total, counts:counts };
+  }
+  // { n: decks with this card, m: decks transcribed }, or null when there is no data to speak from.
+  function tdFigure(card, stats){
+    if(stats===undefined) stats=_tdStats;
+    if(!stats || !stats.total) return null;
+    var base=tdBase(typeof card==="string" ? card : (card && (card.base || card.id)));
+    return { n: stats.counts[base]||0, m: stats.total };
+  }
+  function tdIsStaple(n, m){ return m>0 && n>=TOURNAMENT_STAPLE.minDecks && n>=TOURNAMENT_STAPLE.share*m; }
+  function tdIsStapleCard(card, stats){ var f=tdFigure(card, stats); return !!f && tdIsStaple(f.n, f.m); }
+  function tdAvailable(stats){ if(stats===undefined) stats=_tdStats; return !!(stats && stats.total); }
+  function tdRuleText(){
+    return "Cards in at least "+Math.round(TOURNAMENT_STAPLE.share*100)+"% of the winning decks from official events, and in at least "+TOURNAMENT_STAPLE.minDecks+" of them";
+  }
+  function tdPhrase(n, m){ return (n>0 && m>0) ? "In "+n+" of "+m+" winning decks at official events" : ""; }
+  // Nothing at all for a card no winning deck played, or when no deck data loaded.
+  function tdSheetHtml(card, stats){
+    var f=tdFigure(card, stats);
+    if(!f || !f.n) return "";
+    var staple=tdIsStaple(f.n, f.m) ? '<span class="tdstaple" title="'+esc(tdRuleText())+'">Tournament staple</span>' : "";
+    return '<p class="tdline">'+esc(tdPhrase(f.n, f.m))+staple+'</p>';
+  }
+  // The Tournament staples filter for any list: Cards and Wishlist pass cards, Missing passes {card} rows.
+  function tdFilter(list, on, cardOf, stats){
+    if(!on) return list;
+    return (list||[]).filter(function(x){ return tdIsStapleCard(cardOf ? cardOf(x) : x, stats); });
+  }
+  function tdReadCache(){
+    try{
+      var d=JSON.parse(lsGet(TOURNAMENT_DECKS_LS)||"null");
+      if(!d || !d.feed || (Date.now()-(+d.at||0))>=TOURNAMENT_DECKS_TTL) return null;
+      return tdNormalise(d.feed) ? d.feed : null;
+    }catch(e){ return null; }
+  }
+  function tdWriteCache(feed){
+    try{ lsSet(TOURNAMENT_DECKS_LS, JSON.stringify({at:Date.now(), feed:feed})); }catch(e){}
+  }
+  function tdUse(feed){
+    var norm=tdNormalise(feed);
+    if(!norm) return false;
+    _tdStats=tdCount(norm);
+    return true;
+  }
+  function tdLoad(){
+    if(!tdUse(tdReadCache() || TOURNAMENT_DECKS_FALLBACK)) _tdStats=null;
+    var req=++_tdReq;
+    if(typeof fetch!=="function") return;
+    fetch(TOURNAMENT_DECKS_URL, {cache:"no-store"}).then(function(res){
+      if(!res || !res.ok) throw new Error("tournament decks");
+      return res.json();
+    }).then(function(feed){
+      if(req!==_tdReq || !tdNormalise(feed)) return;
+      tdWriteCache(feed);
+      tdUse(feed);
+      try{ if(typeof tdChanged==="function") tdChanged(); }catch(e){}
+    }).catch(function(){});
+  }
+  tdUse(TOURNAMENT_DECKS_FALLBACK);
+  /* TOURNAMENT DECKS END */
+
   function palGroups(){
     var map = {}, order = [];
     // Seed every Pal from the dex (including future/not-yet-printed) so gap pals appear as 0-printing tiles.
@@ -9560,7 +9705,7 @@ label.acctsetrow { align-items:center; }
   function openRarity(r, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.rares[r]=true; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
@@ -10369,7 +10514,7 @@ label.acctsetrow { align-items:center; }
   // Enter the binder with the Missing filter already selected. Optional text narrows the result to one Pal.
   function openMissingCollection(query){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="missing";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="missing";
     filters.q=query||"";   // setting the box's value fires no input event, so the filter is set here too
     var input=$("search"); if(input) input.value=filters.q;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10382,7 +10527,7 @@ label.acctsetrow { align-items:center; }
     var set={};
     CARDS.forEach(function(c){ var t=addedAt(c.id); if(PREVIOUS_VISIT && t>PREVIOUS_VISIT && t<APP_OPENED_AT) set[c.id]=true; });
     SINCE_VISIT=set;
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     filters.q="";
     var input=$("search"); if(input) input.value="";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10392,7 +10537,7 @@ label.acctsetrow { align-items:center; }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -10405,7 +10550,7 @@ label.acctsetrow { align-items:center; }
     view=view||"all";
     clearSinceVisit();
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
     if(k==="PR2026" && promoTypeDef(promo)) filters.promos[promo]=true;   // a Releases promo box opens on its own type
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -10420,7 +10565,7 @@ label.acctsetrow { align-items:center; }
   function openSetGroup(sets, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
       var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
       filters.exps[x.key]=true; if(inSet.length<x.products.length) inSet.forEach(function(k){ filters.sets[k]=true; }); });
@@ -11453,7 +11598,7 @@ label.acctsetrow { align-items:center; }
     btn.onclick=function(){ var open=panel.hidden; panel.hidden=!open; btn.setAttribute("aria-expanded", open?"true":"false"); };
     $("doneFilters").onclick=function(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); };
     $("clearFilters").onclick=function(){
-      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.view="all";
+      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
       document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
       syncSetChips();
       var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -11463,6 +11608,8 @@ label.acctsetrow { align-items:center; }
   function updateFilterCount(){
     var n=0; ["exps","sets","colors","els","kinds","keywords","rares","promos"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
     if(filters.view!=="all") n++;
+    if(staplesOn()) n++;
+    var st=$("stapleChip"); if(st) st.setAttribute("aria-pressed", staplesOn()?"true":"false");   // the chip follows the mode now showing
     var fc=$("filterCount"); if(!fc) return; if(n){ fc.textContent=n; fc.hidden=false; } else { fc.hidden=true; }
   }
 
@@ -12192,7 +12339,7 @@ label.acctsetrow { align-items:center; }
   Array.prototype.forEach.call(document.querySelectorAll("[data-icon]"), function(el){ el.insertAdjacentHTML("afterbegin", icon(el.getAttribute("data-icon"))); });
   buildNavMenu(); (function(){ var at=document.querySelector(".tab.active"); updateNavMenu(at?at.getAttribute("data-page"):"home"); })();
   (function(){ var sb=$("setsBack"); if(sb) sb.onclick=function(){ if(colMode()!=="col"){ goBack(); return; } renderSetBrowse(); showCollGrid(false); window.scrollTo(0,0); }; })();
-  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); renderTcgNews(); if(typeof upcomingLoad==="function") upcomingLoad(); })();
+  (function(){ var _bb=$("bellBtn"); if(_bb) _bb.onclick=openNewsPopup; primeNewsBell(); renderTcgNews(); if(typeof upcomingLoad==="function") upcomingLoad(); if(typeof tdLoad==="function") tdLoad(); })();
   // Seed history with the starting page so the back button/gesture has somewhere to return to.
   (function(){ var at=document.querySelector(".tab.active"); _curPage = at ? at.getAttribute("data-page") : "home"; try{ history.replaceState({sd:_curPage}, ""); }catch(e){} _histReady=true; })();
   buildColSel();
