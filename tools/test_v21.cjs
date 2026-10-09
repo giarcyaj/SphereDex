@@ -1176,3 +1176,82 @@ test('the Missing page opens on the master set, in card number order', () => {
   assert.ok(!/class="missingtab on"[^>]*data-goal="sphere"/.test(source), 'the Sphere tab is no longer preselected');
   assert.match(source, /if\(missingGoal==="deck" && !playerToolsOn\(\)\) missingGoal="master";/);
 });
+
+// ---- the away card must not repeat itself -------------------------------------------------------------
+// Two of its five rows are facts about right now rather than events: a wishlist faller and a newer build.
+// Both reappeared on every open, so the card could sit on the same line for days and looked frozen after
+// closing and reopening the app. These guard the fix: a line already shown is never shown again.
+function awaySeenSandbox(stored, over) {
+  const box = awaySandbox(over);
+  let store = JSON.stringify(stored || []);
+  box.lsGet = (k) => (k === 'palvault-away-seen' ? store : '[]');
+  box.lsSet = (k, v) => { if (k === 'palvault-away-seen') store = v; };
+  box._awayRows = null;
+  box._awayRecorded = false;
+  // These are module level in the app, so extracting the functions alone leaves them undefined and every
+  // read would throw into its own catch and silently look like nothing had ever been seen.
+  box.AWAY_SEEN_KEY = 'palvault-away-seen';
+  box.AWAY_SEEN_MAX = 24;
+  box.AWAY_SEEN_MS = 60 * 24 * 60 * 60 * 1000;
+  box.readStore = () => JSON.parse(store);
+  vm.runInContext(['awaySeen', 'awayRemember', 'awayRowsOnce'].map(appFunction).join('\n'), box);
+  return box;
+}
+const NEWER = { APP_VERSION: '2.3', _latestAppVersion: '2.4' };
+
+test('a line the away card already showed is not shown again', () => {
+  const first = awaySeenSandbox([], NEWER);
+  const rows = first.awayRowsOnce();
+  assert.equal(rows.length, 1, 'a newer build is news the first time');
+  assert.match(rows[0].line, /2\.4 is available/);
+
+  // Record it the way the render does, then open again with that memory.
+  first.awayRemember(rows.map((r) => r.line));
+  const second = awaySeenSandbox(first.readStore(), NEWER);
+  assert.equal(second.awayRowsOnce().length, 0, 'the same line is not news twice');
+});
+
+test('a different line still gets through', () => {
+  const seen = [{ l: 'SphereDex 2.4 is available', at: Date.now() }];
+  const box = awaySeenSandbox(seen, { APP_VERSION: '2.3', _latestAppVersion: '2.5' });
+  const rows = box.awayRowsOnce();
+  assert.equal(rows.length, 1, 'a newer version than the one already announced is news again');
+  assert.match(rows[0].line, /2\.5 is available/);
+});
+
+test('the card does not vanish when Home repaints', () => {
+  // Home repaints on any change. Recomputing per paint would drop the rows the moment they were recorded.
+  const box = awaySeenSandbox([], NEWER);
+  const a = box.awayRowsOnce();
+  box.awayRemember(a.map((r) => r.line));
+  const b = box.awayRowsOnce();
+  assert.equal(b.length, a.length, 'the same session keeps showing what it is already showing');
+  assert.equal(b, a, 'and it is the very same list, worked out once');
+});
+
+test('a forgotten line becomes news again, and the store stays small', () => {
+  const old = Date.now() - 61 * 24 * 60 * 60 * 1000;
+  const box = awaySeenSandbox([{ l: 'SphereDex 2.4 is available', at: old }], NEWER);
+  assert.equal(box.awayRowsOnce().length, 1, 'a line older than 60 days is forgotten');
+
+  const many = [];
+  for (let i = 0; i < 40; i++) many.push('line ' + i);
+  const b2 = awaySeenSandbox([], NEWER);
+  b2.awayRemember(many);
+  assert.ok(b2.readStore().length <= 24, 'the store is capped, got ' + b2.readStore().length);
+});
+
+test('an unreadable store does not break the card', () => {
+  const box = awaySandbox(NEWER);
+  box.lsGet = () => '{not json';
+  box.lsSet = () => { throw new Error('storage full'); };
+  box._awayRows = null;
+  box.AWAY_SEEN_KEY = 'palvault-away-seen';
+  box.AWAY_SEEN_MAX = 24;
+  box.AWAY_SEEN_MS = 60 * 24 * 60 * 60 * 1000;
+  vm.runInContext(['awaySeen', 'awayRemember', 'awayRowsOnce'].map(appFunction).join('\n'), box);
+  // Length, not deepEqual: the array is built inside the vm realm, so it is never reference equal here.
+  assert.equal(box.awaySeen().length, 0, 'bad JSON reads as nothing seen');
+  assert.equal(box.awayRowsOnce().length, 1, 'and the card still works');
+  box.awayRemember(['x']);   // must not throw
+});

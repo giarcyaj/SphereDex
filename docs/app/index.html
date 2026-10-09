@@ -2216,6 +2216,11 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .ownpill{gap:0}.no-flexgap .ownpill>*+*{margin-left:6px}
   .no-flexgap .ggrow{gap:0}.no-flexgap .ggrow>*+*{margin-left:8px}
   .no-flexgap .ctopic{gap:0}.no-flexgap .ctopic>*+*{margin-left:10px}
+  /* These two put a bare TEXT NODE next to the dot, and an adjacent sibling selector cannot reach a text
+     node, so the leading dot carries the spacing itself. Checked in the browser with gap forced off. */
+  .no-flexgap .sdstock{gap:0}.no-flexgap .sdstock i{margin-right:8px}.no-flexgap .sdstock>*+*{margin-left:8px}
+  .no-flexgap .pxkey span{gap:0}.no-flexgap .pxkey span i{margin-right:6px}
+  .no-flexgap .pxstats div{gap:0}.no-flexgap .pxstats div>*+*{margin-left:7px}
 
   /* ---- ROW containers that WRAP: margin-left = column-gap on siblings,
           margin-bottom = row-gap on every child so wrapped rows are spaced ---- */
@@ -2230,6 +2235,8 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .sealedbar{gap:0}.no-flexgap .sealedbar>*+*{margin-left:24px}.no-flexgap .sealedbar>*{margin-bottom:24px}
   .no-flexgap .pcbtns{gap:0}.no-flexgap .pcbtns>*+*{margin-left:8px}.no-flexgap .pcbtns>*{margin-bottom:8px}
   .no-flexgap .collectedbar{gap:0}.no-flexgap .collectedbar>*+*{margin-left:10px}.no-flexgap .collectedbar>*{margin-bottom:10px}
+  .no-flexgap .pxkey{gap:0}.no-flexgap .pxkey>*+*{margin-left:14px}.no-flexgap .pxkey>*{margin-bottom:14px}
+  .no-flexgap .pxstats{gap:0}.no-flexgap .pxstats>*+*{margin-left:22px}.no-flexgap .pxstats>*{margin-bottom:8px}
   .no-flexgap .deckstats{gap:0}.no-flexgap .deckstats>*+*{margin-left:22px}.no-flexgap .deckstats>*{margin-bottom:22px}
   .no-flexgap .keychips{gap:0}.no-flexgap .keychips>*+*{margin-left:8px}.no-flexgap .keychips>*{margin-bottom:8px}
   .no-flexgap .trophyrow{gap:0}.no-flexgap .trophyrow>*+*{margin-left:14px}.no-flexgap .trophyrow>*{margin-bottom:10px}
@@ -9944,6 +9951,37 @@ label.acctsetrow { align-items:center; }
     }catch(e){}
     return rows;
   }
+  // Three of the five rows above are gated on the away window, but two are facts about RIGHT NOW: a
+  // wishlist faller compares today with yesterday, and a newer build keeps existing until it is installed.
+  // Those two reappeared on every single open, which is why the panel could sit on the same line for days
+  // and why it looked frozen after closing and reopening the app. So the panel now remembers what it has
+  // already told you and never says the same thing twice. Each line carries its own detail (the version,
+  // the card and the price it fell to), so a further fall or a newer build reads as a different line and
+  // still shows. Lines are forgotten after 60 days so the store cannot grow without bound.
+  var AWAY_SEEN_KEY="palvault-away-seen", AWAY_SEEN_MAX=24, AWAY_SEEN_MS=60*24*60*60*1000;
+  function awaySeen(){
+    try{ var a=JSON.parse(lsGet(AWAY_SEEN_KEY)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+  }
+  function awayRemember(lines){
+    try{
+      var now=Date.now(), cut=now-AWAY_SEEN_MS;
+      var keep=awaySeen().filter(function(x){ return x && x.l && (+x.at||0)>cut; });
+      lines.forEach(function(l){ keep.push({ l:l, at:now }); });
+      lsSet(AWAY_SEEN_KEY, JSON.stringify(keep.slice(-AWAY_SEEN_MAX)));
+    }catch(e){}
+  }
+  // Worked out once per session. Home repaints whenever anything changes, so recomputing would make the
+  // panel vanish the moment its lines were remembered.
+  var _awayRows=null, _awayRecorded=false;
+  function awayRowsOnce(){
+    if(_awayRows) return _awayRows;
+    // Expiry has to apply on the way IN as well as on the way out, or a line written 60 days ago would go
+    // on suppressing itself forever and "forgotten after 60 days" would not be true.
+    var cut=Date.now()-AWAY_SEEN_MS, seen={};
+    awaySeen().forEach(function(x){ if(x && x.l && (+x.at||0)>cut) seen[x.l]=1; });
+    _awayRows=awayRows().filter(function(r){ return r && !seen[r.line]; });
+    return _awayRows;
+  }
   // A home bar is a completion meter. Omit it when the card has no total to measure:
   // no deck, an empty deck, an empty wishlist, or collection value (a price, not a percent).
   function homeTrack(pct, on){
@@ -9994,9 +10032,11 @@ label.acctsetrow { align-items:center; }
       });
     }
     if(away){
-      var aRows=awayRows();
+      var aRows=awayRowsOnce();
       if(aRows.length){
         var head=aRows[0], rest=aRows.slice(1,4);
+        // Only what is on screen counts as told: rows past the fourth are not shown, so they stay news.
+        if(!_awayRecorded){ _awayRecorded=true; awayRemember(aRows.slice(0,4).map(function(r){ return r.line; })); }
         var bull=rest.length ? '<ul class="awaylist">'+rest.map(function(r){ return '<li><span>'+r.line+'</span></li>'; }).join("")+'</ul>' : "";
         var act=head.go ? '<div class="hcfoot"><span></span><div class="homeupdate-actions"><button class="homeaction" type="button" data-go="'+head.go+'">'+AWAY_GO[head.go]+'</button></div></div>' : "";
         away.hidden=false;
