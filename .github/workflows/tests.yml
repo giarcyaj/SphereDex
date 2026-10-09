@@ -105,6 +105,9 @@ jobs:
       - name: PalDex upcoming cards
         run: node tools/test_upcoming_cards.cjs
 
+      - name: Launch sold-price backfill
+        run: node tools/test_launch_sold_backfill.cjs
+
   python:
     name: Pipeline tests + bundle sync (Python)
     runs-on: ubuntu-latest
