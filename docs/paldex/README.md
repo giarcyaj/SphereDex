@@ -47,7 +47,7 @@ The phrase `Card upcoming in <set>` is shown only when that Pal has no cards in 
 
 `docs/paldex/tournament-decks.json` (live at `https://spheredex.app/paldex/tournament-decks.json`) holds the winning deck recipes from official events. The app loads it the same way as `upcoming-cards.json`: live file first, then the last saved copy, then the copy shipped in `src/paldeck.html` (`TOURNAMENT_DECKS_FALLBACK`).
 
-Add an event by running `python tools/fetch_tournament_decks.py <event page URL> --held-date YYYY-MM-DD --held-date-source <URL>`. It reads every `data-recipe-id` on the official page, fetches each recipe's JSON and appends one object to `events`. Never type counts by guesswork. A deck the script cannot read is left out and printed on stderr, to be typed in by hand from the official page, and the script exits with status 1. On a re-run, a deck already saved for that event that fails to download keeps its saved copy unchanged, with a warning on stderr.
+Add an event by running `python tools/fetch_tournament_decks.py <event page URL> --held-date YYYY-MM-DD --held-date-source <URL>`. It reads every `data-recipe-id` on the official page, fetches each recipe's JSON and appends one object to `events`. Never type counts by guesswork. A deck the script cannot read is left out and printed on stderr, to be typed in by hand from the official page, and the script exits with status 1. On a re-run, a deck already saved for that event that fails to download keeps its saved copy unchanged, with a warning on stderr. A re-run also keeps the event's saved `date`, `date_kind` and `date_source`; pass `--held-date` and/or `--held-date-source` only to replace them.
 
 | Field | Where | Rule |
 | --- | --- | --- |

@@ -129,6 +129,37 @@ test('parallel printings share the base card figure, both on the sheet and in a 
   assert.equal(ctx.tdSheetHtml({ id: 'EBP01-025OSR', base: 'EBP01-025' }, stats), ctx.tdSheetHtml({ id: 'EBP01-025', base: 'EBP01-025' }, stats));
 });
 
+test('the promo S parallel shares its base card figure in both directions', function() {
+  const ctx = loadApp();
+  assert.ok(CARD_IDS.has('EPR-002S') && CARD_IDS.has('EPR-002'), 'both printings are real catalogue cards');
+  // A deck playing the S printing counts toward the base card...
+  const sOnly = statsOf(ctx, feedOf([[deck(1, ['EPR-002S']), deck(2, ['EBP01-001'])]]));
+  assert.equal(sOnly.counts['EPR-002'], 1);
+  assert.equal(sOnly.counts['EPR-002S'], undefined);
+  assert.equal(ctx.tdFigure('EPR-002', sOnly).n, 1);
+  // ...and the base and the S printing read the same figure, the S card's own base included.
+  const both = statsOf(ctx, feedOf([[deck(1, ['EPR-002']), deck(2, ['EPR-002S']), deck(3, ['EPR-002', 'EPR-002S'])]]));
+  assert.equal(both.counts['EPR-002'], 3, 'one count per deck, even with both printings in it');
+  assert.equal(ctx.tdFigure('EPR-002S', both).n, 3);
+  assert.equal(ctx.tdFigure({ id: 'EPR-002S', base: 'EPR-002S' }, both).n, 3);
+  assert.equal(ctx.tdFigure('epr-002s', both).n, 3);
+});
+
+test('stripping the S touches nothing but a trailing S after the digits', function() {
+  const ctx = loadApp();
+  assert.equal(ctx.tdBase('EPR-002S'), 'EPR-002');
+  assert.equal(ctx.tdBase('EBP01-025SSP'), 'EBP01-025');
+  assert.equal(ctx.tdBase('EBP01-025SP'), 'EBP01-025');
+  assert.equal(ctx.tdBase('EBP01-025SR'), 'EBP01-025');
+  assert.equal(ctx.tdBase('ESOUL-001'), 'ESOUL-001');
+  assert.equal(ctx.tdBase('ESS01-001'), 'ESS01-001');
+  assert.equal(ctx.tdBase('EBP01-001'), 'EBP01-001');
+  // Every catalogue card still lands on a catalogue card's number.
+  CARD_IDS.forEach(function(id) {
+    assert.ok(CARD_IDS.has(ctx.tdBase(id)), id + ' -> ' + ctx.tdBase(id));
+  });
+});
+
 test('a card listed twice in one deck, or with its parallel, counts once', function() {
   const ctx = loadApp();
   const twice = deck(1, ['EBP01-095', 'EBP01-095', 'EBP01-095SR']);

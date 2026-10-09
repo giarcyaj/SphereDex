@@ -18,6 +18,9 @@ event already has one (with a warning on stderr). Otherwise it is left out and
 reported on stderr so it can be typed in by hand, and the script exits 1 so the
 gap is noticed. Nothing is ever guessed.
 
+A re-run keeps the event's saved held date, date_kind and date_source. Pass
+--held-date and/or --held-date-source only to replace them.
+
 card_type values, as the page script reads them:
   a Pals, b Structures, g Gear, e Events (labels from the page's DRM_FRONT config)
   m, t, r are aliases of a, g, e; p and s are not drawn on the official page.
@@ -140,20 +143,50 @@ def deck_from_detail(payload, recipe_id):
     return out, ""
 
 
-def saved_decks(doc, page_url):
-    """Decks already saved for this event page, by recipe id."""
+def saved_event(doc, page_url):
+    """The event already saved for this page, or {}."""
     for e in doc.get("events") or []:
-        if e.get("source_url") == page_url:
-            return {d["source_id"]: d for d in e.get("decks") or [] if isinstance(d, dict) and "source_id" in d}
+        if isinstance(e, dict) and e.get("source_url") == page_url:
+            return e
     return {}
 
 
-def build_event(page_url, page, get_json, held_date="", held_source="", saved=None):
+def saved_decks(doc, page_url):
+    """Decks already saved for this event page, by recipe id."""
+    e = saved_event(doc, page_url)
+    return {d["source_id"]: d for d in e.get("decks") or [] if isinstance(d, dict) and "source_id" in d}
+
+
+def event_dates(published, held_date="", held_source="", saved_event=None):
+    """date, date_kind and date_source for the event.
+
+    A held date is a fact somebody looked up, and the recipe page does not carry
+    it, so a re-run keeps the saved one. --held-date replaces the date and
+    --held-date-source replaces the source. A new held date with no new source
+    drops the saved source, which stated a different day.
+    """
+    old = saved_event or {}
+    if held_date:
+        out = {"date": held_date, "date_kind": "held"}
+        source = held_source or (old.get("date_source") if old.get("date") == held_date else "")
+    elif old.get("date_kind") == "held" and old.get("date"):
+        out = {"date": old["date"], "date_kind": "held"}
+        source = held_source or old.get("date_source") or ""
+    else:
+        return {"date": published, "date_kind": "published"}
+    if source:
+        out["date_source"] = source
+    return out
+
+
+def build_event(page_url, page, get_json, held_date="", held_source="", saved=None, saved_event=None):
     """Event dict plus the decks that could not be fetched (each a dict with the reason).
 
     saved maps recipe id to the deck already in the file for this event. A recipe
     that fails but is in saved keeps that deck unchanged (its skip entry has
     kept=True), so a re-run never drops a deck because of a bad download.
+    saved_event is the event already in the file, whose held date is kept unless
+    held_date or held_source replace it (see event_dates).
     """
     title = parse_title(page)
     published = parse_published(page)
@@ -179,9 +212,8 @@ def build_event(page_url, page, get_json, held_date="", held_source="", saved=No
                 continue
             deck = old
         decks.append(deck)
-    event = {"name": title, "date": held_date or published, "date_kind": "held" if held_date else "published"}
-    if held_date and held_source:
-        event["date_source"] = held_source
+    event = {"name": title}
+    event.update(event_dates(published, held_date, held_source, saved_event))
     event["published"] = published
     event["source_url"] = page_url
     event["decks"] = decks
@@ -224,7 +256,8 @@ def main(argv=None):
             doc = json.load(f)
     page = fetch(args.page_url)
     event, skipped = build_event(args.page_url, page, lambda u: json.loads(fetch(u)),
-                                 args.held_date, args.held_date_source, saved_decks(doc, args.page_url))
+                                 args.held_date, args.held_date_source, saved_decks(doc, args.page_url),
+                                 saved_event(doc, args.page_url))
     for s in skipped:
         label = "KEPT SAVED COPY (fetch failed, saved deck unchanged)" if s["kept"] else "SKIPPED (type in by hand)"
         sys.stderr.write("%s: %s | %s | %s | id %s | %s | %s\n" % (

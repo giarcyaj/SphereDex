@@ -3213,6 +3213,8 @@ label.acctsetrow { align-items:center; }
         <div class="segrow" id="scanEdition">
           <button type="button" class="seg" data-edition="1">1st</button>
           <button type="button" class="seg" data-edition="2">2nd</button>
+          <button type="button" class="seg" data-edition="en" hidden>English</button>
+          <button type="button" class="seg" data-edition="jp">Japanese</button>
         </div>
       </div>
       <div class="scanfield" id="scanTypeRow">
@@ -4511,8 +4513,12 @@ label.acctsetrow { align-items:center; }
     CARDS.forEach(function(c){ (c.keywords||[]).forEach(function(k){ if(gloss[k] && gloss[k].text) seen[k]=1; }); });
     return Object.keys(gloss).filter(function(k){ return seen[k]; });
   }
+  // Both languages, whichever is on display, so an English name or effect phrase still finds the card in
+  // Japanese mode (card, deck and global search all read this).
   function cardSearchText(c){
-    return ((c&&c.name)||"")+" "+((c&&c.id)||"")+" "+((c&&c.rules)||"")+" "+(((c&&c.keywords)||[]).join(" "));
+    c=c||{};
+    var nm=c.name||"", en=c.nameEn||"", rl=c.rules||"", ren=c.rulesEn||"";
+    return nm+" "+(en&&en!==nm?en+" ":"")+(c.id||"")+" "+rl+" "+(ren&&ren!==rl?ren+" ":"")+((c.keywords||[]).join(" "));
   }
   function cardMatchesQuery(c, q){
     q=fold(String(q==null?"":q).trim());
@@ -5527,7 +5533,7 @@ label.acctsetrow { align-items:center; }
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
   }
-  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); var ps=$("paScrim"); if(ps) ps.hidden=true; var px=$("pxScrim"); if(px) px.hidden=true; }   // the price alert dialog belongs to the sheet
+  function closeModal(){ detailGen++; scrim.classList.remove("open"); resetKb(); var ps=$("paScrim"); if(ps) ps.hidden=true; dropPriceChart(); }   // the price alert dialog and the price chart belong to the sheet
   // Every sheet shares one .modal, which keeps its old scroll offset: start a newly opened sheet at the top
   // (a re-render of the same sheet, like a qty step or stock alert tap, keeps its place). Call after adding "open".
   var _sheetKey="";
@@ -6792,6 +6798,8 @@ label.acctsetrow { align-items:center; }
         if(!j || j.uptodate || !j.version) return;
         try{ lsSet(REL_KEY, JSON.stringify(j)); }catch(e){}
         if(!applyReleases(j)) return;
+        // A product this just added missed the image feed if the feed landed first, so apply it again.
+        try{ if(typeof reapplySealedImages==="function") reapplySealedImages(); }catch(e){}
         try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
         try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
         try{ if(typeof renderSetBrowse==="function") renderSetBrowse(); }catch(e){}
@@ -6810,10 +6818,30 @@ label.acctsetrow { align-items:center; }
   var SEALED_IMAGES_LS = "palvault-sealed-images";
   var SEALED_IMAGES_TTL = 30*24*60*60*1000;
   var SEALED_IMAGES_FALLBACK = {"updated_at":"2026-10-09T10:45:00Z","products":[{"id":"box-bp02","edition":"en","box":"https://spheredex.app/sealed/img/BOX_EBP02.webp","source_url":"https://en.palworld-official-cardgame.com/media-kit","official":true},{"id":"box-bp03","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp","source_url":"https://en.palworld-official-cardgame.com/products/bp03","official":true},{"id":"box-ebp01-2e","edition":"en","box":"https://spheredex.app/sealed/img/BOX_BANNER_EBP01_2E.webp","source_url":"https://x.com/PalworldOCG_EN/status/2095723842740314301","official":true},{"id":"pack-bp02","edition":"en","box":"https://spheredex.app/sealed/img/PACK_EBP02.webp","source_url":"https://en.palworld-official-cardgame.com/media-kit","official":true},{"id":"pack-bp03","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp","source_url":"https://en.palworld-official-cardgame.com/products/bp03","official":true},{"id":"ss-vol1","edition":"en","box":"https://spheredex.app/sealed/img/BOX_SS01.webp","source_url":"https://en.palworld-official-cardgame.com/news/post-13","official":true,"replace":true},{"id":"td-ea-bp","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_TD04.webp","source_url":"https://en.palworld-official-cardgame.com/products/td04","official":true}]};
+  // The feed last applied, kept so products that /api/releases adds later still get their pictures.
+  var _sealedImagesFeed = null;
+  // Replacement pictures that have actually loaded on this device, by URL.
+  var _sealedImgLoaded = {};
   function sealedFeedUrl(u){ return typeof u==="string" && /^https:\/\/spheredex\.app\/sealed\/img\/[A-Z0-9_]+\.webp$/.test(u); }
+  function sealedImagesRepaint(){
+    try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
+    try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
+  }
+  // The built in picture has to work on a fresh install with no internet, so a replace:true entry that would
+  // cover a picture already on the tile waits until its replacement has loaded. Offline it never loads, and
+  // the bundled picture stays. With no Image to load into, nothing is replaced.
+  function sealedImgPreload(url, done){
+    if(typeof Image!=="function") return;
+    try{
+      var im=new Image();
+      im.onload=function(){ _sealedImgLoaded[url]=true; done(); };
+      im.src=url;
+    }catch(e){}
+  }
   function applySealedImages(feed){
     if(!feed || !Array.isArray(feed.products)) return false;
     window.CARD_IMG=window.CARD_IMG||{};
+    _sealedImagesFeed=feed;
     var changed=false;
     feed.products.forEach(function(e){
       if(!e || !e.id) return;
@@ -6823,12 +6851,26 @@ label.acctsetrow { align-items:center; }
         var url=e[field]; if(!sealedFeedUrl(url)) return;
         var key=url.slice(url.lastIndexOf("/")+1, -5), prev=window.CARD_IMG[key];
         if(prev && prev!==url && e.replace!==true) return;
-        if(prev!==url){ window.CARD_IMG[key]=url; changed=true; }
-        if((!p[field] || e.replace===true) && p[field]!==key){ p[field]=key; changed=true; }
+        var put=function(){
+          var did=false;
+          if(window.CARD_IMG[key]!==url){ window.CARD_IMG[key]=url; did=true; }
+          if((!p[field] || e.replace===true) && p[field]!==key){ p[field]=key; did=true; }
+          return did;
+        };
+        var cur=p[field] ? window.CARD_IMG[p[field]] : "";
+        var covers=e.replace===true && ((prev && prev!==url) || (cur && p[field]!==key));
+        if(covers && !_sealedImgLoaded[url]){
+          sealedImgPreload(url, function(){ if(_sealedImagesFeed===feed && put()) sealedImagesRepaint(); });
+          return;
+        }
+        if(put()) changed=true;
       });
     });
     return changed;
   }
+  // fetchReleases calls this after it adds products, which may arrive after the feed did. It repaints
+  // straight after, so this does not.
+  function reapplySealedImages(){ return !!_sealedImagesFeed && applySealedImages(_sealedImagesFeed); }
   function fetchSealedImages(){
     var cached=null;
     try{ var d=JSON.parse(lsGet(SEALED_IMAGES_LS)||"null");
@@ -6839,8 +6881,7 @@ label.acctsetrow { align-items:center; }
       if(!j || !Array.isArray(j.products)) return;
       try{ lsSet(SEALED_IMAGES_LS, JSON.stringify({at:Date.now(), feed:j})); }catch(e){}
       if(!applySealedImages(j)) return;
-      try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
-      try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
+      sealedImagesRepaint();
     }).catch(function(){});
   }
   /* SEALED IMAGES END */
@@ -7137,15 +7178,20 @@ label.acctsetrow { align-items:center; }
   // What the stock checker last saw, for this device's market. Fetched once and reused: it changes every
   // 30 minutes at most, so re asking on every sheet open would be noise.
   var STOCK={ region:"", asOf:null, state:null, at:0 };
+  var _stockReq=0;
   function fetchStock(){
     var base=apiBase(); if(!base) return Promise.resolve(null);
     var reg=ebayReg();
     // Keep a reading for 10 minutes, and drop it the moment the market changes.
     if(STOCK.state && STOCK.region===reg && (Date.now()-STOCK.at)<600000) return Promise.resolve(STOCK);
+    var req=++_stockReq;
     return fetch(base+"/api/stock?region="+encodeURIComponent(reg), {cache:"no-store"})
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         if(!j || !j.state) return null;
+        // An answer for a market that is no longer selected, or one overtaken by a newer request, is dropped
+        // rather than stored over the current reading.
+        if(req!==_stockReq || ebayReg()!==reg) return null;
         STOCK={ region:reg, asOf:j.asOf||null, state:j.state, at:Date.now() };
         return STOCK;
       }).catch(function(){ return null; });
@@ -7159,6 +7205,7 @@ label.acctsetrow { align-items:center; }
   function stockGlance(id, pre){
     var st=STOCK.state;
     if(!st) return null;                                   // nothing fetched yet
+    if(STOCK.region!==ebayReg()) return null;              // a reading for another market says nothing here
     var old=false;
     if(STOCK.asOf){
       var t=Date.parse(String(STOCK.asOf).replace(" ","T")+"Z");
@@ -7180,6 +7227,14 @@ label.acctsetrow { align-items:center; }
     if(!g) return "";
     return '<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(g.note)+'</small></p>';
   }
+  // Fills the stock line once the fetch lands, but only on the sheet it was asked for: the line carries the
+  // product id, so a late answer for a product that has since been closed never paints another one.
+  function stockPaint(id, pre){
+    var el=$("sdStock");
+    if(!el || el.getAttribute("data-pid")!==String(id)) return false;
+    el.innerHTML=stockGlanceHtml(id, pre);
+    return true;
+  }
   function openSealedDetail(p){
     var title=p.set||p.name, typ=(p.set&&p.name)?p.name:"", detail=p.sub||"";
     var subline=typ?(typ+(detail?" · "+detail:"")):detail;
@@ -7193,7 +7248,7 @@ label.acctsetrow { align-items:center; }
           '<h2>'+esc(title)+'</h2>'+
           '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Preorder</span></div>'+
           '<div class="predate big">Releases '+esc(sealDate(p)||"soon")+'</div>'+
-          '<div id="sdStock">'+stockGlanceHtml(p.id, true)+'</div>'+
+          '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, true)+'</div>'+
           '<div class="meditor">'+
             '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
@@ -7204,7 +7259,7 @@ label.acctsetrow { align-items:center; }
       var c0=$("mClose"); if(c0) c0.onclick=function(){ dismissOverlay(); };
       var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when you can pre order this.":"Stock alert removed."); };
       var w0=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, w0); if(!w0) openOverlay(closeModal);
-      fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id, true); });
+      fetchStock().then(function(){ stockPaint(p.id, true); });
       return;
     }
     var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
@@ -7226,7 +7281,7 @@ label.acctsetrow { align-items:center; }
         '<div class="bubpanel priceui" id="sdPanelSold" hidden><div class="glabel"><span>Last 5 sold</span><a class="ebaysearch" href="'+sealEbayUrl(p,true)+'" target="_blank" rel="noopener">'+icon('search')+' Search sold on eBay ↗</a></div><div class="salesavg" id="sdSoldAvg"></div><div id="sdSoldRows">'+sealRowsHtml(pr.sales, "sold")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
-        '<div id="sdStock">'+stockGlanceHtml(p.id, false)+'</div>'+
+        '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, false)+'</div>'+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
           '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
@@ -7255,7 +7310,7 @@ label.acctsetrow { align-items:center; }
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, _wasOpen); if(!_wasOpen) openOverlay(closeModal);
     // The sheet renders at once with whatever stock reading is already in hand, then fills the line in when
     // the fetch lands. Nothing waits on the network to open.
-    fetchStock().then(function(){ var el=$("sdStock"); if(el) el.innerHTML=stockGlanceHtml(p.id, false); });
+    fetchStock().then(function(){ stockPaint(p.id, false); });
   }
 
   // ---- Portfolio value-over-time chart ----
@@ -7705,13 +7760,32 @@ label.acctsetrow { align-items:center; }
       + grid + labels + series + xlab + '</svg>' + key + stats
       + (src ? '<p class="pxsrc">'+esc(src)+'</p>' : '');
   }
-  // Done, the scrim itself and Escape all close it; the back button is handled with the other overlays.
+  // The chart is a full overlay with its own history entry (openOverlay). Done, X, the scrim, Escape and Back
+  // all close it through dismissOverlay, so that entry is consumed and no extra Back step is left behind.
+  function hidePriceChart(){ var sc=$("pxScrim"); if(sc) sc.hidden=true; }
+  function shutPriceChart(){
+    var sc=$("pxScrim"); if(!sc || sc.hidden) return;
+    var top=_ovStack[_ovStack.length-1];
+    if(top && top.hide===hidePriceChart){ dismissOverlay(); return; }
+    hidePriceChart();
+  }
+  // Closing the card sheet underneath also closes the chart and consumes its entry, without the popstate
+  // that consumes it closing anything else.
+  function dropPriceChart(){
+    var sc=$("pxScrim"); if(sc) sc.hidden=true;
+    for(var i=_ovStack.length-1;i>=0;i--){
+      if(_ovStack[i].hide!==hidePriceChart) continue;
+      var it=_ovStack.splice(i,1)[0];
+      if(it.hist){ _pxSkipPop++; try{ history.back(); }catch(e){ _pxSkipPop--; } }
+      return;
+    }
+  }
+  var _pxSkipPop=0;
   function wirePriceChart(){
     var sc=$("pxScrim"); if(!sc || sc._wired) return; sc._wired=true;
-    var shut=function(){ sc.hidden=true; };
-    var done=$("pxFullClose"); if(done) done.onclick=shut;
-    var x=$("pxFullX"); if(x) x.onclick=shut;
-    sc.addEventListener("click", function(e){ if(e.target===sc) shut(); });
+    var done=$("pxFullClose"); if(done) done.onclick=shutPriceChart;
+    var x=$("pxFullX"); if(x) x.onclick=shutPriceChart;
+    sc.addEventListener("click", function(e){ if(e.target===sc) shutPriceChart(); });
   }
   function openPriceChart(c){
     var sc=$("pxScrim"); if(!sc || !c) return;
@@ -7720,8 +7794,9 @@ label.acctsetrow { align-items:center; }
     if(sub) sub.textContent="Price history, "+(priceMode()==="sold"?"last sold":"live listings")+" and sold together.";
     if(body) body.innerHTML=fullPriceChartHtml(c.id);
     wirePriceChart();
+    var was=!sc.hidden;
     sc.hidden=false;
-    pushAppEntry({sd:_curPage, ov:_ovStack.length});
+    if(!was) openOverlay(hidePriceChart);
   }
   function priceTrendHtml(t){
     var head="";
@@ -8128,8 +8203,11 @@ label.acctsetrow { align-items:center; }
       main+=qty;
       if(c.sub==="Lucky Pal") lucky+=qty;
       if(c.color && c.color!=="Colorless") colors[c.color]=true;
-      names[c.name]=(names[c.name]||0)+qty;
-      if(textAllowsAnyNumber(c.rules)) anyName[c.name]=true;
+      // The rules are checked in English whatever language is on display: the "any number" sentence is
+      // matched in English, and the same name rule must not depend on a setting.
+      var nm=c.nameEn||c.name;
+      names[nm]=(names[nm]||0)+qty;
+      if(textAllowsAnyNumber(typeof c.rulesEn==="string"?c.rulesEn:c.rules)) anyName[nm]=true;
     });
     if(main!==50) issues.push("Main deck needs "+Math.abs(50-main)+" "+(main<50?"more":"fewer")+" card"+(Math.abs(50-main)===1?"":"s")+" (currently "+main+" / 50).");
     if(souls!==10) issues.push("Soul deck needs "+Math.abs(10-souls)+" "+(souls<10?"more":"fewer")+" Soul card"+(Math.abs(10-souls)===1?"":"s")+" (currently "+souls+" / 10).");
@@ -8256,7 +8334,7 @@ label.acctsetrow { align-items:center; }
       if(!item||!item.card) return;
       var need=+item.need||0; if(!(need>0)) return;
       var p=tcgplayerSetNumber(item.card.set, item.card.id);
-      rows.push({qty:need, name:item.card.name, set:p.set, number:p.number});
+      rows.push({qty:need, name:item.card.nameEn||item.card.name, set:p.set, number:p.number});
     });
     return rows;
   }
@@ -8284,9 +8362,10 @@ label.acctsetrow { align-items:center; }
     CARDS.forEach(function(c){ if(isWished(c.id)) out.push({card:c, need:1}); });
     return out;
   }
+  // TCGplayer lists cards by their English names, so the export uses nameEn in every display language.
   function tcgRowOf(item){
     var p=tcgplayerSetNumber(item.card.set, item.card.id);
-    return {qty:item.need, name:item.card.name, set:p.set, number:p.number};
+    return {qty:item.need, name:item.card.nameEn||item.card.name, set:p.set, number:p.number};
   }
   function missingTcgRows(goal, data){ return missingWantItems(goal, data).map(tcgRowOf); }
   function wishlistTcgRows(){ return wishlistWantItems().map(tcgRowOf); }
@@ -9165,7 +9244,7 @@ label.acctsetrow { align-items:center; }
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
-    if(!closed){ var found=["upScrim","globalSearchScrim","pxScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -9174,16 +9253,19 @@ label.acctsetrow { align-items:center; }
   // back a page. Capture phase, so it beats the inner Esc handlers and nothing is closed twice.
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && backAction()){ e.preventDefault(); e.stopPropagation(); } }, true);
   // Device back / swipe-back: close the top full-screen overlay, else a lightweight popup, else go back a page.
-  window.addEventListener("popstate", function(ev){
+  function onAppPopState(ev){
     if(_navDepth>0) _navDepth--;   // the browser consumed one of the entries this app pushed
+    // The price chart's entry, consumed by dropPriceChart when the sheet under it closed: nothing to close.
+    if(_pxSkipPop>0){ _pxSkipPop--; return; }
     // The price alert dialog sits on the card sheet but owns no history entry: back closes just the dialog
-    // and puts the sheet's entry back, so _ovStack and history stay in step.
-    var px=$("pxScrim"); if(px && !px.hidden){ px.hidden=true; pushAppEntry({sd:_curPage, ov:_ovStack.length}); return; }
+    // and puts the sheet's entry back, so _ovStack and history stay in step. The price chart owns its own
+    // entry (openOverlay), so it is closed by the _ovStack pop below like the other full overlays.
     var ps=$("paScrim"); if(ps && !ps.hidden){ ps.hidden=true; pushAppEntry({sd:_curPage, ov:_ovStack.length}); return; }
     if(_ovStack.length){ var top=_ovStack.pop(); try{ top.hide(); }catch(e){} return; }
     if(closeTopOverlay()){ pushAppEntry({sd:_curPage}); return; }
-    showPage((ev.state && ev.state.sd) || "home", true);
-  });
+    showPage((ev && ev.state && ev.state.sd) || "home", true);
+  }
+  window.addEventListener("popstate", onAppPopState);
   // ---- Dropdown nav (mobile / app): built from the same tabs, icon + text ----
   function closeNavMenu(){ var l=$("navList"); if(l) l.hidden=true; [$("navTrigger"),$("desktopNavTrigger")].forEach(function(t){ if(t) t.setAttribute("aria-expanded","false"); }); }
   function navPages(){ var all=[]; Array.prototype.forEach.call(document.querySelectorAll("#tabs .tab"), function(tab){ var p=tab.getAttribute("data-page"); if(!p || p==="account") return; if(!playerToolsOn() && (p==="decks" || p==="match")) return; all.push({key:p,icon:tab.getAttribute("data-icon"),label:(tab.querySelector(".tablabel")||{}).textContent||p}); }); return all; }
@@ -9591,8 +9673,10 @@ label.acctsetrow { align-items:center; }
   function palImgSrc(g){ var f=PAL_ART[g.name]; if(f) return "img/"+f; if(g.hero) return imgSrc(g.hero); return ""; }
   var paldexFilter = "all", paldexSort = "dex", paldexQuery = "", paldexVariant = "all", paldexView = (function(){ try{ return localStorage.getItem("palvault-paldex-view")||"grid"; }catch(e){ return "grid"; } })();
   // Base Pal name: "Jormuntide - Surging Sea Serpent" -> "Jormuntide". The en dash is what separates the
-  // Pal from its card title, so this also decides how the Missing screen's Pal goal groups cards.
-  function palKey(c){ return String((c&&c.name)||"").split(" \u2013 ")[0].trim(); }
+  // Pal from its card title, so this also decides how the Missing screen's Pal goal groups cards. It reads
+  // the English name whatever language is on display: a Japanese name puts the card title before the dash
+  // and the Pal after it, and PALDEX_NO, PAL_ART and saved goals are all keyed by the English Pal.
+  function palKey(c){ return String((c&&(c.nameEn||c.name))||"").split(" \u2013 ")[0].trim(); }
   // Upcoming Pal cards. Live file docs/paldex/upcoming-cards.json is fetched from
   // UPCOMING_CARDS_URL. Field contract: docs/paldex/README.md. UPCOMING_CARDS_FALLBACK
   // is the copy shipped in the app for when that fetch fails.
@@ -9735,7 +9819,9 @@ label.acctsetrow { align-items:center; }
   var TOURNAMENT_DECKS_FALLBACK = {"readme":"Winning deck recipes from official Palworld OFFICIAL CARD GAME events, transcribed from the official deck recipe pages by tools/fetch_tournament_decks.py. Every card count comes from the official recipe JSON; a deck with no card list is left out, never guessed. To add an event, run the script with the event page URL (it appends a new object to events). date is the day the event was held when date_kind is \"held\" (date_source says where that is stated), or the day the recipes were published when date_kind is \"published\". zone is the official card_type: pal, structure, gear, event, or the raw code for anything else. SphereDex counts a deck as containing a card when it lists it in any zone, and parallel printings share their base card's figure. Card names and decks belong to Pocketpair / Bushiroad.","events":[{"name":"Masters League 26/27 Kyoto","date":"2026-09-22","date_kind":"held","date_source":"https://x.com/PalworldOCG/status/2104481241642971382","published":"2026-10-05","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/ml26-27_kyoto","decks":[{"placement":"Block A Champion","player":"隼人","deck_code":"5BUN7","source_id":22,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=22","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":4,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block A Runner-up","player":"ケニウス","deck_code":"79DU3","source_id":23,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=23","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":3,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block A 3rd place","player":"れれれ","deck_code":"191J7","source_id":24,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=24","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"}]},{"placement":"Block B Champion","player":"とぅるえん","deck_code":"1JGK9","source_id":25,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=25","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block B Runner-up","player":"けーやん","deck_code":"2TR59","source_id":26,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=26","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":3,"zone":"pal"},{"number":"ETD02-014TSR","count":1,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":3,"zone":"structure"},{"number":"ETD01-008TSR","count":1,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD01-010","count":2,"zone":"gear"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-095OSR","count":1,"zone":"event"}]},{"placement":"Block B 3rd place","player":"Y","deck_code":"2WW5M","source_id":27,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=27","cards":[{"number":"EBP01-027","count":4,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Champion","player":"あぴ","deck_code":"35C6P","source_id":28,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=28","cards":[{"number":"EBP01-078","count":4,"zone":"pal"},{"number":"ETD02-012TSR","count":4,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025SSP","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028SR","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"ETD02-021TSR","count":4,"zone":"event"},{"number":"EBP01-046OSR","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Runner-up","player":"マルタ","deck_code":"3VQQK","source_id":29,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=29","cards":[{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":3,"zone":"pal"},{"number":"ETD02-012TSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":3,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C 3rd place","player":"Ura","deck_code":"3YVQX","source_id":30,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=30","cards":[{"number":"EBP01-001","count":2,"zone":"pal"},{"number":"EBP01-005","count":4,"zone":"pal"},{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-045","count":2,"zone":"gear"},{"number":"ETD01-010","count":4,"zone":"gear"},{"number":"EBP01-019","count":2,"zone":"gear"},{"number":"EBP01-023","count":1,"zone":"event"},{"number":"EBP01-046","count":1,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block D Champion","player":"横入れ失礼します","deck_code":"411R9","source_id":31,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=31","cards":[{"number":"EBP01-001","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-019","count":4,"zone":"gear"},{"number":"EBP01-023","count":4,"zone":"event"},{"number":"EBP01-047","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block D Runner-up","player":"kamori-k","deck_code":"4AGSB","source_id":32,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=32","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":1,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block D 3rd place","player":"にしおの手下B","deck_code":"41VA7","source_id":33,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=33","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]}]},{"name":"Grand Challengers Cup – Bushiroad EXPO 2026 in Kuala Lumpur","date":"2026-10-04","date_kind":"held","date_source":"https://en.bushiroad.com/events/bushiroad-expo-2026-ao/","published":"2026-10-07","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/grand-challengers-cup_expokl26","decks":[{"placement":"Champion","player":"Heng","deck_code":"2MVSF","source_id":34,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=34","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":3,"zone":"pal"},{"number":"EBP01-025OSR","count":1,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":3,"zone":"pal"},{"number":"EBP01-028SR","count":1,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":2,"zone":"gear"},{"number":"EBP01-044SR","count":1,"zone":"gear"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Runner-up","player":"Siongyik","deck_code":"1JUVM","source_id":35,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=35","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":1,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012TSR","count":3,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":3,"zone":"event"}]},{"placement":"3rd place","player":"Jdub","deck_code":"3XK47","source_id":36,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=36","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":1,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":3,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":2,"zone":"event"},{"number":"EBP01-095OSR","count":2,"zone":"event"}]}]}]};
   var _tdStats = null;
   var _tdReq = 0;
-  function tdBase(num){ return String(num==null?"":num).trim().toUpperCase().replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,""); }
+  // A single S after the digits is the promo parallel (EPR-002S shares EPR-002's figure, as the importer
+  // reads it). It is only stripped straight after a digit, so no set code or longer suffix is touched.
+  function tdBase(num){ return String(num==null?"":num).trim().toUpperCase().replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,"").replace(/(\d)S$/,"$1"); }
   // Each usable deck becomes the list of base numbers it contains. A deck with no cards, or with any row that
   // is not a card number and a whole count of at least 1, is dropped whole rather than counted in part.
   function tdNormalise(feed){
@@ -11692,9 +11778,15 @@ label.acctsetrow { align-items:center; }
     paintSeg("scanDest","data-dest",scanState.dest);
     paintSeg("scanType","data-type",scanState.type);
     paintSeg("scanEdition","data-edition",scanState.edition);
-    var isColl=scanState.dest==="collection";
+    var isColl=scanState.dest==="collection", edCard=canEdition(scanState.card);
     $("scanCollOpts").hidden=!isColl;
-    $("scanEditionRow").hidden=!(isColl && canEdition(scanState.card));
+    // 1st and 2nd only exist for the sets printed in editions; a scanned Japanese card shows its printing
+    // on any card, with English beside it so the guess can be undone.
+    $("scanEditionRow").hidden=!(isColl && (edCard || scanState.jpRow));
+    Array.prototype.forEach.call(document.querySelectorAll("#scanEdition .seg"), function(b){
+      var v=b.getAttribute("data-edition");
+      b.hidden=(v==="1"||v==="2") ? !edCard : (v==="en" ? edCard : false);
+    });
     $("scanGradeWrap").hidden=!(isColl && scanState.type==="graded");
   }
   // The 2nd Edition reprint only covers the Dawn of Palpagos sets, so the edition choice only shows for those.
@@ -11856,13 +11948,27 @@ label.acctsetrow { align-items:center; }
     Array.prototype.forEach.call(vs.querySelectorAll(".scanvar"), function(b){ b.onclick=function(){ var c=byNumberIdx[(b.getAttribute("data-id")||"").toUpperCase()]; if(c){ scanSetCard(c); vs.hidden=true; } }; });
     scanPaintVariantOwned(scanTargetCol());
   }
+  // The printing the scan sheet starts on: Japanese when the number came off a Japanese card, else the
+  // edition the scanner detected (1st unless it read 2nd), or English for a set with no editions.
+  function scanEditionOf(edition, card){
+    var e=String(edition==null?"":edition);
+    if(e==="jp") return "jp";
+    if(!canEdition(card)) return "en";
+    return e==="2" ? "2" : "1";
+  }
+  // What Add stores for that choice: null means "no edition", as before, for a card with none.
+  function scanAddEdition(card, ed){
+    if(ed==="jp") return "jp";
+    return (canEdition(card) && (ed==="1" || ed==="2")) ? ed : null;
+  }
   function openScanModal(card, edition, graded, lowConf){
     if(!scanScrim) return;
     scanBusy=false;   // a fresh sheet always accepts a press
     // Collector mode hides every graded control, so filing a scan as a slab there leaves the user with a
     // card they cannot see the count of, cannot value and cannot convert back. Add it as a raw copy.
     scanState.dest="collection"; scanState.type=(SETTINGS.mode!=="collector" && graded && (graded.grader||graded.grade||graded.cert))?"graded":"raw";
-    scanState.edition=(String(edition)==="2")?"2":"1";
+    scanState.edition=scanEditionOf(edition, card);
+    scanState.jpRow=(scanState.edition==="jp");
     var scanPaidEl=$("scanPaid"); if(scanPaidEl) scanPaidEl.value="";
     // "Add cards to" default sticks; fall back to the active collection. Filled before the card so the price row reads the right target.
     var cs=$("scanColSel"); cs.innerHTML="";
@@ -11937,7 +12043,7 @@ label.acctsetrow { align-items:center; }
         toast(card.name+" → Wishlist");
       } else {
         var colId=$("scanColSel").value;
-        var ed=canEdition(card)?scanState.edition:null;
+        var ed=scanAddEdition(card, scanState.edition);
         var rec=SCAN_PX[card.id]||null, added=0;   // the popup's price pull (never a second pull on Add)
         var slabId="";
         if(scanState.type==="graded"){
@@ -11955,13 +12061,13 @@ label.acctsetrow { align-items:center; }
             scanLinkPrices(rec, colId, e);
             e.graded.push(gobj); added=gobj.value;
             save(); render();
-            toast(card.name+" · "+gr+" "+gd+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
+            toast(card.name+" · "+gr+" "+gd+(ed==="2"?" · 2nd Ed":(ed==="jp"?" · Japanese":""))+" → "+colName(colId));
           }
         } else {
           var te=null;
           addToCollection(colId, card.id, function(x){ te=x; scanLinkPrices(rec, colId, x); var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && trackPaidOn()){ if(!x.paidRaw || typeof x.paidRaw!=="object") x.paidRaw={}; x.paidRaw[rawEditionKey(ed)]=scanPaid; } },ed);
           if(te) added=unitOfEntry(card.id, null, te);
-          toast(card.name+(ed==="2"?" · 2nd Ed":"")+" → "+colName(colId));
+          toast(card.name+(ed==="2"?" · 2nd Ed":(ed==="jp"?" · Japanese":""))+" → "+colName(colId));
         }
         scanRefreshPages();
         recordScan({id:card.id,colId:colId,dest:"collection",type:scanState.type,edition:rawEditionKey(ed),slabId:slabId,qty:1,value:(+added||0)});
@@ -11977,17 +12083,22 @@ label.acctsetrow { align-items:center; }
     }
   })();
   // Bridge for the native Android camera scanner: open the confirmation modal for a scanned card.
-  window.SDScanAdd = function(id, edition, graded, lowConf){
+  // Both shells hand their resolved number to this one function, so the Japanese number lookup lives here:
+  // readCardNumber turns BP01-001 into EBP01-001 and reports the Japanese printing, which the add sheet then
+  // preselects. An English number keeps whatever edition the scanner detected.
+  function scanAddById(id, edition, graded, lowConf){
     try{
       if(!id) return false;
       if(typeof graded==="string"){ try{ graded=JSON.parse(graded); }catch(e){ graded=null; } }
-      var card = CARDS.filter(function(c){ return c.id===id; })[0]
-              || CARDS.filter(function(c){ return c.base===id; })[0];
+      var read=readCardNumber(id), want=read ? read.id : String(id);
+      var card = CARDS.filter(function(c){ return c.id===want; })[0]
+              || CARDS.filter(function(c){ return c.base===want; })[0];
       if(!card) return false;
-      openScanModal(card, edition, graded, !!lowConf);
+      openScanModal(card, (read && read.edition==="jp") ? "jp" : edition, graded, !!lowConf);
       return true;
     }catch(e){ return false; }
-  };
+  }
+  window.SDScanAdd = scanAddById;
   // Native camera reads this to show which collection a scan will go to. It has to match what the scan
   // sheet itself preselects: the "Add cards to" setting when it names a real collection, else the active
   // one. Reading only the active collection would have named the wrong one for anyone who set a default.
@@ -12240,6 +12351,18 @@ label.acctsetrow { align-items:center; }
     order.forEach(function(sk){ var n=Math.max(ta[sk]||0, tb[sk]||0); for(var i=0;i<n;i++) slabs.push(cloneSlab(first[sk])); });
     out.graded=slabs;
     if((b.notes||"").length > (a.notes||"").length) out.notes=b.notes;
+    // Numbered copy notes get the same rule as slabs: a note only one device wrote is kept, and a note both
+    // wrote counts once per copy it was written for (the higher side), so identical notes are not doubled.
+    // Nothing is capped here: copyNotesList still shows no more notes than there are raw copies.
+    if(Array.isArray(a.copyNotes) || Array.isArray(b.copyNotes)){
+      var cnSig=function(n){ return JSON.stringify([n.serial||"", n.run||"", n.mis?1:0, n.note||"", n.ed||""]); };
+      var cnTally=function(arr){ var t={}; (Array.isArray(arr)?arr:[]).forEach(function(n){ var x=copyNoteClean(n); if(x){ var sk=cnSig(x); t[sk]=(t[sk]||0)+1; } }); return t; };
+      var ca=cnTally(a.copyNotes), cb=cnTally(b.copyNotes), cnFirst={}, cnOrder=[], notesOut=[];
+      (Array.isArray(a.copyNotes)?a.copyNotes:[]).concat(Array.isArray(b.copyNotes)?b.copyNotes:[]).forEach(function(n){
+        var x=copyNoteClean(n); if(!x) return; var sk=cnSig(x); if(!cnFirst[sk]){ cnFirst[sk]=x; cnOrder.push(sk); } });
+      cnOrder.forEach(function(sk){ var n=Math.max(ca[sk]||0, cb[sk]||0); for(var i=0;i<n;i++) notesOut.push(Object.assign({}, cnFirst[sk])); });
+      if(notesOut.length) out.copyNotes=notesOut; else delete out.copyNotes;
+    }
     return out;
   }
   function mergeCol(a, b){

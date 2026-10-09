@@ -203,6 +203,36 @@ test('graded copies from different editions remain distinct during cloud merge',
   assert.deepEqual(plain(merged.graded.map(g => g.edition)).sort(), ['1', '2']);
 });
 
+test('two devices adding different copy notes to the same holding keep both after a cloud merge', () => {
+  const a = app();
+  const base = { qty: 3, rawEditions: { '1': 0, '2': 0, unknown: 3 }, cond: 'Near Mint', notes: '', graded: [] };
+  const phone = { ...base, copyNotes: [{ serial: '372', run: '750' }] };
+  const tablet = { ...base, copyNotes: [{ mis: 1, note: 'Off centre' }] };
+  const labels = (e) => plain(a.copyNotesList(e).map((n) => a.copyNoteLabel(n)).sort());
+  for (const [local, remote] of [[phone, tablet], [tablet, phone]]) {
+    const merged = a.mergeEntry(local, remote);
+    assert.deepEqual(labels(merged), ['372 of 750', 'Misprint · Off centre'], 'neither device loses its note');
+  }
+});
+
+test('copy notes both devices hold are merged once, not doubled', () => {
+  const a = app();
+  const base = { qty: 4, rawEditions: { '1': 0, '2': 0, unknown: 4 }, cond: 'Near Mint', notes: '', graded: [] };
+  const shared = { serial: '12', run: '750', ed: '1' };
+  const local = { ...base, copyNotes: [shared, { serial: '40', run: '750' }] };
+  const remote = { ...base, copyNotes: [{ ...shared }, { serial: '99', run: '750' }] };
+  const merged = a.mergeEntry(local, remote);
+  const sigs = plain(merged.copyNotes.map((n) => a.copyNoteLabel(n)).sort());
+  assert.deepEqual(sigs, ['12 of 750 · 1st edition', '40 of 750', '99 of 750']);
+  // Two genuinely identical notes on one device (two misprints alike) survive as two.
+  const twice = { ...base, copyNotes: [{ mis: 1 }, { mis: 1 }] };
+  assert.equal(a.mergeEntry(twice, { ...base, copyNotes: [{ mis: 1 }] }).copyNotes.length, 2);
+  // A holding with notes on one side only keeps them whichever side it is.
+  assert.equal(a.mergeEntry({ ...base }, local).copyNotes.length, 2);
+  assert.equal(a.mergeEntry(local, { ...base }).copyNotes.length, 2);
+  assert.equal(a.mergeEntry({ ...base }, { ...base }).copyNotes, undefined);
+});
+
 test('global search tolerates a one-character typo without returning unrelated cards', () => {
   const a = app();
   assert.ok(a.globalTextScore('Lambll', 'Lamball EBP01-001') > 0);

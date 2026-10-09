@@ -249,12 +249,114 @@ test('every source with a licence obligation is named on the licences page', () 
 
 test('there is a close X as well as the Done button', () => {
   assert.match(source, /id="pxFullX"[^>]*aria-label="Close"/);
-  assert.match(source, /var x=\$\("pxFullX"\); if\(x\) x\.onclick=shut;/);
+  assert.match(source, /var x=\$\("pxFullX"\); if\(x\) x\.onclick=shutPriceChart;/);
 });
 
-test('the chart closes with the back button, Escape and the card sheet that owns it', () => {
-  assert.match(source, /"upScrim","globalSearchScrim","pxScrim","paScrim"/, 'Escape reaches it');
-  assert.match(source, /var px=\$\("pxScrim"\); if\(px && !px\.hidden\)\{ px\.hidden=true;/, 'the back button reaches it');
-  assert.match(source, /function closeModal\(\)[^]*?var px=\$\("pxScrim"\); if\(px\) px\.hidden=true;/,
-    'closing the card sheet closes it too');
+// ---- history ----------------------------------------------------------------------------------------------
+// The chart pushes a history entry when it opens. Every way of closing it has to consume that entry, or each
+// chart visit leaves one more Back press between the person and leaving the page.
+
+function historyApp() {
+  const els = {};
+  const el = (id) => (els[id] = els[id] || { id, hidden: true, onclick: null, textContent: '', innerHTML: '',
+    addEventListener(type, fn) { this['on_' + type] = fn; } });
+  ['pxScrim', 'pxFullClose', 'pxFullX', 'pxFullTitle', 'pxFullSub', 'pxFullBody', 'paScrim'].forEach(el);
+  const hist = { entries: [{}], index: 0, pending: 0 };
+  const app = {
+    els, hist,
+    $: (id) => els[id] || null,
+    _histReady: true, _navDepth: 0, _curPage: 'collection', _pxSkipPop: 0, detailGen: 0,
+    sheetClosed: 0, pages: [],
+    priceMode: () => 'live',
+    fullPriceChartHtml: () => '<svg></svg>',
+    resetKb: () => {},
+    closeNavMenu: () => {},
+    scrim: { classList: { remove: () => { app.sheetClosed++; } } },
+    showPage: (p) => { app.pages.push(p); },
+    history: {
+      pushState(state) { hist.entries.splice(hist.index + 1); hist.entries.push(state); hist.index++; },
+      back() {
+        if (hist.index === 0) return;
+        hist.index--; hist.pending++;
+        const state = hist.entries[hist.index];
+        setImmediate(() => { hist.pending--; app.onAppPopState({ state }); });
+      },
+    },
+  };
+  vm.createContext(app);
+  vm.runInContext('var _ovStack=[];\n' + ['pushAppEntry', 'openOverlay', 'dismissOverlay', 'closeTopOverlay', 'goBack',
+    'backAction', 'onAppPopState', 'hidePriceChart', 'shutPriceChart', 'dropPriceChart', 'wirePriceChart',
+    'openPriceChart', 'closeModal'].map(appFunction).join('\n'), app);
+  return app;
+}
+const settle = () => new Promise((r) => setImmediate(() => setImmediate(r)));
+
+async function sheetWithChart() {
+  const app = historyApp();
+  app.openOverlay(app.closeModal);                 // the card sheet
+  app.openPriceChart({ id: 'EBP01-002', name: 'Test' });
+  assert.equal(app.els.pxScrim.hidden, false);
+  assert.equal(app.hist.index, 2, 'sheet and chart each own one entry');
+  return app;
+}
+
+async function assertOnlySheetLeft(app, how) {
+  await settle();
+  assert.equal(app.els.pxScrim.hidden, true, how + ' hides the chart');
+  assert.equal(app.hist.index, 1, how + ' consumes the chart entry');
+  assert.equal(app.sheetClosed, 0, how + ' leaves the card sheet open');
+  // One Back now closes the sheet, and the page is left with no extra steps.
+  app.backAction();
+  await settle();
+  assert.equal(app.sheetClosed, 1);
+  assert.equal(app.hist.index, 0, 'no extra Back steps remain after ' + how);
+  assert.equal(app._navDepth, 0);
+}
+
+test('Done consumes the chart history entry', async () => {
+  const app = await sheetWithChart();
+  app.els.pxFullClose.onclick();
+  await assertOnlySheetLeft(app, 'Done');
+});
+
+test('X consumes the chart history entry', async () => {
+  const app = await sheetWithChart();
+  app.els.pxFullX.onclick();
+  await assertOnlySheetLeft(app, 'X');
+});
+
+test('tapping the scrim consumes the chart history entry', async () => {
+  const app = await sheetWithChart();
+  app.els.pxScrim.on_click({ target: app.els.pxScrim });
+  await assertOnlySheetLeft(app, 'the scrim');
+});
+
+test('Escape and the Android Back button consume the chart history entry', async () => {
+  // Escape and SDHardwareBack both go through backAction.
+  const app = await sheetWithChart();
+  assert.equal(app.backAction(), true);
+  await assertOnlySheetLeft(app, 'Escape');
+});
+
+test('browser Back consumes the chart history entry instead of pushing another', async () => {
+  const app = await sheetWithChart();
+  app.history.back();
+  await assertOnlySheetLeft(app, 'browser Back');
+});
+
+test('closing the card sheet under the chart consumes the chart entry too', async () => {
+  const app = await sheetWithChart();
+  app.closeModal();
+  await settle();
+  assert.equal(app.els.pxScrim.hidden, true);
+  assert.equal(app.hist.index, 1, 'only the sheet entry is left, for whoever closed the sheet to consume');
+  assert.equal(app.sheetClosed, 1, 'the skipped popstate closed nothing else');
+  assert.equal(app._pxSkipPop, 0);
+  assert.equal(app.pages.length, 0, 'no page change');
+});
+
+test('reopening a chart that is already open does not push a second entry', async () => {
+  const app = await sheetWithChart();
+  app.openPriceChart({ id: 'EBP01-002', name: 'Test' });
+  assert.equal(app.hist.index, 2);
 });

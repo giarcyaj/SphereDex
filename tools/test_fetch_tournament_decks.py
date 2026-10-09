@@ -161,7 +161,7 @@ class RerunTests(unittest.TestCase):
             f.write(ftd.dump(doc))
         return doc
 
-    def run_main(self, recipe_text):
+    def run_main(self, recipe_text, extra=()):
         def fake_fetch(url, tries=3):
             if url == PAGE_URL:
                 return page()
@@ -172,8 +172,58 @@ class RerunTests(unittest.TestCase):
 
         err = io.StringIO()
         with mock.patch.object(ftd, "fetch", fake_fetch), contextlib.redirect_stderr(err):
-            code = ftd.main([PAGE_URL, "--out", self.out])
+            code = ftd.main([PAGE_URL, "--out", self.out] + list(extra))
         return code, err.getvalue(), json.loads(Path(self.out).read_text(encoding="utf-8"))
+
+    def save_held(self, date="2026-10-04", source="https://example.invalid/held"):
+        """Save all three decks with a held date that differs from the published 2026-10-07."""
+        doc = self.save([34, 35, 36])
+        ev = doc["events"][1]
+        ev.update({"date": date, "date_kind": "held", "date_source": source})
+        with open(self.out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(ftd.dump(doc))
+        return doc
+
+    def test_a_refresh_keeps_the_saved_held_date_and_its_source(self):
+        self.save_held()
+        code, _, after = self.run_main(lambda rid: json.dumps(recipe_for(rid)))
+        self.assertEqual(code, 0)
+        ev = after["events"][1]
+        self.assertEqual(ev["date"], "2026-10-04")
+        self.assertEqual(ev["date_kind"], "held")
+        self.assertEqual(ev["date_source"], "https://example.invalid/held")
+        self.assertEqual(ev["published"], "2026-10-07")
+
+    def test_held_date_flags_replace_the_saved_ones(self):
+        self.save_held()
+        _, _, after = self.run_main(lambda rid: json.dumps(recipe_for(rid)),
+                                    ["--held-date", "2026-10-03", "--held-date-source", "https://example.invalid/new"])
+        ev = after["events"][1]
+        self.assertEqual((ev["date"], ev["date_kind"], ev["date_source"]),
+                         ("2026-10-03", "held", "https://example.invalid/new"))
+
+    def test_a_new_source_alone_keeps_the_saved_held_date(self):
+        self.save_held()
+        _, _, after = self.run_main(lambda rid: json.dumps(recipe_for(rid)),
+                                    ["--held-date-source", "https://example.invalid/better"])
+        ev = after["events"][1]
+        self.assertEqual((ev["date"], ev["date_kind"], ev["date_source"]),
+                         ("2026-10-04", "held", "https://example.invalid/better"))
+
+    def test_a_new_held_date_without_a_source_drops_the_old_source(self):
+        # The saved source states the old day, so it cannot vouch for a different one.
+        self.save_held()
+        _, _, after = self.run_main(lambda rid: json.dumps(recipe_for(rid)), ["--held-date", "2026-10-02"])
+        ev = after["events"][1]
+        self.assertEqual((ev["date"], ev["date_kind"]), ("2026-10-02", "held"))
+        self.assertNotIn("date_source", ev)
+
+    def test_a_saved_published_date_still_follows_the_page(self):
+        self.save([34, 35, 36])
+        _, _, after = self.run_main(lambda rid: json.dumps(recipe_for(rid)))
+        ev = after["events"][1]
+        self.assertEqual((ev["date"], ev["date_kind"]), ("2026-10-07", "published"))
+        self.assertNotIn("date_source", ev)
 
     def test_a_saved_deck_that_fails_is_kept_unchanged_with_a_warning(self):
         before = self.save([34, 35, 36])

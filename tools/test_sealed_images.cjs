@@ -67,6 +67,16 @@ function published() {
 
 const block = extractBlock();
 
+function appFunction(name) {
+  const m = new RegExp('\\bfunction\\s+' + name + '\\s*\\(').exec(source);
+  assert.ok(m, 'App function exists: ' + name);
+  for (let e = source.indexOf('}', m.index); e >= 0; e = source.indexOf('}', e + 1)) {
+    const d = source.slice(m.index, e + 1);
+    try { new vm.Script('(' + d + ')'); return d; } catch (_) { /* keep looking */ }
+  }
+  throw new Error('Could not extract ' + name);
+}
+
 function loadApp(opts) {
   opts = opts || {};
   const store = opts.store || {};
@@ -205,7 +215,9 @@ test('empty tiles gain feed art, and an existing picture stays unless replace is
   assert.equal(row('pack-bp02').box, 'PACK_EBP02');
   assert.equal(row('box-ebp01-2e').box, 'BOX_BANNER_EBP01_2E');
   assert.equal(row('box-ebp01-2e').banner, 'BOX_BANNER_EBP01');
-  assert.equal(ctx.window.CARD_IMG.BOX_SS01, IMG_PREFIX + 'BOX_SS01.webp');
+  // replace:true over a bundled picture waits for the new one to load; this sandbox cannot load any.
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, 'img/BOX_SS01.webp');
+  assert.equal(row('ss-vol1').box, 'BOX_SS01');
   assert.equal(row('ss-vol1').banner, 'BOX_BANNER_SS01');
   assert.equal(ctx.window.CARD_IMG.BOX_BANNER_SS01, 'img/BOX_BANNER_SS01.webp');
   assert.equal(row('td-ea-bp').banner, 'BOX_BANNER_TD04');
@@ -298,6 +310,84 @@ test('offline load keeps the bundled copy, a live file repaints, and a bad paylo
   await flush();
   assert.equal(bad.store['palvault-sealed-images'], undefined);
   assert.equal(bad.SEALED.filter(function(p) { return p.id === 'pack-bp02'; })[0].box, 'PACK_EBP02');
+});
+
+// A browser Image that never loads (offline) or loads when told to.
+function fakeImage(ctx) {
+  ctx.images = [];
+  ctx.Image = function() { ctx.images.push(this); };
+}
+
+test('offline first launch keeps the bundled sleeve picture the replace row would cover', async function() {
+  // A fresh install with no internet: no saved feed, the network fails, and the replacement never loads.
+  const ctx = loadApp({ sealed: baseSealed(), cardImg: baseImg(), page: 'sealed' });
+  fakeImage(ctx);
+  ctx.fetchSealedImages();
+  await flush();
+  const ss = ctx.SEALED.filter(function(p) { return p.id === 'ss-vol1'; })[0];
+  assert.equal(ss.box, 'BOX_SS01');
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, 'img/BOX_SS01.webp', 'the bundled file still backs the tile');
+  assert.equal(ctx.images.length, 1, 'the replacement was only tried in the background');
+  assert.equal(ctx.images[0].src, IMG_PREFIX + 'BOX_SS01.webp');
+  if (ctx.images[0].onerror) ctx.images[0].onerror();
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, 'img/BOX_SS01.webp', 'a failed load changes nothing');
+  assert.deepEqual(ctx.painted, []);
+  // Empty tiles still gain feed art straight away: there is no working picture to protect there.
+  assert.equal(ctx.SEALED.filter(function(p) { return p.id === 'pack-bp02'; })[0].box, 'PACK_EBP02');
+});
+
+test('the replacement takes over once it has actually loaded, and the page repaints', function() {
+  const ctx = loadApp({ sealed: baseSealed(), cardImg: baseImg(), page: 'sealed' });
+  fakeImage(ctx);
+  ctx.applySealedImages(ctx.SEALED_IMAGES_FALLBACK);
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, 'img/BOX_SS01.webp');
+  ctx.images[0].onload();
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, IMG_PREFIX + 'BOX_SS01.webp');
+  assert.deepEqual(ctx.painted, ['sealed']);
+  // Once loaded, a later apply swaps at once rather than loading it again.
+  const again = ctx.images.length;
+  ctx.window.CARD_IMG.BOX_SS01 = 'img/BOX_SS01.webp';
+  assert.equal(ctx.applySealedImages(ctx.SEALED_IMAGES_FALLBACK), true);
+  assert.equal(ctx.window.CARD_IMG.BOX_SS01, IMG_PREFIX + 'BOX_SS01.webp');
+  assert.equal(ctx.images.length, again);
+});
+
+test('a product /api/releases adds after the image feed landed still gets its picture', async function() {
+  // A device with no saved release data: the feed names box-bp04, which SEALED does not have yet.
+  const feed = { products: [{ id: 'box-bp04', box: IMG_PREFIX + 'BOX_EBP02.webp' }] };
+  const ctx = loadApp({
+    sealed: baseSealed(),
+    cardImg: baseImg(),
+    page: 'sealed',
+    fetch: function(url) {
+      if (url === 'https://spheredex.app/sealed/images.json') {
+        return Promise.resolve({ ok: true, json: function() { return Promise.resolve(feed); } });
+      }
+      return Promise.resolve({ ok: true, json: function() { return Promise.resolve({ version: 2, products: [] }); } });
+    }
+  });
+  ctx.fetchSealedImages();
+  await flush();
+  assert.equal(ctx.SEALED.some(function(p) { return p.id === 'box-bp04'; }), false);
+  // Now the real fetchReleases, with applyReleases adding the new product.
+  Object.assign(ctx, {
+    apiBase: function() { return 'https://api.invalid'; },
+    storedReleases: function() { return null; },
+    REL_KEY: 'palvault-releases',
+    applyReleases: function() { ctx.SEALED.push({ id: 'box-bp04', box: '' }); return true; },
+    renderSetBrowse: function() {},
+    renderHome: function() {}
+  });
+  vm.runInContext(appFunction('fetchReleases'), ctx);
+  ctx.painted.length = 0;
+  ctx.fetchReleases();
+  await flush();
+  await flush();
+  const added = ctx.SEALED.filter(function(p) { return p.id === 'box-bp04'; })[0];
+  assert.ok(added, 'the release was added');
+  assert.equal(added.box, 'BOX_EBP02', 'and the kept image feed was applied to it');
+  assert.equal(ctx.window.CARD_IMG.BOX_EBP02, IMG_PREFIX + 'BOX_EBP02.webp');
+  assert.ok(ctx.painted.indexOf('sealed') !== -1, 'the sealed page repainted');
 });
 
 test('a stale saved copy is skipped, and a fresh one is used before the network answers', function() {
