@@ -1,0 +1,8 @@
+{
+  "readme": "The hand checked sourceNumber hints for tools/test_bake_card_text_ja.py. An E number points back at an English promo and must be ignored.",
+  "cards": {
+    "EBP01-010": {"sourceNumber": "BP01-010"},
+    "EPR-001": {"sourceNumber": "PR-017"},
+    "EPR-099": {"sourceNumber": "EPR-099"}
+  }
+}

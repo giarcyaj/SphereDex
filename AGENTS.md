@@ -52,8 +52,15 @@ node tools/test_carousel.cjs
 node tools/test_scan_review.cjs
 node tools/test_editions.cjs
 node tools/test_v21.cjs
+node tools/test_card_language.cjs
+node tools/test_price_chart.cjs
+node tools/test_stock_glance.cjs
+node tools/test_import_trackers.cjs
 node tools/test_tcg_news.cjs
 node tools/test_upcoming_cards.cjs
+node tools/test_sealed_images.cjs
+node tools/test_tournament_decks.cjs
+node tools/test_native_scan_numbers.cjs
 
 # Python 3.11 pipeline tests
 cd tools && python -m unittest discover -p 'test_*.py' -v

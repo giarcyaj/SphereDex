@@ -1,0 +1,285 @@
+{
+  "success": true,
+  "deck": {
+    "id": 34,
+    "public_url": "/deckrecipe/",
+    "deck_code": "2MVSF",
+    "deck_category": "",
+    "master_title": "Grand Challengers Cup – Bushiroad EXPO 2026 in Kuala Lumpur",
+    "ranking": "Champion",
+    "handlename": "Heng",
+    "deck_name": "Pb dragon",
+    "comment": "",
+    "fav_card": "",
+    "sort": 0,
+    "state": "1",
+    "rgdt": "2026-10-07T00:26:27+00:00",
+    "updt": "2026-10-07T00:26:27+00:00"
+  },
+  "details": [
+    {
+      "id": 34,
+      "detail": 1,
+      "card_number": "EBP01-027",
+      "num": 3,
+      "card_type": "a",
+      "manage_id": 123,
+      "Cards": {
+        "picture": "EBP01/EBP01-027.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 2,
+      "card_number": "EBP01-027OSR",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 124,
+      "Cards": {
+        "picture": "EBP01/EBP01-027OSR.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 3,
+      "card_number": "EBP01-026",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 120,
+      "Cards": {
+        "picture": "EBP01/EBP01-026.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 4,
+      "card_number": "EBP01-026OSR",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 121,
+      "Cards": {
+        "picture": "EBP01/EBP01-026OSR.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 5,
+      "card_number": "EBP01-077",
+      "num": 4,
+      "card_type": "a",
+      "manage_id": 206,
+      "Cards": {
+        "picture": "EBP01/EBP01-077.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 6,
+      "card_number": "EBP01-038",
+      "num": 4,
+      "card_type": "a",
+      "manage_id": 140,
+      "Cards": {
+        "picture": "EBP01/EBP01-038.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 7,
+      "card_number": "ETD01-012",
+      "num": 3,
+      "card_type": "a",
+      "manage_id": 18,
+      "Cards": {
+        "picture": "ETD01/ETD01-012.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 8,
+      "card_number": "ETD02-017",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 66,
+      "Cards": {
+        "picture": "ETD02/ETD02-017.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 9,
+      "card_number": "EBP01-025",
+      "num": 3,
+      "card_type": "a",
+      "manage_id": 117,
+      "Cards": {
+        "picture": "EBP01/EBP01-025.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 10,
+      "card_number": "EBP01-025OSR",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 118,
+      "Cards": {
+        "picture": "EBP01/EBP01-025OSR.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 11,
+      "card_number": "ETD01-016",
+      "num": 4,
+      "card_type": "a",
+      "manage_id": 25,
+      "Cards": {
+        "picture": "ETD01/ETD01-016.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 12,
+      "card_number": "EBP01-028",
+      "num": 3,
+      "card_type": "a",
+      "manage_id": 126,
+      "Cards": {
+        "picture": "EBP01/EBP01-028.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 13,
+      "card_number": "EBP01-028SR",
+      "num": 1,
+      "card_type": "a",
+      "manage_id": 127,
+      "Cards": {
+        "picture": "EBP01/EBP01-028SR.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 14,
+      "card_number": "EBP01-098",
+      "num": 4,
+      "card_type": "a",
+      "manage_id": 236,
+      "Cards": {
+        "picture": "EBP01/EBP01-098.png",
+        "card_kind": "Pal"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 15,
+      "card_number": "EBP01-044",
+      "num": 2,
+      "card_type": "g",
+      "manage_id": 147,
+      "Cards": {
+        "picture": "EBP01/EBP01-044.png",
+        "card_kind": "Gear"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 16,
+      "card_number": "EBP01-044SR",
+      "num": 1,
+      "card_type": "g",
+      "manage_id": 148,
+      "Cards": {
+        "picture": "EBP01/EBP01-044SR.png",
+        "card_kind": "Gear"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 17,
+      "card_number": "EBP01-047",
+      "num": 1,
+      "card_type": "e",
+      "manage_id": 153,
+      "Cards": {
+        "picture": "EBP01/EBP01-047.png",
+        "card_kind": "Event"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 18,
+      "card_number": "EBP01-047SR",
+      "num": 1,
+      "card_type": "e",
+      "manage_id": 154,
+      "Cards": {
+        "picture": "EBP01/EBP01-047SR.png",
+        "card_kind": "Event"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 19,
+      "card_number": "ETD02-021",
+      "num": 3,
+      "card_type": "e",
+      "manage_id": 71,
+      "Cards": {
+        "picture": "ETD02/ETD02-021.png",
+        "card_kind": "Event"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 20,
+      "card_number": "EBP01-095",
+      "num": 1,
+      "card_type": "e",
+      "manage_id": 231,
+      "Cards": {
+        "picture": "EBP01/EBP01-095.png",
+        "card_kind": "Event"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 21,
+      "card_number": "EBP01-095OSR",
+      "num": 3,
+      "card_type": "e",
+      "manage_id": 232,
+      "Cards": {
+        "picture": "EBP01/EBP01-095OSR.png",
+        "card_kind": "Event"
+      }
+    },
+    {
+      "id": 34,
+      "detail": 22,
+      "card_number": "EBP01-048",
+      "num": 4,
+      "card_type": "e",
+      "manage_id": 155,
+      "Cards": {
+        "picture": "EBP01/EBP01-048.png",
+        "card_kind": "Event"
+      }
+    }
+  ]
+}

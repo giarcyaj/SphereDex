@@ -1,6 +1,50 @@
 {
-  "updated_at": "2026-10-07T06:10:23Z",
+  "updated_at": "2026-10-09T06:18:17Z",
   "items": [
+    {
+      "id": "x-com-palworldocg-en-status-2108376908765286749",
+      "title": "Card reveal: Victor's Gambit and Axel's Gambit (Legends Awaken)",
+      "url": "https://x.com/PalworldOCG_EN/status/2108376908765286749",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-09T02:00:01Z",
+      "category": "reveal",
+      "summary": "Official English account reveals Victor's Gambit and Axel's Gambit for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "unconfirmed": false
+    },
+    {
+      "id": "x-com-palworldocg-en-status-2108019245854703970",
+      "title": "Card reveal: Lifmunk – Hidden Power and Lifmunk's Submachine Gun (Legends Awaken)",
+      "url": "https://x.com/PalworldOCG_EN/status/2108019245854703970",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-08T02:18:47Z",
+      "category": "reveal",
+      "summary": "Official English account reveals Lifmunk – Hidden Power (EBP02-056, U) and Lifmunk's Submachine Gun for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "unconfirmed": false
+    },
+    {
+      "id": "en-palworld-official-cardgame-com-events-legends-awaken-release-tournament",
+      "title": "Legends Awaken Release Tournament and new Shop Tournament prizes for November",
+      "url": "https://en.palworld-official-cardgame.com/events/legends-awaken-release-tournament",
+      "source": "news",
+      "source_name": "Palworld OFFICIAL CARD GAME",
+      "published_at": "2026-10-07T09:00:03Z",
+      "category": "tournament",
+      "summary": "Official tournament stores each run one Legends Awaken Release Tournament, November 1 to 30, 2026 (Standard, 5-round Swiss, best of 1, decks have at least 10 Legends Awaken cards; entrants get an ESOUL-017 PR card and a champion playmat of Frostallion, Jetragon and Frostallion Noct); Bushi Navi registration opens October 10 at 8 AM PT, November Shop prizes switch to PR Card Pack Vol.2 (17 cards).",
+      "unconfirmed": false
+    },
+    {
+      "id": "en-palworld-official-cardgame-com-news-post-13",
+      "title": "Palworld OCG sales projected to pass 11 million packs worldwide",
+      "url": "https://en.palworld-official-cardgame.com/news/post-13",
+      "source": "news",
+      "source_name": "Palworld OFFICIAL CARD GAME",
+      "published_at": "2026-10-07T06:30:00Z",
+      "category": "official",
+      "summary": "Bushiroad projects that combined worldwide sales of Booster Pack Dawn of Palpagos and Booster Pack Legends Awaken will surpass 11 million packs by early November 2026, while official demo sessions have passed 24,000 participants and Sleeve & Card Set Vol.1 and Legends Awaken go on sale October 16 and October 30.",
+      "unconfirmed": false
+    },
     {
       "title": "Card reveal: Mau – Greed Beckons and Sibelyx – Silken Spinner (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2107652128122810688",
