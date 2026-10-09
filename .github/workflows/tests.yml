@@ -11,6 +11,7 @@ name: Tests
 #      tools/test_import_trackers.cjs — CSV import of other trackers' exports (numbering, parallels, language).
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
+#      tools/test_sealed_images.cjs — sealed product image feed, files and launch loader.
 #      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
@@ -121,6 +122,9 @@ jobs:
 
       - name: PalDex upcoming cards
         run: node tools/test_upcoming_cards.cjs
+
+      - name: Sealed product image feed
+        run: node tools/test_sealed_images.cjs
 
       - name: Tournament decks and staples
         run: node tools/test_tournament_decks.cjs

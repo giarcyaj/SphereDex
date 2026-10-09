@@ -58,6 +58,7 @@ node tools/test_stock_glance.cjs
 node tools/test_import_trackers.cjs
 node tools/test_tcg_news.cjs
 node tools/test_upcoming_cards.cjs
+node tools/test_sealed_images.cjs
 node tools/test_tournament_decks.cjs
 
 # Python 3.11 pipeline tests

@@ -6800,7 +6800,52 @@ label.acctsetrow { align-items:center; }
         try{ if(_curPage==="home" && typeof renderHome==="function") renderHome(); }catch(e){}
       }).catch(function(){});
   }
+  /* SEALED IMAGES BEGIN */
+  // Live sealed images, from docs/sealed/images.json. Contract: docs/sealed/README.md.
+  // A device that cannot reach the file keeps the last saved copy, then this bundled one.
+  // Only https://spheredex.app/sealed/img/ URLs are used. An entry fills an empty box or
+  // banner. replace:true is the only way over a picture that is already there. Offline, the
+  // fetch fails quietly.
+  var SEALED_IMAGES_URL = "https://spheredex.app/sealed/images.json";
+  var SEALED_IMAGES_LS = "palvault-sealed-images";
+  var SEALED_IMAGES_TTL = 30*24*60*60*1000;
+  var SEALED_IMAGES_FALLBACK = {"updated_at":"2026-10-09T10:45:00Z","products":[{"id":"box-bp02","edition":"en","box":"https://spheredex.app/sealed/img/BOX_EBP02.webp","source_url":"https://en.palworld-official-cardgame.com/media-kit","official":true},{"id":"box-bp03","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp","source_url":"https://en.palworld-official-cardgame.com/products/bp03","official":true},{"id":"box-ebp01-2e","edition":"en","box":"https://spheredex.app/sealed/img/BOX_BANNER_EBP01_2E.webp","source_url":"https://x.com/PalworldOCG_EN/status/2095723842740314301","official":true},{"id":"pack-bp02","edition":"en","box":"https://spheredex.app/sealed/img/PACK_EBP02.webp","source_url":"https://en.palworld-official-cardgame.com/media-kit","official":true},{"id":"pack-bp03","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp","source_url":"https://en.palworld-official-cardgame.com/products/bp03","official":true},{"id":"ss-vol1","edition":"en","box":"https://spheredex.app/sealed/img/BOX_SS01.webp","source_url":"https://en.palworld-official-cardgame.com/news/post-13","official":true,"replace":true},{"id":"td-ea-bp","edition":"en","banner":"https://spheredex.app/sealed/img/BOX_BANNER_TD04.webp","source_url":"https://en.palworld-official-cardgame.com/products/td04","official":true}]};
+  function sealedFeedUrl(u){ return typeof u==="string" && /^https:\/\/spheredex\.app\/sealed\/img\/[A-Z0-9_]+\.webp$/.test(u); }
+  function applySealedImages(feed){
+    if(!feed || !Array.isArray(feed.products)) return false;
+    window.CARD_IMG=window.CARD_IMG||{};
+    var changed=false;
+    feed.products.forEach(function(e){
+      if(!e || !e.id) return;
+      var p=SEALED.filter(function(x){ return x.id===e.id; })[0];
+      if(!p) return;
+      ["box","banner"].forEach(function(field){
+        var url=e[field]; if(!sealedFeedUrl(url)) return;
+        var key=url.slice(url.lastIndexOf("/")+1, -5), prev=window.CARD_IMG[key];
+        if(prev && prev!==url && e.replace!==true) return;
+        if(prev!==url){ window.CARD_IMG[key]=url; changed=true; }
+        if((!p[field] || e.replace===true) && p[field]!==key){ p[field]=key; changed=true; }
+      });
+    });
+    return changed;
+  }
+  function fetchSealedImages(){
+    var cached=null;
+    try{ var d=JSON.parse(lsGet(SEALED_IMAGES_LS)||"null");
+      if(d && d.feed && (Date.now()-(+d.at||0))<SEALED_IMAGES_TTL) cached=d.feed; }catch(e){}
+    applySealedImages(cached || SEALED_IMAGES_FALLBACK);
+    if(typeof fetch!=="function") return;
+    fetch(SEALED_IMAGES_URL,{cache:"no-store"}).then(function(r){ return r&&r.ok?r.json():null; }).then(function(j){
+      if(!j || !Array.isArray(j.products)) return;
+      try{ lsSet(SEALED_IMAGES_LS, JSON.stringify({at:Date.now(), feed:j})); }catch(e){}
+      if(!applySealedImages(j)) return;
+      try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(e){}
+      try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(e){}
+    }).catch(function(){});
+  }
+  /* SEALED IMAGES END */
   applyReleases(storedReleases());
+  fetchSealedImages();
   loadReleaseOverrides();
   function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
