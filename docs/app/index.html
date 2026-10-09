@@ -5905,6 +5905,7 @@ label.acctsetrow { align-items:center; }
     saveTextFile(fileSlug(slug,"want-list")+"-"+todayKey()+".csv", "text/csv", text, function(){
       toast("Exported "+n+" card"+(n===1?"":"s"));
     });
+  }
   // ---- CSV import ----
   // RFC 4180 rows: quoted fields, doubled quotes, separators and line breaks inside quotes, CRLF or LF, BOM.
   function parseCsvRows(text, sep){

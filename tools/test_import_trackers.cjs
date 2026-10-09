@@ -43,7 +43,8 @@ const functionNames = [
   'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection',
   'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty',
-  'importCardId', 'importPreview', 'importWhat', 'importToast', 'importName'
+  'importCardId', 'importPreview', 'importWhat', 'importToast', 'importName',
+  'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'copyNoteCsvCell', 'copyNoteFromCsv'
 ];
 const constantNames = [
   'RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS',
