@@ -3535,7 +3535,8 @@ label.acctsetrow { align-items:center; }
   var RELEASE_ART = {
     "2.1": "img/UPDATE_2_1.webp",
     "2.2": "img/UPDATE_2_2.webp",
-    "2.3": "img/UPDATE_2_3.webp"
+    "2.3": "img/UPDATE_2_3.webp",
+    "2.4": "img/UPDATE_2_4.webp"
   };
   // Where someone whose store build is newer than this one goes to get it. Both wrappers hand http(s)
   // links to the system (Android shouldOverrideUrlLoading / onCreateWindow, iOS decidePolicyFor), so
@@ -10306,6 +10307,26 @@ label.acctsetrow { align-items:center; }
     var c=CARDS.filter(function(x){ return x.set===setKey; })[0];
     return c ? imgSrc(c) : "";
   }
+  // Which release the "What's new" slide describes. The web is always on the newest build, so it is this one.
+  // An iOS or Android build can be on a phone before its store offers it (TestFlight, review, the window
+  // before the server is bumped), so it shows its own lines only once the server says this platform's latest
+  // has reached it. Until then, or with no answer yet, it stays on the newest release the store does offer.
+  function featVersion(){
+    var own=typeof APP_VERSION==="string" ? APP_VERSION : "";
+    var native=false;
+    try{ native=(typeof isIosApp==="function" && isIosApp()) || (typeof isAndroidApp==="function" && isAndroidApp()); }catch(e){}
+    if(!native || !own || typeof verNum!=="function") return own;
+    var latest=typeof _latestAppVersion==="string" ? _latestAppVersion : "";
+    if(latest && verNum(latest) >= verNum(own)) return own;
+    var best="";
+    try{
+      Object.keys(RELEASE_HIGHLIGHTS||{}).forEach(function(v){
+        var ok=latest ? verNum(v) <= verNum(latest) : verNum(v) < verNum(own);
+        if(ok && (!best || verNum(v) > verNum(best))) best=v;
+      });
+    }catch(e){}
+    return best;
+  }
   // The release banner for a version, or "" when that version still uses set art.
   function featReleaseArt(ver){
     var src="";
@@ -10394,7 +10415,7 @@ label.acctsetrow { align-items:center; }
     // 3 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
     (function(){
       var behind=typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION);
-      var ver=behind ? _latestAppVersion : (typeof APP_VERSION==="string" ? APP_VERSION : "");
+      var ver=behind ? _latestAppVersion : featVersion();
       var notes=[];
       try{
         // Server notes describe the store build. Use them only when that build is newer.

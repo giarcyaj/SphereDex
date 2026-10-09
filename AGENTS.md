@@ -60,6 +60,7 @@ node tools/test_tcg_news.cjs
 node tools/test_upcoming_cards.cjs
 node tools/test_sealed_images.cjs
 node tools/test_tournament_decks.cjs
+node tools/test_native_scan_numbers.cjs
 
 # Python 3.11 pipeline tests
 cd tools && python -m unittest discover -p 'test_*.py' -v

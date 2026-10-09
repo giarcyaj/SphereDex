@@ -49,6 +49,17 @@ private val CARD_NUMBER = Regex("E[A-Z]{1,4}\\d{0,2}-?\\d{3}[A-Z]{0,3}")
 fun extractCardNumber(text: String): String? =
     CARD_NUMBER.find(text.uppercase().replace(" ", ""))?.value
 
+// Japanese prints carry the English number without the leading E (BP01-001 for EBP01-001). Only the set
+// codes the catalogue uses, with their exact digit counts, and never straight after a letter or digit, so
+// words, rules text numbers and the tail of an E number cannot match. Only the spaces around the hyphen
+// and before a short rarity tail (001 OSR) are closed up, so a word before the number stays a separate
+// word. Mirrors iOS jpCardNumberRegex.
+private val JP_CARD_NUMBER = Regex("(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
+private val SPACED_HYPHEN = Regex(" *- *")
+private val SPACED_RARITY = Regex("(?<=\\d) +(?=[A-Z]{1,3}(?![A-Z0-9]))")
+fun extractJapaneseCardNumber(text: String): String? =
+    JP_CARD_NUMBER.find(text.uppercase().replace(SPACED_HYPHEN, "-").replace(SPACED_RARITY, ""))?.value
+
 /** Shared reticle geometry so the drawn window and the AR-overlay anchor never diverge. */
 private fun computeReticle(w: Float, h: Float, fullCard: Boolean): RectF {
     val rw = w * 0.82f
@@ -465,13 +476,21 @@ class ScannerActivity : ComponentActivity() {
     private fun probeSlab(upright: Bitmap): SlabInfo? = SlabReader.probe(upright)
 
     /** First card number in a list of OCR lines (the slab label) that resolves to a catalogue card. */
-    private fun numberFromLines(lines: List<String>): String? {
-        for (line in lines) {
-            val num = extractCardNumber(line) ?: continue
-            val card = store.resolve(num) ?: continue
-            return card.number
-        }
+    private fun numberFromLines(lines: List<String>): String? = firstCardNumber(lines)
+
+    /** First printed number in these texts that resolves, English (E) numbers first across all of them, so
+     *  a frame that shows both never reads as Japanese and English scans behave exactly as before. */
+    private fun firstCardNumber(texts: List<String>): String? {
+        for (t in texts) { val num = extractCardNumber(t) ?: continue; scannedNumber(num)?.let { return it } }
+        for (t in texts) { val num = extractJapaneseCardNumber(t) ?: continue; scannedNumber(num)?.let { return it } }
         return null
+    }
+
+    /** The number handed to the web app for a scanned number, or null when it is not a card. A Japanese read
+     *  goes back as printed, without its E (BP01-001), so SDScanAdd opens the Japanese printing. */
+    private fun scannedNumber(raw: String): String? {
+        val (card, japanese) = store.resolveScan(raw) ?: return null
+        return if (japanese) card.number.removePrefix("E") else card.number
     }
 
     /** Centre crop of the (already ViewPort-cropped) upright frame to roughly the reticle: card aspect,
@@ -502,14 +521,7 @@ class ScannerActivity : ComponentActivity() {
     }
 
     /** First printed card number in the OCR result that resolves to a catalogue card, else null. */
-    private fun numberFrom(text: Text): String? {
-        for (block in text.textBlocks) {
-            val num = extractCardNumber(block.text) ?: continue
-            val card = store.resolve(num) ?: continue
-            return card.number
-        }
-        return null
-    }
+    private fun numberFrom(text: Text): String? = firstCardNumber(text.textBlocks.map { it.text })
 
     /** A card number was identified. Read the 2nd-edition "II" mark from the frame and attach the slab
      *  (if any) the caller probed on this frame (full mode probes up front, code mode once a number

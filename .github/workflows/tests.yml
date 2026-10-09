@@ -13,6 +13,7 @@ name: Tests
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
 #      tools/test_sealed_images.cjs — sealed product image feed, files and launch loader.
 #      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
+#      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
 #      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
@@ -128,6 +129,9 @@ jobs:
 
       - name: Tournament decks and staples
         run: node tools/test_tournament_decks.cjs
+
+      - name: Native scanner card numbers (English and Japanese)
+        run: node tools/test_native_scan_numbers.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)

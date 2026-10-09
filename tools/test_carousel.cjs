@@ -583,6 +583,89 @@ test('a mapped release banner is used for the 2.1 features and update slides', (
   for (const copy of copies.slice(1)) assert.equal(copy.equals(copies[0]), true, 'native bundles mirror the web banner');
 });
 
+// The real release tables and version compare from the app, so the gate is tested on what ships.
+function releaseTables() {
+  const source = fs.readFileSync(FILES.src, 'utf8');
+  const hi = source.match(/var RELEASE_HIGHLIGHTS = (\{[\s\S]*?\n  \});/);
+  const art = source.match(/var RELEASE_ART = (\{[\s\S]*?\n  \});/);
+  assert.ok(hi && art, 'RELEASE_HIGHLIGHTS and RELEASE_ART are in the source');
+  return {
+    RELEASE_HIGHLIGHTS: vm.runInNewContext('(' + hi[1] + ')'),
+    RELEASE_ART: vm.runInNewContext('(' + art[1] + ')'),
+    verNum: appFunction('verNum'),
+    visibleNews: () => [],
+  };
+}
+const featuresSlide = (a) => a.api.slides().find((s) => s.kind === 'features');
+
+test('in the iOS and Android apps the 2.4 slide waits until the store offers 2.4', () => {
+  const t = releaseTables();
+  for (const platform of [{ isIosApp: () => true, isAndroidApp: () => false }, { isIosApp: () => false, isAndroidApp: () => true }]) {
+    const early = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: '2.3' }));
+    assert.ok(early, 'a features slide still shows');
+    assert.equal(early.version, '2.3');
+    assert.equal(early.title, 'What’s new in 2.3');
+    assert.deepEqual([...early.notes], [...t.RELEASE_HIGHLIGHTS['2.3'].slice(0, 3)]);
+    assert.equal(early.art, 'img/UPDATE_2_3.webp');
+    assert.equal(early.releaseArt, true);
+
+    const live = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: '2.4' }));
+    assert.equal(live.version, '2.4');
+    assert.equal(live.title, 'What’s new in 2.4');
+    assert.deepEqual([...live.notes], [...t.RELEASE_HIGHLIGHTS['2.4'].slice(0, 3)]);
+    assert.equal(live.art, 'img/UPDATE_2_4.webp');
+
+    for (const unknown of ['', undefined]) {
+      const none = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: unknown }));
+      assert.equal(none.version, '2.3', 'nothing known yet falls back to the newest release below this build');
+      assert.equal(none.art, 'img/UPDATE_2_3.webp');
+    }
+  }
+});
+
+test('the web shows its own release slide whatever the store says', () => {
+  const t = releaseTables();
+  for (const platform of [{}, { isIosApp: () => false, isAndroidApp: () => false }]) {
+    for (const latest of ['2.3', '2.4', '', undefined]) {
+      const s = featuresSlide(app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: latest }));
+      assert.equal(s.version, '2.4', 'web with store ' + latest);
+      assert.equal(s.art, 'img/UPDATE_2_4.webp');
+    }
+  }
+});
+
+test('a build behind the store still gets the update slide, native or web', () => {
+  const t = releaseTables();
+  for (const platform of [{ isIosApp: () => true }, { isAndroidApp: () => true }, {}]) {
+    const a = app({ ...t, ...platform, APP_VERSION: '2.4', _latestAppVersion: '2.5', updateNotesFor: () => ['New in 2.5'] });
+    const up = a.api.slides().find((s) => s.kind === 'update');
+    assert.ok(up, 'update slide');
+    assert.equal(up.version, '2.5');
+    assert.equal(up.title, 'SphereDex 2.5 is here');
+    assert.equal(featuresSlide(a), undefined);
+  }
+});
+
+test('the 2.4 release banner is a real 1600x900 file in the built output', () => {
+  const t = releaseTables();
+  const rel = t.RELEASE_ART['2.4'];
+  assert.equal(rel, 'img/UPDATE_2_4.webp');
+  const copies = ['docs/app/', 'app/src/main/assets/', 'ios/SphereDex/SphereDex/Resources/'].map((dir) => {
+    const file = path.join(REPO, dir + rel);
+    assert.equal(fs.existsSync(file), true, dir + rel + ' is in the built output');
+    return fs.readFileSync(file);
+  });
+  const web = copies[0];
+  assert.ok(web.length > 1000 && web.length < 250 * 1024, 'banner is an optimised file under 250KB');
+  assert.equal(web.subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.equal(web.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.equal(web.subarray(23, 26).toString('hex'), '9d012a');
+  assert.equal(web.readUInt16LE(26) & 0x3fff, 1600);
+  assert.equal(web.readUInt16LE(28) & 0x3fff, 900);
+  for (const copy of copies.slice(1)) assert.equal(copy.equals(web), true, 'native bundles mirror the web banner');
+  assert.equal(fs.existsSync(path.join(REPO, 'tools', 'make_release_banner.py')), true, 'the banner can be regenerated');
+});
+
 test('bind is idempotent: re-render never stacks a second set of listeners', () => {
   const a = app({ visibleNews: () => [news({ title: 'Official update' })] });
   a.api.render();
