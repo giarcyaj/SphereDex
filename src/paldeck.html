@@ -10097,14 +10097,17 @@ label.acctsetrow { align-items:center; }
       tog.onclick=function(){ lsSet("palvault-hidefinished", hide?"0":"1"); renderSetBrowse(); }; }
     if(!(hide && setsFinished(["PR2026"], sp))){ br.appendChild(oneSetTile("PR2026", sp)); shown++; }
     BROWSE_EXPANSIONS.forEach(function(x){
-      if(x.upcoming){ br.appendChild(upcomingTile(x)); shown++; return; }
+      if(x.upcoming){ br.appendChild(upcomingTile(x)); return; }
       if(hide && setsFinished(x.sets, sp)) return;
       br.appendChild(expansionTile(x, sp)); shown++;
     });
+    // shown counts released tiles only: upcoming sets always stay, so counting them meant this never
+    // appeared. It sits straight after All Cards, and Show all goes through the chip so its state stays in step.
     if(hide && !shown){
-      var none=document.createElement("div"); none.className="empty";
-      none.innerHTML="<b>All sets are finished</b>Turn off Hide finished sets to see them again.";
-      br.appendChild(none);
+      var none=document.createElement("div"); none.className="empty"; none.style.gridColumn="1/-1";
+      none.innerHTML="<b>All sets finished</b><div style=\"margin-top:12px\"><button class=\"btn\" type=\"button\" id=\"doneShowAll\">Show all</button></div>";
+      br.insertBefore(none, all.nextSibling);
+      var sa=none.querySelector("#doneShowAll"); if(sa && tog) sa.onclick=function(){ tog.click(); };
     }
   }
   // Finished = at least one owned copy of every card the tile counts, the same sum its N/M shows.
