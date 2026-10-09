@@ -1165,3 +1165,14 @@ test('every new wrapping row carries the full no-flexgap fallback', () => {
     assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '>\\*\\{margin-bottom:\\d+px\\}'), cls + ' spaces wrapped lines');
   });
 });
+
+test('the Missing page opens on the master set, in card number order', () => {
+  // The Sphere is SphereDex's own reward layer, not something the card game awards, so it is a poor
+  // assumption about what someone arrived to do. These pin the default in all three places it is decided:
+  // the variable, the tab that renders selected, and the fallback when deck tools are off.
+  assert.match(source, /var missingGoal="master", missingChoice=\{set:"",rarity:"",pal:""\}, missingSort="number";/);
+  assert.match(source, /class="missingtab on"[^>]*aria-selected="true" data-goal="master"/);
+  assert.match(source, /data-goal="sphere">Next Sphere/);
+  assert.ok(!/class="missingtab on"[^>]*data-goal="sphere"/.test(source), 'the Sphere tab is no longer preselected');
+  assert.match(source, /if\(missingGoal==="deck" && !playerToolsOn\(\)\) missingGoal="master";/);
+});
