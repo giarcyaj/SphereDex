@@ -215,7 +215,8 @@ function paidApp() {
     'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
     'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
     'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis',
-    'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty', 'importCardId'
+    'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty', 'importCardId',
+    'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'addCopyNote', 'removeCopyNote', 'copyNoteLabel', 'copyNoteCsvCell', 'copyNoteFromCsv'
   ];
   const code = names.map(appFunction).join('\n') + '\n' + ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS',
     'IMPORT_PARALLELS', 'IMPORT_BASE_WORDS', 'IMPORT_PARALLEL_WORDS', 'IMPORT_LANGS', 'IMPORT_LANG_QUALIFIERS', 'IMPORT_COLS'].map(appConstant).join('\n');

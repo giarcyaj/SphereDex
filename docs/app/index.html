@@ -334,6 +334,10 @@
   .kv.dates { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
   .kv.dates dt { color:var(--ink-soft); font-size:.72rem; }
   .kv.dates dd { font-size:.8rem; }
+  .deckuse { margin:10px 0 0; font-size:.82rem; color:var(--ink-soft); line-height:1.45; overflow-wrap:anywhere; }
+  .deckuse .ic { width:14px; height:14px; margin-right:6px; }
+  .deckuse .deckusename { display:block; margin:2px 0 0 20px; color:var(--ink); font-weight:600; }
+  .deckuse button.deckusename { background:none; border:0; padding:0; font:inherit; font-weight:600; text-align:left; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; overflow-wrap:anywhere; }
   .cname { font-family:var(--font-display); font-weight:750; font-size:.9rem; letter-spacing:-.01em; line-height:1.05; }
   .cname .suffix { color:var(--ink-faint); font-weight:600; font-size:.82em; }
   .crow { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
@@ -394,6 +398,37 @@
   .promoscope span { margin:4px 12px 4px 0; min-width:0; }
   .promoscope b { color:var(--ink); font-weight:700; }
   .promoscope .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
+  /* Value guess: folded to one line above the grid, opens into a rarity grid. Margins, not flex gap. */
+  .valueguess { margin:-4px 0 14px; padding:5px 6px 5px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface); font-size:.84rem; color:var(--ink-soft); overflow-wrap:anywhere; }
+  .valueguess .vghead { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .valueguess .vghead span { margin:4px 12px 4px 0; min-width:0; }
+  .valueguess b { color:var(--ink); font-weight:700; }
+  .valueguess .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
+  .valueguess .vgbody { padding:4px 7px 8px 0; }
+  .valueguess .vghelp { margin:2px 0 10px; }
+  .valueguess .vggrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .valueguess .vggrid .field { min-width:0; } .valueguess .vggrid label { font-size:.76rem; } .valueguess .vggrid input { width:100%; min-width:0; }
+  .valueguess .vgtotal { margin:12px 0 10px; font-size:1rem; color:var(--ink); }
+  /* Printable deck list: a plain black on white sheet, the same on screen (for a screenshot) and on paper. */
+  .deckprint { position:fixed; left:0; top:0; right:0; bottom:0; z-index:205; overflow:auto; background:#fff; color:#111; -webkit-overflow-scrolling:touch; }
+  .deckprint .dpbar { position:sticky; top:0; display:flex; flex-wrap:wrap; align-items:center; padding:10px 16px; background:#f1f1f1; border-bottom:1px solid #ccc; }
+  .deckprint .dpbar button { margin:4px 8px 4px 0; padding:8px 14px; border-radius:10px; border:1.5px solid #999; background:#fff; color:#111; font:inherit; font-weight:650; cursor:pointer; }
+  .deckprint .dpbar p { flex-basis:100%; margin:4px 0 0; font-size:.8rem; color:#444; }
+  .deckprint .dppage { max-width:720px; margin:0 auto; padding:20px 16px 32px; font-size:.95rem; line-height:1.4; overflow-wrap:anywhere; }
+  .deckprint h1 { margin:0 0 4px; font-size:1.4rem; color:#111; }
+  .deckprint .dpsub { margin:0 0 16px; color:#333; font-size:.85rem; }
+  .deckprint h2 { margin:18px 0 2px; font-size:1.05rem; color:#111; border-bottom:1.5px solid #111; padding-bottom:3px; }
+  .deckprint .dpcount { margin:0 0 6px; color:#333; font-size:.82rem; }
+  .deckprint ol { list-style:none; margin:0; padding:0; }
+  .deckprint li { padding:3px 0; border-bottom:1px solid #ddd; }
+  .deckprint li b { display:inline-block; min-width:2em; }
+  .deckprint .dpnum { font-family:ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
+  .deckprint .dpfoot { margin-top:20px; color:#555; font-size:.78rem; }
+  @media print {
+    html.deckprinting body > *:not(#deckPrintSheet) { display:none !important; }
+    html.deckprinting #deckPrintSheet { position:static; overflow:visible; }
+    html.deckprinting #deckPrintSheet .dpbar { display:none !important; }
+  }
 
   /* Modal */
   /* z-index 72 is deliberate and constrained on both sides. It MUST beat .navmenu (70), the floating
@@ -1275,6 +1310,7 @@ label.acctsetrow { align-items:center; }
     /* Deck controls: deck picker on its own row, action buttons in a tidy 3-up grid. */
     .deckctrls { flex-wrap:wrap; }
     .deckctrls > #deckSel { flex:1 1 100%; min-width:100%; }
+    #page-decks .deckctrls > .deckneedline { order:0; }
     .deckctrls > .tbtn { flex:1 1 calc(33.33% - 6px); min-width:0; justify-content:center; }
     /* Card detail: let the stat line wrap in the narrow column beside the art. */
     .statline { flex-wrap:wrap; gap:8px 14px; }
@@ -1479,6 +1515,9 @@ label.acctsetrow { align-items:center; }
   .deckhead { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
   .deckctrls { display:flex; gap:8px; align-items:center; }
   #deckSel { max-width:200px; }
+  /* The open deck's need, repeated under the picker since a closed select clips long names. Its own row. */
+  .deckctrls { flex-wrap:wrap; }
+  .deckctrls > .deckneedline { order:99; flex:1 1 100%; margin:0; font-size:.82rem; font-weight:600; color:var(--ink-soft); overflow-wrap:anywhere; }
   .deckstats { display:flex; gap:22px; flex-wrap:wrap; margin:14px 0 16px; }
   .deckstats .deckbreak { flex:1 0 100%; }
   .deckstats .hs { display:flex; flex-direction:column; gap:2px; }
@@ -1491,6 +1530,24 @@ label.acctsetrow { align-items:center; }
   .deckcomplete .dc-detail { margin-top:2px; color:var(--ink-soft); font-size:.8rem; }
   .deckcomplete .dc-detail b { color:var(--ink); }
   .deckcomplete .btn { flex:none; white-space:nowrap; }
+  .deckwanted { max-width:640px; margin:-4px 0 16px; padding:13px 14px 10px; border:1.5px solid var(--line-strong); border-radius:14px; background:var(--surface); }
+  .deckwanted[hidden] { display:none; }
+  .deckwanted .mwhead { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .deckwanted .mwhead .dc-copy { min-width:0; margin:0 12px 8px 0; }
+  .deckwanted .dc-title { font-weight:750; font-size:.9rem; }
+  .deckwanted .dc-detail { margin-top:2px; color:var(--ink-soft); font-size:.8rem; overflow-wrap:anywhere; }
+  .deckwanted .dc-detail b { color:var(--ink); }
+  .deckwanted .mwbtns { display:flex; flex-wrap:wrap; margin-bottom:8px; }
+  .deckwanted .mwbtns .btn { flex:none; white-space:nowrap; margin:0 8px 0 0; }
+  .deckwanted .mwbtns .btn:last-child { margin-right:0; }
+  .deckwanted .mwrow { display:flex; align-items:center; padding:7px 0; border-top:1px solid var(--line); }
+  .deckwanted .mwrow img { width:28px; height:38px; object-fit:cover; border-radius:5px; background:var(--surface-2); flex:none; margin-right:10px; }
+  .deckwanted .mwname { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+  .deckwanted .mwname .dn { font-weight:650; font-size:.86rem; }
+  .deckwanted .mwname .dnum2 { font-family:var(--font-mono); font-size:.7rem; color:var(--ink-faint); }
+  .deckwanted .mwfig { flex:none; margin-left:10px; font-family:var(--font-mono); font-size:.74rem; color:var(--ink-soft); white-space:nowrap; }
+  .deckwanted .mwfig.need { color:var(--ink); font-weight:700; }
+  .deckwanted #mwAll { margin-top:8px; }
   .decklegality { max-width:640px; margin:-6px 0 16px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); font-size:.8rem; }
   .decklegality.ok { border-color:color-mix(in srgb,var(--el-Grass) 55%,var(--line)); }
   .decklegality .dlhead { display:flex; justify-content:space-between; gap:10px; font-weight:750; }
@@ -1581,12 +1638,15 @@ label.acctsetrow { align-items:center; }
     .pdrow .pdc { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   }
   .deckadd { max-width:520px; margin-bottom:6px; }
+  .deckorderbar { margin:4px 0 10px; }
   .decksug { max-width:520px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px; }
   .decksug[hidden] { display:none; }
   .decksug button { width:100%; text-align:left; border:none; background:transparent; color:var(--ink); padding:9px 13px; display:flex; align-items:center; gap:10px; font-size:.9rem; }
   .decksug button:hover { background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .decksug img { width:26px; height:36px; object-fit:cover; border-radius:4px; flex:none; }
   .decksug .dnum { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); margin-left:auto; }
+  .decksug .dsown { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); white-space:nowrap; flex:none; }
+  .decksug .dsown.have { color:var(--el-Grass); }
   .decklist { display:flex; flex-direction:column; gap:8px; max-width:640px; }
   .deckrow { display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:8px 12px; }
   .deckrow img { width:32px; height:44px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
@@ -1609,6 +1669,7 @@ label.acctsetrow { align-items:center; }
   .nwbtn { cursor:pointer; color:var(--accent-ink); background:var(--surface-2); border:1.5px solid var(--accent); }
   .nwstate { color:var(--ink-soft); border:1.5px dashed var(--line); }
   .nwname { font-size:.78rem; color:var(--ink-faint); min-width:0; }
+  .nwopen { background:none; border:0; padding:4px 0; margin:0; font-family:inherit; font-weight:600; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; text-align:left; overflow-wrap:anywhere; }
   /* Palworld TCG digest (docs/news/palworld-tcg.json). Margins, not flex gap, so the badges stay apart on older WebViews. */
   .tcgnewshead { margin-top:28px; }
   .nmeta { display:flex; flex-wrap:wrap; align-items:center; margin:0 0 2px; }
@@ -1623,6 +1684,10 @@ label.acctsetrow { align-items:center; }
   .editioncounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex-basis:100%;width:100%;margin-top:8px}
   .editioncounts p{grid-column:1/-1;margin:0;color:var(--ink-soft);font-size:.8rem}
   .editioncounts .field{min-width:0}.editioncounts label{font-size:.76rem}.editioncounts input{width:100%;min-width:0}
+  .copynotes .cnrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1.5px solid var(--line);border-radius:12px}
+  .copynotes .cnrow select{width:100%;min-width:0}.copynotes .cnnote{grid-column:1/-1}
+  .copynotes .cnact{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center}.copynotes .cnact>*{margin:0 8px 0 0}
+  .copynotes .cnadd{grid-column:1/-1;justify-self:start}
   /* notification bell + What's-new popup */
   .bellbtn { position:relative; padding:9px 11px; }
   .bellbtn svg { display:block; }
@@ -2095,6 +2160,8 @@ label.acctsetrow { align-items:center; }
   .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
   .setpos{ margin:14px 0 0; font-size:.78rem; color:var(--ink-faint); text-align:center; overflow-wrap:anywhere; }
   .setpos + .setnav{ margin-top:6px; }
+  .setpos + .setpos{ margin-top:2px; }
+  .setposlink{ background:none; border:0; padding:0; margin:0; font:inherit; color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer; overflow-wrap:anywhere; }
   .setnav .setnavb{ display:block; width:48%; max-width:48%; text-align:left; padding:8px 12px; overflow-wrap:anywhere; line-height:1.3; }
   .setnav .snnext{ margin-left:auto; text-align:right; }
   .setnav .snlab{ display:block; font-weight:600; }
@@ -2220,7 +2287,7 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .collectedbar .cbtogs{gap:0}.no-flexgap .collectedbar .cbtogs>*+*{margin-left:8px}
   .no-flexgap .ownchip{gap:0}.no-flexgap .ownchip>*+*{margin-left:6px}
   .no-flexgap .ownseal{gap:0}.no-flexgap .ownseal>*+*{margin-left:12px}
-  .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}
+  .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}.no-flexgap .deckctrls>.deckneedline{margin-left:0;margin-top:6px;margin-bottom:6px}
   .no-flexgap .decksug button{gap:0}.no-flexgap .decksug button>*+*{margin-left:10px}
   .no-flexgap .deckrow{gap:0}.no-flexgap .deckrow>*+*{margin-left:12px}
   .no-flexgap .npitem{gap:0}.no-flexgap .npitem>*+*{margin-left:8px}
@@ -2505,6 +2572,7 @@ label.acctsetrow { align-items:center; }
       <div class="xprow"><span class="lab">Master set completion</span><span class="pct" id="pctNum">0%</span></div>
       <div class="xpbar"><div class="xpfill" id="xpfill" style="width:0"></div></div>
       <div class="meta" id="ownMeta">0 of 255 cards collected</div>
+      <div class="meta" id="wishMeta">0 on wishlist</div>
     </div>
     <div class="panel" id="valPanel" role="button" tabindex="0" title="Tap to switch: last 5 sold / live listings">
       <div class="lab" id="valLab">Binder value</div>
@@ -2523,6 +2591,7 @@ label.acctsetrow { align-items:center; }
       <div class="setpills" id="setPills"></div>
     </div>
   </section>
+  <div class="modeexport" id="colShare"><button class="btn sec" type="button" id="copySummaryBtn">Copy summary</button></div>
 
   <div class="controls">
     <div class="searchrow">
@@ -2575,6 +2644,7 @@ label.acctsetrow { align-items:center; }
 
   <p class="countline" id="countLine"></p>
   <div class="promoscope" id="promoScope" hidden></div>
+  <div class="valueguess" id="valueGuess" hidden></div>
   <div class="grid" id="grid"></div>
   <div id="collectedSealedWrap" hidden>
     <h2 class="sech" style="margin-top:26px">Sealed products</h2>
@@ -2588,11 +2658,13 @@ label.acctsetrow { align-items:center; }
       <h2 class="sech" style="margin:0;flex:1 1 auto">Decks</h2>
       <div class="deckctrls">
         <select class="sortsel" id="deckSel" aria-label="Active deck"></select>
+        <p class="deckneedline" id="deckNeedLine" aria-live="polite" hidden></p>
         <button class="tbtn" id="deckNew" data-icon="plus">New</button>
         <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
+        <button class="tbtn ghost" id="deckPrint" data-icon="news" title="A printable list of this deck">Print</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
         <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
       </div>
@@ -2602,8 +2674,10 @@ label.acctsetrow { align-items:center; }
     <div class="decklegality" id="deckLegality" hidden></div>
     <div class="decklab" id="deckLab" hidden></div>
     <div class="deckcomplete" id="deckCompletion" hidden></div>
+    <div class="deckwanted" id="deckWanted" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
     <div class="decksug" id="deckSug" hidden></div>
+    <div class="deckorderbar" id="deckOrderBar" hidden><button class="chip solid" type="button" id="deckNeedFirst" aria-pressed="false">Need first</button></div>
     <div class="decklist" id="deckList"></div>
   </section>
 
@@ -3011,6 +3085,8 @@ label.acctsetrow { align-items:center; }
     <div class="askbtns"><button type="button" id="globalSearchClose">Close</button></div>
   </div>
 </div>
+
+<div class="deckprint" id="deckPrintSheet" role="dialog" aria-modal="true" aria-label="Printable deck list" hidden></div>
 
 <div class="askscrim" id="deckIOScrim" hidden>
   <div class="askbox wide" role="dialog" aria-modal="true" aria-labelledby="deckIOTitle">
@@ -3683,6 +3759,47 @@ label.acctsetrow { align-items:center; }
     var b=rawCounts(e), key=rawEditionKey(edition), n=rawCount(Math.abs(delta));
     if(delta<0) n=-Math.min(b[key]||0,n);
     b[key]=(b[key]||0)+n; setRawCounts(e,b); return n;
+  }
+  // Numbered copies: raw copies stay counts, and some of them can carry a serial out of the print run (372 of 750)
+  // or a misprint tag with a short note. They live in copyNotes on the holding, never outnumber the raw copies,
+  // and never change qty, the printing counts or any value. Older app versions simply ignore the array.
+  function copyNoteClean(n){
+    if(!n || typeof n!=="object") return null;
+    var dig=function(v){ return String(v==null?"":v).replace(/\D+/g,"").slice(0,7); };
+    var out={}, sr=dig(n.serial), rn=dig(n.run), nt=String(n.note==null?"":n.note).replace(/\s+/g," ").trim().slice(0,80), ed=rawEditionKey(n.ed==null?"unknown":n.ed);
+    if(sr) out.serial=sr; if(rn) out.run=rn; if(n.mis) out.mis=1; if(nt) out.note=nt; if(ed!=="unknown") out.ed=ed;
+    return (sr||rn||out.mis||nt) ? out : null;
+  }
+  function copyNotesList(e){
+    var q=rawCount(e&&e.qty), out=[];
+    ((e && Array.isArray(e.copyNotes))?e.copyNotes:[]).forEach(function(n){ var x=copyNoteClean(n); if(x && out.length<q) out.push(x); });
+    return out;
+  }
+  function setCopyNotes(e, list){
+    var q=rawCount(e&&e.qty), out=[];
+    (list||[]).forEach(function(n){ var x=copyNoteClean(n); if(x && out.length<q) out.push(x); });
+    if(out.length) e.copyNotes=out; else delete e.copyNotes;
+  }
+  function addCopyNote(e, n){
+    var l=copyNotesList(e), x=copyNoteClean(n);
+    if(!x || l.length>=rawCount(e&&e.qty)) return false;
+    l.push(x); e.copyNotes=l; return true;
+  }
+  function removeCopyNote(e, i){ var l=copyNotesList(e); if(i<0 || i>=l.length) return; l.splice(i,1); setCopyNotes(e,l); }
+  function copyNoteLabel(n){
+    var bits=[], num=(n.serial&&n.run) ? n.serial+" of "+n.run : (n.serial ? n.serial : (n.run ? "of "+n.run : ""));
+    if(num) bits.push(num);
+    if(n.mis) bits.push("Misprint");
+    if(n.note) bits.push(n.note);
+    if(n.ed && n.ed!=="unknown") bits.push(rawEditionLabel(n.ed));
+    return bits.join(" · ");
+  }
+  // The CSV Misprint cell: "Misprint", "Misprint: note", or just the note for an untagged copy.
+  function copyNoteCsvCell(n){ return n.mis ? ("Misprint"+(n.note?": "+n.note:"")) : (n.note||""); }
+  function copyNoteFromCsv(serial, run, cell, ed){
+    var n={serial:serial, run:run, ed:ed||"unknown"}, t=String(cell||"").trim(), m=t.match(/^misprint\b\s*:?\s*(.*)$/i);
+    if(m){ n.mis=1; n.note=m[1]; } else n.note=t;
+    return copyNoteClean(n);
   }
   function mergeRawCounts(a,b,out){
     // A correction of unknown -> 1st is the same copy, not two copies. Keep one coherent breakdown
@@ -4522,15 +4639,18 @@ label.acctsetrow { align-items:center; }
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
         : (wishMode && !wishCount())
-        ? "<b>Your wishlist is empty</b>Tap the star on any card to add it here."
+        ? "<b>Your wishlist is empty</b>Tap the star on any card to add it here.<div style=\"margin-top:12px\"><button class=\"btn\" type=\"button\" id=\"wishBrowse\">Browse cards</button></div>"
         : (favMode && !Object.keys(STATE.fav).length)
-        ? "<b>No favourites yet</b>Open a card and tap the heart to keep it here."
+        ? "<b>No favourites yet</b>Open a card and tap the heart to keep it here.<div style=\"margin-top:12px\"><button class=\"btn\" type=\"button\" id=\"favBrowse\">Browse cards</button></div>"
         : noSlabs
         ? "<b>No graded slabs yet</b>Open a card, tap Collect, switch to Graded, pick the grader and grade, then tap Add."
         : noExtras
         ? "<b>No extras</b>Cards you own two or more copies of show up here, ready to trade."
         : (soonMsg() || "<b>No cards match those filters</b>Clear a colour, type, or rarity to widen the search.");
       grid.appendChild(e);
+      // An empty wishlist or favourites list offers the way to the catalogue, the same place the Collection tab opens.
+      var wb=e.querySelector("#wishBrowse"); if(wb) wb.onclick=function(){ showPage("collection"); };
+      var fb=e.querySelector("#favBrowse"); if(fb) fb.onclick=function(){ showPage("collection"); };
     } else if (viewMode==="binder9" || viewMode==="binder12"){
       grid.classList.add("binder");
       var per=viewMode==="binder9"?9:12, cols=viewMode==="binder9"?3:4;
@@ -4573,12 +4693,59 @@ label.acctsetrow { align-items:center; }
     else $("countLine").textContent = cards.length + (cards.length===1?" card":" cards") + " shown of " + TOTAL;
     if(collectedMode){ syncCollectedTogs(); renderCollectedSealed(); }
     paintPromoScope();
+    try{ renderValueGuess(); }catch(e){ reportError(e, "value guess"); }
     // Only refresh what is on screen. stats() updates the Collection dashboard (completion, sets, binder value).
     // Home and Releases are rebuilt lazily when the user navigates to them (see showPage), not on every edit,
     // and mutating callers own persistence (they call save() themselves) so render() no longer saves.
     stats(); updateFilterCount();
   }
 
+  // ---- Value guess: how many of each rarity you pulled, times this set's average price for that rarity ----
+  // A rough figure for a pile of pulls before anything is logged. Uses the same per card price as Sort by
+  // Value, skips cards with no price, and never touches the collection. Counts are kept only while the same
+  // set stays chosen. Shown on the Cards grid when exactly one set is chosen and prices are on.
+  var VG={key:"", counts:{}, open:false};
+  function valueGuessScopeCards(){
+    if(colMode()!=="col" || SETTINGS.mode==="collector") return null;
+    var chosen=FILTER_SETS.filter(function(x){ return filters.exps[x.key]; });
+    if(chosen.length!==1) return null;
+    var codes=setFilterCodes(), list=CARDS.filter(function(c){ return codes.indexOf(c.set)!==-1; });
+    return list.length ? {key:chosen[0].key+"|"+codes.join(","), name:chosen[0].name, cards:list} : null;
+  }
+  function valueGuessRareAvg(cards, rare){
+    var t=0, n=0;
+    cards.forEach(function(c){ if(c.rare!==rare) return; var u=+mktOf(c.id)||0; if(u>0){ t+=u; n++; } });
+    return n ? t/n : 0;
+  }
+  function valueGuessCount(v){ var n=parseInt(String(v==null?"":v).replace(/\D+/g,""),10); return (isFinite(n) && n>0) ? Math.min(999,n) : 0; }
+  function valueGuessTotal(avgs, counts){
+    var t=0; Object.keys(avgs).forEach(function(r){ t+=(+avgs[r]||0)*valueGuessCount(counts&&counts[r]); });
+    return t;
+  }
+  function renderValueGuess(){
+    var el=$("valueGuess"); if(!el) return;
+    var sc=valueGuessScopeCards();
+    if(!sc){ el.hidden=true; el.innerHTML=""; return; }
+    if(sc.key!==VG.key){ VG.key=sc.key; VG.counts={}; }
+    var seen={}; sc.cards.forEach(function(c){ seen[c.rare]=1; });
+    var rares=RARES.filter(function(r){ return seen[r]; }), avgs={};
+    rares.forEach(function(r){ avgs[r]=valueGuessRareAvg(sc.cards, r); });
+    var head='<div class="vghead"><span><b>Value guess</b> · '+esc(sc.name)+'</span><button type="button" class="tbtn" id="vgTog" aria-expanded="'+(VG.open?'true':'false')+'">'+(VG.open?'Hide':'Open')+'</button></div>';
+    if(!VG.open){ el.innerHTML=head; el.hidden=false; $("vgTog").onclick=function(){ VG.open=true; renderValueGuess(); }; return; }
+    el.innerHTML=head+'<div class="vgbody"><p class="vghelp">Type how many you pulled of each rarity. Estimate uses average prices in this set.</p>'+
+      '<div class="vggrid">'+rares.map(function(r){ var v=valueGuessCount(VG.counts[r]);
+        return '<div class="field"><label for="vg'+r+'">'+esc(RARE_NAME[r]||r)+'</label><input id="vg'+r+'" data-vg="'+r+'" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="0" value="'+(v?v:'')+'"></div>'; }).join("")+'</div>'+
+      '<p class="vgtotal">Estimate <b id="vgSum"></b></p>'+
+      '<button type="button" class="btn" id="vgScan">Scan to log them</button></div>';
+    el.hidden=false;
+    var paint=function(){ var sum=$("vgSum"); if(sum) sum.textContent=money(valueGuessTotal(avgs, VG.counts)); };
+    paint();
+    Array.prototype.forEach.call(el.querySelectorAll("[data-vg]"), function(input){
+      input.oninput=function(){ var r=input.getAttribute("data-vg"), n=valueGuessCount(input.value); VG.counts[r]=n; if(String(n||"")!==input.value && input.value!=="") input.value=n?String(n):""; paint(); };
+    });
+    $("vgTog").onclick=function(){ VG.open=false; renderValueGuess(); };
+    $("vgScan").onclick=function(){ showPage("scan"); };
+  }
   // "Shop tournament promos" plus Show all promos above the grid while a promo type narrows the Promo set.
   function paintPromoScope(){
     var el=$("promoScope"); if(!el) return;
@@ -4706,7 +4873,9 @@ label.acctsetrow { align-items:center; }
     $("xpfill").style.width = pct+"%";
     // Every copy held, raw and graded together, next to the unique count (left off an empty binder).
     $("ownMeta").textContent = printings+" of "+TOTAL+" cards collected"+(copies?(" · "+copies+(copies===1?" copy":" copies")):"");
-    _masterN = master.size; _chaseN = chase;
+    // How long the wishlist is, so you do not have to open it to find out.
+    var wm=$("wishMeta"); if(wm) wm.textContent = wishCount()+" on wishlist";
+    _masterN = master.size; _chaseN = chase; _ownN = printings; _copiesN = copies;
     _promoN = bySet["PR2026"]||0; _promoT = SET_TOTAL["PR2026"]||0;
     var _ex = releasedExpansions({ owned:bySet, tot:SET_TOTAL }); _setsN = _ex.done; _setsT = _ex.tot;
     _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
@@ -4739,7 +4908,7 @@ label.acctsetrow { align-items:center; }
     }
   }
   // Merged Base set / Chase cards counter: tap the panel to switch which one it shows.
-  var _masterN=0, _chaseN=0, _promoN=0, _promoT=0, _setsN=0, _setsT=0, _rewardsN=0, _rewardsT=6;
+  var _ownN=0, _copiesN=0, _masterN=0, _chaseN=0, _promoN=0, _promoT=0, _setsN=0, _setsT=0, _rewardsN=0, _rewardsT=6;
   var DUAL_ORDER=["sets","chase","promo","rewards"], dualMetric="sets";
   var DUAL_META={
     sets:   ["Sets completed",   function(){return _setsN;},    function(){return _setsT;}],
@@ -4849,14 +5018,20 @@ label.acctsetrow { align-items:center; }
     if(i<0) return {prev:null, next:null, pos:0, total:0};
     return {prev:i>0?mates[i-1]:null, next:i<mates.length-1?mates[i+1]:null, pos:i+1, total:mates.length};
   }
+  // How many different cards of one set you hold (any copy, raw or graded, counts once), and the set's size.
+  function setCatalogCount(set){ var n=0; CARDS.forEach(function(x){ if(set && x.set===set) n++; }); return n; }
+  function uniqueOwnedInSet(set){ var n=0; CARDS.forEach(function(x){ var s=own[x.id]; if(set && x.set===set && s && copiesOf(s)>0) n++; }); return n; }
+  function setOwnText(c){ var t=setCatalogCount(c.set); return t ? uniqueOwnedInSet(c.set)+" of "+t+" in this set" : ""; }
   function setNavHTML(c){
-    var nb=setNeighbours(c); if(!nb.prev && !nb.next) return "";
+    var ownTxt=setOwnText(c), ownLine=ownTxt ? '<p class="setpos" id="setOwnLine">'+ownTxt+'</p>' : '';
+    var nb=setNeighbours(c); if(!nb.prev && !nb.next) return ownLine;
     function btn(x, cls, label){ return '<button class="btn sec setnavb '+cls+'" type="button" data-id="'+esc(x.id)+'"><span class="snlab">'+label+'</span><span class="snname">'+esc(x.name)+'</span></button>'; }
     // Where this card sits in the walk the two buttons make, so a middle card is not guesswork. The set name
     // says the walk is the card's set, not the filter the sheet was opened from; no name, no raw code.
     var setNm=(SETS[c.set]&&SETS[c.set].name)||"";
-    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · '+esc(setNm):'')+'</p>' : '';
-    return pos+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
+    // The set name opens Cards on that whole set; with no name there is nothing to tap.
+    var pos=(nb.pos>0 && nb.total>1) ? '<p class="setpos">Card '+nb.pos+' of '+nb.total+(setNm?' · <button type="button" class="setposlink" data-set="'+esc(c.set)+'">'+esc(setNm)+'</button>':'')+'</p>' : '';
+    return pos+ownLine+'<div class="setnav">'+(nb.prev?btn(nb.prev,"snprev","&lsaquo; Previous card"):'')+(nb.next?btn(nb.next,"snnext","Next card &rsaquo;"):'')+'</div>';
   }
   function openDetail(c){
     var myGen=++detailGen;   // guards async price pulls against clicking through to another card
@@ -4880,6 +5055,7 @@ label.acctsetrow { align-items:center; }
     var sphereDetail="";
     if(setTrack){ var setCards=setSphereCards(setTrack), setOwned=setCards.filter(function(x){ return has(o(x.id)); }).length;
       sphereDetail='<div class="setcontrib"><span class="rwsphere scorb" style="--rc:'+setTrack.sphere.c+'">'+sphereSVG(setTrack.sphere.c,"detail")+'</span><span class="sctxt"><b>Counts toward '+esc(setTrack.name)+' Sphere</b>Collecting this makes the set '+(setOwned+(has(s)?0:1))+' / '+setCards.length+' complete.</span><button type="button" id="viewSetSphere">View set</button></div>'; }
+    var cnWork = copyNotesList(s);   // numbered copies, blanks kept here until filled in
     var gwork = (s.graded||[]).filter(function(g){ return g && typeof g==="object"; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=g.value; return x; });
     $("mMain").innerHTML =
       '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
@@ -4898,6 +5074,7 @@ label.acctsetrow { align-items:center; }
       kv+
       tdSheetHtml(c)+
       dateAddedHtml+
+      deckUseLine(c)+
       promoContext(c)+
       '<div class="meditor">'+
       // ---- Collection action bubbles ----
@@ -4990,6 +5167,13 @@ label.acctsetrow { align-items:center; }
       var bw=$("bubWish"); if(bw){ bw.className="bub"+(wished?" on bwish":""); bw.innerHTML=icon(wished?'starf':'star')+'<span>Wishlist</span>'; }
       var bf=$("bubFav"); if(bf){ bf.className="bub"+(fav?" on fav":""); bf.innerHTML=icon(fav?'heartf':'heart')+'<span>Favourite</span>'; }
     }
+    // Refresh the numbered copy pills without rebuilding the editor underneath them (keeps focus while typing).
+    function paintOwnPills(){
+      var host=$("ownLine"); if(!host) return;
+      Array.prototype.forEach.call(host.querySelectorAll(".ownpill.cnpill"), function(el){ el.parentNode.removeChild(el); });
+      var anchor=host.querySelector(".editioncounts");
+      copyNotesList(s).forEach(function(n){ var sp=document.createElement("span"); sp.className="ownpill cnpill"; sp.style.paddingRight="12px"; sp.textContent=copyNoteLabel(n); if(anchor) host.insertBefore(sp,anchor); else host.appendChild(sp); });
+    }
     // Quick-remove line: shows current holdings once a card is in the collection.
     function paintOwn(){
       var host=$("ownLine"); if(!host) return;
@@ -4999,11 +5183,39 @@ label.acctsetrow { align-items:center; }
       // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
       // again anywhere in the app, so there was no way to check a slab against its label.
       gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      if(cnWork.length>q) cnWork=cnWork.slice(0,q);
+      copyNotesList(s).forEach(function(n){ parts.push('<span class="ownpill cnpill" style="padding-right:12px">'+esc(copyNoteLabel(n))+'</span>'); });
       host.hidden=!parts.length;
       host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
       if(q){
         host.innerHTML+='<div class="editioncounts"><p>Edit how many raw copies you have of each printing, for example to mark copies as Japanese or Chinese. Older unlabelled copies are kept under Not specified.</p>'+printingKeys(c).map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+(counts[ed]||0)+'"></div>';}).join('')+'</div>';
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
+      }
+      if(q){
+        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have.</p>';
+        cnWork.forEach(function(n,i){
+          var ed=rawEditionKey(n.ed==null?"unknown":n.ed);
+          cnHtml+='<div class="cnrow" data-cn="'+i+'">'+
+            '<div class="field"><label for="cnSerial'+i+'">Number</label><input id="cnSerial'+i+'" data-cnf="serial" type="text" inputmode="numeric" autocomplete="off" placeholder="372" value="'+esc(n.serial||"")+'"></div>'+
+            '<div class="field"><label for="cnRun'+i+'">Of</label><input id="cnRun'+i+'" data-cnf="run" type="text" inputmode="numeric" autocomplete="off" placeholder="750" value="'+esc(n.run||"")+'"></div>'+
+            '<div class="field"><label for="cnEd'+i+'">Printing</label><select id="cnEd'+i+'" data-cnf="ed">'+printingKeys(c).map(function(k){ return '<option value="'+k+'"'+(k===ed?' selected':'')+'>'+rawEditionLabel(k)+'</option>'; }).join("")+'</select></div>'+
+            '<div class="field cnnote"><label for="cnNote'+i+'">Note</label><input id="cnNote'+i+'" data-cnf="note" type="text" maxlength="80" autocomplete="off" placeholder="Optional" value="'+esc(n.note||"")+'"></div>'+
+            '<div class="cnact"><button class="chip solid" data-cnf="mis" type="button" aria-pressed="'+(n.mis?'true':'false')+'">Misprint</button><button class="btn" data-cnrm="'+i+'" type="button">Remove</button></div>'+
+          '</div>';
+        });
+        if(cnWork.length<q) cnHtml+='<button class="btn cnadd" id="cnAdd" type="button">Add serial</button>';
+        host.insertAdjacentHTML("beforeend", cnHtml+'</div>');
+        var cnStore=function(){ setCopyNotes(s,cnWork); persist(); paintOwnPills(); };
+        Array.prototype.forEach.call(host.querySelectorAll(".cnrow"), function(row){
+          var i=parseInt(row.getAttribute("data-cn"),10);
+          Array.prototype.forEach.call(row.querySelectorAll("[data-cnf]"), function(el){
+            var f=el.getAttribute("data-cnf");
+            if(f==="mis") el.onclick=function(){ cnWork[i].mis=cnWork[i].mis?0:1; el.setAttribute("aria-pressed",cnWork[i].mis?"true":"false"); cnStore(); };
+            else el.onchange=function(){ var v=el.value; if(f==="serial"||f==="run"){ v=String(v||"").replace(/\D+/g,"").slice(0,7); el.value=v; } cnWork[i][f]=v; cnStore(); };
+          });
+        });
+        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
+        var cnAdd=$("cnAdd"); if(cnAdd) cnAdd.onclick=function(){ if(cnWork.length<q){ cnWork.push({serial:"",run:"",ed:"unknown",note:""}); paintOwn(); var f=$("cnSerial"+(cnWork.length-1)); if(f) try{ f.focus(); }catch(e){} } };
       }
       if(trackPaidOn()){
         var paidBits=["unknown","1","2","jp","cn"].filter(function(ed){ return counts[ed]; }).map(function(ed){
@@ -5037,6 +5249,7 @@ label.acctsetrow { align-items:center; }
       s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=+g.value||0; return x; });   // keeps cert / edition
       save(); render(); buildColSel();
+      var sol=$("setOwnLine"); if(sol) sol.textContent=setOwnText(c);   // the first or last copy moves the set count
     }
     paintBubbles();
     $("bubColl").onclick=function(){ togglePanel("panelColl"); paintBubbles(); if(panelOpen("panelColl")) $("panelColl").scrollIntoView({block:"nearest",behavior:"smooth"}); };
@@ -5296,6 +5509,20 @@ label.acctsetrow { align-items:center; }
         openDetail(n);
       };
     });
+    // A deck name under Used in N decks: keep any edit, close the sheet, then open Decks on that deck the
+    // way the picker does. A deck deleted since the sheet was drawn does nothing.
+    Array.prototype.forEach.call($("mMain").querySelectorAll("button.deckusename"), function(db){
+      db.onclick=function(){
+        var id=db.getAttribute("data-deck"), d=decks().filter(function(x){ return x.id===id; })[0]; if(!d) return;
+        persist(); dismissOverlay(); STATE.activeDeck=d.id; save(); showPage("decks");
+      };
+    });
+    // Set name under Card N of M: keep any edit, close the sheet, then show the whole set in Cards.
+    var spl=$("mMain").querySelector(".setposlink");
+    if(spl) spl.onclick=function(){
+      var k=spl.getAttribute("data-set"); if(!k || !SETS[k]) return;
+      persist(); dismissOverlay(); openSet(k, "all");
+    };
     var _wasOpen=scrim.classList.contains("open");
     scrim.classList.add("open"); sheetTop("c:"+c.id, _wasOpen);
     if(!_wasOpen) openOverlay(closeModal);
@@ -5593,14 +5820,21 @@ label.acctsetrow { align-items:center; }
   function collectionCsv(col){
     col=col||activeCol();
     var map=(col&&col.own)||{}, seal=(col&&col.sealed)||{}, mode=priceMode(), code=(CUR&&CUR.code)||"";
-    var rows=[CSV_HEADER], inCat={}, prevOwn=own, swapped=(map!==own);
+    var rows=[CSV_HEADER.slice()], inCat={}, prevOwn=own, swapped=(map!==own);
+    // Serial, Run and Misprint columns are added at the end only when a holding has numbered copies, so every
+    // other export keeps exactly the same shape. Each numbered copy is an extra Card row with Quantity 0, which
+    // adds no copies on import (older versions skip it).
+    var withNotes=Object.keys(map).some(function(id){ var e=map[id]; return e && typeof e==="object" && copyNotesList(e).length; });
+    if(withNotes) rows[0]=rows[0].concat(["Serial","Run","Misprint"]);
     var cardRows=function(id, c){
       var e=map[id]; if(!e || typeof e!=="object") return;
       var nm=c?(c.name||""):"", setNm=(c && SETS[c.set])?SETS[c.set].name:"", rare=c?(RARE_NAME[c.rare]||c.rare||""):"";
       var q=Math.floor(+e.qty||0);
       if(q>0){ var u=unitOf(id, mode), us=csvNum(u), counts=rawCounts(e);
         ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return; var ts=csvNum(n*u);
-          rows.push([id, String(n), nm, "Card", setNm, rare, e.cond||"", csvEdition(ed), "", "", "", us, ts, (us||ts)?code:"", e.notes||"", csvPaid(e.paidRaw && e.paidRaw[ed])]); }); }
+          rows.push([id, String(n), nm, "Card", setNm, rare, e.cond||"", csvEdition(ed), "", "", "", us, ts, (us||ts)?code:"", e.notes||"", csvPaid(e.paidRaw && e.paidRaw[ed])]); });
+        copyNotesList(e).forEach(function(cn){
+          rows.push([id, "0", nm, "Card", setNm, rare, e.cond||"", csvEdition(cn.ed), "", "", "", "", "", "", "", "", cn.serial||"", cn.run||"", copyNoteCsvCell(cn)]); }); }
       (Array.isArray(e.graded)?e.graded:[]).forEach(function(g){ if(!g || typeof g!=="object") return; var v=csvNum(g.value);
         rows.push([id, "1", nm, "Graded", setNm, rare, "", csvEdition(g.edition), g.grader||"", (g.grade==null?"":g.grade), (g.cert==null?"":g.cert), v, v, v?code:"", "", csvPaid(g.paid)]); });
     };
@@ -5617,6 +5851,7 @@ label.acctsetrow { align-items:center; }
       var us=csvNum(u), ts=p.pre?"":csvNum(q*u);   // preorders carry no total, so the column sums to the portfolio value
       rows.push([p.id, String(q), title+(typ?" "+typ:""), p.pre?"Preorder":"Sealed", "", "", "", "", "", "", "", us, ts, (us||ts)?code:"", "", csvPaid(s.paid)]);
     });
+    if(withNotes) rows.forEach(function(r){ while(r.length<rows[0].length) r.push(""); });
     return csvText(rows, CSV_NUMCOL);
   }
   // ---- Want list (CSV): the cards you still want, from your wishlist or any Missing goal ----
@@ -5670,7 +5905,6 @@ label.acctsetrow { align-items:center; }
     saveTextFile(fileSlug(slug,"want-list")+"-"+todayKey()+".csv", "text/csv", text, function(){
       toast("Exported "+n+" card"+(n===1?"":"s"));
     });
-  }
   // ---- CSV import ----
   // RFC 4180 rows: quoted fields, doubled quotes, separators and line breaks inside quotes, CRLF or LF, BOM.
   function parseCsvRows(text, sep){
@@ -5857,6 +6091,14 @@ label.acctsetrow { align-items:center; }
         if(/^\d{1,3}[A-Za-z]{0,3}$/.test(num) && /^[A-Za-z]{1,5}\d{0,3}$/.test(setCode)) num=setCode+"-"+num;
         // Blank means 1; "2", "x2" or "2x" as the tolerant reader; 0 (or anything else) on a Card / Sealed row adds nothing.
         var qs=at(row, role.quantity), q=importQty(qs);
+        // A quantity 0 Card row that carries a serial, a print run or a misprint is a numbered copy, not a
+        // checklist line. It adds no copies. Anything else at 0 is only counted, and an unreadable quantity is reported.
+        if(type==="card" && q===0 && (cell(row,"serial") || cell(row,"run") || cell(row,"misprint"))){
+          var nCard=byNumberIdx[num.toUpperCase()], cnote=nCard && copyNoteFromCsv(cell(row,"serial"), cell(row,"run"), cell(row,"misprint"), edOf(cell(row,"edition")));
+          if(!cnote){ skipped++; continue; }
+          var ne=own[nCard.id]; if(!ne){ ne=own[nCard.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; added++; }
+          (ne.copyNotes=ne.copyNotes||[]).push(cnote); continue;
+        }
         if(type!=="graded" && !(q>0)){
           if(q===0){ skipped++; zero++; } else miss(ri, num, "Quantity “"+qs+"” not readable");
           continue;
@@ -5889,6 +6131,8 @@ label.acctsetrow { align-items:center; }
           var nt=cell(row,"notes",true); if(nt.trim()) e.notes=nt;
         }
       }
+      // Numbered copy rows can come before or after the rows that add the copies, so cap them once at the end.
+      Object.keys(own).forEach(function(id){ var x=own[id]; if(!x.copyNotes) return; setCopyNotes(x, x.copyNotes); if(!x.qty && !(x.graded&&x.graded.length) && !x.copyNotes){ delete own[id]; added--; } });
       return { own:own, sealed:sealed, added:added, skipped:skipped, cards:cards, slabs:slabs, sealedItems:sealedItems, unmatched:unmatched, zero:zero };
     }
     lines.forEach(function(line, lineIx){
@@ -6738,11 +6982,14 @@ label.acctsetrow { align-items:center; }
     if(hideTog){ hideTog.setAttribute("aria-pressed", sealHideOn()?"true":"false");
       hideTog.onclick=function(){ lsSet("palvault-sealhide", sealHideOn()?"0":"1"); renderSealed(); }; }
     if(!list.length){
-      // With the chip on and nothing held at all, say so; a search that simply missed keeps the usual line.
-      var noneHeld=sealHideOn() && !SEALED.some(sealOwned);
+      // With the chip on and nothing held at all, say so and offer the way back; a search that simply
+      // missed keeps the usual line. Show all goes through the chip so its state stays in step.
+      var noneHeld=sealHideOn() && !sealOwnedCount();
       grid.innerHTML=noneHeld
-        ? '<div class="empty" style="grid-column:1/-1"><b>No owned products</b>Turn off Hide unowned to see them again.</div>'
+        ? '<div class="empty" style="grid-column:1/-1"><b>None owned</b>Turn off Hide unowned to see them again.<div style="margin-top:12px"><button class="btn" type="button" id="sealShowAll">Show all</button></div></div>'
         : '<div class="empty" style="grid-column:1/-1"><b>No sealed products match</b>Try a set name or product type, like booster box.</div>';
+      var showAll=$("sealShowAll");
+      if(showAll && hideTog) showAll.onclick=function(){ hideTog.click(); };
     }
     list.forEach(function(p){
       if(p.pre && !seenPre){ seenPre=true; var dv=document.createElement("div"); dv.className="sealdivide"; dv.textContent="Preorders · coming soon"; grid.appendChild(dv); }
@@ -7712,10 +7959,29 @@ label.acctsetrow { align-items:center; }
     return any ? n : -1; }
   function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
+  // Which of your decks list a card. A deck counts once however many copies it runs, and the line only
+  // exists with Player tools on, since that is the only time Decks exist as a page.
+  // Copies the open deck already runs of a card (ids matched without case), for the add suggestions.
+  function deckAddRunQty(d, id){ var cs=(d&&d.cards)||{}, up=String(id).toUpperCase(), n=0;
+    Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(k.toUpperCase()===up && q>0) n+=q; });
+    return n; }
+  function decksUsing(id){ var up=String(id).toUpperCase();
+    return decks().filter(function(d){ var cs=(d&&d.cards)||{};
+      return Object.keys(cs).some(function(k){ return k.toUpperCase()===up && (+cs[k]||0)>0; }); }); }
+  // The deck names sit under the count, one per line in picker order; a deck with no name still counts.
+  // A name with a deck id is a button that opens that deck; without one it stays plain text.
+  function deckUseLine(c){ if(!playerToolsOn()) return "";
+    var ds=decksUsing(c.id), n=ds.length;
+    return n ? '<p class="deckuse">'+icon("layers")+'Used in '+n+(n===1?' deck':' decks')+
+      ds.map(function(d){ var nm=String((d&&d.name)||"").trim(); if(!nm) return "";
+        return d.id ? '<button type="button" class="deckusename" data-deck="'+esc(d.id)+'">'+esc(nm)+'</button>' : '<span class="deckusename">'+esc(nm)+'</span>'; }).join("")+'</p>' : ""; }
   // Deck size for the picker: every copy the list runs, so a stub and a full deck tell apart without opening each.
   function deckSizeLabel(d){ var cs=(d&&d.cards)||{}, n=0;
     Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0) n+=q; });
     return n+(n===1?" card":" cards"); }
+  // The open deck's need line under the picker: the same words as its picker option, hidden with no deck.
+  function renderDeckNeedLine(d){ var el=$("deckNeedLine"); if(!el) return;
+    var t=d ? deckNeedLabel(d) : ""; el.textContent=t; el.hidden=!t; }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
@@ -7743,6 +8009,53 @@ label.acctsetrow { align-items:center; }
       var copy=goal.remaining+' missing '+(goal.remaining===1?'copy':'copies')+' across '+items.length+' '+(items.length===1?'unique card':'unique cards')+'. Add '+pending.length+' new '+(pending.length===1?'card':'cards')+' to your wishlist?'+(estimate?" Estimated completion cost: "+money(estimate)+".":"");
       openAsk({title:"Review deck wishlist",message:copy,okText:"Add "+pending.length+" to wishlist",confirmOnly:true,onOk:function(){
         pending.forEach(function(item){ STATE.wishlist[item.card.id]=true; });
+        save(); renderDecks(); renderHome(); if($("page-missing")&&!$("page-missing").hidden) renderMissing();
+      }});
+    };
+  }
+  // Most wanted: every card some deck is still short of, across all decks, from the one active collection.
+  // One owned copy serves every deck, so a card needs its biggest shortfall in any one deck (the most
+  // copies any deck runs, less what you own), never the sum. Ids match without case, like the add suggestions.
+  function mostWantedOwnQty(id, own){ return (own&&own[id]&&+own[id].qty)||0; }
+  function mostWantedRows(ds, own, byId){
+    var map={}, decksWithGap=0;
+    (ds||[]).forEach(function(d){ var cs=(d&&d.cards)||{}, per={}, gap=false;
+      Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0){ var up=k.toUpperCase(); per[up]=(per[up]||0)+q; } });
+      Object.keys(per).forEach(function(up){ var c=byId[up]; if(!c) return;
+        var short=per[up]-mostWantedOwnQty(c.id, own); if(short<=0) return;
+        gap=true; var r=map[up]||(map[up]={card:c, decks:0, need:0}); r.decks++; if(short>r.need) r.need=short; });
+      if(gap) decksWithGap++; });
+    var rows=Object.keys(map).map(function(k){ return map[k]; });
+    rows.sort(function(a,b){ return (b.decks-a.decks)||(b.need-a.need)||((a.card.setIdx||0)-(b.card.setIdx||0))||((a.card.seq||0)-(b.card.seq||0)); });
+    return {rows:rows, decksWithGap:decksWithGap};
+  }
+  // Shown only when two or more decks have gaps, since the open deck's own box already covers one list.
+  // Eight rows by default; Show all is not remembered. Both buttons act on the full list, not just the rows on screen.
+  var mostWantedAll=false;
+  function renderMostWanted(){
+    var host=$("deckWanted"); if(!host) return;
+    var mw=mostWantedRows(decks(), activeCol().own, byNumberIdx), rows=mw.rows;
+    if(!playerToolsOn() || mw.decksWithGap<2 || !rows.length){ host.hidden=true; host.innerHTML=""; return; }
+    var copies=0, estimate=0;
+    rows.forEach(function(r){ copies+=r.need; estimate+=r.need*mktOf(r.card.id); });
+    var shown=mostWantedAll ? rows : rows.slice(0,8);
+    var goal={items:rows.map(function(r){ return {card:r.card, need:r.need}; })};
+    var pending=rows.filter(function(r){ return !isWished(r.card.id); });
+    host.innerHTML='<div class="mwhead"><div class="dc-copy"><div class="dc-title">Most wanted</div><div class="dc-detail"><b>'+rows.length+' '+(rows.length===1?'card':'cards')+'</b> · '+copies+' '+(copies===1?'copy':'copies')+'<span class="priceui"> · est. '+money(estimate)+'</span></div></div>'+
+      '<span class="mwbtns"><button class="btn sec" type="button" id="mwTcgBtn">Copy for TCGplayer</button><button class="btn pri" type="button" id="mwWishBtn">Review wishlist</button></span></div>'+
+      '<div class="mwlist">'+shown.map(function(r){
+        return '<div class="mwrow"><img src="'+imgSrc(r.card)+'" alt=""><div class="mwname"><div class="dn">'+esc(r.card.name)+'</div><div class="dnum2">'+esc(r.card.id)+'</div></div>'+
+          '<span class="mwfig">'+r.decks+(r.decks===1?' deck':' decks')+'</span><span class="mwfig need">'+r.need+(r.need===1?' copy':' copies')+'</span></div>';
+      }).join("")+'</div>'+
+      (rows.length>8 && !mostWantedAll ? '<button class="chip" type="button" id="mwAll">Show all '+rows.length+'</button>' : '');
+    host.hidden=false;
+    var all=$("mwAll"); if(all) all.onclick=function(){ mostWantedAll=true; renderMostWanted(); };
+    $("mwTcgBtn").onclick=function(){ copyTcgplayerRows(deckTcgRows(goal)); };
+    $("mwWishBtn").onclick=function(){
+      if(!pending.length){ openAsk({title:"Already on your wishlist",message:"Every Most wanted card is already on your wishlist.",okText:"Done",confirmOnly:true}); return; }
+      var copy=copies+' missing '+(copies===1?'copy':'copies')+' across '+rows.length+' '+(rows.length===1?'unique card':'unique cards')+' for your decks. Add '+pending.length+' new '+(pending.length===1?'card':'cards')+' to your wishlist?'+(estimate?" Estimated cost: "+money(estimate)+".":"");
+      openAsk({title:"Review Most wanted",message:copy,okText:"Add "+pending.length+" to wishlist",confirmOnly:true,onOk:function(){
+        pending.forEach(function(r){ STATE.wishlist[r.card.id]=true; });
         save(); renderDecks(); renderHome(); if($("page-missing")&&!$("page-missing").hidden) renderMissing();
       }});
     };
@@ -8041,12 +8354,19 @@ label.acctsetrow { align-items:center; }
     var keySel=$("deckKey");
     if(keySel) keySel.onchange=function(){ deckPractice.key=keySel.value; renderDeckLab(d); };
   }
+  // Unique cards in a deck you hold too few copies of (own < deck qty, the Need first test).
+  // Copies short do not add up: owning 2 of 4 counts once.
+  function deckNeedFirstCount(cards, own){
+    var n=0;
+    Object.keys(cards||{}).forEach(function(id){ var q=cards[id]; if(q>0 && ((own[id]&&own[id].qty)||0)<q) n++; });
+    return n;
+  }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
-    var d=activeDeck();
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
-    if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
+    var d=activeDeck(); renderDeckNeedLine(d);
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -8084,11 +8404,24 @@ label.acctsetrow { align-items:center; }
     renderDeckLegality(d);
     renderDeckLab(d);
     renderDeckCompletion(d);
+    renderMostWanted();
     $("deckStats").querySelectorAll(".dbar,.dchip").forEach(function(b){
       b.onclick=function(){ deckFocusOn(b.getAttribute("data-k"), b.getAttribute("data-v")); };
     });
     var clear=$("deckFocusClear"); if(clear) clear.onclick=function(){ deckFocus=null; renderDecks(); };
     var shown=ids.filter(function(id){ return deckRowVisible(byNumberIdx[id.toUpperCase()]); });
+    // Need first lifts the rows you hold too few copies of (the same own < qty test that shows the
+    // Wishlist button) above the rest; each group keeps its set then card number order.
+    var needFirst=lsGet("palvault-deckneedfirst")==="1", nf=$("deckNeedFirst");
+    if(nf){ nf.setAttribute("aria-pressed", needFirst?"true":"false");
+      // The number counts the whole deck, so a stat focus slice never changes it.
+      nf.textContent="Need first "+deckNeedFirstCount(d.cards, activeCol().own);
+      nf.onclick=function(){ lsSet("palvault-deckneedfirst", needFirst?"0":"1"); renderDecks(); }; }
+    if(needFirst){
+      var lack=[], rest=[];
+      shown.forEach(function(id){ var own=(activeCol().own[id]&&activeCol().own[id].qty)||0; (own<d.cards[id]?lack:rest).push(id); });
+      shown=lack.concat(rest);
+    }
     if(!ids.length){ wrap.innerHTML='<div class="empty"><b>This deck is empty</b>Search above to add cards.</div>'; return; }
     if(!shown.length){ wrap.innerHTML='<div class="empty"><b>Nothing in this slice</b>Tap the same stat again to show the whole deck.</div>'; return; }
     wrap.innerHTML="";
@@ -8301,7 +8634,14 @@ label.acctsetrow { align-items:center; }
       else if(copy.actionType==="wishlist") showPage("wishlist");
       else showPage("collection");
     };
-    if(!items.length){ list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"No cards to show for this goal yet.")+'</div>'; return; }
+    // A goal with nothing left says None missing; when it names a set (a chosen set that is now complete),
+    // View set opens that whole set in Cards. The deck goal keeps its own line.
+    if(!items.length){
+      var doneSet=missingGoal!=="deck" && data && data.set && SETS[data.set] ? data.set : "";
+      list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"<b>None missing</b>"+(doneSet?'<div style="margin-top:12px"><button class="btn" type="button" id="missingViewSet">View set</button></div>':''))+'</div>';
+      var vs=$("missingViewSet"); if(vs) vs.onclick=function(){ openSet(doneSet,"all"); };
+      return;
+    }
     // The Tournament staples chip narrows this list only; the goal, its count and its exports stay whole.
     var shown=tdFilter(items, missingStaples, function(item){ return item.card; });
     if(!shown.length){ list.innerHTML='<div class="missingempty">No tournament staples left for this goal.</div>'; return; }
@@ -8356,9 +8696,52 @@ label.acctsetrow { align-items:center; }
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var staples=$("missingStaples"); if(staples) staples.onclick=function(){ missingStaples=!missingStaples; renderMissing(); }; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var staples=$("missingStaples"); if(staples) staples.onclick=function(){ missingStaples=!missingStaples; renderMissing(); }; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; var share=$("copySummaryBtn"); if(share) share.onclick=function(){ copyPlainText(collectionSummaryText(), "Copied collection summary", "Collection summary", "Select the text, then copy."); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
+  // ---- Printable deck list: a personal copy for a tournament table, never the official registration form ----
+  // Main deck and Soul cards in two blocks, one row per card (copies, number, name), sorted like the deck rows.
+  function deckPrintGroups(d){
+    var ids=Object.keys((d&&d.cards)||{}).filter(function(k){ return +d.cards[k]>0 && byNumberIdx[k.toUpperCase()]; });
+    ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return ca.setIdx-cb.setIdx || ca.seq-cb.seq; });
+    var main={title:"Main deck", rows:[], total:0}, soul={title:"Soul", rows:[], total:0};
+    ids.forEach(function(id){ var c=byNumberIdx[id.toUpperCase()], q=Math.floor(+d.cards[id]), g=(String(c.kind||"").toLowerCase()==="soul")?soul:main;
+      g.rows.push({qty:q, id:c.id, name:c.name||""}); g.total+=q; });
+    return [main, soul];
+  }
+  function deckPrintCountLabel(n){ return n+(n===1?" card":" cards"); }
+  function deckPrintLine(r){ return r.qty+" "+r.id+" "+r.name; }
+  function deckPrintText(d){
+    var lines=[(d&&d.name)||"Deck list", "Personal copy. Not the official registration form."];
+    deckPrintGroups(d).forEach(function(g){ lines.push("", g.title+" ("+deckPrintCountLabel(g.total)+")"); g.rows.forEach(function(r){ lines.push(deckPrintLine(r)); }); });
+    lines.push("", "SphereDex personal copy");
+    return lines.join("\n")+"\n";
+  }
+  // The print dialog only on the website: the Android and iPhone apps are web views where print is missing
+  // or does nothing, so there the same sheet stays on screen with Copy list (or a screenshot).
+  function deckPrintCanPrint(){ return /^https?:$/.test(location.protocol) && typeof window.print==="function"; }
+  function renderDeckPrint(d){
+    var el=$("deckPrintSheet"); if(!el) return null;
+    var canPrint=deckPrintCanPrint();
+    el.innerHTML='<div class="dpbar"><button type="button" id="dpClose">Close</button>'+(canPrint?'<button type="button" id="dpPrint">Print</button>':'')+'<button type="button" id="dpCopy">Copy list</button>'+
+      (canPrint?'':'<p>Print is not available here. Copy the list, or take a screenshot.</p>')+'</div>'+
+      '<div class="dppage"><h1>'+esc((d&&d.name)||"Deck list")+'</h1><p class="dpsub">Personal copy. Not the official registration form.</p>'+
+      deckPrintGroups(d).map(function(g){ return '<h2>'+esc(g.title)+'</h2><p class="dpcount">'+deckPrintCountLabel(g.total)+'</p><ol>'+
+        g.rows.map(function(r){ return '<li><b>'+r.qty+'</b><span class="dpnum">'+esc(r.id)+'</span>'+esc(r.name)+'</li>'; }).join("")+'</ol>'; }).join("")+
+      '<p class="dpfoot">SphereDex personal copy</p></div>';
+    return el;
+  }
+  function closeDeckPrint(){ var el=$("deckPrintSheet"); if(el){ el.hidden=true; el.innerHTML=""; } document.documentElement.classList.remove("deckprinting"); }
+  function startDeckPrint(d){
+    var el=renderDeckPrint(d); if(!el) return;
+    el.hidden=false; el.scrollTop=0;
+    document.documentElement.classList.add("deckprinting");
+    openOverlay(closeDeckPrint);
+    $("dpClose").onclick=function(){ dismissOverlay(); };
+    $("dpCopy").onclick=function(){ copyPlainText(deckPrintText(d), "Copied", "Copy list", "Clipboard access is not available here. Select this list and copy it."); };
+    var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
+    if(deckPrintCanPrint()) setTimeout(function(){ try{ window.print(); }catch(e){} }, 60);
+  }
   function deckToText(d){
     var ids=Object.keys(d.cards||{}).filter(function(k){ return d.cards[k]>0; });
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -8408,7 +8791,7 @@ label.acctsetrow { align-items:center; }
     function fallback(){ var ta=$("deckIOText"); if(ta){ ta.focus(); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("Select the text and copy it"); } } }
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done, fallback); } else fallback();
   }
-  function showCopyBox(text, title, hint){
+  function showCopyBox(text, title, hint, okMsg){
     var sc=$("deckIOScrim"); if(!sc) return;
     var ta=$("deckIOText"), act=$("deckIOAction"), alt=$("deckIOAlt"), cancel=$("deckIOCancel");
     function close(){ sc.hidden=true; act.onclick=alt.onclick=cancel.onclick=sc.onclick=null; }
@@ -8420,15 +8803,21 @@ label.acctsetrow { align-items:center; }
     act.onclick=function(){
       ta.focus(); ta.select();
       var ok=false; try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
-      toast(ok?"Copied for TCGplayer":"Select the text and copy it");
+      toast(ok?(okMsg||"Copied for TCGplayer"):"Select the text and copy it");
     };
     alt.hidden=true;
     sc.hidden=false;
     setTimeout(function(){ ta.focus(); ta.select(); }, 30);
   }
-  function copyPlainText(text, okMsg){
+  // A short plain text snapshot of the Collection dashboard to paste into a chat or post. Binder value stays
+  // out: collector mode can hide prices, and a shared number would go stale.
+  function collectionSummaryText(){
+    return [_ownN+" of "+TOTAL+" cards collected", _copiesN+(_copiesN===1?" copy":" copies"), pctOf(_ownN,TOTAL)+" percent complete",
+      wishCount()+" on wishlist", _setsN+" of "+_setsT+" sets completed"].join("\n");
+  }
+  function copyPlainText(text, okMsg, boxTitle, boxHint){
     function done(){ toast(okMsg||"Copied"); }
-    function failed(){ showCopyBox(text, "Copy for TCGplayer", "Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry."); }
+    function failed(){ showCopyBox(text, boxTitle||"Copy for TCGplayer", boxHint||"Clipboard access is not available here. Select this list and copy it into TCGplayer Mass Entry.", okMsg); }
     function execCopy(){
       var ta=document.createElement("textarea");
       ta.value=text; ta.setAttribute("readonly","");
@@ -8493,6 +8882,7 @@ label.acctsetrow { align-items:center; }
       }});
     }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
+    var dpr=$("deckPrint"); if(dpr) dpr.onclick=function(){ var d=activeDeck(); if(d) startDeckPrint(d); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
     var si=$("deckSearch"), sug=$("deckSug");
@@ -8502,7 +8892,8 @@ label.acctsetrow { align-items:center; }
       var matches=CARDS.filter(function(c){ return cardMatchesQuery(c, si.value); }).slice(0,7);
       if(!matches.length){ closeSug(); return; }
       sug.innerHTML=""; matches.forEach(function(c){ var b=document.createElement("button"); b.type="button";
-        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span>';
+        var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0, runs=deckAddRunQty(activeDeck(), c.id);
+        b.innerHTML='<img src="'+imgSrc(c)+'" alt=""><span>'+esc(c.name)+'</span><span class="dnum">'+c.id+'</span><span class="dsown'+(own?' have':'')+'">own '+own+'</span>'+(runs?'<span class="dsown">runs '+runs+'</span>':'');
         b.onclick=function(){ if(!activeDeck()) newDeck(); var d=activeDeck(); d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderDecks(); si.value=""; closeSug(); si.focus(); };
         sug.appendChild(b); });
       sug.hidden=false;
@@ -8645,6 +9036,7 @@ label.acctsetrow { align-items:center; }
     if(head){ head.hidden=(m==="col"); head.textContent=titles[m]||""; }
     var wishExport=$("wishExport"); if(wishExport) wishExport.hidden=!(m==="wish" && wishCount()>0);
     if(dash){ dash.hidden=(m!=="col"); }
+    var share=$("colShare"); if(share) share.hidden=(m!=="col");
     var cb=$("collectedBar"); if(cb) cb.hidden=(m!=="collected");
     var sb=$("setsBack"); if(sb) sb.innerHTML=(m==="col")?"&lsaquo; Browse by set":"&lsaquo; Back";
     if(m==="collected") syncCollectedTogs();
@@ -10434,14 +10826,17 @@ label.acctsetrow { align-items:center; }
       tog.onclick=function(){ lsSet("palvault-hidefinished", hide?"0":"1"); renderSetBrowse(); }; }
     if(!(hide && setsFinished(["PR2026"], sp))){ br.appendChild(oneSetTile("PR2026", sp)); shown++; }
     BROWSE_EXPANSIONS.forEach(function(x){
-      if(x.upcoming){ br.appendChild(upcomingTile(x)); shown++; return; }
+      if(x.upcoming){ br.appendChild(upcomingTile(x)); return; }
       if(hide && setsFinished(x.sets, sp)) return;
       br.appendChild(expansionTile(x, sp)); shown++;
     });
+    // shown counts released tiles only: upcoming sets always stay, so counting them meant this never
+    // appeared. It sits straight after All Cards, and Show all goes through the chip so its state stays in step.
     if(hide && !shown){
-      var none=document.createElement("div"); none.className="empty";
-      none.innerHTML="<b>All sets are finished</b>Turn off Hide finished sets to see them again.";
-      br.appendChild(none);
+      var none=document.createElement("div"); none.className="empty"; none.style.gridColumn="1/-1";
+      none.innerHTML="<b>All sets finished</b>Turn off Hide finished sets to see them again.<div style=\"margin-top:12px\"><button class=\"btn\" type=\"button\" id=\"doneShowAll\">Show all</button></div>";
+      br.insertBefore(none, all.nextSibling);
+      var sa=none.querySelector("#doneShowAll"); if(sa && tog) sa.onclick=function(){ tog.click(); };
     }
   }
   // Finished = at least one owned copy of every card the tile counts, the same sum its N/M shows.
@@ -10688,7 +11083,7 @@ label.acctsetrow { align-items:center; }
   // A reveal you already hold (a raw copy or a slab in the open collection) says so instead of offering the wishlist.
   function newsRevealOwned(c){ return scanOwnCount(activeCol(), c.id)>0; }
   function newsWishHtml(c){
-    var who='<span class="nwname">'+esc(c.name)+'</span>';
+    var who='<button type="button" class="nwname nwopen" data-news-open="'+esc(c.id)+'">'+esc(c.name)+'</button>';   // opens the card sheet
     if(newsRevealOwned(c)) return '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('check')+'In collection</span>'+who+'</div>';
     return isWished(c.id) ? '<div class="nwish on" data-nw-card="'+esc(c.id)+'"><span class="nwstate">'+icon('starf')+'On Wishlist</span>'+who+'</div>'
       : '<div class="nwish" data-nw-card="'+esc(c.id)+'"><button type="button" class="nwbtn" data-news-wish="'+esc(c.id)+'">'+icon('star')+'Add to Wishlist</button>'+who+'</div>';
@@ -10704,7 +11099,12 @@ label.acctsetrow { align-items:center; }
       var c=cardById(b.getAttribute("data-news-wish")); if(!c) return;
       if(!isWished(c.id)){ toggleWish(c.id); save(); render(); toast("Added to wishlist"); }
       // The same card can sit in both lists, so every control for it flips.
-      Array.prototype.forEach.call(document.querySelectorAll('.nwish[data-nw-card="'+c.id+'"]'), function(n){ n.outerHTML=newsWishHtml(c); });
+      Array.prototype.forEach.call(document.querySelectorAll('.nwish[data-nw-card="'+c.id+'"]'), function(n){ var p=n.parentNode; n.outerHTML=newsWishHtml(c); if(p) wireNewsWish(p); });
+    }; });
+    // The card name opens its sheet (price, copies) instead of sending you to search Cards for it.
+    Array.prototype.forEach.call(host.querySelectorAll("[data-news-open]"), function(b){ b.onclick=function(e){
+      e.preventDefault(); e.stopPropagation();
+      var c=cardById(b.getAttribute("data-news-open")); if(c) openDetail(c);
     }; });
   }
   function renderNews(){
