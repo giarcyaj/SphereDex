@@ -8032,7 +8032,14 @@ label.acctsetrow { align-items:center; }
       else if(copy.actionType==="wishlist") showPage("wishlist");
       else showPage("collection");
     };
-    if(!items.length){ list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"No cards to show for this goal yet.")+'</div>'; return; }
+    // A goal with nothing left says None missing; when it names a set (a chosen set that is now complete),
+    // View set opens that whole set in Cards. The deck goal keeps its own line.
+    if(!items.length){
+      var doneSet=missingGoal!=="deck" && data && data.set && SETS[data.set] ? data.set : "";
+      list.innerHTML='<div class="missingempty">'+(missingGoal==="deck"?"This deck is complete \u00b7 choose another deck or add cards to keep building.":"<b>None missing</b>"+(doneSet?'<div style="margin-top:12px"><button class="btn" type="button" id="missingViewSet">View set</button></div>':''))+'</div>';
+      var vs=$("missingViewSet"); if(vs) vs.onclick=function(){ openSet(doneSet,"all"); };
+      return;
+    }
     list.innerHTML="";
     items.sort(function(a,b){
       if(missingSort==="number") return a.card.setIdx-b.card.setIdx || a.card.seq-b.card.seq;
