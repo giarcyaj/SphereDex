@@ -31,10 +31,13 @@ const functionNames = [
   'changeRaw', 'mergeRawCounts', 'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
   'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'scanRestore', 'scanMoveVariant',
   'scanSessionTotal', 'slabSig', 'cloneSlab', 'mergeEntry', 'globalEditDistance', 'globalTextScore',
-  'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn'
+  'fold', 'plainObj', 'cardMap', 'parseDeckList', 'isEmptyOwn',
+  'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty', 'importCardId',
+  'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'addCopyNote', 'removeCopyNote', 'copyNoteLabel', 'copyNoteCsvCell', 'copyNoteFromCsv'
 ];
 const appCode = functionNames.map(appFunction).join('\n') + '\n' +
-  ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX'].map(appConstant).join('\n');
+  ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS', 'DECK_LINE_MAX',
+    'IMPORT_PARALLELS', 'IMPORT_BASE_WORDS', 'IMPORT_PARALLEL_WORDS', 'IMPORT_LANGS', 'IMPORT_LANG_QUALIFIERS', 'IMPORT_COLS'].map(appConstant).join('\n');
 const card = { id: 'EBP01-001', name: 'Lamball', set: 'EBP01', rare: 'C', base: 'EBP01-001' };
 const variant = { ...card, id: 'EBP01-001-SR', rare: 'SR' };
 function app() {
@@ -200,6 +203,36 @@ test('graded copies from different editions remain distinct during cloud merge',
   assert.deepEqual(plain(merged.graded.map(g => g.edition)).sort(), ['1', '2']);
 });
 
+test('two devices adding different copy notes to the same holding keep both after a cloud merge', () => {
+  const a = app();
+  const base = { qty: 3, rawEditions: { '1': 0, '2': 0, unknown: 3 }, cond: 'Near Mint', notes: '', graded: [] };
+  const phone = { ...base, copyNotes: [{ serial: '372', run: '750' }] };
+  const tablet = { ...base, copyNotes: [{ mis: 1, note: 'Off centre' }] };
+  const labels = (e) => plain(a.copyNotesList(e).map((n) => a.copyNoteLabel(n)).sort());
+  for (const [local, remote] of [[phone, tablet], [tablet, phone]]) {
+    const merged = a.mergeEntry(local, remote);
+    assert.deepEqual(labels(merged), ['372 of 750', 'Misprint · Off centre'], 'neither device loses its note');
+  }
+});
+
+test('copy notes both devices hold are merged once, not doubled', () => {
+  const a = app();
+  const base = { qty: 4, rawEditions: { '1': 0, '2': 0, unknown: 4 }, cond: 'Near Mint', notes: '', graded: [] };
+  const shared = { serial: '12', run: '750', ed: '1' };
+  const local = { ...base, copyNotes: [shared, { serial: '40', run: '750' }] };
+  const remote = { ...base, copyNotes: [{ ...shared }, { serial: '99', run: '750' }] };
+  const merged = a.mergeEntry(local, remote);
+  const sigs = plain(merged.copyNotes.map((n) => a.copyNoteLabel(n)).sort());
+  assert.deepEqual(sigs, ['12 of 750 · 1st edition', '40 of 750', '99 of 750']);
+  // Two genuinely identical notes on one device (two misprints alike) survive as two.
+  const twice = { ...base, copyNotes: [{ mis: 1 }, { mis: 1 }] };
+  assert.equal(a.mergeEntry(twice, { ...base, copyNotes: [{ mis: 1 }] }).copyNotes.length, 2);
+  // A holding with notes on one side only keeps them whichever side it is.
+  assert.equal(a.mergeEntry({ ...base }, local).copyNotes.length, 2);
+  assert.equal(a.mergeEntry(local, { ...base }).copyNotes.length, 2);
+  assert.equal(a.mergeEntry({ ...base }, { ...base }).copyNotes, undefined);
+});
+
 test('global search tolerates a one-character typo without returning unrelated cards', () => {
   const a = app();
   assert.ok(a.globalTextScore('Lambll', 'Lamball EBP01-001') > 0);
@@ -239,4 +272,38 @@ test('untouched card entries count as empty; anything the user or a price wrote 
   assert.equal(a.isEmptyOwn({ ...blank, notes: 'trade' }), false);
   assert.equal(a.isEmptyOwn({ ...blank, sold: 3.2 }), false);
   assert.equal(a.isEmptyOwn({ ...blank, rawEditions: { '1': 0, '2': 0, unknown: 0 } }), false);
+});
+
+test('numbered copies: a serial out of the run, capped at the raw count, round trip through CSV', () => {
+  const a = app();
+  const entry = { qty: 3, rawEditions: { '1': 1, '2': 0, unknown: 2 }, cond: 'Near Mint', notes: '', graded: [] };
+  assert.equal(a.addCopyNote(entry, { serial: '372', run: '750' }), true);
+  assert.equal(a.addCopyNote(entry, { serial: '#12', run: '750', ed: '1' }), true);
+  assert.equal(a.addCopyNote(entry, { mis: 1, note: 'Off centre' }), true);
+  assert.equal(a.addCopyNote(entry, { serial: '1', run: '750' }), false, 'no more notes than raw copies');
+  assert.equal(a.addCopyNote({ qty: 1 }, { serial: '', run: '', note: '  ' }), false, 'blank notes are not stored');
+  assert.equal(entry.qty, 3);
+  expectCounts(a, entry, 1, 0, 2);
+  const list = a.copyNotesList(entry);
+  assert.equal(a.copyNoteLabel(list[0]), '372 of 750');
+  assert.equal(a.copyNoteLabel(list[1]), '12 of 750 · 1st edition');
+  assert.equal(a.copyNoteLabel(list[2]), 'Misprint · Off centre');
+  assert.equal(a.copyNoteLabel({ run: '750' }), 'of 750');
+  const col = { own: { [card.id]: entry } };
+  const csv = a.collectionCsv(col), rows = a.parseCsvRows(csv);
+  assert.deepEqual(plain(rows[0].slice(-3)), ['Serial', 'Run', 'Misprint']);
+  assert.equal(rows.filter(r => r[1] === '0').length, 3, 'one quantity 0 row per numbered copy');
+  const imported = a.parseCsvCollection(csv);
+  expectCounts(a, imported.own[card.id], 1, 0, 2);
+  assert.equal(imported.cards, 3, 'numbered copy rows add no copies');
+  assert.deepEqual(plain(imported.own[card.id].copyNotes), plain(list));
+  a.removeCopyNote(entry, 0);
+  assert.equal(a.copyNotesList(entry).length, 2);
+  assert.equal(entry.qty, 3);
+  entry.qty = 1;
+  assert.equal(a.copyNotesList(entry).length, 1, 'fewer copies show fewer notes');
+  const plainCsv = a.collectionCsv({ own: { [card.id]: { qty: 2, graded: [] } } });
+  assert.match(plainCsv.split(/\r\n/)[0], /Paid$/, 'no extra columns without numbered copies');
+  const lone = a.parseCsvCollection('Number,Quantity,Type,Serial,Run,Misprint\nEBP01-001,0,Card,5,50,');
+  assert.equal(lone.own[card.id], undefined, 'a numbered copy row with no copies adds nothing');
 });

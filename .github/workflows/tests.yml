@@ -5,8 +5,15 @@ name: Tests
 #      behaviour on a stub DOM) so edits to paldeck.html cannot silently regress it.
 #   2. tools/test_scan_review.cjs — the scan session/review sheet, same treatment.
 #   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
+#      tools/test_card_language.cjs — Japanese text mapping and the scanner edition.
+#      tools/test_price_chart.cjs — the card price history page.
+#      tools/test_stock_glance.cjs — sealed stock at a glance.
+#      tools/test_import_trackers.cjs — CSV import of other trackers' exports (numbering, parallels, language).
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
+#      tools/test_sealed_images.cjs — sealed product image feed, files and launch loader.
+#      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
+#      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
 #      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
@@ -99,11 +106,32 @@ jobs:
       - name: Deck legality, stats, effect search and purchase price
         run: node tools/test_v21.cjs
 
+      - name: Card language, Japanese text mapping and scanner edition
+        run: node tools/test_card_language.cjs
+
+      - name: Card price history chart
+        run: node tools/test_price_chart.cjs
+
+      - name: Sealed stock at a glance
+        run: node tools/test_stock_glance.cjs
+
+      - name: CSV import from other trackers
+        run: node tools/test_import_trackers.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 
       - name: PalDex upcoming cards
         run: node tools/test_upcoming_cards.cjs
+
+      - name: Sealed product image feed
+        run: node tools/test_sealed_images.cjs
+
+      - name: Tournament decks and staples
+        run: node tools/test_tournament_decks.cjs
+
+      - name: Native scanner card numbers (English and Japanese)
+        run: node tools/test_native_scan_numbers.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)

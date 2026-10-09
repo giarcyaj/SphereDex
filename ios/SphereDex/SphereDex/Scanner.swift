@@ -15,6 +15,23 @@ func extractCardNumber(from text: String) -> String? {
     return String(t[r])
 }
 
+// Japanese prints carry the English number without the leading E (BP01-001 for EBP01-001). Only the set
+// codes the catalogue uses, with their exact digit counts, and never straight after a letter or digit, so
+// words, rules text numbers and the tail of an E number cannot match. Only the spaces around the hyphen
+// and before a short rarity tail (001 OSR) are closed up, so a word before the number stays a separate
+// word. Mirrors Android JP_CARD_NUMBER.
+private let jpCardNumberRegex = try! NSRegularExpression(pattern: "(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
+
+func extractJapaneseCardNumber(from text: String) -> String? {
+    let t = text.uppercased()
+        .replacingOccurrences(of: " *- *", with: "-", options: .regularExpression)
+        .replacingOccurrences(of: "(?<=\\d) +(?=[A-Z]{1,3}(?![A-Z0-9]))", with: "", options: .regularExpression)
+    let range = NSRange(t.startIndex..., in: t)
+    guard let m = jpCardNumberRegex.firstMatch(in: t, range: range),
+          let r = Range(m.range, in: t) else { return nil }
+    return String(t[r])
+}
+
 /// Everything the redesigned confirm popup needs from one scan.
 struct ScanOutcome {
     let number: String        // canonical card number
@@ -386,12 +403,21 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
     }
 
     /// First card number in a list of OCR lines (the slab label) that resolves to a catalogue card.
-    private func numberFromLines(_ lines: [String]) -> String? {
-        for line in lines {
-            guard let raw = extractCardNumber(from: line), let card = resolver.resolve(raw) else { continue }
-            return card
-        }
+    private func numberFromLines(_ lines: [String]) -> String? { firstCardNumber(lines) }
+
+    /// First printed number in these texts that resolves, English (E) numbers first across all of them, so
+    /// a frame that shows both never reads as Japanese and English scans behave exactly as before.
+    private func firstCardNumber(_ texts: [String]) -> String? {
+        for t in texts { if let raw = extractCardNumber(from: t), let num = scannedNumber(raw) { return num } }
+        for t in texts { if let raw = extractJapaneseCardNumber(from: t), let num = scannedNumber(raw) { return num } }
         return nil
+    }
+
+    /// The number handed to the web app for a scanned number, or nil when it is not a card. A Japanese read
+    /// goes back as printed, without its E (BP01-001), so SDScanAdd opens the Japanese printing.
+    private func scannedNumber(_ raw: String) -> String? {
+        guard let hit = resolver.resolveScan(raw) else { return nil }
+        return hit.japanese && hit.number.hasPrefix("E") ? String(hit.number.dropFirst()) : hit.number
     }
 
     /// One .accurate OCR pass over this frame, synchronous on the camera queue (Vision invokes the
@@ -412,9 +438,7 @@ final class ScannerViewController: UIViewController, AVCaptureVideoDataOutputSam
         request.recognitionLanguages = ["en-US"]
         try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right).perform([request])
         if finished || processing { return nil }
-        for line in lines {
-            if let raw = extractCardNumber(from: line), let card = resolver.resolve(raw) { return card }
-        }
+        if let card = firstCardNumber(lines) { return card }
         if byName, let card = resolver.resolveByName(lines) { return card }
         return nil
     }
