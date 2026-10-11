@@ -292,6 +292,14 @@ class MainActivity : ComponentActivity() {
         handleDeepLink(intent)   // launched by tapping a notification (cold start)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Say again which market and which products this device wants alerts for. The send that goes out
+        // when a switch is flipped is best effort, so one made with no signal leaves the server acting on
+        // the old answer; this is the way back. Throttled inside Push to once every 15 minutes.
+        Push.refreshOnResume(this)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)        // keep getIntent() in sync

@@ -13135,6 +13135,13 @@ label.acctsetrow { align-items:center; }
     try{ if(typeof renderHomeNextRelease==="function") renderHomeNextRelease(); }catch(e){}   // and so does the Home line
     try{ if(typeof renderDecks==="function" && _curPage==="decks") renderDecks(); }catch(e){}   // deck needs follow a collection synced from another device
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
+    // Say again what this device wants notified. Every send of these is best effort: the one that goes
+    // out when a switch is flipped is never checked, so a change made with no signal leaves the server
+    // acting on the old market and the old follow list. Nothing else re sent them except a cold start,
+    // and the periodic one in save() only covers the categories whose payload tracks the collection, so
+    // somebody who only uses stock alerts had no way back at all. WAKE_GAP caps this at once every 15
+    // minutes, and the register endpoint simply overwrites, so repeating it costs nothing.
+    try{ if(typeof syncPushPrefs==="function") syncPushPrefs(); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
     fetchReleases();

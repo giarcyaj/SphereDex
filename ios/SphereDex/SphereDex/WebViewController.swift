@@ -340,8 +340,17 @@ enum Push {
     // Default: everything on until the user changes it in Settings. Matches Android's DEFAULT_PREFS.
     private static let defaultPrefs = "{\"releases\":true,\"news\":true,\"newSets\":true}"
 
-    /// The most recent APNs device token this launch, so a prefs change can re-register immediately.
-    private static var lastToken: String?
+    private static let tokenKey = "spheredex_push_token"
+
+    /// The most recent APNs device token, remembered across launches rather than only in memory. A prefs
+    /// change made before APNs had answered this launch used to be dropped on the floor, leaving the
+    /// server alerting on the market the user had just left. With the token kept, the change still goes.
+    /// On a device that has genuinely never had a token, the change is picked up the moment the first one
+    /// arrives, because registerToken always reads the latest prefs rather than a captured copy.
+    private static var lastToken: String? {
+        get { UserDefaults.standard.string(forKey: tokenKey) }
+        set { UserDefaults.standard.set(newValue, forKey: tokenKey) }
+    }
 
     /// The device's current notification prefs as a JSON string (source of truth is the web Settings UI).
     static var currentPrefs: String {
@@ -355,8 +364,14 @@ enum Push {
         if let token = lastToken { registerToken(token) }
     }
 
-    /// POST { token, platform:"ios", prefs } to the backend on a background task. Logged-free best-effort.
-    static func registerToken(_ token: String) {
+    /// POST { token, platform:"ios", prefs } to the backend on a background task.
+    ///
+    /// This is the only way the server learns which market this device is in and which products it
+    /// follows. It used to fire and forget: no completion handler at all, so a failed send looked exactly
+    /// like a successful one and the server kept the old answer until the next launch. The reply is now
+    /// read and a failure retried twice with a widening gap. The endpoint overwrites rather than appends,
+    /// so repeating it is free.
+    static func registerToken(_ token: String, attempt: Int = 0) {
         lastToken = token
         guard let url = URL(string: "\(backend)/api/push/register") else { return }
         var req = URLRequest(url: url)
@@ -365,7 +380,14 @@ enum Push {
         var body: [String: Any] = ["token": token, "platform": "ios"]
         if let prefs = try? JSONSerialization.jsonObject(with: Data(currentPrefs.utf8)) { body["prefs"] = prefs }
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        URLSession.shared.dataTask(with: req).resume()
+        URLSession.shared.dataTask(with: req) { _, response, error in
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if error == nil && (200...299).contains(code) { return }
+            guard attempt < 2 else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(2 * (attempt + 1))) {
+                Push.registerToken(token, attempt: attempt + 1)
+            }
+        }.resume()
     }
 }
 

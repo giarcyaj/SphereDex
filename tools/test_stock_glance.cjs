@@ -596,3 +596,55 @@ test('the stock reading is not cached long enough to outlive a push', () => {
   // Ten minutes meant tapping a restock notification could show the answer from before the restock.
   assert.match(source, /Date\.now\(\)-STOCK\.at\)<120000/);
 });
+
+// ---- telling the server which market and which products -------------------------------------------
+// The server filters stock alerts on this device's market and its own follow list, and it only knows
+// what the phone last managed to tell it. Every one of these sends used to be fire and forget, so a
+// change made with no signal left the server alerting on the market the user had just left, until the
+// next cold start. These guard the three ways back.
+const KOTLIN = fs.readFileSync(path.join(root, 'app', 'src', 'main', 'java', 'app', 'spheredex', 'Push.kt'), 'utf8');
+const ACTIVITY = fs.readFileSync(path.join(root, 'app', 'src', 'main', 'java', 'app', 'spheredex', 'MainActivity.kt'), 'utf8');
+const SWIFT = fs.readFileSync(path.join(root, 'ios', 'SphereDex', 'SphereDex', 'WebViewController.swift'), 'utf8');
+
+test('coming back to the app re-sends what this device wants notified', () => {
+  // onWake is the only path that reaches a user who uses stock alerts and nothing else: the periodic
+  // sync in save() is gated on the categories whose payload tracks the collection.
+  const wake = source.slice(source.indexOf('function onWake('), source.indexOf('document.addEventListener("visibilitychange"'));
+  assert.match(wake, /syncPushPrefs\(\)/, 'a wake re-sends the prefs');
+  assert.match(wake, /typeof syncPushPrefs==="function"/, 'guarded, because onWake runs before everything exists');
+});
+
+test('the prefs sent to the server always carry this device market', () => {
+  // Without the market the server cannot tell a UK watcher from a US one.
+  const fn = appFunction('syncPushPrefs');
+  assert.match(fn, /region:ebayReg\(\)/, 'the market is stamped on every send');
+});
+
+test('Android checks that the registration was accepted, and retries', () => {
+  assert.match(KOTLIN, /responseCode/, 'the status is read, so a rejection is not mistaken for success');
+  assert.match(KOTLIN, /code in 200\.\.299/, 'and only a 2xx counts');
+  assert.match(KOTLIN, /for \(attempt in 0 until 3\)/, 'a failure is retried rather than lost');
+  assert.doesNotMatch(KOTLIN, /return@Thread/, 'no lambda label on a SAM constructor, which may not compile');
+});
+
+test('Android re-registers when the app comes back to the foreground', () => {
+  assert.match(ACTIVITY, /override fun onResume\(\)/, 'there is a resume path at all');
+  assert.match(ACTIVITY, /Push\.refreshOnResume\(this\)/);
+  assert.match(KOTLIN, /fun refreshOnResume\(/);
+  assert.match(KOTLIN, /lastResumeRegister/, 'and it is throttled, not fired on every resume');
+});
+
+test('iOS remembers its token so a change made before APNs answers is not lost', () => {
+  // lastToken used to be in memory only, so a prefs change in a launch where APNs had not yet handed
+  // over a token was silently dropped and the server kept the old market.
+  assert.match(SWIFT, /tokenKey/, 'the token is keyed into UserDefaults');
+  assert.match(SWIFT, /UserDefaults\.standard\.string\(forKey: tokenKey\)/);
+  assert.doesNotMatch(SWIFT, /private static var lastToken: String\?$/m, 'not the in memory only version');
+});
+
+test('iOS reads the reply and retries', () => {
+  assert.match(SWIFT, /dataTask\(with: req\) \{ _, response, error in/, 'there is a completion handler at all');
+  assert.match(SWIFT, /\(200\.\.\.299\)\.contains\(code\)/);
+  assert.match(SWIFT, /attempt < 2/, 'a failure is retried rather than lost');
+  assert.doesNotMatch(SWIFT, /URLSession\.shared\.dataTask\(with: req\)\.resume\(\)/, 'the fire and forget call is gone');
+});
