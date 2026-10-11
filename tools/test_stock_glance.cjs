@@ -39,7 +39,7 @@ function sandbox(asOf, state, shops) {
     Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext(['stockGlance', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -173,7 +173,7 @@ function liveSandbox() {
   };
   sb.ebayReg = () => sb.region;
   vm.createContext(sb);
-  vm.runInContext(['fetchStock', 'stockGlance', 'stockShops', 'stockAgo', 'stockShopRow',
+  vm.runInContext(['fetchStock', 'stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow',
     'stockGlanceHtml', 'stockPaint'].map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -231,7 +231,7 @@ test('both sheets tag the stock line with their product and paint through the gu
   const open = source.indexOf('function openSealedDetail(');
   const body = source.slice(open, source.indexOf('// ---- Portfolio value-over-time chart', open));
   assert.equal((body.match(/id="sdStock" data-pid="'\+esc\(p\.id\)\+'"/g) || []).length, 2);
-  assert.equal((body.match(/fetchStock\(\)\.then\(function\(\)\{ stockPaint\(p\.id, (true|false)\); \}\)/g) || []).length, 2);
+  assert.equal((body.match(/fetchStock\(\)\.then\(function\(\)\{ stockPaint\(p\.id, (stockPre\(p\)|false)\); \}\)/g) || []).length, 2);
   assert.doesNotMatch(body, /\$\("sdStock"\); if\(el\) el\.innerHTML/);
 });
 
@@ -241,7 +241,9 @@ test('the preorder sheet shows the line, and asks for preorder wording', () => {
   // none: that is why a preorder showed no stock state at all.
   const open = source.indexOf('function openSealedDetail(');
   const pre = source.slice(open, source.indexOf('var s=sealItem(p.id)', open));
-  assert.match(pre, /stockGlanceHtml\(p\.id,\s*true\)/, 'preorder sheet renders the glance as a preorder');
+  // Not a literal true: the backend decides pre order or in stock from the ship date when it sends a
+  // push, so the page has to decide it the same way or the two split on release day.
+  assert.match(pre, /stockGlanceHtml\(p\.id,\s*stockPre\(p\)\)/, 'preorder sheet asks the date, not a baked in flag');
   assert.match(pre, /fetchStock\(\)\.then/, 'preorder sheet also fills the line in when the fetch lands');
   assert.match(pre, /notified when you can pre order this/, 'the bell toast matches what it will send');
 });
@@ -275,7 +277,7 @@ function shopSandbox(asOf, state, shops, region) {
     Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext(['stockGlance', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -408,4 +410,96 @@ test('the folded away list is actually folded away', () => {
   // On an old WebView [hidden] is not !important, so .sdshops display:grid outranks it and the
   // "other N shops" would sit open on the page with the button doing nothing visible.
   assert.match(source, /\.sdshops\[hidden\]\{[^}]*display:none/);
+});
+
+// ---- agreeing with the push ----------------------------------------------------------------------
+// Everything below guards the places where the sealed page and the stock alert push could tell a
+// watcher two different things. Each one failed before it was fixed.
+
+function seenSandbox(seen, asOf, state, shops) {
+  const sb = {
+    STOCK: { region: 'co.uk', asOf, seen, state, shops, at: Date.now() },
+    STOCK_STALE_MS: 2 * HOUR,
+    ebayReg: () => 'co.uk',
+    REGION_CUR: { 'co.uk': 'GBP' },
+    moneyIn: (n) => '£' + Number(n).toFixed(2),
+    esc: (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    Date, Math, isNaN, String, Number,
+  };
+  vm.createContext(sb);
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+    .map(appFunction).join('\n'), sb);
+  return sb;
+}
+
+test('freshness is judged per product, not across the whole market', () => {
+  // The market clock keeps moving because other products are still being read. A product no shop lists
+  // any more is never re read, so judging it by the market clock made a frozen reading look current.
+  const sb = seenSandbox({ a: stamp(5 * HOUR), b: stamp(60000) }, stamp(60000), { a: 'in', b: 'in' }, null);
+  assert.match(sb.stockGlanceHtml('a', false), /Stock unconfirmed/, 'the frozen product owns up');
+  assert.match(sb.stockGlanceHtml('b', false), /In stock/, 'the one still being read is unaffected');
+});
+
+test('a backend with no per product times still works', () => {
+  const sb = seenSandbox(null, stamp(60000), { a: 'in' }, null);
+  assert.match(sb.stockGlanceHtml('a', false), /In stock/);
+});
+
+test('in stock is withdrawn when not one shop confirms it', () => {
+  // The headline is only rewritten while some shop still lists the product; the rows are rebuilt every
+  // run. So the rows are the fresher half and they win. Before this it read "In stock at all 2 shops we
+  // check", which is out of stock wording glued under a green headline.
+  const shops = { a: [
+    { shop: 'Collectors Edge', status: 'check', url: 'https://ce.example/p', price: '' },
+    { shop: 'Total Cards', status: 'out', url: 'https://tc.example/p', price: '9.99' },
+  ] };
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, shops).stockGlanceHtml('a', false);
+  assert.match(html, /Stock unconfirmed/, 'the headline steps back');
+  assert.match(html, /no shop confirmed it this check/);
+  assert.doesNotMatch(html, /In stock/, 'and never claims in stock over an unconfirmed list');
+  assert.doesNotMatch(html, /at all 2 shops we check/, 'the out of stock wording is gone too');
+});
+
+test('in stock stands when a shop does confirm it', () => {
+  const shops = { a: [
+    { shop: 'Collectors Edge', status: 'in', url: 'https://ce.example/p', price: '94.95' },
+    { shop: 'Total Cards', status: 'out', url: 'https://tc.example/p', price: '109.95' },
+  ] };
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, shops).stockGlanceHtml('a', false);
+  assert.match(html, /In stock/);
+  assert.match(html, /at 1 of 2 shops/);
+});
+
+test('a product this market does not carry says nothing about when it was checked', () => {
+  // "Last checked 5 minutes ago" under "we do not track this one" reads as though we looked and found
+  // none. We never look for it here at all.
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, null).stockGlanceHtml('zz', false);
+  assert.match(html, /we do not track this one/);
+  assert.doesNotMatch(html, /Last checked/);
+});
+
+test('a stale reading still says when it was last read', () => {
+  const html = seenSandbox({ a: stamp(5 * HOUR) }, stamp(5 * HOUR), { a: 'in' }, null).stockGlanceHtml('a', false);
+  assert.match(html, /Stock unconfirmed/);
+  assert.match(html, /Last checked 5 hours ago/, 'the age shown is this product, not the market');
+});
+
+test('the pre order wording follows the release date, so it agrees with the push', () => {
+  // The backend works out pre order versus in stock from the ship date at the moment it sends. p.pre is
+  // baked into the app build, so on release day the push said "available now" and the page said
+  // "Pre order open" until the next app update.
+  const sb = { _MONIX: { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 },
+    RELEASE_OVERRIDES: {}, Date, isNaN };
+  vm.createContext(sb);
+  vm.runInContext(['sealDate', 'sealShipped', 'stockPre'].map(appFunction).join('\n'), sb);
+
+  assert.equal(sb.stockPre({ pre: true, date: 'Jan 29, 2027' }), true, 'a future date is still a pre order');
+  assert.equal(sb.stockPre({ pre: true, date: 'Oct 16, 2024' }), false, 'a date that has passed is not');
+  assert.equal(sb.stockPre({ pre: true, date: 'late Oct 2026' }), true, 'no day means no opinion, the flag stands');
+  assert.equal(sb.stockPre({ pre: true }), true, 'no date at all, the flag stands');
+  assert.equal(sb.stockPre({ pre: false, date: 'Jan 29, 2027' }), false, 'a released product never reads as a pre order');
+
+  // sealDate is news aware, so a date the news pipeline corrects counts here too.
+  sb.RELEASE_OVERRIDES = { x: 'Oct 16, 2024' };
+  assert.equal(sb.stockPre({ id: 'x', pre: true, date: 'Jan 29, 2027' }), false, 'a corrected date wins');
 });

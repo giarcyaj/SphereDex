@@ -6924,6 +6924,21 @@ label.acctsetrow { align-items:center; }
   fetchSealedImages();
   loadReleaseOverrides();
   function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
+  // Has this product's release date passed? A vague "late Oct 2026" has no day, so it stays unknown and
+  // the baked in pre flag keeps its say. sealDate is news aware, so a corrected date counts here too.
+  function sealShipped(p){
+    var d=sealDate(p); if(!d) return false;
+    var m=/^\s*([a-z]{3})[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})/i.exec(d);
+    if(!m) return false;
+    var mo=_MONIX[m[1].toLowerCase()]; if(mo==null) return false;
+    var t=new Date(+m[3], mo, +m[2]).getTime();
+    return !isNaN(t) && Date.now()>=t;
+  }
+  // Whether the STOCK line should read as pre orders rather than stock. The backend works this out from
+  // the ship date at the moment it sends a push; p.pre is baked into the app build. Left alone they split
+  // on release day, so a watcher would get "available now" on their phone and read "Pre order open" on the
+  // page. The date wins wherever there is a real one.
+  function stockPre(p){ return !!(p && p.pre) && !sealShipped(p); }
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
   // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
@@ -7212,7 +7227,7 @@ label.acctsetrow { align-items:center; }
   }
   // What the stock checker last saw, for this device's market. Fetched once and reused: it changes every
   // 30 minutes at most, so re asking on every sheet open would be noise.
-  var STOCK={ region:"", asOf:null, state:null, shops:null, at:0 };
+  var STOCK={ region:"", asOf:null, seen:null, state:null, shops:null, at:0 };
   var _stockReq=0;
   function fetchStock(){
     var base=apiBase(); if(!base) return Promise.resolve(null);
@@ -7227,7 +7242,7 @@ label.acctsetrow { align-items:center; }
         // An answer for a market that is no longer selected, or one overtaken by a newer request, is dropped
         // rather than stored over the current reading.
         if(req!==_stockReq || ebayReg()!==reg) return null;
-        STOCK={ region:reg, asOf:j.asOf||null, state:j.state, shops:j.shops||null, at:Date.now() };
+        STOCK={ region:reg, asOf:j.asOf||null, seen:j.seen||null, state:j.state, shops:j.shops||null, at:Date.now() };
         return STOCK;
       }).catch(function(){ return null; });
   }
@@ -7237,13 +7252,23 @@ label.acctsetrow { align-items:center; }
   // pre = this product has not come out yet. A shop having it then means its pre orders are open, which is
   // a different sentence from "in stock" and has to read as one: nobody can hold a Legends Awaken box in
   // October. The caller passes p.pre, so the words always agree with the sheet they sit on.
+  // When THIS product was last actually read. The market wide asOf is the wrong clock for one product: a
+  // product no shop lists any more is never re read, so its reading freezes while the market's clock keeps
+  // moving, and a frozen reading would look fresh for ever. Falls back to the market clock for a backend
+  // that predates per product times.
+  function stockSeen(id){
+    var m=STOCK.seen;
+    var v=(m && m[id]) ? m[id] : null;
+    return v || STOCK.asOf || null;
+  }
   function stockGlance(id, pre){
     var st=STOCK.state;
     if(!st) return null;                                   // nothing fetched yet
     if(STOCK.region!==ebayReg()) return null;              // a reading for another market says nothing here
+    var when=stockSeen(id);
     var old=false;
-    if(STOCK.asOf){
-      var t=Date.parse(String(STOCK.asOf).replace(" ","T")+"Z");
+    if(when){
+      var t=Date.parse(String(when).replace(" ","T")+"Z");
       old = !isNaN(t) && (Date.now()-t) > STOCK_STALE_MS;
     } else old=true;
     var v=st[id];
@@ -7302,6 +7327,15 @@ label.acctsetrow { align-items:center; }
     var g=stockGlance(id, pre);
     if(!g) return "";
     var rows=stockShops(id), i, have=[], rest=[];
+    // A headline that says in stock while not one shop on the list confirms it is a contradiction, and the
+    // headline is the half more likely to be out of date: it is only rewritten when some shop still lists
+    // the product, whereas the rows are rebuilt every run. So the rows win and the headline steps back to
+    // unconfirmed. This is what a shop going quiet looks like for a product only that shop carried.
+    if(g.cls==="in" && rows.length){
+      var anyIn=false;
+      for(i=0;i<rows.length;i++){ if(rows[i].status==="in"){ anyIn=true; break; } }
+      if(!anyIn) g={ cls:"unk", text:"Stock unconfirmed", note:"no shop confirmed it this check" };
+    }
     // A reading too old to trust cannot be trusted shop by shop either. Saying "Stock unconfirmed" above a
     // list of shops marked as having it would contradict itself, so every row drops to go and look and the
     // names stay, which is still the useful part: these are the shops to try.
@@ -7332,7 +7366,12 @@ label.acctsetrow { align-items:center; }
       out+='<button class="sdmore" type="button" aria-expanded="false"><span>\u25be</span><span>Show the <b>other '+
         rest.length+(rest.length===1?' shop':' shops')+'</b></span></button>';
     }
-    var ago=stockAgo(STOCK.asOf);
+    // This product's own reading time, never the market's. A stale reading still says how old it is,
+    // because that is the whole point of it. But a product no shop in this market carries says nothing:
+    // it has no reading of its own, and "Last checked 5 minutes ago" under "we do not track this one"
+    // would read as though we had looked and found none, when in truth we never look for it here.
+    var known=!!(STOCK.state && STOCK.state[id]);
+    var ago=(!known && !rows.length) ? "" : stockAgo(stockSeen(id));
     if(ago) out+='<p class="sdwhen">Last checked '+esc(ago)+(rows.length?' \u00b7 rechecked every 30 minutes':'')+'</p>';
     return out;
   }
@@ -7370,7 +7409,7 @@ label.acctsetrow { align-items:center; }
           '<h2>'+esc(title)+'</h2>'+
           '<div class="mtags"><span class="eltag" style="background:var(--accent)">'+esc(subline)+'</span><span class="eltag" style="background:var(--r-RR);color:#241300">Preorder</span></div>'+
           '<div class="predate big">Releases '+esc(sealDate(p)||"soon")+'</div>'+
-          '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, true)+'</div>'+
+          '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, stockPre(p))+'</div>'+
           '<div class="meditor">'+
             '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
             '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
@@ -7382,7 +7421,7 @@ label.acctsetrow { align-items:center; }
       var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when you can pre order this.":"Stock alert removed."); };
       var w0=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, w0); if(!w0) openOverlay(closeModal);
       wireStockShops();
-      fetchStock().then(function(){ stockPaint(p.id, true); });
+      fetchStock().then(function(){ stockPaint(p.id, stockPre(p)); });
       return;
     }
     var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
