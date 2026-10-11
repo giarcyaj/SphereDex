@@ -26,16 +26,21 @@ function appFunction(name) {
 }
 
 const HOUR = 3600000;
-function sandbox(asOf, state) {
+function sandbox(asOf, state, shops) {
   const sb = {
-    STOCK: { region: 'co.uk', asOf, state, at: Date.now() },
+    STOCK: { region: 'co.uk', asOf, state, shops: shops || null, at: Date.now() },
     STOCK_STALE_MS: 2 * HOUR,
     esc: (s) => String(s),
     ebayReg: () => 'co.uk',
-    Date,
+    // stockGlanceHtml now draws the named shops too, so its helpers come along even when a test only
+    // cares about the single line.
+    REGION_CUR: { 'co.uk': 'GBP' },
+    moneyIn: (n) => '£' + Number(n).toFixed(2),
+    Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext([appFunction('stockGlance'), appFunction('stockGlanceHtml')].join('\n'), sb);
+  vm.runInContext(['stockGlance', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+    .map(appFunction).join('\n'), sb);
   return sb;
 }
 const stamp = (msAgo) => new Date(Date.now() - msAgo).toISOString().slice(0, 19).replace('T', ' ');
@@ -149,14 +154,17 @@ function liveSandbox() {
   const calls = [];
   const els = {};
   const sb = {
-    STOCK: { region: '', asOf: null, state: null, at: 0 },
+    STOCK: { region: '', asOf: null, state: null, shops: null, at: 0 },
     _stockReq: 0,
     STOCK_STALE_MS: 2 * HOUR,
     region: 'co.uk',
     esc: (s) => String(s),
     apiBase: () => 'https://api.invalid',
     encodeURIComponent,
-    Date,
+    REGION_CUR: { 'co.uk': 'GBP' },
+    moneyIn: (n) => '£' + Number(n).toFixed(2),
+    wireStockShops: () => {},                 // no real DOM here; the expander has its own tests
+    Date, Math, isNaN, String, Number,
     Promise,
     calls,
     els,
@@ -165,7 +173,8 @@ function liveSandbox() {
   };
   sb.ebayReg = () => sb.region;
   vm.createContext(sb);
-  vm.runInContext(['fetchStock', 'stockGlance', 'stockGlanceHtml', 'stockPaint'].map(appFunction).join('\n'), sb);
+  vm.runInContext(['fetchStock', 'stockGlance', 'stockShops', 'stockAgo', 'stockShopRow',
+    'stockGlanceHtml', 'stockPaint'].map(appFunction).join('\n'), sb);
   return sb;
 }
 function stockLine(pid) {
@@ -250,4 +259,153 @@ test('the 2nd Edition box is polled and its id matches the backend', () => {
   assert.equal(ids.length, 10);
   // Every polled id must be a real sealed product, or the bell appears for nothing.
   for (const id of ids) assert.ok(source.includes('id:"' + id + '"'), 'sealed product exists: ' + id);
+});
+
+// ---- the named shops ---------------------------------------------------------------------------------
+// The sheet now says WHICH shops have it. Everything below is drawn from data the server sends, so these
+// guard both the wording and the one thing that would be dangerous to get wrong: an untrusted url.
+function shopSandbox(asOf, state, shops, region) {
+  const sb = {
+    STOCK: { region: region || 'co.uk', asOf, state, shops, at: Date.now() },
+    STOCK_STALE_MS: 2 * HOUR,
+    ebayReg: () => 'co.uk',
+    REGION_CUR: { 'co.uk': 'GBP', com: 'USD' },
+    moneyIn: (n, code) => (code === 'GBP' ? '\u00a3' : '$') + Number(n).toFixed(2),
+    esc: (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    Date, Math, isNaN, String, Number,
+  };
+  vm.createContext(sb);
+  vm.runInContext(['stockGlance', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+    .map(appFunction).join('\n'), sb);
+  return sb;
+}
+const SHOPS = {
+  'box-ebp01': [
+    { shop: 'Collectors Edge', status: 'in', url: 'https://collectorsedge.co.uk/products/box', price: '94.95' },
+    { shop: 'Total Cards', status: 'in', url: 'https://totalcards.net/products/box', price: '109.95' },
+    { shop: 'Binderly', status: 'check', url: 'https://binderly.co.uk/products/box', price: '' },
+    { shop: 'Eterna Cards', status: 'out', url: 'https://eternacards.com/products/box', price: '114.95' },
+  ],
+};
+
+test('the headline counts the shops once they are known', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.match(html, /In stock/);
+  assert.match(html, /at 2 of 4 shops/, 'says how many of how many');
+});
+
+test('only the shops that have it are listed, the rest are hidden until asked for', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  const open = html.slice(0, html.indexOf('sdrest'));
+  assert.match(open, /Collectors Edge/, 'an in stock shop is visible');
+  assert.match(open, /Total Cards/);
+  assert.doesNotMatch(open, /Eterna Cards/, 'an out of stock shop is not visible up front');
+  assert.match(html, /<ul class="sdshops sdrest" hidden>/, 'the rest are rendered but hidden');
+  assert.match(html, /Show the <b>other 2 shops<\/b>/);
+});
+
+test('each status gets its own colour class and a word for people who cannot use colour', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.match(html, /<li class="in" title="Has it">/);
+  assert.match(html, /<li class="chk" title="Go and look">/);
+  assert.match(html, /<li class="out" title="Does not have it">/);
+});
+
+test('prices read in the shop market currency, and a missing one shows nothing', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.match(html, /\u00a394\.95/, 'a UK shop reads in pounds');
+  assert.match(html, /go and look/, 'a shop we could not read says so instead of a price');
+});
+
+test('a hostile url can never become a link', () => {
+  // The rows come from the server. If a shop name or url were ever poisoned, this sheet sits in a WebView
+  // holding the whole collection, so only http(s) is allowed to become an anchor.
+  const sb = shopSandbox(stamp(60000), { x: 'in' }, {
+    x: [
+      { shop: 'Bad', status: 'in', url: 'javascript:alert(1)', price: '1.00' },
+      { shop: 'Also bad', status: 'in', url: 'data:text/html,<script>', price: '1.00' },
+      { shop: 'Fine', status: 'in', url: 'https://ok.example/p', price: '1.00' },
+    ],
+  });
+  const html = sb.stockGlanceHtml('x', false);
+  assert.doesNotMatch(html, /javascript:/, 'no javascript url survives');
+  assert.doesNotMatch(html, /href="data:/, 'no data url survives');
+  assert.match(html, /href="https:\/\/ok\.example\/p"/, 'a real url still links');
+  assert.equal((html.match(/<a /g) || []).length, 1, 'only the safe row became a link');
+});
+
+test('a shop name is escaped, not injected', () => {
+  const sb = shopSandbox(stamp(60000), { x: 'in' }, {
+    x: [{ shop: '<img src=x onerror=alert(1)>', status: 'in', url: 'https://ok.example/p', price: '1.00' }],
+  });
+  const html = sb.stockGlanceHtml('x', false);
+  assert.doesNotMatch(html, /<img/, 'the tag never reaches the page as markup');
+  assert.match(html, /&lt;img/, 'it is shown as text instead');
+});
+
+test('no shop data at all still draws the old single line', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, null);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.match(html, /at a shop in your market/, 'falls back to the wording that shipped in 2.4');
+  assert.doesNotMatch(html, /sdshops/, 'and draws no list');
+});
+
+test('a reading for another market is ignored', () => {
+  const sb = shopSandbox(stamp(60000), { 'box-ebp01': 'in' }, SHOPS, 'com');
+  assert.equal(sb.stockShops('box-ebp01').length, 0);
+});
+
+test('last checked is coarse, because the checker only runs every half hour', () => {
+  const sb = shopSandbox(stamp(60000), {}, null);
+  assert.equal(sb.stockAgo(stamp(30 * 1000)), 'just now');
+  assert.equal(sb.stockAgo(stamp(60 * 1000)), '1 minute ago');
+  assert.equal(sb.stockAgo(stamp(12 * 60 * 1000)), '12 minutes ago');
+  assert.equal(sb.stockAgo(stamp(60 * 60 * 1000)), '1 hour ago');
+  assert.equal(sb.stockAgo(stamp(4 * 60 * 60 * 1000)), '4 hours ago');
+  assert.equal(sb.stockAgo(null), '', 'no timestamp says nothing rather than guessing');
+  assert.equal(sb.stockAgo('not a date'), '');
+});
+
+test('a stale reading keeps the amber line and does not claim a shop count', () => {
+  const sb = shopSandbox(stamp(3 * HOUR), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.match(html, /Stock unconfirmed/);
+  assert.doesNotMatch(html, /at 2 of 4/, 'an old reading does not get to count shops');
+});
+
+test('a stale reading does not let any shop still claim to have it', () => {
+  // "Stock unconfirmed" above a list of shops marked green would contradict itself. Every row drops to
+  // go and look, and no price is shown, because neither is known any more.
+  const sb = shopSandbox(stamp(3 * HOUR), { 'box-ebp01': 'in' }, SHOPS);
+  const html = sb.stockGlanceHtml('box-ebp01', false);
+  assert.doesNotMatch(html, /<li class="in"/, 'no row still says it has it');
+  assert.doesNotMatch(html, /<li class="out"/, 'and none claims the opposite either');
+  assert.equal((html.match(/<li class="chk"/g) || []).length, 4, 'all four read as go and look');
+  assert.doesNotMatch(html, /£94\.95/, 'a price nobody can vouch for is dropped');
+  assert.match(html, /Collectors Edge/, 'the shop names stay, which is the useful part');
+});
+
+test('out of stock counts the shops in words that read properly', () => {
+  const sb = shopSandbox(stamp(60000), { 'pack-ebp01': 'out' }, {
+    'pack-ebp01': [
+      { shop: 'Collectors Edge', status: 'out', url: 'https://a.example/p', price: '4.25' },
+      { shop: 'Total Cards', status: 'out', url: 'https://b.example/p', price: '4.50' },
+    ],
+  });
+  assert.match(sb.stockGlanceHtml('pack-ebp01', false), /at all 2 shops we check/);
+
+  const one = shopSandbox(stamp(60000), { x: 'out' }, {
+    x: [{ shop: 'Only Shop', status: 'out', url: 'https://a.example/p', price: '1.00' }],
+  });
+  assert.match(one.stockGlanceHtml('x', false), /at the 1 shop we check/, 'singular reads properly too');
+});
+
+test('the folded away list is actually folded away', () => {
+  // On an old WebView [hidden] is not !important, so .sdshops display:grid outranks it and the
+  // "other N shops" would sit open on the page with the button doing nothing visible.
+  assert.match(source, /\.sdshops\[hidden\]\{[^}]*display:none/);
 });

@@ -1909,6 +1909,33 @@ label.acctsetrow { align-items:center; }
   .pxstats b{ font-weight:600; }
   .pxstats span{ color:var(--muted); }
   .pxempty{ margin:18px 0; color:var(--muted); font-size:14px; }
+  /* The shops behind the stock line. Rows carry a dot AND a word in their title attribute, because the
+     colour alone would fail the people most likely to need this. */
+  .sdshops{ list-style:none; margin:11px 0 0; padding:0; display:grid; gap:1px;
+    border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--line); }
+  /* Current Chrome marks [hidden] !important so display:grid cannot beat it. The old WebViews this
+     app still runs on do not, and there display:grid wins and nothing ever folds away. Same reason
+     as the .no-flexgap rules below. */
+  .sdshops[hidden]{ display:none; }
+  .sdshops li{ display:flex; align-items:center; gap:10px; background:var(--surface-2);
+    padding:10px 11px; font-size:13px; }
+  .sdshops i{ width:7px; height:7px; border-radius:50%; flex:none; }
+  .sdshops li.in i{ background:var(--el-Grass); }
+  .sdshops li.chk i{ background:var(--el-Electric,#f3c31c); }
+  .sdshops li.out i{ background:var(--el-Fire); }
+  .sdshops li.chk,.sdshops li.out{ color:var(--ink-soft); }
+  .sdshops .nm{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sdshops .pr{ font-weight:700; color:var(--ink); }
+  .sdshops li.chk .pr,.sdshops li.out .pr{ font-weight:500; color:var(--ink-faint); }
+  .sdshops .go{ color:var(--accent); font-size:12px; flex:none; }
+  .sdmore{ display:flex; align-items:center; gap:7px; width:100%; margin:9px 0 0; padding:0;
+    background:none; border:0; color:var(--ink-faint); font:inherit; font-size:12.5px; text-align:left; }
+  .sdmore b{ color:var(--ink-soft); font-weight:600; }
+  .sdwhen{ font-size:11.5px; color:var(--ink-faint); margin:10px 2px 0; }
+  .no-flexgap .sdshops li{gap:0}.no-flexgap .sdshops li>*+*{margin-left:10px}
+  .no-flexgap .sdshops li i{margin-right:10px}
+  .no-flexgap .sdmore{gap:0}.no-flexgap .sdmore>*+*{margin-left:7px}
+
   /* Stock at a glance. A dot plus words: colour alone would fail anyone who cannot separate red from
      green, and this is exactly the sort of line that matters most to them. */
   .sdstock{ display:flex; align-items:center; gap:8px; margin:10px 0 0; font-size:13px; font-weight:600; }
@@ -7185,7 +7212,7 @@ label.acctsetrow { align-items:center; }
   }
   // What the stock checker last saw, for this device's market. Fetched once and reused: it changes every
   // 30 minutes at most, so re asking on every sheet open would be noise.
-  var STOCK={ region:"", asOf:null, state:null, at:0 };
+  var STOCK={ region:"", asOf:null, state:null, shops:null, at:0 };
   var _stockReq=0;
   function fetchStock(){
     var base=apiBase(); if(!base) return Promise.resolve(null);
@@ -7200,7 +7227,7 @@ label.acctsetrow { align-items:center; }
         // An answer for a market that is no longer selected, or one overtaken by a newer request, is dropped
         // rather than stored over the current reading.
         if(req!==_stockReq || ebayReg()!==reg) return null;
-        STOCK={ region:reg, asOf:j.asOf||null, state:j.state, at:Date.now() };
+        STOCK={ region:reg, asOf:j.asOf||null, state:j.state, shops:j.shops||null, at:Date.now() };
         return STOCK;
       }).catch(function(){ return null; });
   }
@@ -7230,10 +7257,96 @@ label.acctsetrow { align-items:center; }
     if(v==="out") return { cls:"out", text:"Out of stock", note:"at every shop we check" };
     return { cls:"unk", text:"Check the shop", note:"we do not track this one" };
   }
+  // The named shops for one product in the reading's own market, or an empty list. Older app builds and
+  // markets the checker has never reached both land here as [], which simply draws no list.
+  function stockShops(id){
+    var m=STOCK.shops;
+    if(!m || STOCK.region!==ebayReg()) return [];
+    var a=m[id];
+    return (a && a.length) ? a : [];
+  }
+  // "12 minutes ago". Deliberately coarse: the checker runs every 30 minutes, so a figure to the second
+  // would imply a precision the reading does not have.
+  function stockAgo(iso){
+    if(!iso) return "";
+    var t=Date.parse(String(iso).replace(" ","T")+"Z");
+    if(isNaN(t)) return "";
+    // Floor, not round: an "ago" should never claim more time has passed than actually has, and rounding
+    // made a reading 30 seconds old say "1 minute ago".
+    var m=Math.floor((Date.now()-t)/60000);
+    if(m<1) return "just now";
+    if(m===1) return "1 minute ago";
+    if(m<60) return m+" minutes ago";
+    var h=Math.floor(m/60);
+    return h===1 ? "1 hour ago" : h+" hours ago";
+  }
+  // One row. Prices come in the SHOP's market currency, not the reader's chosen one, so a UK shop always
+  // reads in pounds even for someone who views their collection in dollars.
+  function stockShopRow(r){
+    var cls=(r.status==="in")?"in":((r.status==="check")?"chk":"out");
+    var word=(r.status==="in")?"Has it":((r.status==="check")?"Go and look":"Does not have it");
+    var price="";
+    if(r.status==="check" && !r.price) price="go and look";
+    else if(r.price) price=moneyIn(+r.price, REGION_CUR[ebayReg()]||"GBP");
+    var nm='<span class="nm">'+esc(r.shop)+'</span>';
+    var pr='<span class="pr">'+esc(price)+'</span>';
+    var inner='<i></i>'+nm+pr;
+    // Only link out to a url the backend gave us, and only an http(s) one.
+    var u=String(r.url||"");
+    if(/^https?:\/\//.test(u)){
+      inner='<a href="'+esc(u)+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0;color:inherit;text-decoration:none">'+inner+'<span class="go">\u2197</span></a>';
+    }
+    return '<li class="'+cls+'" title="'+word+'">'+inner+'</li>';
+  }
   function stockGlanceHtml(id, pre){
     var g=stockGlance(id, pre);
     if(!g) return "";
-    return '<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(g.note)+'</small></p>';
+    var rows=stockShops(id), i, have=[], rest=[];
+    // A reading too old to trust cannot be trusted shop by shop either. Saying "Stock unconfirmed" above a
+    // list of shops marked as having it would contradict itself, so every row drops to go and look and the
+    // names stay, which is still the useful part: these are the shops to try.
+    if(g.cls==="unk" && rows.length){
+      var stale=[];
+      for(i=0;i<rows.length;i++) stale.push({ shop:rows[i].shop, status:"check", url:rows[i].url, price:"" });
+      rows=stale;
+    }
+    for(i=0;i<rows.length;i++){ (rows[i].status==="in"?have:rest).push(rows[i]); }
+    // The headline counts the shops once we know them, because "2 of 9" answers "is it worth looking"
+    // better than "a shop in your market" does.
+    var note=g.note;
+    if(rows.length && g.cls!=="unk"){
+      note=have.length
+        ? ("at "+have.length+" of "+rows.length+(rows.length===1?" shop":" shops"))
+        : ("at "+(rows.length===1?"the 1 shop":("all "+rows.length+" shops"))+" we check");
+    }
+    var out='<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(note)+'</small></p>';
+    if(have.length){
+      out+='<ul class="sdshops">';
+      for(i=0;i<have.length;i++) out+=stockShopRow(have[i]);
+      out+='</ul>';
+    }
+    if(rest.length){
+      out+='<ul class="sdshops sdrest" hidden>';
+      for(i=0;i<rest.length;i++) out+=stockShopRow(rest[i]);
+      out+='</ul>';
+      out+='<button class="sdmore" type="button" aria-expanded="false"><span>\u25be</span><span>Show the <b>other '+
+        rest.length+(rest.length===1?' shop':' shops')+'</b></span></button>';
+    }
+    var ago=stockAgo(STOCK.asOf);
+    if(ago) out+='<p class="sdwhen">Last checked '+esc(ago)+(rows.length?' \u00b7 rechecked every 30 minutes':'')+'</p>';
+    return out;
+  }
+  // The expander. Wired after every paint, because the sheet is rebuilt rather than patched.
+  function wireStockShops(){
+    var box=$("sdStock"); if(!box) return;
+    var btn=box.querySelector(".sdmore"), rest=box.querySelector(".sdrest");
+    if(!btn || !rest) return;
+    btn.onclick=function(){
+      var open=!rest.hidden;
+      rest.hidden=open;
+      btn.setAttribute("aria-expanded", open?"false":"true");
+      btn.firstChild.textContent = open ? "\u25be" : "\u25b4";
+    };
   }
   // Fills the stock line once the fetch lands, but only on the sheet it was asked for: the line carries the
   // product id, so a late answer for a product that has since been closed never paints another one.
@@ -7241,6 +7354,7 @@ label.acctsetrow { align-items:center; }
     var el=$("sdStock");
     if(!el || el.getAttribute("data-pid")!==String(id)) return false;
     el.innerHTML=stockGlanceHtml(id, pre);
+    wireStockShops();
     return true;
   }
   function openSealedDetail(p){
@@ -7267,6 +7381,7 @@ label.acctsetrow { align-items:center; }
       var c0=$("mClose"); if(c0) c0.onclick=function(){ dismissOverlay(); };
       var sa0=$("sdStockAlert"); if(sa0) sa0.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(on?"You'll be notified when you can pre order this.":"Stock alert removed."); };
       var w0=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, w0); if(!w0) openOverlay(closeModal);
+      wireStockShops();
       fetchStock().then(function(){ stockPaint(p.id, true); });
       return;
     }
@@ -7318,6 +7433,7 @@ label.acctsetrow { align-items:center; }
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, _wasOpen); if(!_wasOpen) openOverlay(closeModal);
     // The sheet renders at once with whatever stock reading is already in hand, then fills the line in when
     // the fetch lands. Nothing waits on the network to open.
+    wireStockShops();
     fetchStock().then(function(){ stockPaint(p.id, false); });
   }
 
