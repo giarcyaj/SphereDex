@@ -503,3 +503,96 @@ test('the pre order wording follows the release date, so it agrees with the push
   sb.RELEASE_OVERRIDES = { x: 'Oct 16, 2024' };
   assert.equal(sb.stockPre({ id: 'x', pre: true, date: 'Jan 29, 2027' }), false, 'a corrected date wins');
 });
+
+// ---- a product stops being a pre order when it comes out ------------------------------------------
+// "Pre order" is a fact about the date, not a boolean typed into the build months earlier. It used to
+// be the boolean, which is why the backend (which reads the ship date when it sends) and the page
+// would have disagreed from 16 Oct 2026, the day ss-vol1 ships.
+function releaseSandbox(sealed, overrides) {
+  const sb = {
+    SEALED: sealed,
+    RELEASE_OVERRIDES: overrides || {},
+    _MONIX: { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 },
+    Date, isNaN,
+  };
+  vm.createContext(sb);
+  vm.runInContext(['sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'stockPre']
+    .map(appFunction).join('\n'), sb);
+  return sb;
+}
+
+test('a date that has passed turns a pre order into a released product', () => {
+  const sealed = [{ id: 'old', pre: true, date: 'Oct 16, 2024' }, { id: 'soon', pre: true, date: 'Jan 29, 2027' }];
+  const sb = releaseSandbox(sealed);
+  assert.equal(sb.applyReleased(), true, 'it reports that something moved');
+  assert.equal(sealed[0].pre, false, 'the one that has come out is no longer a pre order');
+  assert.equal(sealed[1].pre, true, 'the one still to come is untouched');
+});
+
+test('a date with no day leaves the declared flag alone', () => {
+  // "late Oct 2026" is not a date we can act on, so guessing from it would be worse than waiting.
+  const sealed = [{ id: 'vague', pre: true, date: 'late Oct 2026' }];
+  releaseSandbox(sealed).applyReleased();
+  assert.equal(sealed[0].pre, true);
+});
+
+test('a released product that gets delayed becomes a pre order again', () => {
+  // The news pipeline can move a date. Without remembering what the product was declared as, a product
+  // we auto released could never go back, and its Preorder badge would be gone for good.
+  const sealed = [{ id: 'x', pre: true, date: 'Oct 16, 2024' }];
+  const sb = releaseSandbox(sealed);
+  sb.applyReleased();
+  assert.equal(sealed[0].pre, false);
+  assert.equal(sealed[0].preRaw, true, 'what it was declared as is remembered');
+  sb.RELEASE_OVERRIDES.x = 'Jan 29, 2027';          // a delay lands from the news
+  assert.equal(sb.applyReleased(), true);
+  assert.equal(sealed[0].pre, true, 'and it is a pre order once more');
+});
+
+test('a product that was never a pre order is never made one', () => {
+  const sealed = [{ id: 'r', pre: false, date: 'Jan 29, 2027' }];
+  releaseSandbox(sealed).applyReleased();
+  assert.equal(sealed[0].pre, false);
+});
+
+test('running it twice changes nothing the second time', () => {
+  const sealed = [{ id: 'old', pre: true, date: 'Oct 16, 2024' }];
+  const sb = releaseSandbox(sealed);
+  assert.equal(sb.applyReleased(), true);
+  assert.equal(sb.applyReleased(), false, 'idempotent, so calling it on every render is free');
+});
+
+test('the structural guards read what the product was declared as', () => {
+  // Which products keep chasing a news date, and whose overrides are remembered, must follow the
+  // DECLARED flag. On the derived one, a product we auto released would drop out of both and a delay
+  // announced afterwards could never reach it.
+  const body = source.slice(source.indexOf('function loadReleaseOverrides('),
+    source.indexOf('function sealMap('));
+  assert.doesNotMatch(body, /if\(!p\.pre\)\s*return;/, 'no guard still reads the derived flag');
+  assert.equal((body.match(/sealPreRaw\(p\)/g) || []).length >= 3, true, 'they read the declared one');
+});
+
+test('a sealed product carries a date we can act on, or says so plainly', () => {
+  // applyReleased is only as good as the dates. Every tracked pre order should parse, or be openly
+  // vague rather than quietly unparseable.
+  const sb = releaseSandbox([]);
+  const m = /var STOCK_ALL_IDS=\[([^\]]+)\]/.exec(source);
+  const ids = m[1].split(',').map((s) => s.trim().replace(/"/g, ''));
+  let checked = 0;
+  for (const id of ids) {
+    const row = new RegExp('\\{ id:"' + id.replace(/[-]/g, '\\-') + '",[^\\n]*').exec(source);
+    if (!row) continue;
+    const d = /date:"([^"]*)"/.exec(row[0]);
+    if (!d || !d[1]) continue;
+    checked++;
+    const parses = /^\s*([a-z]{3})[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})/i.test(d[1]);
+    const vague = !/\d{1,2}/.test(d[1].replace(/20\d{2}/, ''));
+    assert.ok(parses || vague, id + ' has a date we can neither read nor call vague: ' + d[1]);
+  }
+  assert.ok(checked >= 8, 'the dates were actually inspected, not skipped (' + checked + ')');
+});
+
+test('the stock reading is not cached long enough to outlive a push', () => {
+  // Ten minutes meant tapping a restock notification could show the answer from before the restock.
+  assert.match(source, /Date\.now\(\)-STOCK\.at\)<120000/);
+});

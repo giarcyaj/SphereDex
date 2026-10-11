@@ -6767,11 +6767,11 @@ label.acctsetrow { align-items:center; }
   function loadReleaseOverrides(){
     var d=null; try{ d=JSON.parse(lsGet(RO_KEY)||"null"); }catch(e){}
     if(!d) return;
-    SEALED.forEach(function(p){ if(!p.pre) return; var r=d[p.id];
+    SEALED.forEach(function(p){ if(!sealPreRaw(p)) return; var r=d[p.id];
       if(r && r.d && r.base===p.date) RELEASE_OVERRIDES[p.id]=r.d; });
   }
   function saveReleaseOverrides(){
-    var out={}; SEALED.forEach(function(p){ if(!p.pre) return;
+    var out={}; SEALED.forEach(function(p){ if(!sealPreRaw(p)) return;
       if(RELEASE_OVERRIDES[p.id]) out[p.id]={ d:RELEASE_OVERRIDES[p.id], base:p.date }; });
     try{ lsSet(RO_KEY, JSON.stringify(out)); }catch(e){}
   }
@@ -6806,7 +6806,7 @@ label.acctsetrow { align-items:center; }
       var p=SEALED.filter(function(x){ return x.id===r.id; })[0]
         || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null);
       if(p){
-        if(p.pre && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; relNews("date", p); }
+        if(sealPreRaw(p) && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; relNews("date", p); }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
       }
@@ -6939,6 +6939,25 @@ label.acctsetrow { align-items:center; }
   // on release day, so a watcher would get "available now" on their phone and read "Pre order open" on the
   // page. The date wins wherever there is a real one.
   function stockPre(p){ return !!(p && p.pre) && !sealShipped(p); }
+  // What the product was DECLARED as, before any date was applied. The structural places below (which
+  // news dates to keep chasing, which overrides to remember) have to keep working on a product we have
+  // auto released, or a delay announced later could never move it back.
+  function sealPreRaw(p){ return (p && p.preRaw!=null) ? !!p.preRaw : !!(p && p.pre); }
+  // "Pre order" means "not out yet", so it belongs to the release date, not to a boolean typed into the
+  // build months earlier. Run at startup, whenever a date moves, and on every Sealed render so a day
+  // rolling over while the app is open still counts. A vague date with no day says nothing, so the
+  // declared flag keeps its say there, and a date moving back out makes it a pre order again.
+  function applyReleased(){
+    if(typeof SEALED==="undefined" || !SEALED.forEach) return false;
+    var changed=false;
+    SEALED.forEach(function(p){
+      if(p.preRaw==null) p.preRaw=!!p.pre;
+      var now=p.preRaw && !sealShipped(p);
+      if(now!==p.pre){ p.pre=now; changed=true; }
+    });
+    return changed;
+  }
+  applyReleased();
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
   // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
@@ -6957,7 +6976,7 @@ label.acctsetrow { align-items:center; }
     var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
     var changed=false;
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
-    SEALED.forEach(function(p){ if(!p.pre || (p.srv && p.date)) return;
+    SEALED.forEach(function(p){ if(!sealPreRaw(p) || (p.srv && p.date)) return;
       var keys=(p.nk&&p.nk.length)?p.nk:[p.set||p.name];
       for(var i=0;i<items.length;i++){ var it=items[i]||{};
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
@@ -6971,6 +6990,7 @@ label.acctsetrow { align-items:center; }
   }
   // Rebuild overrides from a news list and repaint Sealed / Releases if a date actually moved.
   function refreshReleaseDates(items){ if(!buildReleaseOverrides(items)) return;
+    applyReleased();          // a date that moved may have just released a product, or put one back
     saveReleaseOverrides();   // hold the resolved date after the announcing item drops out of the feed
     try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(_){}
     try{ if(_curPage==="releases" && typeof renderReleases==="function") renderReleases(); }catch(_){}
@@ -7112,6 +7132,7 @@ label.acctsetrow { align-items:center; }
   }
   function renderSealed(){
     var grid=$("sealedGrid"); if(!grid) return;
+    applyReleased();   // a release day that arrived while the app was open still counts
     grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
     grid.innerHTML="";
     var seenPre=false, list=sealedList();
@@ -7232,8 +7253,10 @@ label.acctsetrow { align-items:center; }
   function fetchStock(){
     var base=apiBase(); if(!base) return Promise.resolve(null);
     var reg=ebayReg();
-    // Keep a reading for 10 minutes, and drop it the moment the market changes.
-    if(STOCK.state && STOCK.region===reg && (Date.now()-STOCK.at)<600000) return Promise.resolve(STOCK);
+    // Keep a reading for two minutes, and drop it the moment the market changes. It used to be ten,
+    // which is long enough that tapping a restock push could show the answer from before the restock.
+    // Two matches the Cache-Control the endpoint itself sends.
+    if(STOCK.state && STOCK.region===reg && (Date.now()-STOCK.at)<120000) return Promise.resolve(STOCK);
     var req=++_stockReq;
     return fetch(base+"/api/stock?region="+encodeURIComponent(reg), {cache:"no-store"})
       .then(function(r){ return r.ok ? r.json() : null; })
