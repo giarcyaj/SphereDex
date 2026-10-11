@@ -7891,6 +7891,9 @@ label.acctsetrow { align-items:center; }
     if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
     return text;
   }
+  // Colours follow the app's one rule for prices: live listings are --up (green), last sold is --azure
+  // (blue). The price mode dot, the chart legend classes and the day view all use it. This chart was the
+  // one place that had them swapped, so the same line meant two different things on adjoining screens.
   function fullPriceChartHtml(id){
     var live=cardPricePoints(id, "live"), sold=cardPricePoints(id, "sold");
     var all=live.concat(sold);
@@ -7912,11 +7915,11 @@ label.acctsetrow { align-items:center; }
       labels+='<text x="'+(padL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--ink)">'+esc(money(gv))+'</text>';
     }
     var series="";
-    if(sold.length>1) series+='<path d="'+pxSeriesPath(sold,X,Y)+'" fill="none" stroke="var(--el-Grass)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
-    if(live.length>1) series+='<path d="'+pxSeriesPath(live,X,Y)+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    if(sold.length>1) series+='<path d="'+pxSeriesPath(sold,X,Y)+'" fill="none" stroke="var(--azure)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    if(live.length>1) series+='<path d="'+pxSeriesPath(live,X,Y)+'" fill="none" stroke="var(--up)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
     // A single reading draws no line, so mark it rather than showing an empty box.
-    if(sold.length===1) series+='<circle cx="'+X(pxDayNum(sold[0].d)).toFixed(1)+'" cy="'+Y(sold[0].v).toFixed(1)+'" r="3" fill="var(--el-Grass)"/>';
-    if(live.length===1) series+='<circle cx="'+X(pxDayNum(live[0].d)).toFixed(1)+'" cy="'+Y(live[0].v).toFixed(1)+'" r="3" fill="var(--accent)"/>';
+    if(sold.length===1) series+='<circle cx="'+X(pxDayNum(sold[0].d)).toFixed(1)+'" cy="'+Y(sold[0].v).toFixed(1)+'" r="3" fill="var(--azure)"/>';
+    if(live.length===1) series+='<circle cx="'+X(pxDayNum(live[0].d)).toFixed(1)+'" cy="'+Y(live[0].v).toFixed(1)+'" r="3" fill="var(--up)"/>';
 
     // Dates across the bottom rather than only the two ends, so a point can be placed in time by eye.
     // The count comes down with the span: five ticks over a fortnight would repeat the same day.
@@ -7931,8 +7934,8 @@ label.acctsetrow { align-items:center; }
     }
 
     var key='<div class="pxkey">'
-      + (live.length?'<span><i style="background:var(--accent)"></i>Live listings</span>':'')
-      + (sold.length?'<span><i style="background:var(--el-Grass)"></i>Last sold</span>':'')
+      + (live.length?'<span><i style="background:var(--up)"></i>Live listings</span>':'')
+      + (sold.length?'<span><i style="background:var(--azure)"></i>Last sold</span>':'')
       + '</div>';
 
     var stats='<div class="pxstats">'

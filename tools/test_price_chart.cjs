@@ -360,3 +360,36 @@ test('reopening a chart that is already open does not push a second entry', asyn
   app.openPriceChart({ id: 'EBP01-002', name: 'Test' });
   assert.equal(app.hist.index, 2);
 });
+
+// ---- one colour per price type, everywhere ---------------------------------------------------------
+// The app has one rule: live listings are --up (green) and last sold is --azure (blue). The combined
+// price history chart had them swapped, so the same coloured line meant opposite things on screens a
+// tap apart. These hold every place that colours a price type to the same pair.
+const LIVE = 'var(--up)';
+const SOLD = 'var(--azure)';
+
+test('the combined price history chart draws live green and sold blue', () => {
+  const fn = appFunction('fullPriceChartHtml');
+  assert.match(fn, /pxSeriesPath\(live,X,Y\)\+'" fill="none" stroke="var\(--up\)"/, 'the live line is green');
+  assert.match(fn, /pxSeriesPath\(sold,X,Y\)\+'" fill="none" stroke="var\(--azure\)"/, 'the sold line is blue');
+  assert.match(fn, /live\[0\]\.v\)\.toFixed\(1\)\+'" r="3" fill="var\(--up\)"/, 'a lone live point is green');
+  assert.match(fn, /sold\[0\]\.v\)\.toFixed\(1\)\+'" r="3" fill="var\(--azure\)"/, 'a lone sold point is blue');
+  assert.match(fn, /background:var\(--up\)"><\/i>Live listings/, 'the legend agrees for live');
+  assert.match(fn, /background:var\(--azure\)"><\/i>Last sold/, 'the legend agrees for sold');
+});
+
+test('the combined chart carries none of the old swapped colours', () => {
+  const fn = appFunction('fullPriceChartHtml');
+  assert.doesNotMatch(fn, /var\(--el-Grass\)/, 'green for sold is gone');
+  assert.doesNotMatch(fn, /var\(--accent\)/, 'cyan for live is gone');
+});
+
+test('every other place that colours a price type uses the same pair', () => {
+  // If any of these ever moves, the chart test above has to move with it, and the reverse.
+  assert.match(source, /\.val \.pmdot \{[^}]*background:var\(--up\)/, 'the price mode dot is green for live');
+  assert.match(source, /\.val \.pmdot\.sold \{ background:var\(--azure\)/, 'and blue for sold');
+  assert.match(source, /\.pclegend \.lglive::before \{ background:var\(--up\)/, 'the legend class for live');
+  assert.match(source, /\.pclegend \.lgsold::before \{ background:var\(--azure\)/, 'the legend class for sold');
+  assert.match(source, /color:\(isSold\?"var\(--azure\)":"var\(--up\)"\)/, 'the day view');
+  assert.ok(LIVE !== SOLD);
+});
