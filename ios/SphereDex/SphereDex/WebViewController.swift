@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import UserNotifications
 
 /// Hosts the bundled SphereDex web app in a WKWebView and wires the native bridge.
 ///
@@ -66,6 +67,10 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
 
         // Let a tapped-notification deep link route into this web view once the page is ready.
         PushRouter.shared.register(webView)
+        // Tell the page whether the phone lets SphereDex show notifications, every time the app comes to the
+        // front, because that is changed in the Settings app, outside this one.
+        NotificationCenter.default.addObserver(self, selector: #selector(reportNotificationsAllowed),
+                                               name: UIApplication.didBecomeActiveNotification, object: nil)
 
         if let url = URL(string: Self.appURL) {
             webView.load(URLRequest(url: url))
@@ -244,6 +249,24 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     // The bundled page finished loading: release any deep link queued from a cold-start notification tap.
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         PushRouter.shared.pageReady()
+        reportNotificationsAllowed()
+    }
+
+    /// window.SDNotifPerm(true | false | null): false only when the person has declined or switched off
+    /// notifications for SphereDex, null while iOS has not asked yet. The page then shows a note instead of
+    /// a switch that says on while every alert is blocked.
+    @objc private func reportNotificationsAllowed() {
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            let arg: String
+            switch settings.authorizationStatus {
+            case .denied: arg = "false"
+            case .notDetermined: arg = "null"
+            default: arg = "true"
+            }
+            DispatchQueue.main.async {
+                self?.webView?.evaluateJavaScript("window.SDNotifPerm && window.SDNotifPerm(\(arg))", completionHandler: nil)
+            }
+        }
     }
 
     // iOS can kill the web content process while the app is in the background (memory pressure), and it does
@@ -340,17 +363,13 @@ enum Push {
     // Default: everything on until the user changes it in Settings. Matches Android's DEFAULT_PREFS.
     private static let defaultPrefs = "{\"releases\":true,\"news\":true,\"newSets\":true}"
 
-    private static let tokenKey = "spheredex_push_token"
-
-    /// The most recent APNs device token, remembered across launches rather than only in memory. A prefs
-    /// change made before APNs had answered this launch used to be dropped on the floor, leaving the
-    /// server alerting on the market the user had just left. With the token kept, the change still goes.
-    /// On a device that has genuinely never had a token, the change is picked up the moment the first one
-    /// arrives, because registerToken always reads the latest prefs rather than a captured copy.
-    private static var lastToken: String? {
-        get { UserDefaults.standard.string(forKey: tokenKey) }
-        set { UserDefaults.standard.set(newValue, forKey: tokenKey) }
-    }
+    /// The most recent APNs device token, for THIS launch only. 2.4.1 kept it in UserDefaults, which is part
+    /// of every iCloud and computer backup: a new iPhone restored from the old one got the old phone's token
+    /// back and sent its own market and follows to the old phone's row until APNs answered, and for good if
+    /// notifications were declined there. Memory is enough. APNs hands the token over on every launch that
+    /// has permission, and registerToken reads the current prefs when it does, so a change made before the
+    /// token arrives still goes out the moment it does.
+    private static var lastToken: String?
 
     /// The device's current notification prefs as a JSON string (source of truth is the web Settings UI).
     static var currentPrefs: String {

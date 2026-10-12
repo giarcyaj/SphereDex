@@ -174,12 +174,12 @@ function liveSandbox() {
   sb.ebayReg = () => sb.region;
   vm.createContext(sb);
   vm.runInContext(['fetchStock', 'stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow',
-    'stockGlanceHtml', 'stockPaint'].map(appFunction).join('\n'), sb);
+    'stockGlanceHtml', 'stockShopsOpen', 'stockPaint'].map(appFunction).join('\n'), sb);
   return sb;
 }
 function stockLine(pid) {
   const attrs = { 'data-pid': pid };
-  return { innerHTML: '', getAttribute: (k) => (k in attrs ? attrs[k] : null) };
+  return { innerHTML: '', getAttribute: (k) => (k in attrs ? attrs[k] : null), querySelector: () => null };
 }
 const answer = (state) => ({ ok: true, json: () => Promise.resolve({ asOf: stamp(60000), state }) });
 const settle = () => new Promise((r) => setImmediate(r));
@@ -245,7 +245,8 @@ test('the preorder sheet shows the line, and asks for preorder wording', () => {
   // push, so the page has to decide it the same way or the two split on release day.
   assert.match(pre, /stockGlanceHtml\(p\.id,\s*stockPre\(p\)\)/, 'preorder sheet asks the date, not a baked in flag');
   assert.match(pre, /fetchStock\(\)\.then/, 'preorder sheet also fills the line in when the fetch lands');
-  assert.match(pre, /notified when you can pre order this/, 'the bell toast matches what it will send');
+  assert.match(pre, /toast\(stockAlertToast\(on, true\)\)/, 'the bell toast asks for the pre order wording');
+  assert.match(appFunction('stockAlertToast'), /notified when you can pre order this/, 'which matches what it will send');
 });
 
 test('the released sheet passes preorder false explicitly', () => {
@@ -634,12 +635,16 @@ test('Android re-registers when the app comes back to the foreground', () => {
   assert.match(KOTLIN, /lastResumeRegister/, 'and it is throttled, not fired on every resume');
 });
 
-test('iOS remembers its token so a change made before APNs answers is not lost', () => {
-  // lastToken used to be in memory only, so a prefs change in a launch where APNs had not yet handed
-  // over a token was silently dropped and the server kept the old market.
-  assert.match(SWIFT, /tokenKey/, 'the token is keyed into UserDefaults');
-  assert.match(SWIFT, /UserDefaults\.standard\.string\(forKey: tokenKey\)/);
-  assert.doesNotMatch(SWIFT, /private static var lastToken: String\?$/m, 'not the in memory only version');
+test('iOS never sends prefs to a token restored from another phone', () => {
+  // UserDefaults rides along in an iCloud or computer backup, so a token kept there came back on a new
+  // iPhone restored from the old one, and the new phone's prefs went to the OLD phone's row until APNs
+  // answered (for good, if notifications were declined there). In memory is enough: APNs hands over the
+  // token on every launch with permission, and registerToken reads the current prefs when it does, so a
+  // change made before that still goes out the moment the token arrives.
+  assert.match(SWIFT, /private static var lastToken: String\?$/m, 'the token lives in memory for this launch only');
+  assert.doesNotMatch(SWIFT, /forKey: tokenKey/, 'and is never written to UserDefaults');
+  assert.match(SWIFT, /if let token = lastToken { registerToken\(token\) }/, 'a change re-sends once a token is known');
+  assert.match(SWIFT, /JSONSerialization\.jsonObject\(with: Data\(currentPrefs\.utf8\)\)/, 'and every send reads the current prefs');
 });
 
 test('iOS reads the reply and retries', () => {

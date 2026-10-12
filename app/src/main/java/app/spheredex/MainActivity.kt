@@ -3,6 +3,7 @@ package app.spheredex
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
@@ -31,6 +32,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -55,7 +57,22 @@ class MainActivity : ComponentActivity() {
     // Android 13+ notification permission. Result ignored: if declined, the user can still opt in
     // later from system settings, and the app works fully without it.
     private val notifPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { reportNotificationsAllowed() }
+
+    /** Whether the phone lets SphereDex show notifications at all: the Android 13 permission, the app's own
+     *  switch in system settings, and the one channel every alert uses. */
+    private fun notificationsAllowed(): Boolean = try {
+        val nm = NotificationManagerCompat.from(this)
+        nm.areNotificationsEnabled() && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            nm.getNotificationChannel(Push.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE)
+    } catch (_: Exception) { true }
+
+    /** Tell the page, so a switch that says on is not quietly blocked by the phone. Sent once the page has
+     *  loaded and on every resume, because the person changes it in system settings, outside the app. */
+    private fun reportNotificationsAllowed() {
+        if (!pageLoaded) return
+        web.evaluateJavascript("window.SDNotifPerm && window.SDNotifPerm(${notificationsAllowed()})", null)
+    }
 
     /** Push the current safe-area insets into the web app as CSS variables (--sat/--sab/--sal/--sar). */
     private fun applyInsets() { insetJs?.let { js -> web.evaluateJavascript(js, null) } }
@@ -173,6 +190,7 @@ class MainActivity : ComponentActivity() {
                     applyInsets()
                     pageLoaded = true
                     applyPendingPushUrl()   // a notification tapped before the page loaded
+                    reportNotificationsAllowed()
                 }
             }
             // Make window.prompt/confirm/alert work (WebView blocks them by default),
@@ -288,7 +306,9 @@ class MainActivity : ComponentActivity() {
         // are harmless without it, and fetchAndRegister no-ops while Firebase has no default app.
         Push.ensureChannel(this)
         askNotificationPermission()
-        Push.fetchAndRegister(this)
+        // Through the resume throttle, not straight to fetchAndRegister: onResume runs right after this on
+        // every cold start, and with the throttle still at 0 it posted the same registration a second time.
+        Push.refreshOnResume(this)
         handleDeepLink(intent)   // launched by tapping a notification (cold start)
     }
 
@@ -298,6 +318,7 @@ class MainActivity : ComponentActivity() {
         // when a switch is flipped is best effort, so one made with no signal leaves the server acting on
         // the old answer; this is the way back. Throttled inside Push to once every 15 minutes.
         Push.refreshOnResume(this)
+        reportNotificationsAllowed()
     }
 
     override fun onNewIntent(intent: Intent) {
