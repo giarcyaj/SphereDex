@@ -6928,6 +6928,9 @@ label.acctsetrow { align-items:center; }
   applyReleases(storedReleases());
   fetchSealedImages();
   loadReleaseOverrides();
+  // Month names for sealShipped and parseNewsDate. applyReleased() runs at startup
+  // just below, so the table is assigned before that call.
+  var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
   // Has this product's release date passed? A vague "late Oct 2026" has no day, so it stays unknown and
   // the baked in pre flag keeps its say. sealDate is news aware, so a corrected date counts here too.
@@ -6963,7 +6966,6 @@ label.acctsetrow { align-items:center; }
     return changed;
   }
   applyReleased();
-  var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
   // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
   // are often truncated mid-date and drop the year. A release month well before the news month rolls to next year.
