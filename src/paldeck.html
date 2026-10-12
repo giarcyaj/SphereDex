@@ -2931,7 +2931,7 @@ label.acctsetrow { align-items:center; }
         </select>
       </div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Text size</div><div class="sdesc">Make everything in the app bigger or smaller. Remembered on this device.</div></div>
+        <div class="setinfo"><div class="stitle">Text size</div><div class="sdesc">Make everything in the app bigger or smaller. Saved to your account when you are signed in, otherwise on this device.</div></div>
         <select class="sortsel" id="setTextSize" aria-label="Text size">
           <option value="0.9">Small</option>
           <option value="1">Default</option>
@@ -4213,6 +4213,7 @@ label.acctsetrow { align-items:center; }
     if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];
     var w=SETTINGS.notif.stockWatch, i=w.indexOf(id);
     if(i>=0){ w.splice(i,1); } else { w.push(id); SETTINGS.notif.stock=true; }   // opting into a product enables the master
+    var sw=$("setNotifStock"); if(sw) sw.checked=SETTINGS.notif.stock!==false;   // painted once at startup otherwise
     saveSettings(); syncPushPrefs();
     return i<0;   // true = now on
   }
@@ -4365,7 +4366,7 @@ label.acctsetrow { align-items:center; }
   // Account-level settings that sync to the signed-in account (piggybacked on the state blob under
   // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme,
   // view, notifications stay local). _currency and _edition live outside SETTINGS so carry them too.
-  var ACCT_SETTING_KEYS=["defaultGrader","ebayRegion","priceMode","mode","textScale"];
+  var ACCT_SETTING_KEYS=["defaultGrader","ebayRegion","priceMode","mode","textScale","cardLang"];
   function accountSettingsBlob(){ var o={}; ACCT_SETTING_KEYS.forEach(function(k){ if(SETTINGS[k]!==undefined) o[k]=SETTINGS[k]; });
     o._currency=lsGet("palvault-currency")||(CUR&&CUR.code);
     o._edition=SEAL_ED; return o; }
@@ -4403,6 +4404,10 @@ label.acctsetrow { align-items:center; }
     // controls and the root font size kept the other device's.
     if(typeof applyMode==="function") applyMode();
     if(typeof applyTextScale==="function") applyTextScale();
+    if(a.cardLang!==undefined){
+      if(typeof applyCardLang==="function") applyCardLang();
+      var clSel=document.getElementById("setCardLang"); if(clSel) clSel.value=(SETTINGS.cardLang==="ja")?"ja":"en";
+    }
     // A market arriving from the account used to be adopted AFTER the price book had already been fetched
     // for the old one, and nothing refetched: for up to 12 hours the user saw one market's prices under
     // another market's currency symbol. Empty the books and ask again.
@@ -7219,43 +7224,7 @@ label.acctsetrow { align-items:center; }
       '<div class="hs"><span class="n">'+sealOwnedCount()+'</span><span class="l">Owned</span></div>';
   }
 
-  // ---- Sealed product detail sheet + region-aware buy links ----
-  var AMAZON_DOMAIN={ "co.uk":"amazon.co.uk","com":"amazon.com","de":"amazon.de","com.au":"amazon.com.au","ca":"amazon.ca","fr":"amazon.fr","it":"amazon.it","es":"amazon.es" };
-  var REGION_SHORT={ "co.uk":"UK","com":"US","de":"DE","com.au":"AU","ca":"CA","fr":"FR","it":"IT","es":"ES" };
-  // Curated Palworld-TCG stockists per marketplace. Fixed URLs point at each shop's Palworld range;
-  // "%q" (TCGplayer) is replaced with the product search. France/Italy fall back to eBay + Amazon.
-  var RETAILERS={
-    "co.uk":[["Magic Madhouse","https://magicmadhouse.co.uk/other-tcgs/palworld-tcg"],["The Card Vault","https://thecardvault.co.uk/collections/palworld-official-card-game-all-products"],["Total Cards","https://totalcards.net/collections/palworld-official-card-game"],["Chaos Cards","https://www.chaoscards.co.uk/shop/card-games/palworld-tcg"]],
-    "com":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
-    "ca":[["TCGplayer","https://www.tcgplayer.com/search/all/product?q=%q"]],
-    "com.au":[["Good Games","https://www.goodgames.com.au/collections/palworld-official-card-game"],["GB Toys","https://gbtoys.com.au/collections/palworld-official-card-game"],["Collectible Madness","https://collectiblemadness.com.au/collections/palworld-official-card-game"]],
-    "de":[["Play-Maniac","https://www.play-maniac.de/collections/palworld-official-card-game"],["Universe TCG","https://www.universetcg.com/collections/palworld-card-game"]],
-    "es":[["Turol Games","https://www.turolgames.com/en/741-palworld"]]
-  };
-  // Deep links to the exact product page, per SEALED id, keyed by shop name, for the shops that expose
-  // stable product URLs (every Shopify stockist we also poll for stock, across UK/US/AU/DE). Shops with
-  // no per-product URL (Amazon, TCGplayer, Magic Madhouse, Chaos Cards) fall back to their search /
-  // category page. Keep these handles + STOCK_TRACKED + the backend STOCK_SOURCES in step.
-  var SEAL_SHOP_URLS={
-    "box-ebp01":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-booster-box-12x-packs","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-booster-box-12-packs","Universe TCG":"https://www.universetcg.com/products/palworld-bp01-dawn-of-palpagos-booster-box","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-bp01-dawn-of-palpagos-booster-box","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-bp01-dawn-of-palpagos-booster-box","GB Toys":"https://gbtoys.com.au/products/palworld-card-game-bp01-dawn-of-palpagos-booster-box"},
-    "pack-ebp01":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-booster-pack","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-booster-pack","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-bp01-dawn-of-palpagos-booster-pack"},
-    "td-rb":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-red-and-blue-trial-deck","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-trial-deck-red-blue","Universe TCG":"https://www.universetcg.com/products/palworld-trial-deck-td01","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-td01-dawn-of-palpagos-trial-deck-redblue","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-td01-dawn-of-palpagos-red-blue-trial-deck","Play-Maniac":"https://www.play-maniac.de/products/palworld-official-card-game-dawn-of-palpagos-red-blue-trial-deck-td01-englisch"},
-    "td-gp":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck","Total Cards":"https://totalcards.net/products/palworld-official-card-game-dawn-of-palpagos-trial-deck-green-purple","Universe TCG":"https://www.universetcg.com/products/palworld-trial-deck-td02","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-pocge-td02-dawn-of-palpagos-trial-deck-greenpurple","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-td02-dawn-of-palpagos-green-purple-trial-deck","Play-Maniac":"https://www.play-maniac.de/products/palworld-official-card-game-dawn-of-palpagos-green-purple-trial-deck-td02-englisch"},
-    "ss-vol1":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-sleeve-card-set-vol-1","Total Cards":"https://totalcards.net/products/palworld-official-card-game-sleeve-card-set-vol-1","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-sleeve-card-set-vol-1-english","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-ss01-sleeve-card-set-vol1"},
-    "box-bp02":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-legends-awaken-booster-box-12x-packs","Total Cards":"https://totalcards.net/products/palworld-official-card-game-legends-awaken-booster-box-12-packs","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-bp02-legends-awaken-booster-box-12-packs-english","Collectible Madness":"https://collectiblemadness.com.au/products/palworld-official-card-game-bp02-legends-awaken-booster-box","GB Toys":"https://gbtoys.com.au/products/palworld-card-game-bp02-legends-awaken-booster-box"},
-    "pack-bp02":{"The Card Vault":"https://thecardvault.co.uk/products/palworld-official-card-game-legends-awaken-booster-pack","Total Cards":"https://totalcards.net/products/palworld-official-card-game-legends-awaken-booster-pack","Universe TCG":"https://www.universetcg.com/products/palworld-official-card-game-bp02-legends-awaken-booster-pack-english","Good Games":"https://www.goodgames.com.au/products/palworld-tcg-bp02-legends-awaken-booster-pack"}
-  };
-  function sealBuyLinks(p){
-    var reg=ebayReg(), ed=(SEAL_EDITIONS[SEAL_ED]||{}).kw||"";
-    var q=encodeURIComponent(((p.q||("Palworld "+p.name))+(ed?(" "+ed):"")).trim());
-    var links=[
-      {name:"eBay "+(REGION_SHORT[reg]||reg), url:"https://www.ebay."+reg+"/sch/i.html?_nkw="+q},
-      {name:"Amazon", url:"https://www."+(AMAZON_DOMAIN[reg]||"amazon.com")+"/s?k="+q}
-    ];
-    (RETAILERS[reg]||[]).forEach(function(r){ var pu=(SEAL_SHOP_URLS[p.id]||{})[r[0]]; links.push({name:r[0], url:pu||r[1].replace("%q",q)}); });
-    links.push({name:"Official", url:SEAL_OFFICIAL_URL});
-    return { region:(REGION_SHORT[reg]||reg.toUpperCase()), links:links };
-  }
+  // ---- Sealed product detail sheet ----
   // Official Palworld TCG product page (the RRP button's target).
   var SEAL_OFFICIAL_URL="https://en.palworld-official-cardgame.com/products";
   // eBay search for a sealed product (sold vs live listings), region + edition aware — mirrors the card-detail links.
@@ -7359,9 +7328,10 @@ label.acctsetrow { align-items:center; }
   }
   // One row. Prices come in the SHOP's market currency, not the reader's chosen one, so a UK shop always
   // reads in pounds even for someone who views their collection in dollars.
-  function stockShopRow(r){
+  function stockShopRow(r, pre){
     var cls=(r.status==="in")?"in":((r.status==="check")?"chk":"out");
-    var word=(r.status==="in")?"Has it":((r.status==="check")?"Go and look":"Does not have it");
+    var word=(r.status==="check")?"Go and look":(pre ? ((r.status==="in")?"Taking pre orders":"Not taking pre orders")
+      : ((r.status==="in")?"Has it":"Does not have it"));
     var price="";
     if(r.status==="check" && !r.price) price="go and look";
     else if(r.price) price=moneyIn(+r.price, REGION_CUR[ebayReg()]||"GBP");
@@ -7408,12 +7378,12 @@ label.acctsetrow { align-items:center; }
     var out='<p class="sdstock '+g.cls+'"><i></i>'+esc(g.text)+' <small>'+esc(note)+'</small></p>';
     if(have.length){
       out+='<ul class="sdshops">';
-      for(i=0;i<have.length;i++) out+=stockShopRow(have[i]);
+      for(i=0;i<have.length;i++) out+=stockShopRow(have[i], pre);
       out+='</ul>';
     }
     if(rest.length){
       out+='<ul class="sdshops sdrest" hidden>';
-      for(i=0;i<rest.length;i++) out+=stockShopRow(rest[i]);
+      for(i=0;i<rest.length;i++) out+=stockShopRow(rest[i], pre);
       out+='</ul>';
       out+='<button class="sdmore" type="button" aria-expanded="false"><span>\u25be</span><span>Show the <b>other '+
         rest.length+(rest.length===1?' shop':' shops')+'</b></span></button>';
@@ -7455,7 +7425,6 @@ label.acctsetrow { align-items:center; }
     var title=p.set||p.name, typ=(p.set&&p.name)?p.name:"", detail=p.sub||"";
     var subline=typ?(typ+(detail?" · "+detail:"")):detail;
     if(p.pre){
-      var bl0=sealBuyLinks(p);
       var dbox=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
       $("mMain").innerHTML=
         '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
@@ -7466,8 +7435,6 @@ label.acctsetrow { align-items:center; }
           '<div class="predate big">Releases '+esc(sealDate(p)||"soon")+'</div>'+
           '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, stockPre(p))+'</div>'+
           '<div class="meditor">'+
-            '<div class="buylabel">Preorder · '+esc(bl0.region)+'</div>'+
-            '<div class="buyrow">'+bl0.links.map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
             (stockAlertBtn(p)?'<div class="sdbtnrow" style="display:flex;margin-top:9px">'+stockAlertBtn(p)+'</div>':'')+
             '<p class="qsub" style="margin-top:10px">Not released yet, so there is no market price. It will track once it launches.</p>'+
           '</div>'+

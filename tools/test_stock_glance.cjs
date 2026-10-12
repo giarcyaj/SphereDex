@@ -796,10 +796,36 @@ test('a product with no RRP on file says n/a, not £0.00', () => {
   assert.doesNotMatch(source, /<b class="glval">'\+money\(rrpShown\)\+'<\/b>/);
 });
 
-test('the Buy sealed row is gone from the released sheet, the Preorder row stays', () => {
-  // The live shop list names every shop that stocks it, with a price and a direct link.
+test('no fixed link rows on a sealed sheet: the live shop list replaces them, eBay links included', () => {
+  // The live shop list names every shop that stocks it, or is taking pre orders, with a price and a direct link.
   assert.doesNotMatch(source, /Buy sealed/);
-  assert.match(source, /'<div class="buylabel">Preorder · '\+esc\(bl0\.region\)\+'<\/div>'/);
+  assert.doesNotMatch(source, /class="buylabel"/, 'no Preorder row on a pre order either');
+  assert.doesNotMatch(source, /function sealBuyLinks|var RETAILERS|var SEAL_SHOP_URLS/, 'the old link lists are gone');
+  const pre = appFunction('openSealedDetail').split('var s=sealItem(p.id)')[0];
+  assert.doesNotMatch(pre, /ebay/i, 'the pre order sheet has no eBay link');
+  assert.match(pre, /stockGlanceHtml\(p\.id, stockPre\(p\)\)/, 'it shows the stock check of shops taking pre orders');
+});
+
+test('a shop row on a pre order says whether that shop is taking pre orders', () => {
+  const sb = { esc: (x) => String(x), moneyIn: (v) => '£' + v, REGION_CUR: { 'co.uk': 'GBP' }, ebayReg: () => 'co.uk' };
+  vm.createContext(sb); vm.runInContext(appFunction('stockShopRow'), sb);
+  assert.match(sb.stockShopRow({ shop: 'A', status: 'in', price: '10' }, true), /title="Taking pre orders"/);
+  assert.match(sb.stockShopRow({ shop: 'A', status: 'out' }, true), /title="Not taking pre orders"/);
+  assert.match(sb.stockShopRow({ shop: 'A', status: 'in', price: '10' }, false), /title="Has it"/);
+  assert.match(sb.stockShopRow({ shop: 'A', status: 'check' }, true), /title="Go and look"/);
+});
+
+test('following a product shows the Settings Stock alerts switch as on straight away', () => {
+  assert.match(appFunction('toggleStockAlert'), /var sw=\$\("setNotifStock"\); if\(sw\) sw\.checked=SETTINGS\.notif\.stock!==false;/);
+});
+
+test('card language follows the account, as the Account page says', () => {
+  assert.match(source, /var ACCT_SETTING_KEYS=\[[^\]]*"cardLang"[^\]]*\]/);
+  assert.match(appFunction('applyAccountSettings'), /if\(a\.cardLang!==undefined\)\{\s*if\(typeof applyCardLang==="function"\) applyCardLang\(\);/);
+});
+
+test('the Text size line says it is saved to the account when signed in', () => {
+  assert.match(source, /Text size<\/div><div class="sdesc">Make everything in the app bigger or smaller\. Saved to your account when you are signed in, otherwise on this device\./);
 });
 
 function sortSandbox(sealed, key, dir) {
