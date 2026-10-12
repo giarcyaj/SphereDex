@@ -117,7 +117,10 @@ function notifSandbox(native) {
   const sb = {
     window: native ? { AndroidPush: { setPrefs() {} } } : {},
     els, $: (id) => els[id] || null,
-    SETTINGS: { notif: { stock: true, stockWatch: ['box-ebp01'] } },
+    // Since 2.4.2 a followed product lives in the synced record (STATE.alerts), not in notif.stockWatch.
+    SETTINGS: { notif: { stock: true } },
+    STATE: { alerts: { v: 1, stock: { 'box-ebp01': { on: true, at: 1790000000000 } }, price: {} } },
+    ALERT_AT_MAX: 4102444800000,
     STOCK_TRACKED: { 'co.uk': ['box-ebp01'] },
     ebayReg: () => 'co.uk',
     icon: () => '', esc: (s) => String(s),
@@ -125,7 +128,7 @@ function notifSandbox(native) {
   vm.createContext(sb);
   const slice = source.slice(source.indexOf('  function nativePushIface()'), source.indexOf('  function toggleStockAlert('));
   // only the declarations the note needs, not the weekly recap helpers in between
-  const want = ['nativePushIface', 'stockAlertOn', 'notifBlocked', 'paintNotifOs', 'stockAlertNote', 'stockAlertToast', 'stockAlertBtn'];
+  const want = ['nativePushIface', 'plainObj', 'alertAt', 'alertEntOk', 'stockOnList', 'stockAlertOn', 'notifBlocked', 'paintNotifOs', 'stockAlertNote', 'stockAlertToast', 'stockAlertBtn'];
   vm.runInContext(want.map(appFunction).join('\n'), sb);
   vm.runInContext(/var NOTIF_OS_OK=null;/.exec(slice)[0] + /var NOTIF_OFF_NOTE="[^"]+";/.exec(slice)[0] +
     /window\.SDNotifPerm=function\(ok\)\{[^\n]+/.exec(slice)[0], sb);

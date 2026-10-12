@@ -2976,11 +2976,11 @@ label.acctsetrow { align-items:center; }
           <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers shops in the UK, US, Canada, Australia, Germany, France, Italy and Spain. Turn alerts on for a product from its page.</div></div>
+          <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers shops in the UK, US, Canada, Australia, Germany, France, Italy and Spain. Turn alerts on for a product from its page. The products you follow are saved to your account when you are signed in. This switch turns stock alerts on or off for this device only.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
         </div>
         <div class="setrow">
-          <div class="setinfo"><div class="stitle">Price alerts</div><div class="sdesc">Get notified when a card's price crosses a level you set. Prices are checked once a day, after the nightly update. Add an alert from a card's page, and tap one below to open its card.</div></div>
+          <div class="setinfo"><div class="stitle">Price alerts</div><div class="sdesc">Get notified when a card's price crosses a level you set. Prices are checked once a day, after the nightly update. Add an alert from a card's page, and tap one below to open its card. Your price alerts are saved to your account when you are signed in, and every phone you sign in on can alert you. This switch is for this device only. Up to 30 alerts are checked.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifPrice"><span class="track"></span></label>
         </div>
         <div class="setrow">
@@ -3510,6 +3510,12 @@ label.acctsetrow { align-items:center; }
 
   // State
   var LS_KEY = "palvault-v1";
+  // Accounts on one device and follows saved to the account (2.4.2). Literals only, and here: bootAccounts
+  // (just after the AUTH block) and migrateDeviceAlerts (in the Settings block) read these at startup, and the
+  // 2.4.1 blank app came from a top level statement reading a var that was only assigned further down.
+  var ALERT_AT_MAX=4102444800000, ALERT_OFF_KEEP=200, PUSH_GEN=0, OTHER_TAB=false, SIGNING_OUT=false, ALERTS_MOVED=false,
+      STASH_PRE="palvault-stash:", ACCT_BASE_KEY="palvault-acct-base",
+      PERSON_KEYS=["displayName","defaultAddCol","sphere","sphereSeen"], PERSON_NOTIF=["weeklyDigest","milestones","availability"];
   // Guarded localStorage for the small prefs: a browser that blocks site data throws on every access, which
   // would stop the whole app at startup. A write that fails is kept in memory so this session still reads it back.
   var LS_MEM={};
@@ -3566,9 +3572,9 @@ label.acctsetrow { align-items:center; }
       "Fixes to the price chart colours and to stock alerts"
     ],
     "2.4.2": [
-      "Sealed products sort by release date",
-      "Release day shows on Home and Releases again",
-      "Fixes for stock alerts and older Android phones"
+      "Stock and price alerts are saved to your account",
+      "Each account keeps its own cards on a shared phone",
+      "Sealed sorts by release date, plus many fixes"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
@@ -3660,6 +3666,10 @@ label.acctsetrow { align-items:center; }
       var e=col && col.own ? col.own[id] : null;
       st.wishlistAt[id]=(e && e.addAt && has(e)) ? +e.addAt : 0;
     });
+    // The follows record and the owner tag ride in the saved state. Only a value of the wrong type is dropped
+    // here: this runs at startup before the price alert helpers exist, so entries are left to their readers.
+    if(st.alerts!==undefined && !plainObj(st.alerts)) delete st.alerts;
+    if(st._local!==undefined && !localOk(st._local)) delete st._local;
     return st;
   }
   normTop(STATE);
@@ -3714,13 +3724,19 @@ label.acctsetrow { align-items:center; }
   function stateReplacer(k, v){ if(k==="own" && v && typeof v==="object" && !Array.isArray(v)){ var out={}; for(var id in v){ if(!isEmptyOwn(v[id])) out[id]=v[id]; } return out; } return v; }
   function stateJSON(){ return JSON.stringify(STATE, stateReplacer); }
   function save(){
+    if(OTHER_TAB) return;   // another tab signed in or out: this one is reloading and must not write its old copy
     try{ stampAdds(); }catch(_){}
     try{ snapshot(); }catch(_){}
+    // An edit made while signed out is a change this copy's owner has not synced, so the copy is kept whole if
+    // someone else signs in here. AUTH is read through typeof because save() can run before the AUTH block.
+    try{ if(!(typeof AUTH==="object" && AUTH && AUTH.token)) loc().dirty=true; }catch(_){}
+    // The push is marked first, so AUTH.dirty is on disk before the edit is: a crash between the two writes
+    // used to leave a saved edit that nothing would ever push.
+    try{ if(typeof pushCloud==="function") pushCloud(); }catch(_){}
     try{ localStorage.setItem(LS_KEY, stateJSON()); }
     catch(e){
       if(!storageWarned){ storageWarned=true; try{ toast("This device will not let the app save. Sign in to keep your collection safe."); }catch(_){} }
     }
-    try{ if(typeof pushCloud==="function") pushCloud(); }catch(_){}
     if(SETTINGS.notif&&(SETTINGS.notif.weeklyDigest===true||SETTINGS.notif.availability===true||SETTINGS.notif.milestones===true)&&Date.now()-LAST_DEVICE_PUSH_PREF_SYNC>30*1000){ LAST_DEVICE_PUSH_PREF_SYNC=Date.now(); syncPushPrefs(); }
     askPersist();   // once, now that there is something worth keeping
   }
@@ -4162,11 +4178,12 @@ label.acctsetrow { align-items:center; }
   // preference would only take effect after the person changed the setting by hand.
   applyCardLang();
   function saveSettings(){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} if(typeof pushCloud==="function") pushCloud(); }
-  // Stock alerts (native push only): which sealed products this device wants a restock alert for. This
-  // rides the existing setPrefs bridge — the native host forwards the whole notif JSON (incl. stockWatch)
-  // to /api/push/register, so no native change is needed. Web has no push, so these are gated on a
-  // native push bridge being present. stockWatch stays device-local (not in ACCT_SETTING_KEYS) because
-  // alerts are tied to this device's push token.
+  // Stock alerts (native push only). The products someone follows live in STATE.alerts (see mergeAlerts), so
+  // they are saved to the account and come back on every phone it signs in on. Each device keeps its own on/off
+  // switches in SETTINGS.notif and registers its owner's follows with its own push token: syncPushPrefs puts
+  // them in the notif JSON as stockWatch and priceWatch, the native host forwards that whole JSON to
+  // /api/push/register, so no native or backend change is needed. Web has no push, so the follow buttons are
+  // gated on a native push bridge being present.
   function nativePushIface(){ return (window.AndroidPush&&typeof window.AndroidPush.setPrefs==="function")?window.AndroidPush
     :((window.IOSPush&&typeof window.IOSPush.setPrefs==="function")?window.IOSPush:null); }
   // Include the market region so the backend only sends a device stock alerts for its own market's shops.
@@ -4207,8 +4224,10 @@ label.acctsetrow { align-items:center; }
     return stats;
   }
   function collectionMilestoneCount(){ return CARDS.filter(function(c){ return own[c.id]&&ownsForCompletion(c); }).length; }
-  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ var prefs=Object.assign({},SETTINGS.notif,{region:ebayReg()}); if(prefs.weeklyDigest===true) prefs.weeklyStats=weeklyCollectionStats(); else delete prefs.weeklyStats; if(prefs.milestones===true) prefs.milestoneCount=collectionMilestoneCount(); else delete prefs.milestoneCount; if(prefs.availability===true) prefs.availabilityWatch=Object.keys(STATE.wishlist||{}).filter(function(id){return !!cardById(id);}).slice(0,300); else delete prefs.availabilityWatch; np.setPrefs(JSON.stringify(prefs)); }catch(e){} } }
-  function stockAlertOn(id){ var n=SETTINGS.notif; return !!(n&&Array.isArray(n.stockWatch)&&n.stockWatch.indexOf(id)>=0); }
+  // The follow lists come from STATE.alerts (this device's owner), each in its own try with an empty
+  // fallback, so a bad record can never stop the release, news and other categories being sent.
+  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ var prefs=Object.assign({},SETTINGS.notif,{region:ebayReg()}); try{ prefs.stockWatch=stockOnList(STATE.alerts); }catch(e1){ prefs.stockWatch=[]; } try{ prefs.priceWatch=sentPriceAlerts(); }catch(e2){ prefs.priceWatch=[]; } if(prefs.weeklyDigest===true) prefs.weeklyStats=weeklyCollectionStats(); else delete prefs.weeklyStats; if(prefs.milestones===true) prefs.milestoneCount=collectionMilestoneCount(); else delete prefs.milestoneCount; if(prefs.availability===true) prefs.availabilityWatch=Object.keys(STATE.wishlist||{}).filter(function(id){return !!cardById(id);}).slice(0,300); else delete prefs.availabilityWatch; np.setPrefs(JSON.stringify(prefs)); }catch(e){} } }
+  function stockAlertOn(id){ return stockOnList(STATE.alerts).indexOf(id)>=0; }
   // Whether the PHONE lets SphereDex show notifications at all. The Android and iOS shells report it once the
   // page has loaded and again each time the app comes back to the front, because it is changed in the phone's
   // own settings, outside the app. Until a shell reports it (the web, or a shell older than this page) it is
@@ -4233,13 +4252,139 @@ label.acctsetrow { align-items:center; }
     return pre ? "You'll be notified when you can pre order this." : "You'll be notified when this is in stock.";
   }
   function toggleStockAlert(id){
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:true,stockWatch:[],price:false,priceWatch:[]};
-    if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];
-    var w=SETTINGS.notif.stockWatch, i=w.indexOf(id);
-    if(i>=0){ w.splice(i,1); } else { w.push(id); SETTINGS.notif.stock=true; }   // opting into a product enables the master
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,price:false};
+    var following=stockAlertOn(id), switchOn=SETTINGS.notif.stock===true, r;
+    // Followed (here or on another phone) while this device has stock alerts switched off: the tap turns them
+    // on here and keeps the follow, rather than unfollowing it on every device.
+    if(following && !switchOn){ SETTINGS.notif.stock=true; SETTINGS.notif.stockOff=false; }
+    else if(following){ r=alertRec(); r.stock[id]={on:false, at:alertStamp(r)}; }   // an off marker, so the unfollow wins a merge
+    else { r=alertRec(); r.stock[id]={on:true, at:alertStamp(r)}; SETTINGS.notif.stock=true; SETTINGS.notif.stockOff=false; }   // following a product turns this device's alerts on
     var sw=$("setNotifStock"); if(sw) sw.checked=SETTINGS.notif.stock!==false;   // painted once at startup otherwise
-    saveSettings(); syncPushPrefs();
-    return i<0;   // true = now on
+    save(); saveSettings(); syncPushPrefs();
+    return !(following && switchOn);   // true = now on
+  }
+  // ---- Follows, saved to the account: STATE.alerts ----------------------------------------------------
+  // {v:1, stock:{"<productId>":{on, at}}, price:{"<id>|<k>|<v>|<r>|<m>":{on, at, a}}}, plus any kind a newer app
+  // adds. on:false is an off marker, so an unfollow beats an older follow in a merge. at is ms, and anything
+  // stamped after 2100 is ignored everywhere. The merge checks only the envelope (on is a boolean, at is a valid
+  // time, an on price entry carries an object a) and carries every entry verbatim, so another version's markets,
+  // fields and kinds survive this one. What this build acts on is decided by the readers (stockOnList,
+  // priceOnList), which take any JSON at all. The record is created only by an edit or by migrateDeviceAlerts,
+  // so the web, which has no follow buttons, never invents one, but it still carries and merges it.
+  function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+  function alertAt(e){ var t=plainObj(e)?+e.at:0; return (isFinite(t) && t>0 && t<=ALERT_AT_MAX) ? t : 0; }
+  function alertEntOk(e, isPrice){
+    if(!plainObj(e) || typeof e.on!=="boolean" || !alertAt(e)) return false;
+    if(isPrice && e.on){ if(!plainObj(e.a)) return false; var s=""; try{ s=JSON.stringify(e.a); }catch(_){ return false; } if(s.length>2048) return false; }
+    try{ return JSON.stringify(e).length<=4096; }catch(_){ return false; }
+  }
+  function canonEnt(e){ var a="", w=""; try{ a=(e.a===undefined)?"":JSON.stringify(e.a); w=JSON.stringify(e); }catch(_){} return JSON.stringify([e.on?1:0, alertAt(e), a, w]); }
+  // A strict total order (the later at, then off, then the larger canonical form), so the merge is commutative,
+  // associative and idempotent, and every device settles on the same record whatever order it hears things in.
+  function alertWins(x, y){ var ax=alertAt(x), ay=alertAt(y); if(ax!==ay) return ax>ay; if(x.on!==y.on) return !x.on; return canonEnt(x)>canonEnt(y); }
+  function mergeAlertMap(x, y, isPrice){
+    var best={}, out={};
+    [x, y].forEach(function(m){ if(!plainObj(m)) return;
+      Object.keys(m).forEach(function(k){ var e=m[k]; if(k==="__proto__" || !alertEntOk(e, isPrice)) return;
+        if(!hasOwn(best, k) || alertWins(e, best[k])) best[k]=e; }); });
+    Object.keys(best).sort().forEach(function(k){ out[k]=JSON.parse(JSON.stringify(best[k])); });
+    return out;
+  }
+  // undefined when neither side has a record: missing means "not known here yet", never "nothing followed".
+  function mergeAlerts(a, b){
+    if(!plainObj(a) && !plainObj(b)) return undefined;
+    var A=plainObj(a)?a:{}, B=plainObj(b)?b:{}, out={v:1}, extra={};
+    [A.v, B.v].forEach(function(v){ v=+v; if(isFinite(v) && v>out.v) out.v=v; });
+    [A, B].forEach(function(m){ Object.keys(m).forEach(function(k){ if(k!=="v" && k!=="stock" && k!=="price" && k!=="__proto__" && plainObj(m[k])) extra[k]=1; }); });
+    out.stock=mergeAlertMap(A.stock, B.stock, false);
+    out.price=mergeAlertMap(A.price, B.price, true);
+    Object.keys(extra).sort().forEach(function(k){ out[k]=mergeAlertMap(A[k], B[k], false); });   // a kind a newer app added: the same rule
+    return out;
+  }
+  function canonAlerts(r){
+    var m=mergeAlerts(r, null), parts=[]; if(!m) return "";
+    Object.keys(m).sort().forEach(function(kind){ if(kind==="v") return;
+      Object.keys(m[kind]).forEach(function(k){ parts.push(JSON.stringify([kind, k, canonEnt(m[kind][k])])); }); });
+    return parts.join(",");
+  }
+  // A missing record counts the same as an empty one.
+  function sameAlerts(a, b){ return canonAlerts(a)===canonAlerts(b); }
+  // Only at adopt: every on entry stays, plus the newest ALERT_OFF_KEEP off markers of each kind.
+  function alertGC(r){
+    if(!plainObj(r)) return r;
+    Object.keys(r).forEach(function(kind){ var m=r[kind]; if(kind==="v" || !plainObj(m)) return;
+      var offs=Object.keys(m).filter(function(k){ return plainObj(m[k]) && m[k].on===false; });
+      if(offs.length<=ALERT_OFF_KEEP) return;
+      offs.sort(function(x, y){ return (alertAt(m[y])-alertAt(m[x])) || (x<y?-1:(x>y?1:0)); });
+      offs.slice(ALERT_OFF_KEEP).forEach(function(k){ delete m[k]; });
+    });
+    return r;
+  }
+  function alertRec(){
+    var r=STATE.alerts; if(!plainObj(r)) r=STATE.alerts={v:1, stock:{}, price:{}};
+    if(r.v===undefined) r.v=1; if(!plainObj(r.stock)) r.stock={}; if(!plainObj(r.price)) r.price={};
+    return r;
+  }
+  // Now, or just after the newest stamp in the record, so an edit made after seeing an entry always beats it,
+  // even on a phone whose clock is behind.
+  function alertStamp(r){
+    var mx=0;
+    if(plainObj(r)) Object.keys(r).forEach(function(kind){ var m=r[kind]; if(kind==="v" || !plainObj(m)) return;
+      Object.keys(m).forEach(function(k){ var t=alertAt(m[k]); if(t>mx) mx=t; }); });
+    return Math.min(ALERT_AT_MAX, Math.max(Date.now(), mx+1));
+  }
+  function paKey(a){ return [a.id, a.k, a.v, a.r, a.m].join("|"); }
+  function stockOnList(r){
+    var m=(plainObj(r) && plainObj(r.stock)) ? r.stock : {};
+    return Object.keys(m).filter(function(k){ return alertEntOk(m[k], false) && m[k].on===true; }).sort();
+  }
+  // [{key, a}] for the on price alerts this build can read, oldest first.
+  function priceOnList(r){
+    var m=(plainObj(r) && plainObj(r.price)) ? r.price : {}, rows=[];
+    Object.keys(m).forEach(function(k){ var e=m[k]; if(!alertEntOk(e, true) || e.on!==true) return;
+      var a=normPriceAlert(e.a); if(a) rows.push({key:k, a:a, t:alertAt(e)}); });
+    rows.sort(function(x, y){ return (x.t-y.t) || (x.key<y.key?-1:(x.key>y.key?1:0)); });
+    return rows.map(function(x){ return {key:x.key, a:x.a}; });
+  }
+  // What this device sends: the newest PRICE_ALERT_MAX (the backend's per device limit) for cards it knows.
+  function sentPriceAlerts(){ return priceOnList(STATE.alerts).filter(function(x){ return !!cardById(x.a.id); }).slice(-PRICE_ALERT_MAX).map(function(x){ return x.a; }); }
+  function priceAlertByKey(k){ var r=STATE.alerts, e=(plainObj(r) && plainObj(r.price) && hasOwn(r.price, k)) ? r.price[k] : null; return (alertEntOk(e, true) && e.on) ? normPriceAlert(e.a) : null; }
+  function notifPairs(){ return [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"],["setNotifPrice","price"],["setNotifWeekly","weeklyDigest"],["setNotifMilestones","milestones"],["setNotifAvailability","availability"]]; }
+  function paintNotifSwitches(){ notifPairs().forEach(function(p){ var el=$(p[0]); if(el) el.checked=(SETTINGS.notif||{})[p[1]]!==false; }); }
+  // After every adopt, account switch and legacy join. Follows that arrive from another phone switch this
+  // device's alerts on, unless someone switched them off here by hand (stockOff / priceOff). The switches are
+  // this device's, so they are written straight to storage and never pushed.
+  function alertsChanged(){
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,price:false};
+    var n=SETTINGS.notif, ch=false;
+    if(stockOnList(STATE.alerts).length && n.stock!==true && !n.stockOff){ n.stock=true; ch=true; }
+    if(priceOnList(STATE.alerts).length && n.price!==true && !n.priceOff){ n.price=true; ch=true; }
+    if(ch && !OTHER_TAB){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
+    paintNotifSwitches(); renderPriceAlertList(); syncPushPrefs();
+  }
+  // 2.4.1 and older kept follows in this device's settings (notif.stockWatch / priceWatch). Fold them into
+  // STATE.alerts once, stamped now (additions win, so a follow is never lost), skipping any already on. It runs
+  // at startup inside the Settings block, so it uses no AUTH, $, save or push. The record is written first and
+  // the device lists are emptied only once it is safely stored, so a full disk simply tries again next launch.
+  function migrateDeviceAlerts(){
+    var n=SETTINGS.notif; if(!n) return;
+    if(!Array.isArray(n.stockWatch)) n.stockWatch=[];
+    if(!Array.isArray(n.priceWatch)) n.priceWatch=[];
+    var sw=n.stockWatch, pw=n.priceWatch, added=0;
+    if(!sw.length && !pw.length) return;
+    // Following always switched the master on, so a switch that is off beside a list was turned off by hand.
+    if(n.stock!==true && sw.length) n.stockOff=true;
+    if(n.price!==true && pw.length) n.priceOff=true;
+    var r=alertRec();
+    sw.forEach(function(id){ if(typeof id!=="string" || !id || id==="__proto__") return;
+      var e=hasOwn(r.stock, id)?r.stock[id]:null; if(alertEntOk(e, false) && e.on) return;
+      r.stock[id]={on:true, at:alertStamp(r)}; added++; });
+    pw.forEach(function(x){ var a=normPriceAlert(x); if(!a) return; var k=paKey(a), e=hasOwn(r.price, k)?r.price[k]:null;
+      if(alertEntOk(e, true) && e.on) return;
+      r.price[k]={on:true, at:alertStamp(r), a:a}; added++; });
+    var ok=false; try{ localStorage.setItem(LS_KEY, stateJSON()); ok=true; }catch(e){}
+    if(ok){ n.stockWatch=[]; n.priceWatch=[]; try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
+    if(added) ALERTS_MOVED=true;
   }
   // Markets and products the stock-alert checker can actually alert on. MUST mirror
   // spheredex-backend/src/stock.ts: the regions listed in STOCK_SOURCES (40 shops across all
@@ -4258,11 +4403,13 @@ label.acctsetrow { align-items:center; }
   // prices in a flex row. Native push only, and only for products the user's market can poll.
   function stockAlertBtn(p){
     if(!nativePushIface() || (STOCK_TRACKED[ebayReg()]||[]).indexOf(p.id)<0) return "";
-    var on=stockAlertOn(p.id), st="flex:1 1 auto;justify-content:center;"+(on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
-    return '<button class="btn sec sdalert" id="sdStockAlert" type="button" style="'+st+'">'+icon('bell')+' Stock alerts '+(on?'on':'off')+'</button>';
+    var following=stockAlertOn(p.id), on=following && (SETTINGS.notif||{}).stock===true;
+    var st="flex:1 1 auto;justify-content:center;"+(on?"background:var(--accent);color:#04222a;border-color:var(--accent);":"");
+    return '<button class="btn sec sdalert" id="sdStockAlert" type="button" style="'+st+'">'+icon('bell')+' '+(on?'Stock alerts on':(following?'Following, alerts off here':'Stock alerts off'))+'</button>';
   }
-  // Price alerts (native push only): per card alerts, device local like stockWatch and carried to the backend
-  // by the same setPrefs bridge (SETTINGS.notif.priceWatch, master switch SETTINGS.notif.price). Each alert is
+  // Price alerts (native push only): per card alerts, saved with the follows in STATE.alerts.price so they sync
+  // with the account. Each device has its own master switch (SETTINGS.notif.price) and sends the newest
+  // PRICE_ALERT_MAX for cards it knows through the same setPrefs bridge (prefs.priceWatch). Each alert is
   // {id, k, v, b, r, m, c, at}: card id; kind "above" | "below" (v is a price) or "up" | "down" (v is a percent
   // move from b); b = the card's price when the alert was set; r = eBay region; m = price mode ("live" |
   // "sold"); c = currency code; at = ms. spheredex-backend/src/alerts.ts checks them once a day, after the
@@ -4277,11 +4424,8 @@ label.acctsetrow { align-items:center; }
     if(k==="down" && v>=100) return null;
     return {id:id, k:k, v:v, b:(isFinite(b)&&b>0)?b:0, r:r, m:m, c:(typeof a.c==="string"&&/^[A-Z]{3}$/.test(a.c))?a.c:REGION_CUR[r], at:+a.at||0};
   }
-  function priceWatch(){
-    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]};
-    if(!Array.isArray(SETTINGS.notif.priceWatch)) SETTINGS.notif.priceWatch=[];
-    return SETTINGS.notif.priceWatch;
-  }
+  // Read only: every on price alert this build can read, oldest first.
+  function priceWatch(){ return priceOnList(STATE.alerts).map(function(x){ return x.a; }); }
   function priceAlertsFor(id){ return priceWatch().filter(function(a){ return a.id===id; }); }
   function samePriceAlert(a, x){ return a.id===x.id && a.k===x.k && a.v===x.v && a.r===x.r && a.m===x.m; }
   // The price an alert is measured against: only the server's nightly book for that mode, the one the backend
@@ -4304,11 +4448,19 @@ label.acctsetrow { align-items:center; }
     return t;
   }
   function addPriceAlert(a){
-    priceWatch().push(a); SETTINGS.notif.price=true;   // adding an alert enables the master, like following a product
+    var n=normPriceAlert(a)||a, r=alertRec();
+    r.price[paKey(n)]={on:true, at:alertStamp(r), a:n};
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,price:false};
+    SETTINGS.notif.price=true; SETTINGS.notif.priceOff=false;   // adding an alert turns this device's price alerts on, like following a product
     var sw=$("setNotifPrice"); if(sw) sw.checked=true;
-    saveSettings(); syncPushPrefs(); renderPriceAlertList();
+    save(); saveSettings(); syncPushPrefs(); renderPriceAlertList();
   }
-  function removePriceAlertAt(i){ var w=priceWatch(); if(!(i>=0 && i<w.length)) return; w.splice(i,1); saveSettings(); syncPushPrefs(); renderPriceAlertList(); }
+  function removePriceAlertKey(k){
+    if(!priceAlertByKey(k)) return;   // already gone: removed on another phone, or by a sync since the list was drawn
+    var r=alertRec(); r.price[k]={on:false, at:alertStamp(r)};
+    save(); syncPushPrefs(); renderPriceAlertList();
+  }
+  function removePriceAlertAt(i){ var l=priceOnList(STATE.alerts); if(l[i]) removePriceAlertKey(l[i].key); }
   // Card sheet button: "Price alert", or accent filled with the count once this card has alerts.
   function paintPriceAlertBtn(id){
     var b=$("bubAlert"); if(!b) return; var n=priceAlertsFor(id).length;
@@ -4318,18 +4470,20 @@ label.acctsetrow { align-items:center; }
   // Settings > Notifications list: every alert (card, condition, remove); tap a row to open its card.
   function renderPriceAlertList(){
     var host=$("priceAlertList"); if(!host) return;
-    var w=priceWatch();
-    if(!w.length){ host.innerHTML='<div class="paempty">No price alerts yet. Open a card and tap Price alert to set one.</div>'; return; }
-    host.innerHTML=w.map(function(a,i){ var c=cardById(a.id);
-      return '<div class="parow tap" role="button" tabindex="0" data-i="'+i+'"><div class="patxt"><b>'+esc(c?c.name:a.id)+'</b><span>'+esc((c?c.rare+' · ':'')+priceAlertText(a))+'</span></div>'+
-        '<button class="pax" type="button" data-i="'+i+'" aria-label="Remove price alert">✕</button></div>'; }).join("");
+    var rows=priceOnList(STATE.alerts).filter(function(x){ return !!cardById(x.a.id); });
+    if(!rows.length){ host.innerHTML='<div class="paempty">No price alerts yet. Open a card and tap Price alert to set one.</div>'; return; }
+    // The phone sends only the newest PRICE_ALERT_MAX, so any older ones are shown as paused, not hidden.
+    var sent={}; rows.slice(-PRICE_ALERT_MAX).forEach(function(x){ sent[x.key]=1; });
+    host.innerHTML=rows.map(function(x){ var a=x.a, c=cardById(a.id);
+      return '<div class="parow tap" role="button" tabindex="0" data-k="'+esc(x.key)+'"><div class="patxt"><b>'+esc(c?c.name:a.id)+'</b><span>'+esc((c?c.rare+' · ':'')+priceAlertText(a)+(sent[x.key]===1?'':' · Paused. Only '+PRICE_ALERT_MAX+' price alerts are checked.'))+'</span></div>'+
+        '<button class="pax" type="button" data-k="'+esc(x.key)+'" aria-label="Remove price alert">✕</button></div>'; }).join("");
     Array.prototype.forEach.call(host.querySelectorAll(".parow"), function(row){
-      var i=parseInt(row.getAttribute("data-i"),10);
-      row.onclick=function(e){ if(e && e.target && e.target.closest && e.target.closest(".pax")) return; var a=priceWatch()[i], c=a&&cardById(a.id); if(c) openDetail(c); };
+      var k=row.getAttribute("data-k");
+      row.onclick=function(e){ if(e && e.target && e.target.closest && e.target.closest(".pax")) return; var a=priceAlertByKey(k), c=a&&cardById(a.id); if(c) openDetail(c); };
       row.onkeydown=function(e){ if(e.target===row && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); row.onclick(e); } };
     });
     Array.prototype.forEach.call(host.querySelectorAll(".pax"), function(x){
-      x.onclick=function(){ removePriceAlertAt(parseInt(x.getAttribute("data-i"),10)); toast("Price alert removed"); };
+      x.onclick=function(){ removePriceAlertKey(x.getAttribute("data-k")); toast("Price alert removed"); };
     });
   }
   // The price alert dialog over a card sheet: the current price and its basis, a four way choice, the value
@@ -4348,7 +4502,8 @@ label.acctsetrow { align-items:center; }
     // {ok, alert, msg}: msg is the preview when ok, otherwise why Save is off.
     function check(){
       if(!(cur>0)) return {msg:"This card has no price yet, so an alert can't be set. Try again after the next price update."};
-      if(priceWatch().length>=PRICE_ALERT_MAX) return {msg:"You have "+PRICE_ALERT_MAX+" price alerts, the most allowed. Remove one to add another."};
+      var nOn=priceOnList(STATE.alerts).length;
+      if(nOn>=PRICE_ALERT_MAX) return {msg:"You have "+nOn+" price alerts, and "+PRICE_ALERT_MAX+" is the most. Remove one to add another."};
       var v=parseFloat(String(inp.value||"").replace(",","."));
       if(!isFinite(v) || v<=0) return {msg:isPct()?"Enter a percent.":"Enter a price."};
       v=Math.round(v*100)/100;
@@ -4371,10 +4526,10 @@ label.acctsetrow { align-items:center; }
     }
     function paintExisting(){
       var rows=[];
-      priceWatch().forEach(function(a,i){ if(a.id===c.id) rows.push('<div class="parow"><div class="patxt"><span>'+esc(priceAlertText(a))+'</span></div><button class="pax" type="button" data-i="'+i+'" aria-label="Remove price alert">✕</button></div>'); });
+      priceOnList(STATE.alerts).forEach(function(x){ if(x.a.id===c.id) rows.push('<div class="parow"><div class="patxt"><span>'+esc(priceAlertText(x.a))+'</span></div><button class="pax" type="button" data-k="'+esc(x.key)+'" aria-label="Remove price alert">✕</button></div>'); });
       var list=$("paList"); list.innerHTML=rows.join(""); $("paExist").hidden=!rows.length;
       Array.prototype.forEach.call(list.querySelectorAll(".pax"), function(x){
-        x.onclick=function(){ removePriceAlertAt(parseInt(x.getAttribute("data-i"),10)); paintExisting(); paint(); if(onChange) onChange(); toast("Price alert removed"); };
+        x.onclick=function(){ removePriceAlertKey(x.getAttribute("data-k")); paintExisting(); paint(); if(onChange) onChange(); toast("Price alert removed"); };
       });
     }
     function close(){ sc.hidden=true; save.onclick=cancel.onclick=sc.onclick=inp.oninput=inp.onkeydown=null; Array.prototype.forEach.call(kinds, function(b){ b.onclick=null; }); }
@@ -4388,12 +4543,34 @@ label.acctsetrow { align-items:center; }
     sc.hidden=false;
   }
   // Account-level settings that sync to the signed-in account (piggybacked on the state blob under
-  // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme,
-  // view, notifications stay local). _currency and _edition live outside SETTINGS so carry them too.
+  // _acct). Kept to the ones the user thinks of as "their setup", not device-specific prefs (theme, view
+  // and the notification switches stay on the device; the follows themselves sync in STATE.alerts).
+  // _currency and _edition live outside SETTINGS so carry them too.
   var ACCT_SETTING_KEYS=["defaultGrader","ebayRegion","priceMode","mode","textScale","cardLang"];
-  function accountSettingsBlob(){ var o={}; ACCT_SETTING_KEYS.forEach(function(k){ if(SETTINGS[k]!==undefined) o[k]=SETTINGS[k]; });
+  function accountSettingsBlob(){ var o={}, base=acctBase(), k;
+    // Keys a newer app added to the account ride along unchanged, so this app's pushes never strip them.
+    if(base) for(k in base){ if(hasOwn(base, k) && ACCT_SETTING_KEYS.indexOf(k)<0 && k!=="_currency" && k!=="_edition") o[k]=base[k]; }
+    ACCT_SETTING_KEYS.forEach(function(k){ if(SETTINGS[k]!==undefined) o[k]=SETTINGS[k]; });
     o._currency=lsGet("palvault-currency")||(CUR&&CUR.code);
     o._edition=SEAL_ED; return o; }
+  // The account settings the server last agreed with, for this data's owner: the server's copy at every adopt
+  // and what was sent at every accepted push. A setting that differs from it was changed on this device since,
+  // and only those may override the account's own (mergeAcct).
+  function acctBase(){ var b=null; try{ b=JSON.parse(lsGet(ACCT_BASE_KEY)||"null"); }catch(e){ b=null; }
+    return (plainObj(b) && plainObj(b.acct) && b.email===loc().email) ? b.acct : null; }
+  function setAcctBase(a){ lsSet(ACCT_BASE_KEY, JSON.stringify({email:loc().email, acct:plainObj(a)?a:null})); }
+  // Signing in never overwrites the account's settings with the phone's. With no base every key the account has
+  // wins; after that, a key this device changed since the two last agreed keeps this device's value.
+  function mergeAcct(theirs){ var out={}, mine=accountSettingsBlob(), base=acctBase(), k;
+    if(!plainObj(theirs)) theirs={};
+    for(k in theirs){ if(hasOwn(theirs, k)) out[k]=theirs[k]; }
+    for(k in mine){ if(!hasOwn(mine, k)) continue;
+      if(theirs[k]===undefined || (base && JSON.stringify(mine[k])!==JSON.stringify(base[k]))) out[k]=mine[k]; }
+    return out; }
+  function sameAcct(a, b){ if(!plainObj(a) || !plainObj(b)) return a===b; var k;
+    for(k in a){ if(hasOwn(a, k) && JSON.stringify(a[k])!==JSON.stringify(b[k])) return false; }
+    for(k in b){ if(hasOwn(b, k) && JSON.stringify(a[k])!==JSON.stringify(b[k])) return false; }
+    return true; }
   // Prices we FETCHED for the old market are in the old market's money, and the symbol beside them has just
   // changed, so they are cleared and refill from the new one. Sealed products carry their own per edition
   // copies of the same figures and used to be left behind, so the Sealed page and the portfolio total went
@@ -12506,23 +12683,26 @@ label.acctsetrow { align-items:center; }
     // Notifications (native app only): each toggle maps to a per-device push category on the backend.
     if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]};
     if(SETTINGS.notif.stock===undefined) SETTINGS.notif.stock=false;                      // stock alerts default off; turns on when a product is followed
-    if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];           // nothing watched until picked
+    if(!Array.isArray(SETTINGS.notif.stockWatch)) SETTINGS.notif.stockWatch=[];           // the old device follow list, empty once moved
     SETTINGS.notif.price=(SETTINGS.notif.price===true);                                    // price alerts default off; turns on when an alert is added
-    SETTINGS.notif.priceWatch=(Array.isArray(SETTINGS.notif.priceWatch)?SETTINGS.notif.priceWatch:[])
-      .map(normPriceAlert).filter(function(a){ return a && cardById(a.id); }).slice(0,PRICE_ALERT_MAX);   // drop anything malformed or for a card no longer in the app
+    if(!Array.isArray(SETTINGS.notif.priceWatch)) SETTINGS.notif.priceWatch=[];
+    // Follows made before 2.4.2 lived only in those two device lists. Move them into STATE.alerts once, before
+    // anything below paints the price list or sends the first prefs. A throw here must never stop startup.
+    try{ migrateDeviceAlerts(); }catch(e){ try{ reportError(e,"migrateAlerts"); }catch(_){} }
     SETTINGS.notif.weeklyDigest=(SETTINGS.notif.weeklyDigest===true);                     // weekly collection counts are opt-in
     SETTINGS.notif.milestones=(SETTINGS.notif.milestones===true);                         // aggregate card-count milestones are opt-in
     SETTINGS.notif.availability=(SETTINGS.notif.availability===true);                   // wishlist IDs are shared only for this explicit feature
     var nativePush=nativePushIface();
     var ng=$("notifGroup"); if(ng) ng.style.display=nativePush?"flex":"none";
     function syncNotif(){ syncPushPrefs(); }
-    [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"],["setNotifPrice","price"],["setNotifWeekly","weeklyDigest"],["setNotifMilestones","milestones"],["setNotifAvailability","availability"]].forEach(function(p){
+    notifPairs().forEach(function(p){
       var el=$(p[0]); if(!el) return;
       el.checked=SETTINGS.notif[p[1]]!==false;
-      el.onchange=function(){ SETTINGS.notif[p[1]]=el.checked; saveSettings(); syncNotif(); };
+      // stockOff / priceOff: switched off here by hand, so follows synced from another phone leave it off
+      el.onchange=function(){ SETTINGS.notif[p[1]]=el.checked; if(p[1]==="stock"||p[1]==="price") SETTINGS.notif[p[1]+"Off"]=!el.checked; saveSettings(); syncNotif(); };
     });
-    renderPriceAlertList();
-    syncNotif();  // reflect saved (incl. cloud-synced) prefs into the native layer at startup
+    try{ renderPriceAlertList(); }catch(e){ try{ reportError(e,"priceAlertList"); }catch(_){} }
+    syncNotif();  // send this device's switches and its owner's follows (from STATE.alerts) to the native layer at startup
     var gr=$("setGrader"); if(gr){ gr.innerHTML=GRADERS.map(function(x){return '<option'+((SETTINGS.defaultGrader||"PSA")===x?' selected':'')+'>'+x+'</option>';}).join(""); gr.onchange=function(){ SETTINGS.defaultGrader=gr.value; saveSettings(); }; }
     var an=$("acctName"); an.value=SETTINGS.displayName||"";
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); paintLogin(); };
@@ -12536,11 +12716,14 @@ label.acctsetrow { align-items:center; }
   // ---- Cloud: accounts + sync + prices (all optional; no-ops when offline) ----
   var AUTH = (function(){ try{ return JSON.parse(localStorage.getItem("palvault-auth"))||{}; }catch(e){ return {}; } })();
   if(AUTH.serverRev==null) AUTH.serverRev=0;
-  function saveAuth(){ try{ localStorage.setItem("palvault-auth", JSON.stringify(AUTH)); }catch(e){} }
+  function saveAuth(){ if(OTHER_TAB) return; try{ localStorage.setItem("palvault-auth", JSON.stringify(AUTH)); }catch(e){} }
   // AUTH.dirty is how the merge knows this device has work the cloud has not seen. No install that predates
   // it has the field, so on the first launch after updating, every one of them looked clean: exactly the
   // launch where anything added offline since the last sync is most at risk. Assume unpushed work once.
   if(AUTH.token && AUTH.dirty===undefined){ AUTH.dirty=true; saveAuth(); }
+  // Whose data this device holds, checked once AUTH is known (see bootAccounts). If it fails, the session ends:
+  // one person's copy must never be merged into another person's account.
+  try{ bootAccounts(); }catch(e){ try{ reportError(e,"bootAccounts"); }catch(_){} try{ if(AUTH && AUTH.token){ AUTH={serverRev:0,email:AUTH.email||"",expired:true}; saveAuth(); } }catch(_){} }
   // Header login button: reflects sign-in state, opens the Account page.
   function paintLogin(){ var b=$("loginBtn"); if(!b) return;
     if(AUTH.token){ b.classList.add("in");
@@ -12553,8 +12736,8 @@ label.acctsetrow { align-items:center; }
   function apiBase(){ return (SETTINGS.serverUrl||"").replace(/\/+$/,""); }
   function api(path, method, body){
     var base=apiBase(); if(!base) return Promise.reject(new Error("Prices are unavailable right now."));
-    var hadToken=!!AUTH.token;
-    var headers={"Content-Type":"application/json"}; if(AUTH.token) headers["Authorization"]="Bearer "+AUTH.token;
+    var usedTok=AUTH.token, hadToken=!!usedTok;
+    var headers={"Content-Type":"application/json"}; if(usedTok) headers["Authorization"]="Bearer "+usedTok;
     // no-store: the backend labels public answers "public, max-age=60, stale-while-revalidate=300", which is
     // right for the edge but wrong for a user's explicit Refresh tap, which could otherwise be answered from
     // the WebView's own cache without ever reaching the worker. Dedupe lives in JS (SALES_CACHE, PRICEBOOK),
@@ -12565,7 +12748,7 @@ label.acctsetrow { align-items:center; }
         // way (a captive portal, a proxy, a WAF, a misrouted request) used to sign the user out just as
         // thoroughly, quietly turning a synced collection into a device-only one for the rest of that
         // install. Those now just fail the request, and the next sync tries again.
-        if(r.status===401 && hadToken && j && j.code==="bad_token") handleSessionExpired();
+        if(r.status===401 && hadToken && j && j.code==="bad_token") handleSessionExpired(usedTok);
         return {ok:r.ok,status:r.status,body:j};
       }); });
   }
@@ -12592,18 +12775,29 @@ label.acctsetrow { align-items:center; }
     return ent.p;
   }
   // Does this device hold anything worth protecting? Used before letting a cloud copy replace it.
+  function colHasCards(col){
+    var m=(col&&col.own)||{}, s=(col&&col.sealed)||{}, k;
+    for(k in m){ var e=m[k]; if(e && ((+e.qty>0) || (e.graded&&e.graded.length))) return true; }
+    // Sealed holdings are objects, so a plain + is NaN: a collection of nothing but boxes and pre
+    // orders reported itself empty and lost its protection against being replaced by the cloud copy.
+    for(k in s){ var sp=s[k]; if(sp && (typeof sp==="object" ? (+sp.qty>0) : (+sp>0))) return true; }
+    return false;
+  }
   function localHasCards(){
+    try{ return (STATE.cols||[]).some(function(col){ return colHasCards(col); }); }catch(e){ return false; }
+  }
+  // Cards, sealed, a wishlist, favourites or a deck with cards in it. A guest with only a wishlist used to lose
+  // it at sign in. Follows are left out on purpose: every adopt merges them anyway, and counting them sent a
+  // follow only guest down the merge path for nothing.
+  function localHasData(){
     try{
-      return (STATE.cols||[]).some(function(col){
-        var m=col.own||{}, s=col.sealed||{}, k;
-        for(k in m){ var e=m[k]; if(e && ((+e.qty>0) || (e.graded&&e.graded.length))) return true; }
-        // Sealed holdings are objects, so a plain + is NaN: a collection of nothing but boxes and pre
-        // orders reported itself empty and lost its protection against being replaced by the cloud copy.
-        for(k in s){ var sp=s[k]; if(sp && (typeof sp==="object" ? (+sp.qty>0) : (+sp>0))) return true; }
-        return false;
-      });
+      if(localHasCards()) return true;
+      if(Object.keys(STATE.wishlist||{}).length || Object.keys(STATE.fav||{}).length) return true;
+      return (STATE.decks||[]).some(function(d){ return !!(d && d.cards && typeof d.cards==="object" && Object.keys(d.cards).length); });
     }catch(e){ return false; }
   }
+  // A collection worth keeping at a first merge into an account: cards, sealed, or a price history.
+  function colHolds(col){ return colHasCards(col) || !!(col && col.hist && typeof col.hist==="object" && Object.keys(col.hist).length); }
   // ---- Merging two copies of the same account ---------------------------------------------------------
   // When a device has unpushed changes AND the cloud has moved on, the two copies have genuinely diverged
   // and there is no safe way to pick one: taking the server's copy deletes what you added offline, taking
@@ -12671,9 +12865,11 @@ label.acctsetrow { align-items:center; }
     // Price history is per collection, so the copy that only the other device recorded has to survive too.
     // A day key present on both sides keeps this device's entry.
     if(a.hist || b.hist) out.hist=Object.assign({}, b.hist||{}, a.hist||{});
+    for(k in b){ if(hasOwn(b, k) && !hasOwn(out, k)) out[k]=b[k]; }   // a field a newer app keeps per collection survives this one
     return out;
   }
-  function mergeStates(local, remote){
+  function mergeStates(local, remote, opts){
+    opts=opts||{};
     var out={}, k;
     for(k in local) out[k]=local[k];
     var cols=[], byId={};
@@ -12684,6 +12880,16 @@ label.acctsetrow { align-items:center; }
       merged.push(r? mergeCol(byId[id], r) : byId[id]);
     });
     (remote.cols||[]).forEach(function(c){ if(c && c.id && !byId[c.id]) merged.push(c); });   // only on the cloud: keep it
+    // The first merge of a device that has never synced with this account (a guest joining, or a sign in on a
+    // phone that already had cards). An empty collection that exists only here is a placeholder, such as a
+    // guest's default "My Collection", and it used to become the account's ACTIVE collection, so every device
+    // opened on an empty one. Leave it out and keep the account's own active collection.
+    var rIds={}, rAny=false;
+    (remote.cols||[]).forEach(function(c){ if(c && c.id){ rIds[c.id]=1; rAny=true; } });
+    if(opts.firstJoin && rAny){
+      merged=merged.filter(function(c){ return rIds[c.id]===1 || colHolds(c); });
+      if(remote.active && rIds[remote.active]===1) out.active=remote.active;
+    }
     out.cols=merged;
     if(!merged.filter(function(c){ return c.id===out.active; })[0] && merged.length) out.active=merged[0].id;
     // The wishlist, favourites and decks live at the TOP of the state, not inside a collection, so copying
@@ -12703,16 +12909,44 @@ label.acctsetrow { align-items:center; }
       out.decks=dorder.map(function(id){ return dm[id]; });
       if(!dm[out.activeDeck]) out.activeDeck=out.decks[0].id;
     }
+    // Follows merge entry by entry (mergeAlerts). out._local is this device's, from the copy above.
+    var al=mergeAlerts(local.alerts, remote.alerts); if(al) out.alerts=al; else delete out.alerts;
+    // Anything a newer app keeps at the top of the state survives this one. The server's _acct is handled by
+    // adoptRemote, and _local only ever comes from this device.
+    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local") out[k]=remote[k]; }
     return out;
   }
-  function adoptRemote(blob, rev){
-    var acct=(blob&&blob._acct)||null; if(blob&&blob._acct){ try{ delete blob._acct; }catch(e){} }
+  // Take the server's copy, or the merge of it with this device's. opts.merged: blob is already that union and
+  // the caller pushes it. opts.acct: the server's _acct, when blob is a merge that does not carry it.
+  function adoptRemote(blob, rev, opts){
+    opts=opts||{};
+    var acct=(opts.acct!==undefined)?opts.acct:((blob&&blob._acct)||null);
+    try{ delete blob._acct; delete blob._local; }catch(e){}
+    var keepLocal=loc(), prevAlerts=STATE.alerts, incoming=blob.alerts;
     // Keep the copy being replaced. Whatever else goes wrong in a sync, the previous collection is one
     // localStorage key away instead of gone.
     try{ var prev=localStorage.getItem(LS_KEY); if(prev) localStorage.setItem(LS_KEY+"-prepull", prev); }catch(e){}
-    STATE=blob; cleanCols(STATE); normTop(STATE); AUTH.serverRev=rev; AUTH.dirty=false; AUTH.lastSyncAt=Date.now(); saveAuth(); addBaseline();   // cloud data keeps its own add times
-    try{ localStorage.setItem(LS_KEY, stateJSON()); }catch(e){}
-    if(acct && typeof applyAccountSettings==="function") applyAccountSettings(acct);
+    STATE=blob; if(!Array.isArray(STATE.cols) || !STATE.cols.length){ var f=freshState(); STATE.cols=f.cols; STATE.active=f.active; }
+    cleanCols(STATE); normTop(STATE); STATE._local=keepLocal;
+    // Every adopt merges this device's follows in, so an older app that dropped the record, or wrote back a
+    // stale one, is put right by the next 2.4.2 device to sync.
+    var al=mergeAlerts(prevAlerts, incoming); if(al) STATE.alerts=alertGC(al); else delete STATE.alerts;
+    own=activeCol().own; addBaseline();   // at once: cloud data keeps its own add times, and any save() below sees this copy
+    var mAcct=acct?mergeAcct(acct):null;
+    var ahead=!!opts.merged || !sameAlerts(STATE.alerts, incoming) || !!(acct && !sameAcct(mAcct, acct));
+    // The data first, then the sync position. If the data cannot be stored the position does not move, so the
+    // next push gets a 409 and merges instead of overwriting the account with an older saved copy.
+    var ok=writeStateRaw();
+    if(ok){ AUTH.serverRev=rev; AUTH.dirty=ahead; AUTH.lastSyncAt=Date.now(); }
+    else AUTH.dirty=true;
+    saveAuth();
+    if(acct) setAcctBase(acct);
+    if(mAcct) applyAccountSettings(mAcct);
+    repaintAll(); alertsChanged();
+    if(ok && ahead && !opts.merged) pushCloud(true);
+    return ok;
+  }
+  function repaintAll(){
     own=activeCol().own; buildColSel(); applySettings(); render(); renderQuick();
     // render() deliberately skips the pages that are built lazily, so after a sync Home (the landing page)
     // and the other totals kept showing the pre sync numbers until the user navigated away and back.
@@ -12723,54 +12957,78 @@ label.acctsetrow { align-items:center; }
     try{ if(typeof renderAccount==="function") renderAccount(); }catch(e){}
   }
   function pullState(){
+    var tok=AUTH.token, gen0=PUSH_GEN, rev0=AUTH.serverRev;
     return api("/api/state","GET").then(function(r){
-      if(!r.ok) return;
+      // Only for the session that asked, and only if nothing synced meanwhile: a push that started or finished
+      // since this was asked already resolves the two copies, through its 200 or its 409 merge.
+      if(OTHER_TAB || AUTH.token!==tok || !r.ok) return;
+      if(PUSH_GEN!==gen0 || pushing || AUTH.serverRev!==rev0) return;
       var remote=r.body.blob, rev=r.body.rev||0;
       if(remote && remote.cols){
         // Adopting is only safe when this device has nothing the server has not already accepted. A fresh
         // sign in (serverRev 0) counts as unsafe too: the collection on this device predates the account.
-        var risky=localHasCards() && (AUTH.dirty || !AUTH.serverRev);
-        if(risky && rev===AUTH.serverRev){ pushCloud(true); return; }   // server still holds OUR copy: send ours up
-        if(risky){
-          var merged=mergeStates(STATE, remote);
-          adoptRemote(merged, rev);
-          AUTH.dirty=true; saveAuth(); pushCloud(true);                 // put the union back on the server
+        var risky=localHasData() && (AUTH.dirty || !AUTH.serverRev);
+        if(risky && rev===AUTH.serverRev) pushCloud(true);   // server still holds OUR copy: send ours up
+        else if(risky){
+          adoptRemote(mergeStates(STATE, remote, {firstJoin:!AUTH.serverRev}), rev, {merged:true, acct:remote._acct||null});
+          pushCloud(true);                 // put the union back on the server
           toast("Merged your cloud collection with this device");
-          return;
         }
-        adoptRemote(remote, rev); toast("Loaded your cloud collection");
+        else { adoptRemote(remote, rev); toast("Loaded your cloud collection"); }
       }
       else { AUTH.serverRev=rev; saveAuth(); pushCloud(true); }
+      try{ joinLegacyIfOurs(remote); }catch(e){ try{ reportError(e,"joinLegacy"); }catch(_){} }
     });
   }
   var pushTimer=null, pushing=false;
   function pushCloud(now, btn){
-    if(!AUTH || !AUTH.token || !apiBase()) return;
+    if(OTHER_TAB || !AUTH || !AUTH.token || !apiBase()) return;
+    PUSH_GEN++;                         // every edit since a push was sent: its 200 clears dirty only if none came after
     AUTH.dirty=true; saveAuth();        // cleared only when the server accepts this copy
     function doPush(done){
+      if(!AUTH.token){ if(done) done(); return; }
       // One push at a time. Two in flight both carry the rev from before either landed, so the second is
       // answered with a 409 the device caused itself, which used to be resolved by discarding local edits.
-      if(pushing){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ doPush(); }, 800); if(done) done(); return; }
+      if(pushing){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ pushTimer=null; doPush(); }, 800); if(done) done(); return; }
       pushing=true;
       setSyncStatus("syncing…");
-      api("/api/state","PUT",{rev:AUTH.serverRev,blob:(function(){ var b=JSON.parse(stateJSON()); if(typeof accountSettingsBlob==="function") b._acct=accountSettingsBlob(); return b; })()}).then(function(r){
+      var tok=AUTH.token, gen=PUSH_GEN, sent=JSON.parse(stateJSON());
+      delete sent._local;               // this device's own owner tag and sync position never leave it
+      sent._acct=accountSettingsBlob(); var sentAcct=sent._acct;
+      api("/api/state","PUT",{rev:AUTH.serverRev,blob:sent}).then(function(r){
+        if(OTHER_TAB || AUTH.token!==tok) return;   // signed out, or someone else signed in, while this was in flight
         if(r.status===409 && r.body.blob){
           // The server moved on. Union the two copies rather than letting either side delete the other,
-          // then send the result up so both devices end on the same collection.
-          adoptRemote(mergeStates(STATE, r.body.blob), r.body.rev);
-          AUTH.dirty=true; saveAuth();
+          // then send the result up so both devices end on the same collection. If the union could not be
+          // stored, the next edit tries again: pushing now would only 409 again, without end.
+          var stored=adoptRemote(mergeStates(STATE, r.body.blob, {firstJoin:!AUTH.serverRev}), r.body.rev, {merged:true, acct:r.body.blob._acct||null});
           toast("Merged newer data from another device");
-          pushing=false; pushCloud(true); return;
+          pushing=false; if(stored) pushCloud(true); return;
         }
-        else if(r.ok){ AUTH.serverRev=r.body.rev; AUTH.dirty=false; AUTH.lastSyncAt=Date.now(); saveAuth(); setSyncStatus("synced"); }
+        else if(r.ok){
+          // An edit made while this was in flight is not on the server yet, so it stays dirty and is sent next.
+          AUTH.serverRev=r.body.rev; AUTH.dirty=(PUSH_GEN!==gen); AUTH.lastSyncAt=Date.now(); saveAuth(); setAcctBase(sentAcct);
+          setSyncStatus(AUTH.dirty?"syncing…":"synced");
+        }
         else setSyncStatus("sync error");
       }).catch(function(){ setSyncStatus("offline"); }).then(function(){ pushing=false; if(done) done(); });
     }
     clearTimeout(pushTimer);
     // Manual "Sync now" (with a button) runs immediately on its own promise chain, so its spinner is never
     // orphaned by a background save()->pushCloud() that would clearTimeout a debounced timer holding done().
-    if(btn){ doPush(busyBtn(btn, "Syncing…")); return; }
-    pushTimer=setTimeout(function(){ doPush(); }, now?150:1400);
+    if(btn){ pushTimer=null; doPush(busyBtn(btn, "Syncing…")); return; }
+    pushTimer=setTimeout(function(){ pushTimer=null; doPush(); }, now?150:1400);
+  }
+  // A sign in and a password reset both end here once the server says yes. beginSession has its own guard: a
+  // throw there is a bug, not a network error, and the data on disk is consistent, so the app reloads.
+  function sessionStarted(r, typed, prefix, msg){
+    var kind="";
+    try{ kind=beginSession(r.body.email||typed, r.body.token); }
+    catch(e){ try{ reportError(e,"beginSession"); }catch(_){} try{ location.reload(); }catch(_){} return false; }
+    if(!kind){ msg("There is not enough space on this device to keep the last account's changes apart from yours. Sign in as that account first so they can sync, then try again.", true); return false; }
+    renderAccount(); pullState().catch(function(){});
+    toast(kind==="switch" ? "Signed in as "+AUTH.email+". The last account's cards and alerts are kept apart on this device." : prefix+AUTH.email);
+    return true;
   }
   function doAuth(kind, btn){
     var email=($("acctEmail")||{}).value, pw=($("acctPw")||{}).value;
@@ -12778,22 +13036,245 @@ label.acctsetrow { align-items:center; }
     api("/api/"+kind,"POST",{email:email,password:pw}).then(function(r){
       done();
       if(!r.ok){ acctMsg(r.body.error||"Sign in failed.", true); return; }
-      AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; AUTH.expired=false; saveAuth();
-      renderAccount(); pullState(); toast("Signed in as "+AUTH.email);
+      sessionStarted(r, email, "Signed in as ", acctMsg);
     }).catch(function(){ done(); acctMsg(netErr(), true); });
   }
-  function signOut(){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Signed out (data stays on this device)"); }
+  // A plain sign out keeps today's behaviour: the data stays on this device and its alerts keep running. It
+  // first sends anything not yet synced, for up to 8 seconds, so the account has it.
+  function signOut(){
+    if(SIGNING_OUT) return;
+    var tok=AUTH.token;
+    if(tok && apiBase() && navigator.onLine!==false && (AUTH.dirty || pushing || pushTimer)){
+      SIGNING_OUT=true;
+      var done=busyBtn($("signOutBtn"), "Signing out…");
+      if(AUTH.dirty && !pushing) pushCloud(true);
+      whenSynced(8000, tok, function(){ SIGNING_OUT=false; done(); finishSignOut(tok); });
+      return;
+    }
+    finishSignOut(tok);
+  }
+  function whenSynced(ms, tok, cb){
+    var t0=Date.now();
+    (function poll(){
+      if((!AUTH.dirty && !pushing && !pushTimer) || AUTH.token!==tok || navigator.onLine===false || Date.now()-t0>=ms){ cb(); return; }
+      setTimeout(poll, 250);
+    })();
+  }
+  function finishSignOut(tok){
+    clearTimeout(pushTimer); pushTimer=null;   // a debounced push must not outlive the session
+    // The data and its sync position first. A session that never synced, or ended during the flush, leaves
+    // the copy unsynced, so it is kept whole if someone else signs in here.
+    var l=loc();
+    if(tok && AUTH.token===tok){ l.rev=AUTH.serverRev||0; l.dirty=!!AUTH.dirty || !(AUTH.serverRev>0); }
+    else l.dirty=true;
+    writeStateRaw();
+    var keep=AUTH.lastBackupAt;
+    AUTH={serverRev:0}; if(keep) AUTH.lastBackupAt=keep; saveAuth();
+    renderAccount();
+    toast(l.dirty ? "Signed out. Your latest changes are saved on this device and sync the next time you sign in here." : "Signed out (data stays on this device)");
+  }
   // Server rejected our token: it expired, the account was deleted, or the password was reset on
   // another device (which invalidates older sessions). Drop the dead token locally and prompt a
   // fresh sign-in; the collection stays on this device. The AUTH.token guard collapses concurrent
-  // 401s into a single sign-out + toast.
-  function handleSessionExpired(){
-    if(!AUTH.token) return;
+  // 401s into a single sign-out + toast, and usedTok drops a late 401 that belongs to an earlier session.
+  function handleSessionExpired(usedTok){
+    if(!AUTH.token || (usedTok && AUTH.token!==usedTok)) return;
+    clearTimeout(pushTimer); pushTimer=null;
+    // The data first. The account may have been deleted elsewhere, so this copy is always kept whole.
+    var l=loc(); l.rev=AUTH.serverRev||0; l.dirty=true; writeStateRaw();
     // Keep the address and remember WHY we are signed out, so the Account page can say so and signing
     // back in is one field. A toast on its own was easy to miss, and missing it cost cloud sync.
-    AUTH={serverRev:0, email:AUTH.email||"", expired:true}; saveAuth();
+    var keep=AUTH.lastBackupAt;
+    AUTH={serverRev:0, email:AUTH.email||"", expired:true}; if(keep) AUTH.lastBackupAt=keep; saveAuth();
     if(typeof renderAccount==="function") renderAccount();
     toast("Signed out. Please sign in again to keep syncing.");
+  }
+  // ---- Accounts on one device -------------------------------------------------------------------------
+  // STATE._local = {v:1, email, rev, dirty} is saved INSIDE palvault-v1, in the same write as the data, so the
+  // data and its owner can never be split by a crash. email is the owner's lowercased address, "" for data made
+  // before this device ever signed in (a guest), "?" for a copy 2.4.1 left signed out whose owner is unknown.
+  // rev and dirty are the copy's sync position, written when a session ends (while signed in AUTH.serverRev and
+  // AUTH.dirty are the live values). It is never sent: doPush deletes it, adoptRemote strips it from every
+  // download and keeps this device's own. When someone else signs in, the whole outgoing copy is set aside
+  // under palvault-stash:<email> and comes back exactly as it was left when that account signs in here again.
+  function localOk(l){ return plainObj(l) && typeof l.email==="string"; }
+  // Who owns a copy saved before 2.4.2, which carries no tag. AUTH may not be assigned yet when save() asks,
+  // so the saved session is then read straight from storage.
+  function deriveLocal(){
+    var a=(typeof AUTH==="object" && AUTH) ? AUTH : null;
+    if(!a){ try{ a=JSON.parse(localStorage.getItem("palvault-auth")); }catch(e){ a=null; } }
+    if(!plainObj(a)) a={};
+    var em=String(a.email||"").toLowerCase(), rv=+a.serverRev, pre=null;
+    if(a.token) return {v:1, email:em, rev:(isFinite(rv) && rv>0)?rv:0, dirty:(a.dirty===undefined)?true:!!a.dirty};
+    if(em) return {v:1, email:em, rev:0, dirty:true};                     // a session the server ended
+    try{ pre=localStorage.getItem(LS_KEY+"-prepull"); }catch(e){}
+    if(pre) return {v:1, email:"?", rev:0, dirty:true};                   // signed out on 2.4.1 after a sync: owner unknown
+    return {v:1, email:"", rev:0, dirty:true};                            // never signed in: this device's own data
+  }
+  function loc(){
+    if(!localOk(STATE._local)) STATE._local=deriveLocal();
+    var l=STATE._local, r=+l.rev;
+    l.rev=(isFinite(r) && r>0) ? Math.floor(r) : 0;
+    if(typeof l.dirty!=="boolean") l.dirty=true;
+    if(l.v===undefined) l.v=1;
+    return l;
+  }
+  function writeStateRaw(){ if(OTHER_TAB) return false; try{ localStorage.setItem(LS_KEY, stateJSON()); return true; }catch(e){ return false; } }
+  // An account that has never been on this device starts here. Never reads paldeck-ebp01-v2: that is the
+  // previous owner's oldest data.
+  function freshState(){ var id="c"+Date.now(); return {cols:[{id:id, name:"My Collection", own:{}}], active:id, wishlist:{}, wishlistAt:{}, fav:{}}; }
+  function readStash(em){ var s=null; try{ s=JSON.parse(localStorage.getItem(STASH_PRE+em)||"null"); }catch(e){ s=null; } return plainObj(s) ? s : null; }
+  function writeStash(em, obj){ if(OTHER_TAB) return false; try{ localStorage.setItem(STASH_PRE+em, JSON.stringify(obj)); return true; }catch(e){ return false; } }
+  function stashKeys(){ var out=[], i, k; try{ for(i=0;i<localStorage.length;i++){ k=localStorage.key(i); if(k && k.indexOf(STASH_PRE)===0) out.push(k); } }catch(e){} return out; }
+  // At most 6 set aside copies. The oldest go first, but never one with changes its account has not synced.
+  function trimStashes(){
+    var ks=stashKeys(); if(ks.length<=6) return;
+    var rows=ks.map(function(k){ var s=null; try{ s=JSON.parse(localStorage.getItem(k)); }catch(e){}
+      var st=plainObj(s) ? s.state : null;
+      return {k:k, at:(plainObj(s) && +s.at) || 0, keep:!!(plainObj(st) && plainObj(st._local) && st._local.dirty===true)}; });
+    rows.sort(function(a, b){ return a.at-b.at; });
+    var n=rows.length;
+    rows.forEach(function(r){ if(n>6 && !r.keep){ try{ localStorage.removeItem(r.k); n--; }catch(e){} } });
+  }
+  // The few personal settings that change with the person: display name, default collection, Sphere theme,
+  // and the opt ins that share collection figures (weekly recap, milestones, wishlist availability).
+  function personPart(){ var p={notif:{}}, n=SETTINGS.notif||{};
+    PERSON_KEYS.forEach(function(k){ if(SETTINGS[k]!==undefined) p[k]=SETTINGS[k]; });
+    PERSON_NOTIF.forEach(function(k){ p.notif[k]=(n[k]===true); });
+    return p; }
+  // null gives the defaults. The launcher icon is left alone: changing it relaunches the Android app.
+  function applyPerson(p){
+    p=plainObj(p) ? p : null;
+    var d={displayName:"", defaultAddCol:"ask", sphere:-1};
+    PERSON_KEYS.forEach(function(k){ if(p && p[k]!==undefined) SETTINGS[k]=p[k]; else if(hasOwn(d, k)) SETTINGS[k]=d[k]; else delete SETTINGS[k]; });
+    if(!SETTINGS.notif) SETTINGS.notif={releases:true,news:true,newSets:true,stock:false,price:false};
+    var pn=(p && plainObj(p.notif)) ? p.notif : {};
+    PERSON_NOTIF.forEach(function(k){ SETTINGS.notif[k]=(pn[k]===true); });
+    if(!OTHER_TAB){ try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
+    var an=$("acctName"); if(an) an.value=SETTINGS.displayName||"";
+    try{ applySphere(); }catch(e){}
+    try{ renderSphereThemes(); }catch(e){}
+  }
+  function maskEmail(em){ em=String(em||""); var i=em.indexOf("@"); return (i<1) ? "\u2022\u2022\u2022" : em.charAt(0)+"\u2022\u2022\u2022"+em.slice(i); }
+  // Sign in as someone other than the owner of the data on this device. The outgoing copy is set aside whole,
+  // then the incoming account's own copy (or an empty collection) is installed. Synchronous, and ordered so a
+  // crash at any point leaves palvault-v1 holding one owner's data under that owner's tag. false: nothing
+  // changed, because the outgoing copy could not be kept.
+  function switchOwner(em){
+    var l=loc(), out=l.email;
+    // W0: on the web, another tab may have saved this owner's copy since this tab last did.
+    try{ var raw=localStorage.getItem(LS_KEY), disk=raw?JSON.parse(raw):null;
+      if(plainObj(disk) && Array.isArray(disk.cols) && disk.cols.length && localOk(disk._local) && disk._local.email===out && raw!==stateJSON()){
+        cleanCols(disk); var mine=STATE._local, both=mergeStates(disk, STATE);
+        both._local=mine; mine.dirty=true; STATE=both; cleanCols(STATE); own=activeCol().own; addBaseline(); writeStateRaw(); }
+    }catch(e){}
+    // W1: set the outgoing copy aside, with its sync position.
+    l=loc();
+    if(AUTH.token && String(AUTH.email||"").toLowerCase()===l.email){ l.rev=AUTH.serverRev||0; l.dirty=!!AUTH.dirty || pushing || !!pushTimer; }
+    var at=Date.now(), person=personPart(), base=acctBase(), ed=lsGet("palvault-ed-applied");
+    if(!writeStash(out, {v:1, at:at, email:out, state:JSON.parse(stateJSON()), person:person, acctBase:base, edApplied:ed})){
+      // No room for the whole copy. Only a copy its account already holds may be kept as its follows alone.
+      if(!(l.rev>0 && !l.dirty)) return false;
+      if(!writeStash(out, {v:1, at:at, email:out, state:null, alerts:STATE.alerts||null, person:person, acctBase:base, edApplied:ed})) return false;
+    }
+    // W2: the incoming account's copy. This ONE write carries the data and its owner.
+    var inc=readStash(em), has=!!(inc && plainObj(inc.state));
+    var next=has ? inc.state : freshState();
+    if(!Array.isArray(next.cols) || !next.cols.length){ var f=freshState(); next.cols=f.cols; next.active=f.active; }
+    if(inc && !has && plainObj(inc.alerts)) next.alerts=inc.alerts;
+    next._local=plainObj(next._local) ? next._local : {v:1, rev:0, dirty:false};
+    next._local.email=em;
+    if(!has){ next._local.rev=0; next._local.dirty=false; }
+    cleanCols(next); normTop(next);
+    var was=STATE; STATE=next;
+    if(!writeStateRaw()){ STATE=was; return false; }
+    own=activeCol().own; addBaseline();   // at once: nothing between STATE=next and here may reach save()
+    // W3: what belonged to the outgoing person and is not part of their copy.
+    try{ localStorage.removeItem(STASH_PRE+em); }catch(e){}
+    try{ localStorage.removeItem(LS_KEY+"-prepull"); }catch(e){}
+    try{ localStorage.removeItem(DAYP_KEY); }catch(e){}
+    _dayP=null;
+    // W4
+    setAcctBase(inc && inc.acctBase ? inc.acctBase : null);
+    var edv=(inc && inc.edApplied) || lsGet("palvault-ed-applied"); if(edv) lsSet("palvault-ed-applied", edv);
+    // From here the disk is consistent, so a throw reloads into it.
+    try{
+      applyPerson(inc ? inc.person : null);
+      var d0=loc().dirty;
+      if(inc && plainObj(inc.acctBase)) applyAccountSettings(inc.acctBase);
+      reconcileEdition();
+      if(loc().dirty!==d0){ loc().dirty=d0; writeStateRaw(); }   // applying the account's settings is not an edit of this copy
+      resetScanSession(); refreshScanSessionUI(); closeScanReview();
+      if(scrim && scrim.classList.contains("open")) dismissOverlay();
+      repaintAll(); alertsChanged(); trimStashes();
+    }catch(e){ try{ reportError(e,"switchOwner"); }catch(_){} try{ location.reload(); }catch(_){} }
+    return true;
+  }
+  // Called by a sign in and a password reset as soon as the server says yes, before anything else. Returns
+  // "switch", "legacy", "guest" or "same", or "" when the sign in had to be refused (no room to keep the last
+  // account's copy). The new token is saved LAST, so a crash leaves the device signed out with its data
+  // under the right owner.
+  function beginSession(email, token){
+    var em=String(email||"").toLowerCase(), l=loc(), prev=l.email, kind, old=AUTH||{};
+    clearTimeout(pushTimer); pushTimer=null;
+    if(prev && prev!==em){ if(!switchOwner(em)) return ""; kind=(prev==="?")?"legacy":"switch"; }
+    else if(!prev){ l.email=em; l.dirty=true; writeStateRaw(); setAcctBase(null); kind="guest"; }   // data made before ever signing in joins the first account, as always
+    else kind="same";
+    l=loc();
+    AUTH={token:token, email:em, serverRev:(l.rev>0?l.rev:0), dirty:(!!l.dirty || !(l.rev>0)), expired:false};
+    if(old.lastBackupAt) AUTH.lastBackupAt=old.lastBackupAt;
+    if(kind==="same" && old.lastSyncAt) AUTH.lastSyncAt=old.lastSyncAt;
+    saveAuth();
+    return kind;
+  }
+  // Startup, once AUTH is known: tag a copy saved before 2.4.2 with its owner, end a session whose data belongs
+  // to someone else, and mark follows the update moved so they sync. Marks only: pushTimer and pushing are
+  // assigned further down, so nothing here may push, pull or paint.
+  function bootAccounts(){
+    var had=localOk(STATE._local), l=loc(), em=String(AUTH.email||"").toLowerCase();
+    if(!had) writeStateRaw();
+    // Guest data with a live session can only be a guest join whose state write failed: it is that account's.
+    if(AUTH.token && !l.email && em){ l.email=em; writeStateRaw(); }
+    if(AUTH.token && l.email && l.email!==em){ AUTH={serverRev:0, email:AUTH.email||"", expired:true}; saveAuth(); }
+    if(ALERTS_MOVED){ if(AUTH.token){ AUTH.dirty=true; saveAuth(); } else { l.dirty=true; writeStateRaw(); } }
+    // Web: another tab that signs in or out changes who this data belongs to. This tab stops writing and reloads.
+    window.addEventListener("storage", function(e){
+      if(!e || e.key!=="palvault-auth") return;
+      var t=""; try{ t=(JSON.parse(e.newValue||"null")||{}).token||""; }catch(_){ t=""; }
+      if(t===(AUTH.token||"")) return;
+      OTHER_TAB=true;
+      try{ location.reload(); }catch(_){}
+    });
+  }
+  // A collection 2.4.1 left signed out ("?") joins this account by itself only when it shares a collection id
+  // with it, which means it came from this account. Otherwise the Account page offers to add it.
+  function joinLegacyIfOurs(remote){
+    var s=readStash("?"); if(!s || !plainObj(s.state) || !AUTH.token) return;
+    var mine={}; ((remote && remote.cols) || []).forEach(function(c){ if(c && c.id) mine[c.id]=1; });
+    if((s.state.cols || []).some(function(c){ return !!(c && c.id && mine[c.id]===1); })) joinLegacy();
+  }
+  function joinLegacy(){
+    var s=readStash("?"); if(!s || !plainObj(s.state) || !AUTH.token) return;
+    var keep=loc(), st=s.state; delete st._local; delete st._acct;
+    if(!Array.isArray(st.cols)) st.cols=[];
+    cleanCols(st);
+    var m=mergeStates(STATE, st); m._local=keep;
+    STATE=m; cleanCols(STATE); normTop(STATE); own=activeCol().own; addBaseline();
+    if(writeStateRaw()){ try{ localStorage.removeItem(STASH_PRE+"?"); }catch(e){} }   // the stash goes only once the union is stored
+    repaintAll(); alertsChanged(); pushCloud(true);
+    toast("Added this device's earlier collection to your account");
+  }
+  // The collection stays on this device and becomes its own (guest) data, so the next account that signs in
+  // here takes it in. The delete note says so before the tap.
+  function deleteAccountDone(){
+    clearTimeout(pushTimer); pushTimer=null;
+    var l=loc(), em=l.email;
+    l.email=""; l.rev=0; l.dirty=true; writeStateRaw();
+    if(em){ try{ localStorage.removeItem(STASH_PRE+em); }catch(e){} }
+    setAcctBase(null);
+    var keep=AUTH.lastBackupAt;
+    AUTH={serverRev:0}; if(keep) AUTH.lastBackupAt=keep; saveAuth();
+    renderAccount(); toast("Your account has been deleted. Your collection stays on this device.");
   }
   function acctMsg(m,bad){ var el=$("acctMsg"); if(el){ el.textContent=m; el.style.color=bad?"var(--el-Fire)":"var(--accent-ink)"; } }
   function syncStatusText(s){ if(s!=="synced") return s; return "synced · last sync "+relTime(AUTH.lastSyncAt||0); }
@@ -12817,7 +13298,7 @@ label.acctsetrow { align-items:center; }
       ["Text size", "setTextSize"]
     ];
     el.innerHTML='<div class="stitle">Your settings</div>'+
-      '<p class="sdesc" style="margin:6px 0 12px">'+(synced?'Saved to your account and synced across your devices.':'Sign in above to sync these across your devices. For now they are saved on this device.')+'</p>'+
+      '<p class="sdesc" style="margin:6px 0 12px">'+(synced?'Saved to your account and synced across your devices. Stock alert follows and price alerts are saved to your account too. Each device keeps its own alert switches.':'Sign in above to sync these across your devices. For now they are saved on this device.')+'</p>'+
       '<div class="acctset">'+rows.map(function(r){
         var src=$(r[1]); if(!src) return "";
         var opts = src.type==="checkbox"
@@ -12839,12 +13320,15 @@ label.acctsetrow { align-items:center; }
     var el=$("acctCard"); if(!el) return;
     if(!apiBase()){ el.innerHTML='<div class="stitle">Cloud sync</div><p class="sdesc" style="margin:8px 0 0">Cloud sync is unavailable right now. Your collection stays saved on this device, and you can move it with Export / Import.</p>'; return; }
     if(AUTH.token){
-      el.innerHTML='<div class="stitle">Signed in</div><p class="sdesc" style="margin:8px 0 12px">'+esc(AUTH.email||"")+' · <span id="syncStat">'+esc(AUTH.dirty?"changes not synced":syncStatusText("synced"))+'</span></p><div class="acctform"><button class="btn sec" id="syncNow">Sync now</button><button class="btn sec" id="signOutBtn">Sign out</button></div><div id="delZone" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px"></div>';
+      // A collection 2.4.1 left on this device without an owner, which did not join this account by itself.
+      var leg=readStash("?"), legHtml=(leg && plainObj(leg.state)) ? '<div style="margin-top:14px"><p class="sdesc" style="margin:0 0 9px">This device also has a collection from before this update that is not linked to an account.</p><button class="btn sec" id="legacyJoin">Add it to this account</button></div>' : '';
+      el.innerHTML='<div class="stitle">Signed in</div><p class="sdesc" style="margin:8px 0 12px">'+esc(AUTH.email||"")+' · <span id="syncStat">'+esc(AUTH.dirty?"changes not synced":syncStatusText("synced"))+'</span></p><div class="acctform"><button class="btn sec" id="syncNow">Sync now</button><button class="btn sec" id="signOutBtn">Sign out</button></div>'+legHtml+'<div id="delZone" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px"></div>';
       $("syncNow").onclick=function(){ pushCloud(true, this); }; $("signOutBtn").onclick=signOut;
+      var lj=$("legacyJoin"); if(lj) lj.onclick=function(){ openAsk({title:"Add it to this account?", message:"Its cards, wishlist and alerts join "+(AUTH.email||"this account")+" and sync to your other devices.", okText:"Add it", confirmOnly:true, onOk:function(){ joinLegacy(); }}); };
       var dz=$("delZone");
       function delInitial(){
         dz.innerHTML='<button class="btn danger" id="delAcctBtn">Delete account</button>'+
-          '<p class="sdesc" style="margin:8px 0 0;font-size:.8rem">Permanently removes your account and any data synced to the server. Cards saved on this device stay unless you reset the app.</p>';
+          '<p class="sdesc" style="margin:8px 0 0;font-size:.8rem">Permanently removes your account and any data synced to the server. Cards and alerts saved on this device stay, and the next account that signs in on this device takes them in.</p>';
         $("delAcctBtn").onclick=delConfirm;
       }
       function delConfirm(){
@@ -12857,7 +13341,7 @@ label.acctsetrow { align-items:center; }
         var y=$("delYes"), m=$("delMsg"); var doneDel=busyBtn(y, "Deleting…");
         function fail(t){ if(m){ m.textContent=t; m.style.color="var(--el-Fire)"; } doneDel(); }
         api("/api/account","DELETE").then(function(r){
-          if(r&&r.ok){ AUTH={serverRev:0}; saveAuth(); renderAccount(); toast("Your account has been deleted"); }
+          if(r&&r.ok){ deleteAccountDone(); }
           else fail((r&&r.body&&r.body.error)||"Couldn't delete the account. Please try again.");
         }).catch(function(){ fail(netErr()); });
       }
@@ -12866,7 +13350,9 @@ label.acctsetrow { align-items:center; }
       // A session the server ended (password reset elsewhere, account deleted, token expired) leaves this
       // note behind, because the toast that announced it is long gone by the time anyone looks here.
       var expNote = AUTH.expired ? '<p class="sdesc" style="margin:8px 0 0;color:var(--el-Fire)">Your session ended, so this device has stopped syncing. Sign in again to pick it back up. Nothing has been lost from this device.</p>' : '';
-      el.innerHTML='<div class="stitle">Sign in or create an account</div>'+expNote+'<p class="sdesc" style="margin:8px 0 14px">Saves your collections to your account and syncs across devices.</p>'+
+      // Whose data this is, when it belongs to an account: someone else signing in gets their own copy.
+      var lo=loc(), ownerNote=(lo.email && lo.email!=="?" && lo.email.indexOf("@")>0) ? '<p class="sdesc" style="margin:8px 0 0">The cards and alerts on this device belong to '+esc(maskEmail(lo.email))+'. If someone else signs in, they are kept apart and come back when this account signs in here again.</p>' : '';
+      el.innerHTML='<div class="stitle">Sign in or create an account</div>'+expNote+ownerNote+'<p class="sdesc" style="margin:8px 0 14px">Saves your collections to your account and syncs across devices.</p>'+
         '<div class="acctform stack">'+
           '<input class="sortsel" id="acctEmail" type="email" autocomplete="email" placeholder="you@email.com">'+
           '<div class="pwwrap"><input class="sortsel" id="acctPw" type="password" autocomplete="current-password" placeholder="Password (8+ characters)"><button type="button" class="pweye" id="acctPwEye" aria-label="Show password">'+EYE_ON+'</button></div>'+
@@ -12935,9 +13421,8 @@ label.acctsetrow { align-items:center; }
       var b=$("fpReset"), done=busyBtn(b,"Resetting…");
       api("/api/reset-password","POST",{email:RESET_EMAIL,code:code,password:pw}).then(function(r){
         if(!r.ok){ fpMsg((r.body&&r.body.error)||"Couldn't reset your password.", true); done(); return; }
-        AUTH.token=r.body.token; AUTH.email=r.body.email; AUTH.serverRev=0; AUTH.expired=false; saveAuth();
+        if(!sessionStarted(r, RESET_EMAIL, "Password reset. Signed in as ", fpMsg)){ done(); return; }
         RESET_EMAIL="";
-        renderAccount(); pullState(); toast("Password reset. Signed in as "+AUTH.email);
       }).catch(function(){ fpMsg(netErr(), true); done(); });
     };
   }
@@ -13182,6 +13667,9 @@ label.acctsetrow { align-items:center; }
     // somebody who only uses stock alerts had no way back at all. WAKE_GAP caps this at once every 15
     // minutes, and the register endpoint simply overwrites, so repeating it costs nothing.
     try{ if(typeof syncPushPrefs==="function") syncPushPrefs(); }catch(e){}
+    // Changes that never reached the account (made offline, or a push that failed) go up when the app comes
+    // back. Push only: no pull on wake in this release.
+    try{ if(AUTH.token && AUTH.dirty && !pushing && !SIGNING_OUT) pushCloud(true); }catch(e){}
     checkAppVersion();
     fetchCatalogue();
     fetchReleases();

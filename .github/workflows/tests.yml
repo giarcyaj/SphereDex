@@ -16,6 +16,8 @@ name: Tests
 #      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
 #      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
 #      tools/test_small_fixes.cjs — shop list open state, notification permission note, push registration, baked sealed art.
+#      tools/test_account_sync.cjs — accounts on one phone, follows saved to the account, the account settings
+#      merge, and the startup ordering guards (2.4.1 shipped blank from a top level read of a later var).
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
 #      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
@@ -140,6 +142,9 @@ jobs:
 
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
+
+      - name: Accounts on one device, synced follows, account settings merge (startup ordering guards)
+        run: node tools/test_account_sync.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)
