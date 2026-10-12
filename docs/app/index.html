@@ -6754,7 +6754,7 @@ label.acctsetrow { align-items:center; }
     // nk = distinctive news keywords: a news item mentioning one of these + a "Month D, YYYY" date overrides
     // this product's release date automatically (see buildReleaseOverrides). "2nd Edition" / "Card Set Vol"
     // are used instead of the set name so they don't match the 1st-edition set's news.
-    { id:"box-ebp01-2e", set:"Dawn of Palpagos", name:"Booster Box · 2nd Edition", sub:"12 packs · cards marked “II”", box:"", banner:"BOX_BANNER_EBP01", q:"Palworld Dawn of Palpagos 2nd Edition Booster Box", nk:["2nd Edition"], pre:true, date:"late Oct 2026" },
+    { id:"box-ebp01-2e", set:"Dawn of Palpagos", rel:"Dawn of Palpagos 2nd Edition", name:"Booster Box · 2nd Edition", sub:"12 packs · cards marked “II”", box:"", banner:"BOX_BANNER_EBP01", q:"Palworld Dawn of Palpagos 2nd Edition Booster Box", nk:["2nd Edition"], pre:true, date:"late Oct 2026" },
     { id:"box-bp02", set:"Legends Awaken", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP02", code:"BP02", q:"Palworld Legends Awaken Booster Box", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
     { id:"pack-bp02", set:"Legends Awaken", name:"Booster Pack", sub:"7 cards", box:"", q:"Palworld Legends Awaken Booster Pack", nk:["Legends Awaken"], pre:true, date:"Oct 30, 2026" },
     { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"75 sleeves · 10 cards", box:"BOX_SS01", banner:"BOX_BANNER_SS01", code:"SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
@@ -6982,15 +6982,25 @@ label.acctsetrow { align-items:center; }
       if(ny){ yr=+ny[1]; if(mo < (+ny[2]-1)-1) yr+=1; } else { yr=new Date().getFullYear(); } }
     return MONTHS[mo]+" "+day+", "+yr;
   }
+  // The start of an exact release day ("Oct 16, 2026" or ISO), or 0 for a vague or missing date.
+  function releaseDayTime(d){ var s=String(d||"");
+    if(!/^\d{4}-\d{2}-\d{2}/.test(s) && !/[A-Za-z]{3}[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/.test(s)) return 0;
+    var t=monDateTime(s); return isFinite(t) ? t : 0; }
   // Match each upcoming product to the NEWEST news item that names it AND signals a release, then adopt its date.
   function buildReleaseOverrides(items){
     if(!items||!items.length) return false;
     var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
     var changed=false;
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
-    SEALED.forEach(function(p){ if(!p.pre || (p.srv && p.date)) return;   // released: news cannot un-release it
+    SEALED.forEach(function(p){ if(!sealPreRaw(p) || (p.srv && p.date)) return;
+      // Once a product is out, only news published BEFORE its release day may move the date. A later "out now"
+      // story or tournament post cannot turn an owned box back into a pre order, but a delay announced in time
+      // still counts on a phone that first sees it after the day. The day is the later of the build's date and
+      // a remembered news date, so a too early date taken from a headline can still be put right.
+      var outT = p.pre ? 0 : Math.max(releaseDayTime(p.date), releaseDayTime(sealDate(p)));
       var keys=(p.nk&&p.nk.length)?p.nk:[p.set||p.name];
       for(var i=0;i<items.length;i++){ var it=items[i]||{};
+        if(outT && !(monDateTime(it.date) < outT)) continue;   // posted on or after release day, or undated
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
         if(!keys.some(function(k){ return lc.indexOf(String(k).toLowerCase())>=0; })) continue;
         if(!SIGNAL.test(text)) continue;
@@ -7441,6 +7451,7 @@ label.acctsetrow { align-items:center; }
     return true;
   }
   function openSealedDetail(p){
+    applyReleased();   // the app may have been open since before midnight on release day
     var title=p.set||p.name, typ=(p.set&&p.name)?p.name:"", detail=p.sub||"";
     var subline=typ?(typ+(detail?" · "+detail:"")):detail;
     if(p.pre){
@@ -10632,7 +10643,7 @@ label.acctsetrow { align-items:center; }
         } else if(typeof RELEASE_HIGHLIGHTS!=="undefined" && RELEASE_HIGHLIGHTS[ver]) notes=RELEASE_HIGHLIGHTS[ver];
         else if(typeof updateNotesFor==="function" && ver) notes=updateNotesFor(ver)||[];
       }catch(e){}
-      if(behind && (!notes || !notes.length)) notes=["Fresh cards & prices","Improvements to speed & reliability","Behind-the-scenes fixes that keep prices honest"];
+      if(behind && (!notes || !notes.length)) notes=["Fresh cards & prices","Improvements to speed & reliability","Behind the scenes fixes that keep prices honest"];
       notes=(notes||[]).slice(0,3);
       if(!notes.length) return;
       var mapped = featReleaseArt(ver);
@@ -10993,10 +11004,12 @@ label.acctsetrow { align-items:center; }
   // "Added to collection" line and the Collection recent sort.
   // Fixed order, first four shown, the first becomes the headline. There is no scoring: the order IS the
   // ranking, which keeps the whole thing readable in one pass.
-  var AWAY_GO = { releases:"View releases", paldex:"View PalDex", wishlist:"View wishlist" };
+  var AWAY_GO = { releases:"View releases", sealed:"View sealed", paldex:"View PalDex", wishlist:"View wishlist" };
   // monDateTime falls back to the 28th for a bare "Mon YYYY", so "late Oct 2026" parses as a real day and
   // the 2nd Edition box would announce itself as released on a date nobody published. A product is only
   // called out when its date names an actual day.
+  // The name a release is announced by: its set, unless the product has its own (a reprint of an older set).
+  function releaseName(p){ return String((p && (p.rel||p.set||p.name)) || "").trim(); }
   function sealDayKnown(str){ var d=String(str||"");
     return /^\d{4}-\d{2}-\d{2}/.test(d) || /\d{1,2},?\s+\d{4}/.test(d); }
   function awayRows(){
@@ -11006,11 +11019,12 @@ label.acctsetrow { align-items:center; }
     try{
       var seenSet={};
       SEALED.forEach(function(p){
-        if(!p || !sealPreRaw(p) || seenSet[p.set]) return;   // declared pre order: its day may have just passed
+        var nm=releaseName(p);
+        if(!p || !sealPreRaw(p) || !nm || seenSet[nm]) return;   // declared pre order: its day may have just passed
         var d=sealDate(p); if(!sealDayKnown(d)) return;
         var t=monDateTime(d); if(!(t>prev && t<=now)) return;
-        seenSet[p.set]=1;
-        rows.push({ line:esc(p.set)+" is out now", go:"releases" });
+        seenSet[nm]=1;
+        rows.push({ line:esc(nm)+" is out now", go:"sealed" });   // Releases drops it the day after
       });
     }catch(e){}
     // 2. A release date that moved, or a product that appeared, since the last open.
@@ -11120,7 +11134,7 @@ label.acctsetrow { align-items:center; }
   // and its packs on the same day are one line. A tie keeps the earlier product in SEALED.
   function nextHomeReleaseGroup(){ var best=null;
     (SEALED||[]).forEach(function(p){ if(!preOrToday(p)) return;
-      var title=String(p.set||p.name||"").trim(); if(!title) return;
+      var title=releaseName(p); if(!title) return;
       var pd=sealDate(p), n=releaseDaysUntil(pd); if(n<0) return;
       if(!best || n<best.days) best={ title:title, date:pd, days:n }; });
     return best; }

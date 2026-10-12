@@ -693,12 +693,102 @@ test('every release day line reads the release day aware check, not the raw flag
   assert.match(rel, /SEALED\.filter\(preOrToday\)/, 'the Releases timeline rows');
 });
 
-test('news can no longer turn a released product back into a pre order', () => {
-  // It only moves the date of something still on pre order. A post release tournament announcement used to
-  // flip an owned box back to Preorder, hiding it from value and from its Owned stepper.
-  assert.match(appFunction('buildReleaseOverrides'), /if\(!p\.pre \|\| \(p\.srv && p\.date\)\) return;/);
+// Runs the real news gate: startup marks products released, then the news list is read, as refreshReleaseDates does.
+function newsSandbox(sealed, todayIso, items, remembered) {
+  const RealDate = Date;
+  const fixed = new RealDate(todayIso + 'T12:00:00').getTime();
+  function FakeDate(...a) { return a.length ? new RealDate(...a) : new RealDate(fixed); }
+  FakeDate.now = () => fixed; FakeDate.parse = RealDate.parse; FakeDate.UTC = RealDate.UTC;
+  FakeDate.prototype = RealDate.prototype;
+  const sb = { SEALED: sealed, RELEASE_OVERRIDES: Object.assign({}, remembered || {}), _MONIX: MONIX,
+    MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    decodeEntities: (x) => String(x == null ? '' : x), Date: FakeDate, isNaN, isFinite, Number, Math, String };
+  vm.createContext(sb);
+  vm.runInContext(['monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'parseNewsDate',
+    'releaseDayTime', 'buildReleaseOverrides'].map(appFunction).join('\n'), sb);
+  sb.applyReleased();
+  sb.buildReleaseOverrides(items);
+  sb.applyReleased();
+  return sb;
+}
+const SS = () => ({ id: 'ss-vol1', pre: true, date: 'Oct 16, 2026', set: 'Sleeve & Card Set Vol. 1', nk: ['Card Set Vol'] });
+const BOX = () => ({ id: 'box-ebp01', pre: false, date: 'Jul 30, 2026', set: 'Dawn of Palpagos', nk: ['Dawn of Palpagos'] });
+
+test('a post release story cannot turn a released product back into a pre order', () => {
+  // A tournament post after release named a later date and flipped an owned box back to Preorder, hiding it
+  // from value and from its Owned stepper. This is the case 2.4.2 set out to fix.
+  const ss = SS();
+  const sb = newsSandbox([ss], '2026-10-20', [
+    { date: '2026-10-18', title: 'Sleeve & Card Set Vol. 1 is now available! Tournament on November 6, 2026' }]);
+  assert.equal(sb.RELEASE_OVERRIDES['ss-vol1'], undefined, 'the later post is not read as a date');
+  assert.equal(ss.pre, false, 'it stays released');
+  const box = BOX();
+  const sb2 = newsSandbox([box], '2026-10-12', [{ date: '2026-09-01', title: 'Dawn of Palpagos now available, launch party Nov 6' }]);
+  assert.equal(sb2.RELEASE_OVERRIDES['box-ebp01'], undefined, 'a box that was never a pre order is never chased');
+  const day = SS();
+  newsSandbox([day], '2026-10-16', [{ date: '2026-10-16', title: 'Sleeve & Card Set Vol. 1 out now, pre-order Vol. 2 for Dec 4, 2026' }]);
+  assert.equal(day.pre, false, 'a post on release day itself cannot move it either');
+});
+
+test('a delay announced before release day still counts when the phone first sees it after the day', () => {
+  // 2.4.2 as first built stopped reading news for anything already marked released, and startup marks it
+  // released before the news is read. A phone that skipped a few days, a fresh install, or one in Australia
+  // reading a UK afternoon post after its own midnight, kept the old date for good.
+  const ss = SS();
+  const sb = newsSandbox([ss], '2026-10-17', [
+    { date: '2026-10-14', title: 'The Sleeve & Card Set Vol. 1 release date has moved to October 30, 2026' }]);
+  assert.equal(sb.RELEASE_OVERRIDES['ss-vol1'], 'Oct 30, 2026', 'the delay is adopted');
+  assert.equal(ss.pre, true, 'and it is a pre order again');
+  const undated = SS();
+  newsSandbox([undated], '2026-10-17', [{ title: 'The Sleeve & Card Set Vol. 1 release date has moved to October 30, 2026' }]);
+  assert.equal(undated.pre, false, 'a post with no publish date cannot move a released product');
+});
+
+test('a too early remembered date can still be put right by news', () => {
+  // A headline such as "pre-orders open Oct 9" can leave an early date behind. Once that day passed the product
+  // read as released, and 2.4.2 as first built never let news correct it, so it was saved back every launch.
+  const ss = SS();
+  const sb = newsSandbox([ss], '2026-10-12', [
+    { date: '2026-10-10', title: 'Sleeve & Card Set Vol. 1 will ship October 16, 2026' }], { 'ss-vol1': 'Oct 9, 2026' });
+  assert.equal(sb.RELEASE_OVERRIDES['ss-vol1'], 'Oct 16, 2026', 'the real date replaces the early one');
+  assert.equal(ss.pre, true, 'and it is a pre order until the 16th');
+});
+
+test('a product still on pre order follows the newest dated news, as before', () => {
+  const ss = SS();
+  const sb = newsSandbox([ss], '2026-10-12', [
+    { date: '2026-10-11', title: 'Sleeve & Card Set Vol. 1 release date moved to October 23, 2026' },
+    { date: '2026-09-20', title: 'Sleeve & Card Set Vol. 1 will ship October 16, 2026' }]);
+  assert.equal(sb.RELEASE_OVERRIDES['ss-vol1'], 'Oct 23, 2026');
+  assert.equal(ss.pre, true);
   assert.match(appFunction('refreshReleaseDates'), /\{ applyReleased\(\); if\(!buildReleaseOverrides/,
     'the flag is brought up to date before the news is read');
+});
+
+test('"is out now" opens Sealed, which still lists the product after its day', () => {
+  // Releases only lists a product until its release day, so the old View releases button led nowhere.
+  const away = appFunction('awayRows');
+  assert.match(away, /rows\.push\(\{ line:esc\(nm\)\+" is out now", go:"sealed" \}\)/);
+  assert.match(source, /var AWAY_GO = \{[^}]*sealed:"View sealed"/);
+});
+
+test('the 2nd Edition box is announced as the 2nd Edition, not as the July set', () => {
+  assert.match(source, /id:"box-ebp01-2e", set:"Dawn of Palpagos", rel:"Dawn of Palpagos 2nd Edition"/);
+  const sb = { }; vm.createContext(sb); vm.runInContext(appFunction('releaseName'), sb);
+  assert.equal(sb.releaseName({ set: 'Dawn of Palpagos', rel: 'Dawn of Palpagos 2nd Edition' }), 'Dawn of Palpagos 2nd Edition');
+  assert.equal(sb.releaseName({ set: 'Legends Awaken', name: 'Booster Box' }), 'Legends Awaken');
+  assert.equal(sb.releaseName(null), '');
+  assert.match(appFunction('awayRows'), /var nm=releaseName\(p\);/);
+  assert.match(appFunction('nextHomeReleaseGroup'), /var title=releaseName\(p\);/);
+});
+
+test('a sealed sheet brings the release flag up to date before it picks its layout', () => {
+  // Left open across midnight on release day, the sheet used the pre order layout with a released stock line.
+  assert.match(appFunction('openSealedDetail'), /^function openSealedDetail\(p\)\{\s*applyReleased\(\);/);
+});
+
+test('the fallback update notes have no hyphens', () => {
+  assert.doesNotMatch(source, /Behind-the-scenes/);
 });
 
 test('a product with no RRP on file says n/a, not £0.00', () => {
