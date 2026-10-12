@@ -53,7 +53,7 @@ const NEW_FUNCS = ['hasOwn', 'alertAt', 'alertEntOk', 'canonEnt', 'alertWins', '
   'mergeAcct', 'sameAcct', 'colHasCards', 'localHasData', 'colHolds', 'repaintAll', 'sessionStarted', 'whenSynced',
   'finishSignOut', 'localOk', 'deriveLocal', 'loc', 'writeStateRaw', 'freshState', 'readStash', 'writeStash', 'stashKeys',
   'trimStashes', 'personPart', 'applyPerson', 'maskEmail', 'switchOwner', 'beginSession', 'bootAccounts', 'joinLegacyIfOurs',
-  'joinLegacy', 'deleteAccountDone'];
+  'joinLegacy', 'deleteAccountDone', 'absorbOtherTab', 'acctDefaults', 'milestoneKey', 'stockOfficialHtml'];
 const CHANGED_FUNCS = ['normTop', 'save', 'syncPushPrefs', 'stockAlertOn', 'toggleStockAlert', 'stockAlertBtn', 'priceWatch',
   'addPriceAlert', 'removePriceAlertAt', 'renderPriceAlertList', 'openPriceAlert', 'accountSettingsBlob', 'saveAuth', 'api',
   'localHasCards', 'mergeCol', 'mergeStates', 'adoptRemote', 'pullState', 'pushCloud', 'doAuth', 'signOut',
@@ -141,7 +141,8 @@ test('a push never carries this device\'s owner tag, and adopt writes the data b
   assert.ok(adopt.indexOf('own=activeCol().own; addBaseline();') < adopt.indexOf('applyAccountSettings('), 'own is this copy before anything can save');
   const pull = appFunction('pullState');
   assert.match(pull, /if\(OTHER_TAB \|\| AUTH\.token!==tok \|\| !r\.ok\) return;/);
-  assert.match(pull, /if\(PUSH_GEN!==gen0 \|\| pushing \|\| AUTH\.serverRev!==rev0\) return;/);
+  // It defers only to a push of its OWN session: a push still open from the previous account settles nothing here.
+  assert.match(pull, /if\(PUSH_GEN!==gen0 \|\| \(pushing && pushTok===tok\) \|\| AUTH\.serverRev!==rev0\) return;/);
 });
 
 test('switchOwner points own at the incoming copy straight after installing it', () => {
@@ -490,12 +491,14 @@ const REAL = ['plainObj', 'hasOwn', 'has', 'lsGet', 'lsSet', 'activeCol', 'clean
   'localHasData', 'colHolds', 'slabSig', 'mergeEntry', 'mergeCol', 'mergeStates', 'adoptRemote', 'repaintAll', 'pullState', 'pushCloud',
   'sessionStarted', 'doAuth', 'signOut', 'whenSynced', 'finishSignOut', 'handleSessionExpired', 'localOk', 'deriveLocal', 'loc',
   'writeStateRaw', 'freshState', 'readStash', 'writeStash', 'stashKeys', 'trimStashes', 'personPart', 'applyPerson', 'maskEmail',
-  'switchOwner', 'beginSession', 'bootAccounts', 'joinLegacyIfOurs', 'joinLegacy', 'deleteAccountDone'];
+  'switchOwner', 'beginSession', 'bootAccounts', 'joinLegacyIfOurs', 'joinLegacy', 'deleteAccountDone',
+  'absorbOtherTab', 'acctDefaults', 'milestoneKey'];
 const REAL_CODE = REAL.map(appFunction).join('\n');
 const LITERALS = /\n  (var ALERT_AT_MAX=[\s\S]*?;)\n/.exec(source)[1];
 const BOOT_LINE = BOOT_CALL.exec(source)[0];
 const PA_LINE = /var PRICE_ALERT_MAX=30, PA_KINDS=[^\n]*/.exec(source)[0];
 const ACCT_LINE = /var ACCT_SETTING_KEYS=\[[^\]]*\];/.exec(source)[0];
+const PUSH_LINE = /var pushTimer=null, pushing=false[^;]*;/.exec(source)[0];   // the real declaration, so the sandbox never drifts from it
 const CARDS = ['EBP01-001', 'EBP01-002', 'EBP01-003', 'EBP01-004', 'EBP01-005', 'EBP01-006', 'EBP01-009', 'EBP01-023SP'].map((id) => ({ id, name: id, rare: 'C' }));
 
 // One device. reboot() starts the app again on the same storage, the way a relaunch does.
@@ -518,6 +521,7 @@ function device(server, storage, opts) {
       CARDS, cardById: (id) => CARDS.find((c) => c.id === id),
       REGION_CUR: { 'co.uk': 'GBP', com: 'USD', de: 'EUR' }, CURRENCIES: [{ code: 'GBP' }, { code: 'USD' }, { code: 'EUR' }],
       RAW_KNOWN: ['1', '2', 'jp', 'cn'], RAW_LANGS: { jp: 1, cn: 1 },
+      detectRegion: () => 'co.uk',
       STOCK_TRACKED: { 'co.uk': ['box-bp02', 'ss-vol1', 'box-ebp01'], de: ['box-bp02', 'ss-vol1', 'box-ebp01'] },
       $: (id) => els[id] || null, icon: () => '', esc: (s) => String(s),
       ebayReg: () => sb.SETTINGS.ebayRegion,
@@ -554,7 +558,7 @@ function device(server, storage, opts) {
       'if(AUTH.serverRev==null) AUTH.serverRev=0;',
       DIRTY_LINE,
       BOOT_LINE,
-      'var pushTimer=null, pushing=false;',
+      PUSH_LINE,
       'function addCard(id, n){ var s=own[id]; if(!s) s=own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; s.qty=Math.max(0,s.qty+n); save(); }',
       'function wish(id){ STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); save(); }',
       // the startup pull
@@ -898,8 +902,8 @@ flow('price alerts follow the account; past 30 the oldest are shown as paused, a
   noErrors(p, t);
 });
 
-flow('the update moves follows into the record once, and marks them to sync', async () => {
-  const server = new FakeServer(); server.account('a@x.com', null, { cols: [{ id: 'cA', name: 'Main', own: {} }], active: 'cA' }, 3);
+flow('the update moves follows into the record once, and they reach the account', async () => {
+  const server = new FakeServer(); server.account('a@x.com', null, { cols: [{ id: 'cA', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] } } }], active: 'cA' }, 3);
   const old = new FakeStorage({
     'palvault-v1': J({ cols: [{ id: 'cA', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] } } }], active: 'cA', wishlist: {}, fav: {} }),
     'palvault-settings': J({ notif: { releases: true, news: true, newSets: true, stock: false, stockWatch: ['box-bp02', 7, ''], price: true,
@@ -1008,4 +1012,205 @@ test('the Account page masks the owner of the data on this device', () => {
   const sb = {}; vm.createContext(sb); vm.runInContext(appFunction('maskEmail'), sb);
   assert.equal(sb.maskEmail('alice@gmail.com'), 'a•••@gmail.com');
   assert.equal(sb.maskEmail('nope'), '•••');
+});
+
+// ==== the final review's fixes ===============================================================================
+flow('moving 2.4.1 follows never brings back a card another phone removed', async () => {
+  // The server moved on (rev 4: EBP01-002 and a wishlist card removed on another phone) while this phone, clean
+  // at rev 3, still holds them. Moving its follows used to mark it dirty, so the startup pull merged instead of
+  // adopting, and the removed card and wishlist entry came back on every device.
+  const server = new FakeServer();
+  server.account('a@x.com', null, { cols: [{ id: 'cA', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] } } }], active: 'cA', wishlist: {}, fav: {} }, 4);
+  const old = new FakeStorage({
+    'palvault-v1': J({ cols: [{ id: 'cA', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] }, 'EBP01-002': { qty: 1, graded: [] } } }], active: 'cA', wishlist: { 'EBP01-009': true }, wishlistAt: { 'EBP01-009': 5 }, fav: {} }),
+    'palvault-settings': J({ notif: { releases: true, news: true, newSets: true, stock: true, stockWatch: ['box-bp02'], price: false, priceWatch: [] } }),
+    'palvault-auth': J({ token: 'stale', email: 'a@x.com', serverRev: 3, dirty: false }),
+  });
+  server.tokens.stale = 'a@x.com';
+  const p = device(server, old);
+  await run(3000);
+  assert.deepEqual(p.cards(), { 'EBP01-001': 1 }, 'the removed card stays removed on the phone');
+  assert.deepEqual(serverCards(server, 'a@x.com'), { 'EBP01-001': 1 }, 'and on the account');
+  assert.deepEqual(Object.keys(server.accounts['a@x.com'].blob.wishlist || {}), [], 'the removed wishlist card stays removed');
+  assert.deepEqual(serverFollows(server, 'a@x.com'), ['box-bp02'], 'the moved follow still reaches the account');
+  assert.equal(p.ctx.AUTH.dirty, false);
+  noErrors(p);
+});
+
+flow('a returning account keeps its unsynced copy even after another account was deleted on the phone', async () => {
+  const server = new FakeServer(); server.account('a@x.com'); server.account('b@x.com');
+  const p = device(server);
+  await p.signIn('a@x.com'); await p.add('EBP01-001');
+  p.ctx.navigator.onLine = false; await p.add('EBP01-003');           // offline: never reaches A's account
+  await p.signOut();
+  assert.equal(p.ctx.loc().dirty, true);
+  p.ctx.navigator.onLine = true;
+  await p.signIn('b@x.com'); await p.add('EBP01-005');
+  await p.ctx.api('/api/account', 'DELETE'); p.ctx.deleteAccountDone(); await run(1000);
+  assert.equal(p.owner(), '', 'the deleted account left guest data behind');
+  await p.signIn('a@x.com'); await run(3000);
+  assert.ok(serverCards(server, 'a@x.com')['EBP01-003'], "A's offline card reaches A's account");
+  assert.equal(p.ls.getItem('palvault-stash:a@x.com'), null, "A's set aside copy was used and removed");
+  noErrors(p);
+});
+
+test('a late answer to Delete account acts only if the phone still holds that account', () => {
+  const f = appFunction('renderAccount');
+  assert.match(f, /doneDel=busyBtn\(y, "Deleting…"\), delEm=loc\(\)\.email;/);
+  assert.match(f, /if\(r&&r\.ok\)\{ if\(loc\(\)\.email===delEm\) deleteAccountDone\(\); \}/);
+});
+
+flow('an unfollow made on a phone that updated first survives the second phone updating later', async () => {
+  const server = new FakeServer(); server.account('a@x.com', null, { cols: [{ id: 'cA', name: 'Main', own: {} }], active: 'cA' }, 1);
+  const old241 = () => new FakeStorage({
+    'palvault-v1': J({ cols: [{ id: 'cA', name: 'Main', own: {} }], active: 'cA', wishlist: {}, fav: {} }),
+    'palvault-settings': J({ notif: { releases: true, news: true, newSets: true, stock: true, stockWatch: ['box-bp02'], price: true,
+      priceWatch: [{ id: 'EBP01-001', k: 'above', v: 50, b: 31.5, r: 'co.uk', m: 'live', c: 'GBP', at: 1000 }] } }),
+    'palvault-auth': J({ token: 't1', email: 'a@x.com', serverRev: 1, dirty: false }),
+  });
+  server.tokens.t1 = 'a@x.com';
+  const p1 = device(server, old241());
+  await run(3000);
+  assert.deepEqual(serverFollows(server, 'a@x.com'), ['box-bp02']);
+  p1.ctx.toggleStockAlert('box-bp02');                               // unfollow on the phone that updated first
+  p1.ctx.removePriceAlertAt(0);
+  await run(3000);
+  assert.deepEqual(serverFollows(server, 'a@x.com'), [], 'the unfollow reached the account');
+  const store2 = old241(); store2.setItem('palvault-auth', J({ token: 't2', email: 'a@x.com', serverRev: 1, dirty: false })); server.tokens.t2 = 'a@x.com';
+  const p2 = device(server, store2);                                 // the second phone updates a day later
+  await run(3000);
+  assert.deepEqual(serverFollows(server, 'a@x.com'), [], 'the unfollow still stands on the account');
+  assert.deepEqual(p2.follows(), [], 'and on the second phone');
+  assert.equal(p2.ctx.priceWatch().length, 0, 'the removed price alert stays removed too');
+  noErrors(p1, p2);
+});
+
+flow('the same person returning to a 2.4.1 leftover keeps their personal settings', async () => {
+  const server = new FakeServer();
+  server.account('a@x.com', null, { cols: [{ id: 'cLeg', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] } } }], active: 'cLeg' }, 2);
+  const store = new FakeStorage({
+    'palvault-v1': J({ cols: [{ id: 'cLeg', name: 'Main', own: { 'EBP01-001': { qty: 1, graded: [] } } }], active: 'cLeg', wishlist: {}, fav: {} }),
+    'palvault-v1-prepull': J({ cols: [{ id: 'cLeg', name: 'Main', own: {} }], active: 'cLeg' }),
+    'palvault-settings': J({ displayName: 'Craig', notif: { releases: true, news: true, newSets: true, stock: false, stockWatch: [], price: false, priceWatch: [], weeklyDigest: true } }),
+    'palvault-auth': J({ serverRev: 0 }),
+  });
+  const p = device(server, store);
+  assert.equal(p.owner(), '?');
+  await p.signIn('a@x.com'); await run(3000);
+  assert.deepEqual(p.cards(), { 'EBP01-001': 1 }, 'the leftover rejoined its own account');
+  assert.equal(p.ctx.SETTINGS.displayName, 'Craig', 'the display name came back');
+  assert.equal(p.ctx.SETTINGS.notif.weeklyDigest, true, 'and the weekly recap opt in');
+  noErrors(p);
+});
+
+flow("an account's unsynced settings change goes with its set aside copy", async () => {
+  const server = new FakeServer(); server.account('a@x.com'); server.account('b@x.com');
+  const p = device(server);
+  await p.signIn('a@x.com'); await p.add('EBP01-001');
+  p.ctx.navigator.onLine = false;
+  p.ctx.SETTINGS.ebayRegion = 'de'; p.ctx.saveSettings(); await run(2000);
+  await p.signOut();
+  p.ctx.navigator.onLine = true;
+  await p.signIn('b@x.com'); await p.signOut();
+  await p.signIn('a@x.com'); await run(3000);
+  assert.equal(p.ctx.SETTINGS.ebayRegion, 'de', 'the phone is back on the market A chose offline');
+  assert.equal(server.accounts['a@x.com'].blob._acct.ebayRegion, 'de', 'and it reached the account');
+  assert.equal(p.lastPrefs().region, 'de', 'and stock alerts follow it');
+  noErrors(p);
+});
+
+flow("someone new on a shared phone never inherits the last person's card language", async () => {
+  const server = new FakeServer(); server.account('a@x.com');
+  // B's account was last written by 2.4.1: its settings have no card language yet.
+  server.account('b@x.com', null, { cols: [{ id: 'cB', name: 'Main', own: {} }], active: 'cB', _acct: { ebayRegion: 'co.uk', defaultGrader: 'PSA', priceMode: 'live', mode: 'trader', textScale: 1 } }, 1);
+  const p = device(server);
+  await p.signIn('a@x.com'); await p.add('EBP01-001');
+  p.ctx.SETTINGS.cardLang = 'ja'; p.ctx.saveSettings(); await run(3000);
+  await p.signOut();
+  await p.signIn('b@x.com'); await run(3000);
+  assert.equal(p.ctx.SETTINGS.cardLang, 'en', 'B starts in English');
+  assert.equal(server.accounts['b@x.com'].blob._acct.cardLang, 'en', "and B's account never takes A's Japanese");
+  noErrors(p);
+});
+
+flow("signing out in one web tab keeps another tab's unsynced edit", async () => {
+  const server = new FakeServer(); server.account('a@x.com');
+  const p = device(server);
+  await p.signIn('a@x.com'); await p.add('EBP01-001');
+  // Another tab of the same owner saved a card it could not sync yet.
+  const disk = JSON.parse(p.ls.getItem('palvault-v1'));
+  disk.cols[0].own['EBP01-006'] = { qty: 1, graded: [] };
+  p.ls.setItem('palvault-v1', JSON.stringify(disk));
+  await p.signOut();
+  const after = JSON.parse(p.ls.getItem('palvault-v1'));
+  assert.ok(after.cols[0].own['EBP01-006'], "the other tab's card is still on disk");
+  assert.equal(after._local.dirty, true, 'and the copy is marked unsynced, so it reaches the account at the next sign in');
+  noErrors(p);
+});
+
+flow('one tab on its own never reads its own save as another tab', async () => {
+  const server = new FakeServer(); server.account('a@x.com');
+  const p = device(server);
+  await p.signIn('a@x.com'); await p.add('EBP01-001'); await run(3000);
+  assert.equal(p.ctx.absorbOtherTab(), false);
+  await p.signOut();
+  assert.equal(JSON.parse(p.ls.getItem('palvault-v1'))._local.dirty, false, 'a clean sign out stays clean');
+  noErrors(p);
+});
+
+flow('milestones carry a key per person, so a switch is never read as a new crossing', async () => {
+  const server = new FakeServer(); server.account('a@x.com'); server.account('b@x.com');
+  const p = device(server);
+  await p.signIn('a@x.com');
+  p.ctx.SETTINGS.notif.milestones = true; p.ctx.syncPushPrefs();
+  const ka = p.lastPrefs().milestoneKey;
+  assert.match(String(ka), /^m[0-9a-z]+$/, 'a random key, never the email');
+  p.reboot(); p.ctx.SETTINGS.notif.milestones = true; p.ctx.syncPushPrefs();
+  assert.equal(p.lastPrefs().milestoneKey, ka, 'the same key after a relaunch');
+  await p.signOut(); await p.signIn('b@x.com');
+  p.ctx.SETTINGS.notif.milestones = true; p.ctx.syncPushPrefs();
+  const kb = p.lastPrefs().milestoneKey;
+  assert.notEqual(kb, ka, 'another person gets their own key');
+  await p.signOut(); await p.signIn('a@x.com');
+  p.ctx.SETTINGS.notif.milestones = true; p.ctx.syncPushPrefs();
+  assert.equal(p.lastPrefs().milestoneKey, ka, "A's key comes back with A's copy");
+  p.ctx.SETTINGS.notif.milestones = false; p.ctx.syncPushPrefs();
+  assert.equal(p.lastPrefs().milestoneKey, undefined, 'no key is sent while milestones are off');
+  noErrors(p);
+});
+
+test('a pull defers only to a push of its own session', () => {
+  assert.match(source, /var pushTimer=null, pushing=false, pushTok=null;/);
+  assert.match(appFunction('pushCloud'), /var tok=AUTH\.token, gen=PUSH_GEN, sent=JSON\.parse\(stateJSON\(\)\); pushTok=tok;/);
+});
+
+test('the account settings pickers show what the account applied', () => {
+  const f = appFunction('applyAccountSettings');
+  ['setEbayRegion', 'setGrader', 'setPriceMode', 'curSel', 'sealEd', 'cardEd'].forEach((id) => assert.match(f, new RegExp('getElementById\\("' + id + '"\\)'), id));
+});
+
+test('the price alert limit counts what this phone shows, and says how many must go', () => {
+  const f = appFunction('openPriceAlert');
+  assert.match(f, /priceOnList\(STATE\.alerts\)\.filter\(function\(x\)\{ return !!cardById\(x\.a\.id\); \}\)\.length, need=nOn-PRICE_ALERT_MAX\+1;/);
+  assert.match(f, /Remove "\+\(need===1\?"one":need\)\+" to add another\."/);
+  assert.match(appFunction('renderPriceAlertList'), /Not on this phone yet/, 'an alert for an unknown card is listed so it can be removed');
+});
+
+test('the warnings use a colour that reads on both themes', () => {
+  assert.equal((source.match(/--warn-ink:#8f6109;/g) || []).length, 2, 'light: base and data-theme light');
+  assert.equal((source.match(/--warn-ink:#f3c31c;/g) || []).length, 2, 'dark: the media query and data-theme dark');
+  assert.doesNotMatch(source, /color:var\(--el-Electric,#f5b83d\)/);
+});
+
+test('Releases names a reprint the way Home does', () => {
+  const f = appFunction('renderReleases');
+  assert.match(f, /upcomingNames\[releaseName\(p\)\]=true/);
+  assert.match(f, /nm=releaseName\(p\), key=nm\+"\|"\+\(pd\|\|""\)/);
+});
+
+test('a pre order no shop row covers links the official page, never eBay', () => {
+  assert.match(appFunction('stockGlanceHtml'), /if\(!g\) return pre \? stockOfficialHtml\(\) : "";/);
+  assert.match(appFunction('stockGlanceHtml'), /if\(pre && !rows\.length\) out\+=stockOfficialHtml\(\);/);
+  assert.doesNotMatch(appFunction('stockOfficialHtml'), /ebay/i);
+  assert.match(source, /var STOCK_ALL_IDS=\[[^\]]*"box-bp03","pack-bp03"\]/, 'Eternal Ascent box and pack are checked for stock');
 });

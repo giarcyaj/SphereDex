@@ -30,6 +30,7 @@ function sandbox(asOf, state, shops) {
   const sb = {
     STOCK: { region: 'co.uk', asOf, state, shops: shops || null, at: Date.now() },
     STOCK_STALE_MS: 2 * HOUR,
+    SEAL_OFFICIAL_URL: 'https://en.palworld-official-cardgame.com/products',
     esc: (s) => String(s),
     ebayReg: () => 'co.uk',
     // stockGlanceHtml now draws the named shops too, so its helpers come along even when a test only
@@ -39,7 +40,7 @@ function sandbox(asOf, state, shops) {
     Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml', 'stockOfficialHtml']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -174,7 +175,7 @@ function liveSandbox() {
   sb.ebayReg = () => sb.region;
   vm.createContext(sb);
   vm.runInContext(['fetchStock', 'stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow',
-    'stockGlanceHtml', 'stockShopsOpen', 'stockPaint'].map(appFunction).join('\n'), sb);
+    'stockGlanceHtml', 'stockOfficialHtml', 'stockShopsOpen', 'stockPaint'].map(appFunction).join('\n'), sb);
   return sb;
 }
 function stockLine(pid) {
@@ -259,7 +260,7 @@ test('the 2nd Edition box is polled and its id matches the backend', () => {
   assert.ok(m, 'STOCK_ALL_IDS exists');
   const ids = m[1].split(',').map((s) => s.trim().replace(/"/g, ''));
   assert.ok(ids.includes('box-ebp01-2e'), 'the 2nd Edition box is in the polled list');
-  assert.equal(ids.length, 10);
+  assert.equal(ids.length, 12);   // Eternal Ascent box and pack joined in 2.4.2
   // Every polled id must be a real sealed product, or the bell appears for nothing.
   for (const id of ids) assert.ok(source.includes('id:"' + id + '"'), 'sealed product exists: ' + id);
 });
@@ -278,7 +279,7 @@ function shopSandbox(asOf, state, shops, region) {
     Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml', 'stockOfficialHtml']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -428,7 +429,7 @@ function seenSandbox(seen, asOf, state, shops) {
     Date, Math, isNaN, String, Number,
   };
   vm.createContext(sb);
-  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml']
+  vm.runInContext(['stockGlance', 'stockSeen', 'stockShops', 'stockAgo', 'stockShopRow', 'stockGlanceHtml', 'stockOfficialHtml']
     .map(appFunction).join('\n'), sb);
   return sb;
 }

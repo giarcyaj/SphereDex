@@ -28,7 +28,7 @@
     --bg:#e7eef2; --surface:#ffffff; --surface-2:#eef3f6; --ink:#12222c; --ink-soft:#46606e;
     --ink-faint:#7d95a3; --line:#d4e0e6; --line-strong:#b7ccd4; --accent:#0d9aab; --accent-ink:#0a7885;
     --shadow:24px 32px 60px -30px rgba(12,40,55,.24); --dim:.4;
-    --gold:#c98a12; --gold-deep:#8f6109; --edge:rgba(255,255,255,.8);
+    --gold:#c98a12; --gold-deep:#8f6109; --edge:rgba(255,255,255,.8); --warn-ink:#8f6109;
     --kb:0px; /* on-screen keyboard height; native (Android) sets this so the modal can sit above it */
   }
   /* ---- DARK HUD (the Palworld game default) ---- */
@@ -36,16 +36,16 @@
     --bg:#08151f; --surface:#12242f; --surface-2:#0e1e28; --ink:#eef6fa; --ink-soft:#a8bcc8;
     --ink-faint:#66808f; --line:#143b45; --line-strong:#1d5560; --accent:#12e3f5; --accent-ink:#5fe6f4;
     --shadow:24px 34px 70px -34px rgba(0,6,12,.85); --dim:.3;
-    --gold:#ffb020; --gold-deep:#b8791a; --edge:rgba(120,220,240,.10);
+    --gold:#ffb020; --gold-deep:#b8791a; --edge:rgba(120,220,240,.10); --warn-ink:#f3c31c;
   }}
   :root[data-theme="light"]{ --bg:#e7eef2; --surface:#ffffff; --surface-2:#eef3f6; --ink:#12222c;
     --ink-soft:#46606e; --ink-faint:#7d95a3; --line:#d4e0e6; --line-strong:#b7ccd4; --accent:#0d9aab;
     --accent-ink:#0a7885; --shadow:24px 32px 60px -30px rgba(12,40,55,.24); --dim:.4;
-    --gold:#c98a12; --gold-deep:#8f6109; --edge:rgba(255,255,255,.8); }
+    --gold:#c98a12; --gold-deep:#8f6109; --edge:rgba(255,255,255,.8); --warn-ink:#8f6109; }
   :root[data-theme="dark"]{ --bg:#08151f; --surface:#12242f; --surface-2:#0e1e28; --ink:#eef6fa;
     --ink-soft:#a8bcc8; --ink-faint:#66808f; --line:#143b45; --line-strong:#1d5560; --accent:#12e3f5;
     --accent-ink:#5fe6f4; --shadow:24px 34px 70px -34px rgba(0,6,12,.85); --dim:.3;
-    --gold:#ffb020; --gold-deep:#b8791a; --edge:rgba(120,220,240,.10); }
+    --gold:#ffb020; --gold-deep:#b8791a; --edge:rgba(120,220,240,.10); --warn-ink:#f3c31c; }
 
   * { box-sizing: border-box; }
   html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
@@ -1943,7 +1943,7 @@ label.acctsetrow { align-items:center; }
   .sdstock.out{ color:var(--el-Fire); } .sdstock.out i{ background:var(--el-Fire); }
   /* --r-SP is a green, so the amber state was reading almost the same as in stock. The Electric element
      colour is the app's own amber and is defined in both themes. */
-  .sdstock.unk{ color:var(--el-Electric,#f5b83d); } .sdstock.unk i{ background:var(--el-Electric,#f5b83d); }
+  .sdstock.unk{ color:var(--warn-ink,#8f6109); } .sdstock.unk i{ background:var(--el-Electric,#f5b83d); }
   /* --muted does not exist, so this inherited the state colour and the small print shouted as loudly as
      the verdict. --ink-faint is the real quiet text token. */
   .sdstock small{ font-weight:500; color:var(--ink-faint); }
@@ -2962,7 +2962,7 @@ label.acctsetrow { align-items:center; }
       <div id="notifGroup" style="display:none;flex-direction:column;gap:14px">
         <div class="setcat">Notifications</div>
         <div class="sdesc" style="margin:0 2px">Push notifications only · no email alerts. Choose which alerts this device can receive.</div>
-        <div class="sdesc" id="notifOsOff" hidden style="margin:0 2px;color:var(--el-Electric,#f5b83d)">Notifications are turned off for SphereDex in your phone settings, so none of these alerts can reach you. Turn them on there to get them.</div>
+        <div class="sdesc" id="notifOsOff" hidden style="margin:0 2px;color:var(--warn-ink,#8f6109)">Notifications are turned off for SphereDex in your phone settings, so none of these alerts can reach you. Turn them on there to get them.</div>
         <div class="setrow">
           <div class="setinfo"><div class="stitle">New release alerts</div><div class="sdesc">Get notified when a new Palworld TCG set or product is announced.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifReleases"><span class="track"></span></label>
@@ -3514,6 +3514,7 @@ label.acctsetrow { align-items:center; }
   // (just after the AUTH block) and migrateDeviceAlerts (in the Settings block) read these at startup, and the
   // 2.4.1 blank app came from a top level statement reading a var that was only assigned further down.
   var ALERT_AT_MAX=4102444800000, ALERT_OFF_KEEP=200, PUSH_GEN=0, OTHER_TAB=false, SIGNING_OUT=false, ALERTS_MOVED=false,
+      LAST_LS_WRITE=null,
       STASH_PRE="palvault-stash:", ACCT_BASE_KEY="palvault-acct-base",
       PERSON_KEYS=["displayName","defaultAddCol","sphere","sphereSeen"], PERSON_NOTIF=["weeklyDigest","milestones","availability"];
   // Guarded localStorage for the small prefs: a browser that blocks site data throws on every access, which
@@ -3636,7 +3637,8 @@ label.acctsetrow { align-items:center; }
   var V2_PREVIEW = /(?:^|&)preview=v2(?:&|$)/i.test((window.location.search||"").replace(/^\?/,"")) && !window.IS_IOS && !window.IS_NATIVE;
   var STATE = loadState();
   function loadState(){
-    var s=null; try { s=JSON.parse(localStorage.getItem(LS_KEY)); } catch(e){}
+    var s=null, raw=null; try { raw=localStorage.getItem(LS_KEY); s=JSON.parse(raw); } catch(e){}
+    LAST_LS_WRITE=raw;   // what this tab knows is on disk: any other value there was written by another tab
     if (s && s.cols && s.cols.length) return s;
     var old=null; try { old=JSON.parse(localStorage.getItem("paldeck-ebp01-v2")); } catch(e){}
     return { cols:[{ id:"c"+Date.now(), name:"My Collection", own: (old&&typeof old==="object")?old:{} }], active:null };
@@ -3733,7 +3735,7 @@ label.acctsetrow { align-items:center; }
     // The push is marked first, so AUTH.dirty is on disk before the edit is: a crash between the two writes
     // used to leave a saved edit that nothing would ever push.
     try{ if(typeof pushCloud==="function") pushCloud(); }catch(_){}
-    try{ localStorage.setItem(LS_KEY, stateJSON()); }
+    try{ var js=stateJSON(); localStorage.setItem(LS_KEY, js); LAST_LS_WRITE=js; }
     catch(e){
       if(!storageWarned){ storageWarned=true; try{ toast("This device will not let the app save. Sign in to keep your collection safe."); }catch(_){} }
     }
@@ -4120,7 +4122,7 @@ label.acctsetrow { align-items:center; }
   // it is safe to run during early init (save()/snapshot() are defined later).
   function reconcileEdition(){ var applied=(lsGet("palvault-ed-applied")==="jp")?"jp":"en";
     if(applied!==SEAL_ED){ swapCardEdition(applied, SEAL_ED);
-      var ok=false; try{ localStorage.setItem(LS_KEY, stateJSON()); ok=true; }catch(_){}
+      var ok=false; try{ var js=stateJSON(); localStorage.setItem(LS_KEY, js); LAST_LS_WRITE=js; ok=true; }catch(_){}
       if(ok) lsSet("palvault-ed-applied", SEAL_ED); else LS_MEM["palvault-ed-applied"]=SEAL_ED; } }   // flag only persists with the STATE it describes
   // The single entry point both toggles (#cardEd, #sealEd) call: switch edition, swap prices, resync
   // the selectors, repaint everything that shows a price.
@@ -4226,8 +4228,11 @@ label.acctsetrow { align-items:center; }
   function collectionMilestoneCount(){ return CARDS.filter(function(c){ return own[c.id]&&ownsForCompletion(c); }).length; }
   // The follow lists come from STATE.alerts (this device's owner), each in its own try with an empty
   // fallback, so a bad record can never stop the release, news and other categories being sent.
-  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ var prefs=Object.assign({},SETTINGS.notif,{region:ebayReg()}); try{ prefs.stockWatch=stockOnList(STATE.alerts); }catch(e1){ prefs.stockWatch=[]; } try{ prefs.priceWatch=sentPriceAlerts(); }catch(e2){ prefs.priceWatch=[]; } if(prefs.weeklyDigest===true) prefs.weeklyStats=weeklyCollectionStats(); else delete prefs.weeklyStats; if(prefs.milestones===true) prefs.milestoneCount=collectionMilestoneCount(); else delete prefs.milestoneCount; if(prefs.availability===true) prefs.availabilityWatch=Object.keys(STATE.wishlist||{}).filter(function(id){return !!cardById(id);}).slice(0,300); else delete prefs.availabilityWatch; np.setPrefs(JSON.stringify(prefs)); }catch(e){} } }
+  function syncPushPrefs(){ var np=nativePushIface(); if(np){ try{ var prefs=Object.assign({},SETTINGS.notif,{region:ebayReg()}); try{ prefs.stockWatch=stockOnList(STATE.alerts); }catch(e1){ prefs.stockWatch=[]; } try{ prefs.priceWatch=sentPriceAlerts(); }catch(e2){ prefs.priceWatch=[]; } if(prefs.weeklyDigest===true) prefs.weeklyStats=weeklyCollectionStats(); else delete prefs.weeklyStats; if(prefs.milestones===true){ prefs.milestoneCount=collectionMilestoneCount(); try{ prefs.milestoneKey=milestoneKey(); }catch(e3){} } else { delete prefs.milestoneCount; delete prefs.milestoneKey; } if(prefs.availability===true) prefs.availabilityWatch=Object.keys(STATE.wishlist||{}).filter(function(id){return !!cardById(id);}).slice(0,300); else delete prefs.availabilityWatch; np.setPrefs(JSON.stringify(prefs)); }catch(e){} } }
   function stockAlertOn(id){ return stockOnList(STATE.alerts).indexOf(id)>=0; }
+  // A random key per data owner (never the email), so the push service can tell a different person signing in
+  // from a real milestone crossing. Kept in STATE._local, so it travels with the owner's set aside copy.
+  function milestoneKey(){ var l=loc(); if(typeof l.mk!=="string" || !l.mk){ l.mk="m"+Date.now().toString(36)+Math.floor(Math.random()*1e9).toString(36); writeStateRaw(); } return l.mk; }
   // Whether the PHONE lets SphereDex show notifications at all. The Android and iOS shells report it once the
   // page has loaded and again each time the app comes back to the front, because it is changed in the phone's
   // own settings, outside the app. Until a shell reports it (the web, or a shell older than this page) it is
@@ -4244,7 +4249,7 @@ label.acctsetrow { align-items:center; }
   function stockAlertNote(p){
     if(!stockAlertBtn(p)) return "";
     var on=stockAlertOn(p.id);
-    return '<p class="qsub" id="sdStockNote" data-on="'+(on?1:0)+'"'+((on&&notifBlocked())?'':' hidden')+' style="margin:8px 0 0;color:var(--el-Electric,#f5b83d)">'+esc(NOTIF_OFF_NOTE)+'</p>';
+    return '<p class="qsub" id="sdStockNote" data-on="'+(on?1:0)+'"'+((on&&notifBlocked())?'':' hidden')+' style="margin:8px 0 0;color:var(--warn-ink,#8f6109)">'+esc(NOTIF_OFF_NOTE)+'</p>';
   }
   function stockAlertToast(on, pre){
     if(!on) return "Stock alert removed.";
@@ -4363,7 +4368,7 @@ label.acctsetrow { align-items:center; }
     paintNotifSwitches(); renderPriceAlertList(); syncPushPrefs();
   }
   // 2.4.1 and older kept follows in this device's settings (notif.stockWatch / priceWatch). Fold them into
-  // STATE.alerts once, stamped now (additions win, so a follow is never lost), skipping any already on. It runs
+  // STATE.alerts once, stamped as old as they can be (see below), skipping any the record already decides. It runs
   // at startup inside the Settings block, so it uses no AUTH, $, save or push. The record is written first and
   // the device lists are emptied only once it is safely stored, so a full disk simply tries again next launch.
   function migrateDeviceAlerts(){
@@ -4376,13 +4381,16 @@ label.acctsetrow { align-items:center; }
     if(n.stock!==true && sw.length) n.stockOff=true;
     if(n.price!==true && pw.length) n.priceOff=true;
     var r=alertRec();
+    // Stamped as old as they can be: a stock follow at 1 (2.4.1 kept no date), a price alert at the time 2.4.1
+    // set it. So an unfollow made on a phone that updated first always wins, and an entry the record already
+    // holds, on or off, is never overridden.
     sw.forEach(function(id){ if(typeof id!=="string" || !id || id==="__proto__") return;
-      var e=hasOwn(r.stock, id)?r.stock[id]:null; if(alertEntOk(e, false) && e.on) return;
-      r.stock[id]={on:true, at:alertStamp(r)}; added++; });
+      if(alertEntOk(hasOwn(r.stock, id)?r.stock[id]:null, false)) return;
+      r.stock[id]={on:true, at:1}; added++; });
     pw.forEach(function(x){ var a=normPriceAlert(x); if(!a) return; var k=paKey(a), e=hasOwn(r.price, k)?r.price[k]:null;
-      if(alertEntOk(e, true) && e.on) return;
-      r.price[k]={on:true, at:alertStamp(r), a:a}; added++; });
-    var ok=false; try{ localStorage.setItem(LS_KEY, stateJSON()); ok=true; }catch(e){}
+      if(alertEntOk(e, true)) return;
+      var t=+a.at; r.price[k]={on:true, at:(isFinite(t) && t>0) ? Math.min(t, Date.now(), ALERT_AT_MAX) : 1, a:a}; added++; });
+    var ok=false; try{ var js=stateJSON(); localStorage.setItem(LS_KEY, js); LAST_LS_WRITE=js; ok=true; }catch(e){}
     if(ok){ n.stockWatch=[]; n.priceWatch=[]; try{ localStorage.setItem("palvault-settings", JSON.stringify(SETTINGS)); }catch(e){} }
     if(added) ALERTS_MOVED=true;
   }
@@ -4394,7 +4402,7 @@ label.acctsetrow { align-items:center; }
   // to this map only after stock.ts has shops for it, and vice versa, in the same change.
     // A preorder product belongs here as soon as the checker polls it: the sheet then says whether its pre
     // orders are actually open, per market, instead of leaving the buyer to try every shop.
-  var STOCK_ALL_IDS=["box-ebp01","box-ebp01-2e","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp"];
+  var STOCK_ALL_IDS=["box-ebp01","box-ebp01-2e","pack-ebp01","td-rb","td-gp","ss-vol1","box-bp02","pack-bp02","td-ea-rg","td-ea-bp","box-bp03","pack-bp03"];
   var STOCK_TRACKED={
     "co.uk":STOCK_ALL_IDS, "com":STOCK_ALL_IDS, "ca":STOCK_ALL_IDS, "com.au":STOCK_ALL_IDS,
     "de":STOCK_ALL_IDS, "fr":STOCK_ALL_IDS, "it":STOCK_ALL_IDS, "es":STOCK_ALL_IDS
@@ -4470,12 +4478,13 @@ label.acctsetrow { align-items:center; }
   // Settings > Notifications list: every alert (card, condition, remove); tap a row to open its card.
   function renderPriceAlertList(){
     var host=$("priceAlertList"); if(!host) return;
-    var rows=priceOnList(STATE.alerts).filter(function(x){ return !!cardById(x.a.id); });
+    var rows=priceOnList(STATE.alerts);
     if(!rows.length){ host.innerHTML='<div class="paempty">No price alerts yet. Open a card and tap Price alert to set one.</div>'; return; }
-    // The phone sends only the newest PRICE_ALERT_MAX, so any older ones are shown as paused, not hidden.
-    var sent={}; rows.slice(-PRICE_ALERT_MAX).forEach(function(x){ sent[x.key]=1; });
+    // The phone sends only the newest PRICE_ALERT_MAX for cards it knows, so any older ones are shown as paused,
+    // and an alert for a card this phone does not have is still listed, so it can be removed.
+    var sent={}; rows.filter(function(x){ return !!cardById(x.a.id); }).slice(-PRICE_ALERT_MAX).forEach(function(x){ sent[x.key]=1; });
     host.innerHTML=rows.map(function(x){ var a=x.a, c=cardById(a.id);
-      return '<div class="parow tap" role="button" tabindex="0" data-k="'+esc(x.key)+'"><div class="patxt"><b>'+esc(c?c.name:a.id)+'</b><span>'+esc((c?c.rare+' · ':'')+priceAlertText(a)+(sent[x.key]===1?'':' · Paused. Only '+PRICE_ALERT_MAX+' price alerts are checked.'))+'</span></div>'+
+      return '<div class="parow tap" role="button" tabindex="0" data-k="'+esc(x.key)+'"><div class="patxt"><b>'+esc(c?c.name:a.id)+'</b><span>'+esc((c?c.rare+' · ':'')+priceAlertText(a)+(!c?' · Not on this phone yet':(sent[x.key]===1?'':' · Paused. Only '+PRICE_ALERT_MAX+' price alerts are checked.')))+'</span></div>'+
         '<button class="pax" type="button" data-k="'+esc(x.key)+'" aria-label="Remove price alert">✕</button></div>'; }).join("");
     Array.prototype.forEach.call(host.querySelectorAll(".parow"), function(row){
       var k=row.getAttribute("data-k");
@@ -4502,8 +4511,8 @@ label.acctsetrow { align-items:center; }
     // {ok, alert, msg}: msg is the preview when ok, otherwise why Save is off.
     function check(){
       if(!(cur>0)) return {msg:"This card has no price yet, so an alert can't be set. Try again after the next price update."};
-      var nOn=priceOnList(STATE.alerts).length;
-      if(nOn>=PRICE_ALERT_MAX) return {msg:"You have "+nOn+" price alerts, and "+PRICE_ALERT_MAX+" is the most. Remove one to add another."};
+      var nOn=priceOnList(STATE.alerts).filter(function(x){ return !!cardById(x.a.id); }).length, need=nOn-PRICE_ALERT_MAX+1;
+      if(need>0) return {msg:"You have "+nOn+" price alerts, and "+PRICE_ALERT_MAX+" is the most. Remove "+(need===1?"one":need)+" to add another."};
       var v=parseFloat(String(inp.value||"").replace(",","."));
       if(!isFinite(v) || v<=0) return {msg:isPct()?"Enter a percent.":"Enter a price."};
       v=Math.round(v*100)/100;
@@ -4621,7 +4630,15 @@ label.acctsetrow { align-items:center; }
     if(a.ebayRegion!==undefined){
       if(typeof renderPriceAlertList==="function") renderPriceAlertList();
       if(typeof syncPushPrefs==="function") syncPushPrefs();   // stock alerts were still polling the old market
-    } }
+    }
+    // The pickers are painted once at startup, so the account's answers have to be put into them here too.
+    var _er=document.getElementById("setEbayRegion"); if(_er) _er.value=ebayReg();
+    var _gr=document.getElementById("setGrader"); if(_gr) _gr.value=SETTINGS.defaultGrader||"PSA";
+    var _pm=document.getElementById("setPriceMode"); if(_pm) _pm.value=(SETTINGS.priceMode==="sold")?"sold":"live";
+    var _cs=document.getElementById("curSel"); if(_cs && CUR) _cs.value=CUR.code;
+    var _se=document.getElementById("sealEd"); if(_se) _se.value=SEAL_ED;
+    var _ce=document.getElementById("cardEd"); if(_ce) _ce.value=SEAL_ED;
+    if(typeof renderPriceSources==="function") renderPriceSources(); }
   var viewMode = lsGet("palvault-view") || SETTINGS.defaultView || "auto";
   var $ = function(id){ return document.getElementById(id); };
   var grid = $("grid");
@@ -7546,9 +7563,12 @@ label.acctsetrow { align-items:center; }
     }
     return '<li class="'+cls+'" title="'+word+'">'+inner+'</li>';
   }
+  // A pre order no shop row covers yet (no reading, or no shop lists it) still has somewhere to go: the official
+  // product page. Never eBay.
+  function stockOfficialHtml(){ return '<p class="sdwhen"><a href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener">Official product page \u2197</a></p>'; }
   function stockGlanceHtml(id, pre){
     var g=stockGlance(id, pre);
-    if(!g) return "";
+    if(!g) return pre ? stockOfficialHtml() : "";
     var rows=stockShops(id), i, have=[], rest=[];
     // A headline that says in stock while not one shop on the list confirms it is a contradiction, and the
     // headline is the half more likely to be out of date: it is only rewritten when some shop still lists
@@ -7596,6 +7616,7 @@ label.acctsetrow { align-items:center; }
     var known=!!(STOCK.state && STOCK.state[id]);
     var ago=(!known && !rows.length) ? "" : stockAgo(stockSeen(id));
     if(ago) out+='<p class="sdwhen">Last checked '+esc(ago)+(rows.length?' \u00b7 rechecked every 30 minutes':'')+'</p>';
+    if(pre && !rows.length) out+=stockOfficialHtml();
     return out;
   }
   // Whether the other shops list on the sheet showing this product is open right now.
@@ -11568,7 +11589,7 @@ label.acctsetrow { align-items:center; }
   // ---- Releases ----
   function renderReleases(){
     var sp=setProgress(), tl=$("timeline"); if(!tl) return;
-    var upcomingNames={}; SEALED.forEach(function(p){ if(preOrToday(p)) upcomingNames[p.set||p.name]=true; });
+    var upcomingNames={}; SEALED.forEach(function(p){ if(preOrToday(p)) upcomingNames[releaseName(p)]=true; });
     tl.innerHTML='<div class="releasehero"><div><div class="releaseeyebrow">'+icon('calendar')+' The road ahead</div><h3>Every set, in order</h3><p>Track every set, see what you have collected, and get ready for what launches next.</p></div><div class="releasecount"><b>'+Object.keys(upcomingNames).length+'</b><span>upcoming releases</span></div></div><div class="releasegroup-label">Card sets</div>';
     SET_ORDER.forEach(function(k){
       var m=SET_META[k]||{}, box=boxSrc(k), owned=sp.owned[k], tot=sp.tot[k], pct=pctOf(owned,tot);
@@ -11598,8 +11619,8 @@ label.acctsetrow { align-items:center; }
     // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
     var ugroups=[], ugmap={};
     SEALED.filter(preOrToday).forEach(function(p){
-      var pd=sealDate(p), key=(p.set||p.name)+"|"+(pd||""), g=ugmap[key];
-      if(!g){ g=ugmap[key]={ title:(p.set||p.name), date:pd, box:p.box, banner:p.banner, items:[], first:p }; ugroups.push(g); }
+      var pd=sealDate(p), nm=releaseName(p), key=nm+"|"+(pd||""), g=ugmap[key];
+      if(!g){ g=ugmap[key]={ title:nm, date:pd, box:p.box, banner:p.banner, items:[], first:p }; ugroups.push(g); }
       var typ=(p.set&&p.name)?p.name:(p.sub||"");   // the product type shown under the set headline
       if(typ && g.items.indexOf(typ)<0) g.items.push(typ);
       if(!g.box && p.box) g.box=p.box;
@@ -11608,7 +11629,7 @@ label.acctsetrow { align-items:center; }
     if(ugroups.length) tl.insertAdjacentHTML("beforeend",'<div class="releasegroup-label">Coming up · preorder products</div>');
     ugroups.sort(function(a,b){ return upDate(a.date)-upDate(b.date); }).forEach(function(g){
       // Timeline shows the official promo banner (like the released sets); fall back to the product tile then a placeholder.
-      var img=(window.CARD_IMG&&(window.CARD_IMG[g.banner]||window.CARD_IMG[g.box]))||"", subline=g.items.join(" · ");
+      var C=window.CARD_IMG, img=(C&&((g.first&&g.first.rel&&C[g.box])||C[g.banner]||C[g.box]))||"", subline=g.items.join(" · ");   // a reprint shows its own box
       var up=document.createElement("div"); up.className="trow tupcoming clickable";
       up.innerHTML='<div class="tbox">'+(img?'<img src="'+img+'" alt="'+esc(g.title)+'">':'<span class="ph">Soon</span>')+'</div>'+
         '<div class="tinfo"><div class="treleasetop"><span class="tbadge soon">✦ On the horizon</span><span class="tdate">'+esc(g.date||"Date TBA")+'</span></div><h3>'+esc(g.title)+' →</h3>'+
@@ -12962,7 +12983,7 @@ label.acctsetrow { align-items:center; }
       // Only for the session that asked, and only if nothing synced meanwhile: a push that started or finished
       // since this was asked already resolves the two copies, through its 200 or its 409 merge.
       if(OTHER_TAB || AUTH.token!==tok || !r.ok) return;
-      if(PUSH_GEN!==gen0 || pushing || AUTH.serverRev!==rev0) return;
+      if(PUSH_GEN!==gen0 || (pushing && pushTok===tok) || AUTH.serverRev!==rev0) return;   // a previous session's push settles nothing here
       var remote=r.body.blob, rev=r.body.rev||0;
       if(remote && remote.cols){
         // Adopting is only safe when this device has nothing the server has not already accepted. A fresh
@@ -12980,7 +13001,7 @@ label.acctsetrow { align-items:center; }
       try{ joinLegacyIfOurs(remote); }catch(e){ try{ reportError(e,"joinLegacy"); }catch(_){} }
     });
   }
-  var pushTimer=null, pushing=false;
+  var pushTimer=null, pushing=false, pushTok=null;
   function pushCloud(now, btn){
     if(OTHER_TAB || !AUTH || !AUTH.token || !apiBase()) return;
     PUSH_GEN++;                         // every edit since a push was sent: its 200 clears dirty only if none came after
@@ -12992,7 +13013,7 @@ label.acctsetrow { align-items:center; }
       if(pushing){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ pushTimer=null; doPush(); }, 800); if(done) done(); return; }
       pushing=true;
       setSyncStatus("syncing…");
-      var tok=AUTH.token, gen=PUSH_GEN, sent=JSON.parse(stateJSON());
+      var tok=AUTH.token, gen=PUSH_GEN, sent=JSON.parse(stateJSON()); pushTok=tok;
       delete sent._local;               // this device's own owner tag and sync position never leave it
       sent._acct=accountSettingsBlob(); var sentAcct=sent._acct;
       api("/api/state","PUT",{rev:AUTH.serverRev,blob:sent}).then(function(r){
@@ -13064,12 +13085,13 @@ label.acctsetrow { align-items:center; }
     clearTimeout(pushTimer); pushTimer=null;   // a debounced push must not outlive the session
     // The data and its sync position first. A session that never synced, or ended during the flush, leaves
     // the copy unsynced, so it is kept whole if someone else signs in here.
-    var l=loc();
-    if(tok && AUTH.token===tok){ l.rev=AUTH.serverRev||0; l.dirty=!!AUTH.dirty || !(AUTH.serverRev>0); }
+    var took=absorbOtherTab(), l=loc();
+    if(tok && AUTH.token===tok){ l.rev=AUTH.serverRev||0; l.dirty=!!AUTH.dirty || !(AUTH.serverRev>0) || took; }
     else l.dirty=true;
     writeStateRaw();
     var keep=AUTH.lastBackupAt;
     AUTH={serverRev:0}; if(keep) AUTH.lastBackupAt=keep; saveAuth();
+    if(took){ try{ repaintAll(); }catch(e){} }   // only now that the session is gone, so no push is queued
     renderAccount();
     toast(l.dirty ? "Signed out. Your latest changes are saved on this device and sync the next time you sign in here." : "Signed out (data stays on this device)");
   }
@@ -13081,7 +13103,7 @@ label.acctsetrow { align-items:center; }
     if(!AUTH.token || (usedTok && AUTH.token!==usedTok)) return;
     clearTimeout(pushTimer); pushTimer=null;
     // The data first. The account may have been deleted elsewhere, so this copy is always kept whole.
-    var l=loc(); l.rev=AUTH.serverRev||0; l.dirty=true; writeStateRaw();
+    absorbOtherTab(); var l=loc(); l.rev=AUTH.serverRev||0; l.dirty=true; writeStateRaw();
     // Keep the address and remember WHY we are signed out, so the Account page can say so and signing
     // back in is one field. A toast on its own was easy to miss, and missing it cost cloud sync.
     var keep=AUTH.lastBackupAt;
@@ -13119,7 +13141,19 @@ label.acctsetrow { align-items:center; }
     if(l.v===undefined) l.v=1;
     return l;
   }
-  function writeStateRaw(){ if(OTHER_TAB) return false; try{ localStorage.setItem(LS_KEY, stateJSON()); return true; }catch(e){ return false; } }
+  function writeStateRaw(){ if(OTHER_TAB) return false; try{ var js=stateJSON(); localStorage.setItem(LS_KEY, js); LAST_LS_WRITE=js; return true; }catch(e){ return false; } }
+  // On the web another tab of the same owner may have saved since this tab last wrote. Take its copy in (it
+  // wins a clash) before this tab writes over it, so its unsynced edits survive a sign out, an ended session,
+  // a delete or a switch here. Compared with what THIS tab last wrote, so one tab on its own never trips it.
+  function absorbOtherTab(){
+    var l=loc();
+    try{ var raw=localStorage.getItem(LS_KEY), disk=raw?JSON.parse(raw):null;
+      if(raw && raw!==LAST_LS_WRITE && plainObj(disk) && Array.isArray(disk.cols) && disk.cols.length && localOk(disk._local) && disk._local.email===l.email){
+        cleanCols(disk); var both=mergeStates(disk, STATE);
+        both._local=l; l.dirty=true; STATE=both; cleanCols(STATE); normTop(STATE); own=activeCol().own; addBaseline(); return true; }
+    }catch(e){}
+    return false;
+  }
   // An account that has never been on this device starts here. Never reads paldeck-ebp01-v2: that is the
   // previous owner's oldest data.
   function freshState(){ var id="c"+Date.now(); return {cols:[{id:id, name:"My Collection", own:{}}], active:id, wishlist:{}, wishlistAt:{}, fav:{}}; }
@@ -13155,6 +13189,7 @@ label.acctsetrow { align-items:center; }
     try{ applySphere(); }catch(e){}
     try{ renderSphereThemes(); }catch(e){}
   }
+  function acctDefaults(){ var r=detectRegion(); return {defaultGrader:"PSA", ebayRegion:r, priceMode:"live", mode:"trader", textScale:1, cardLang:"en", _currency:REGION_CUR[r]||"GBP", _edition:"en"}; }
   function maskEmail(em){ em=String(em||""); var i=em.indexOf("@"); return (i<1) ? "\u2022\u2022\u2022" : em.charAt(0)+"\u2022\u2022\u2022"+em.slice(i); }
   // Sign in as someone other than the owner of the data on this device. The outgoing copy is set aside whole,
   // then the incoming account's own copy (or an empty collection) is installed. Synchronous, and ordered so a
@@ -13163,19 +13198,15 @@ label.acctsetrow { align-items:center; }
   function switchOwner(em){
     var l=loc(), out=l.email;
     // W0: on the web, another tab may have saved this owner's copy since this tab last did.
-    try{ var raw=localStorage.getItem(LS_KEY), disk=raw?JSON.parse(raw):null;
-      if(plainObj(disk) && Array.isArray(disk.cols) && disk.cols.length && localOk(disk._local) && disk._local.email===out && raw!==stateJSON()){
-        cleanCols(disk); var mine=STATE._local, both=mergeStates(disk, STATE);
-        both._local=mine; mine.dirty=true; STATE=both; cleanCols(STATE); own=activeCol().own; addBaseline(); writeStateRaw(); }
-    }catch(e){}
+    if(absorbOtherTab()) writeStateRaw();
     // W1: set the outgoing copy aside, with its sync position.
     l=loc();
     if(AUTH.token && String(AUTH.email||"").toLowerCase()===l.email){ l.rev=AUTH.serverRev||0; l.dirty=!!AUTH.dirty || pushing || !!pushTimer; }
-    var at=Date.now(), person=personPart(), base=acctBase(), ed=lsGet("palvault-ed-applied");
-    if(!writeStash(out, {v:1, at:at, email:out, state:JSON.parse(stateJSON()), person:person, acctBase:base, edApplied:ed})){
+    var at=Date.now(), person=personPart(), base=acctBase(), acctNow=accountSettingsBlob(), ed=lsGet("palvault-ed-applied");
+    if(!writeStash(out, {v:1, at:at, email:out, state:JSON.parse(stateJSON()), person:person, acctBase:base, acct:acctNow, edApplied:ed})){
       // No room for the whole copy. Only a copy its account already holds may be kept as its follows alone.
       if(!(l.rev>0 && !l.dirty)) return false;
-      if(!writeStash(out, {v:1, at:at, email:out, state:null, alerts:STATE.alerts||null, person:person, acctBase:base, edApplied:ed})) return false;
+      if(!writeStash(out, {v:1, at:at, email:out, state:null, alerts:STATE.alerts||null, person:person, acctBase:base, acct:acctNow, edApplied:ed})) return false;
     }
     // W2: the incoming account's copy. This ONE write carries the data and its owner.
     var inc=readStash(em), has=!!(inc && plainObj(inc.state));
@@ -13201,7 +13232,11 @@ label.acctsetrow { align-items:center; }
     try{
       applyPerson(inc ? inc.person : null);
       var d0=loc().dirty;
-      if(inc && plainObj(inc.acctBase)) applyAccountSettings(inc.acctBase);
+      // The returning account's settings as it left them (an unsynced change included; the base stays the last
+      // agreed copy, so the next push sends it up). Someone new starts from the defaults, never the last person's.
+      if(inc && plainObj(inc.acct)) applyAccountSettings(inc.acct);
+      else if(inc && plainObj(inc.acctBase)) applyAccountSettings(inc.acctBase);
+      else applyAccountSettings(acctDefaults());
       reconcileEdition();
       if(loc().dirty!==d0){ loc().dirty=d0; writeStateRaw(); }   // applying the account's settings is not an edit of this copy
       resetScanSession(); refreshScanSessionUI(); closeScanReview();
@@ -13218,7 +13253,17 @@ label.acctsetrow { align-items:center; }
     var em=String(email||"").toLowerCase(), l=loc(), prev=l.email, kind, old=AUTH||{};
     clearTimeout(pushTimer); pushTimer=null;
     if(prev && prev!==em){ if(!switchOwner(em)) return ""; kind=(prev==="?")?"legacy":"switch"; }
-    else if(!prev){ l.email=em; l.dirty=true; writeStateRaw(); setAcctBase(null); kind="guest"; }   // data made before ever signing in joins the first account, as always
+    else if(!prev){
+      // Data made before ever signing in (or left by a deleted account) joins the first account, as always. If
+      // this account set an unsynced copy aside here earlier, that copy joins too, so its offline changes are kept.
+      var st=readStash(em), sp=null;
+      if(st && plainObj(st.state) && plainObj(st.state._local) && st.state._local.dirty===true){ sp=st.state; delete sp._local; delete sp._acct; if(!Array.isArray(sp.cols)) sp.cols=[]; cleanCols(sp);
+        var mg=mergeStates(sp, STATE); mg._local=l; STATE=mg; cleanCols(STATE); normTop(STATE); own=activeCol().own; addBaseline(); }
+      l.email=em; l.rev=0; l.dirty=true;
+      if(writeStateRaw() && st){ try{ localStorage.removeItem(STASH_PRE+em); }catch(e){} }
+      setAcctBase(null);
+      if(st && st.person){ try{ applyPerson(st.person); }catch(e){} }
+      kind="guest"; }
     else kind="same";
     l=loc();
     AUTH={token:token, email:em, serverRev:(l.rev>0?l.rev:0), dirty:(!!l.dirty || !(l.rev>0)), expired:false};
@@ -13236,7 +13281,10 @@ label.acctsetrow { align-items:center; }
     // Guest data with a live session can only be a guest join whose state write failed: it is that account's.
     if(AUTH.token && !l.email && em){ l.email=em; writeStateRaw(); }
     if(AUTH.token && l.email && l.email!==em){ AUTH={serverRev:0, email:AUTH.email||"", expired:true}; saveAuth(); }
-    if(ALERTS_MOVED){ if(AUTH.token){ AUTH.dirty=true; saveAuth(); } else { l.dirty=true; writeStateRaw(); } }
+    // Signed in, the startup pull's adopt merges the moved follows into the server copy and pushes them (it sees
+    // the two differ). Marking the session dirty instead sent a clean phone down the union merge, which brought
+    // back cards removed on other devices.
+    if(ALERTS_MOVED && !AUTH.token){ l.dirty=true; writeStateRaw(); }
     // Web: another tab that signs in or out changes who this data belongs to. This tab stops writing and reloads.
     window.addEventListener("storage", function(e){
       if(!e || e.key!=="palvault-auth") return;
@@ -13251,16 +13299,23 @@ label.acctsetrow { align-items:center; }
   function joinLegacyIfOurs(remote){
     var s=readStash("?"); if(!s || !plainObj(s.state) || !AUTH.token) return;
     var mine={}; ((remote && remote.cols) || []).forEach(function(c){ if(c && c.id) mine[c.id]=1; });
-    if((s.state.cols || []).some(function(c){ return !!(c && c.id && mine[c.id]===1); })) joinLegacy();
+    if((s.state.cols || []).some(function(c){ return !!(c && c.id && mine[c.id]===1); })) joinLegacy(true);
   }
-  function joinLegacy(){
+  function joinLegacy(ours){
     var s=readStash("?"); if(!s || !plainObj(s.state) || !AUTH.token) return;
     var keep=loc(), st=s.state; delete st._local; delete st._acct;
     if(!Array.isArray(st.cols)) st.cols=[];
     cleanCols(st);
     var m=mergeStates(STATE, st); m._local=keep;
     STATE=m; cleanCols(STATE); normTop(STATE); own=activeCol().own; addBaseline();
-    if(writeStateRaw()){ try{ localStorage.removeItem(STASH_PRE+"?"); }catch(e){} }   // the stash goes only once the union is stored
+    if(writeStateRaw()){
+      // Proven to be this account's own copy (it shares a collection id), so its personal settings come back too,
+      // without overwriting any the person has changed since signing in. Not for the manual button.
+      if(ours===true && plainObj(s.person)){ var cur=personPart(), dp={displayName:"", defaultAddCol:"ask", sphere:-1}, pn=plainObj(s.person.notif)?s.person.notif:{}, mix={notif:{}};
+        PERSON_KEYS.forEach(function(k){ mix[k]=(cur[k]===undefined || cur[k]===dp[k]) ? s.person[k] : cur[k]; });
+        PERSON_NOTIF.forEach(function(k){ mix.notif[k]=(cur.notif[k]===true || pn[k]===true); });
+        try{ applyPerson(mix); }catch(e){} }
+      try{ localStorage.removeItem(STASH_PRE+"?"); }catch(e){} }   // the stash goes only once the union is stored
     repaintAll(); alertsChanged(); pushCloud(true);
     toast("Added this device's earlier collection to your account");
   }
@@ -13268,7 +13323,7 @@ label.acctsetrow { align-items:center; }
   // here takes it in. The delete note says so before the tap.
   function deleteAccountDone(){
     clearTimeout(pushTimer); pushTimer=null;
-    var l=loc(), em=l.email;
+    absorbOtherTab(); var l=loc(), em=l.email;
     l.email=""; l.rev=0; l.dirty=true; writeStateRaw();
     if(em){ try{ localStorage.removeItem(STASH_PRE+em); }catch(e){} }
     setAcctBase(null);
@@ -13338,10 +13393,10 @@ label.acctsetrow { align-items:center; }
         $("delNo").onclick=delInitial; $("delYes").onclick=delGo;
       }
       function delGo(){
-        var y=$("delYes"), m=$("delMsg"); var doneDel=busyBtn(y, "Deleting…");
+        var y=$("delYes"), m=$("delMsg"); var doneDel=busyBtn(y, "Deleting…"), delEm=loc().email;
         function fail(t){ if(m){ m.textContent=t; m.style.color="var(--el-Fire)"; } doneDel(); }
         api("/api/account","DELETE").then(function(r){
-          if(r&&r.ok){ deleteAccountDone(); }
+          if(r&&r.ok){ if(loc().email===delEm) deleteAccountDone(); }   // someone else may have signed in meanwhile
           else fail((r&&r.body&&r.body.error)||"Couldn't delete the account. Please try again.");
         }).catch(function(){ fail(netErr()); });
       }
