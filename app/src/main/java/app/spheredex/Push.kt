@@ -96,14 +96,17 @@ object Push {
      * If all three attempts fail the next foreground re-sends it (the web layer calls setPrefs on wake).
      */
     fun registerToken(ctx: Context, token: String) {
-        val prefs = currentPrefs(ctx)
+        // The application context, not the activity, so a retry thread never keeps an activity alive.
+        val app = ctx.applicationContext
         Thread {
             var sent = false
             for (attempt in 0 until 3) {
                 if (attempt > 0) {
                     try { Thread.sleep(2000L * attempt) } catch (_: InterruptedException) { break }
                 }
-                if (postRegistration(token, prefs)) { sent = true; break }
+                // Read the prefs on every attempt. Captured once, an older chain's retry could land after a
+                // newer change and put the old follow list or market back on the server.
+                if (postRegistration(token, currentPrefs(app))) { sent = true; break }
             }
             if (!sent) Log.w(TAG, "register gave up after 3 attempts")
         }.start()

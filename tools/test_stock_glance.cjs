@@ -648,3 +648,129 @@ test('iOS reads the reply and retries', () => {
   assert.match(SWIFT, /attempt < 2/, 'a failure is retried rather than lost');
   assert.doesNotMatch(SWIFT, /URLSession\.shared\.dataTask\(with: req\)\.resume\(\)/, 'the fire and forget call is gone');
 });
+
+// ---- 2.4.2: release day, Sealed sort, and the bugs the 2.4.1 bug check found -------------------------
+// Each of these was found by running the whole app, not by a unit test, so each gets a guard here.
+const PUSH_KT = fs.readFileSync(path.join(root, 'app', 'src', 'main', 'java', 'app', 'spheredex', 'Push.kt'), 'utf8');
+const MONIX = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+
+function releaseDaySandbox(sealed, todayIso) {
+  const RealDate = Date;
+  const fixed = new RealDate(todayIso + 'T12:00:00').getTime();
+  function FakeDate(...a) { return a.length ? new RealDate(...a) : new RealDate(fixed); }
+  FakeDate.now = () => fixed; FakeDate.parse = RealDate.parse; FakeDate.UTC = RealDate.UTC;
+  FakeDate.prototype = RealDate.prototype;
+  const sb = { SEALED: sealed, RELEASE_OVERRIDES: {}, _MONIX: MONIX, Date: FakeDate, isNaN, Number, Math, String };
+  vm.createContext(sb);
+  vm.runInContext(['monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'releaseDaysUntil', 'preOrToday']
+    .map(appFunction).join('\n'), sb);
+  sb.applyReleased();
+  return sb;
+}
+
+test('release day still counts as release day, after the pre order flag has flipped', () => {
+  // applyReleased turns p.pre off at local midnight of the release day. Every "X today" line read p.pre, so
+  // they all went quiet on exactly the day they exist for.
+  const p = { id: 'ss', pre: true, date: 'Oct 16, 2026', set: 'Sleeve & Card Set Vol. 1' };
+  const day = releaseDaySandbox([p], '2026-10-16');
+  assert.equal(p.pre, false, 'on the day itself it is released');
+  assert.equal(day.preOrToday(p), true, 'but the countdown still sees it as today');
+  const after = releaseDaySandbox([{ id: 'ss', pre: true, date: 'Oct 16, 2026' }], '2026-10-17');
+  assert.equal(after.preOrToday(after.SEALED[0]), false, 'the next day it is simply released');
+  const before = releaseDaySandbox([{ id: 'ss', pre: true, date: 'Oct 16, 2026' }], '2026-10-15');
+  assert.equal(before.preOrToday(before.SEALED[0]), true, 'and before the day it is a pre order');
+  const never = releaseDaySandbox([{ id: 'box', pre: false, date: 'Jul 30, 2026' }], '2026-07-30');
+  assert.equal(never.preOrToday(never.SEALED[0]), false, 'a product never declared a pre order is never "today"');
+});
+
+test('every release day line reads the release day aware check, not the raw flag', () => {
+  const away = appFunction('awayRows');
+  assert.match(away, /!sealPreRaw\(p\)/, 'While you were away reads the declared pre order flag');
+  assert.doesNotMatch(away, /!p\.pre \|\|/, 'not the auto flipped one');
+  assert.match(appFunction('nextHomeReleaseGroup'), /preOrToday\(p\)/, 'the Home countdown');
+  const rel = appFunction('renderReleases');
+  assert.match(rel, /if\(preOrToday\(p\)\) upcomingNames/, 'the Releases upcoming names');
+  assert.match(rel, /SEALED\.filter\(preOrToday\)/, 'the Releases timeline rows');
+});
+
+test('news can no longer turn a released product back into a pre order', () => {
+  // It only moves the date of something still on pre order. A post release tournament announcement used to
+  // flip an owned box back to Preorder, hiding it from value and from its Owned stepper.
+  assert.match(appFunction('buildReleaseOverrides'), /if\(!p\.pre \|\| \(p\.srv && p\.date\)\) return;/);
+  assert.match(appFunction('refreshReleaseDates'), /\{ applyReleased\(\); if\(!buildReleaseOverrides/,
+    'the flag is brought up to date before the news is read');
+});
+
+test('a product with no RRP on file says n/a, not £0.00', () => {
+  assert.match(source, /'\+\(rrpShown>0\?money\(rrpShown\):"n\/a"\)\+'/);
+  assert.doesNotMatch(source, /<b class="glval">'\+money\(rrpShown\)\+'<\/b>/);
+});
+
+test('the Buy sealed row is gone from the released sheet, the Preorder row stays', () => {
+  // The live shop list names every shop that stocks it, with a price and a direct link.
+  assert.doesNotMatch(source, /Buy sealed/);
+  assert.match(source, /'<div class="buylabel">Preorder · '\+esc\(bl0\.region\)\+'<\/div>'/);
+});
+
+function sortSandbox(sealed, key, dir) {
+  const sb = {
+    SEALED: sealed, RELEASE_OVERRIDES: {}, sealSortKey: key, sealSortDir: dir, sealQ: '',
+    fold: (x) => String(x).toLowerCase(), sealHideOn: () => false, sealOwned: () => false,
+    sealItem: () => ({ qty: 0 }), sealUnit: () => 0, sealPrice: () => ({ rrp: 0 }), defaultRRP: () => 0,
+    Date, isNaN, Number, Math, String, Infinity,
+  };
+  vm.createContext(sb);
+  vm.runInContext(['monDateTime', 'sealDate', 'sealedList'].map(appFunction).join('\n'), sb);
+  return sb.sealedList().map((p) => p.id);
+}
+const SORT_SET = [
+  { id: 'promo', name: 'PR Card Pack', pre: false, date: '' },
+  { id: 'box1', name: 'Booster Box', pre: false, date: 'Jul 30, 2026' },
+  { id: 'later', name: 'Later Box', pre: true, date: 'Jan 29, 2027' },
+  { id: 'soon', name: 'Soon Set', pre: true, date: 'Oct 16, 2026' },
+  { id: 'vague', name: '2nd Edition Box', pre: true, date: 'late Oct 2026' },
+  { id: 'deck', name: 'Trial Deck', pre: false, date: 'Jul 30, 2026' },
+];
+
+test('Sealed sorts by release date by default, and the menu says so', () => {
+  assert.match(source, /var sealSortKey="release"/);
+  assert.match(source, /<option value="release" selected>Sort · Release date<\/option>/);
+  assert.match(source, /if\(so\)\{ so\.value=sealSortKey;/, 'the menu is set from the sort in use');
+});
+
+test('release date order keeps released products above every pre order', () => {
+  // A product with no date reads as infinitely late. One plain chronological run sank the released promo
+  // products below the "Preorders, coming soon" divider.
+  const ids = sortSandbox(SORT_SET.map((p) => ({ ...p })), 'release', 1);
+  assert.deepEqual(ids, ['box1', 'deck', 'promo', 'soon', 'vague', 'later'],
+    'released oldest first, undated released last of the released, then pre orders soonest first');
+  const rev = sortSandbox(SORT_SET.map((p) => ({ ...p })), 'release', -1);
+  assert.deepEqual(rev, ['promo', 'deck', 'box1', 'soon', 'vague', 'later'],
+    'Reverse flips the released, and pre orders still run soonest first below them');
+});
+
+test('the shop list expander says Hide once it is open', () => {
+  const fn = appFunction('wireStockShops');
+  assert.match(fn, /lbl\.nodeValue = open \? "Show the " : "Hide the "/);
+});
+
+test('shop names line up on the left, even on the centred sealed sheet', () => {
+  assert.match(source, /\.sdshops\{[^}]*text-align:left/);
+});
+
+test('old WebViews space a linked shop row like any other', () => {
+  assert.match(source, /\.no-flexgap \.sdshops li>a>\*\+\*\{margin-left:10px\}/, 'the fallback reaches inside the link');
+  assert.match(source, /\.sdshops\{[^}]*grid-gap:1px; gap:1px;/, 'and grid-gap keeps the dividers on older Chromium');
+});
+
+test('nothing calls Element.replaceWith, which Android 7 WebViews lack', () => {
+  const script = source.slice(source.indexOf('<script>'), source.lastIndexOf('</script>'));
+  assert.doesNotMatch(script, /\.replaceWith\(/);
+});
+
+test('Android sends the current prefs on every retry', () => {
+  // Captured once, an older chain's retry could land after a newer change and undo it on the server.
+  assert.match(PUSH_KT, /postRegistration\(token, currentPrefs\(app\)\)/);
+  assert.doesNotMatch(PUSH_KT, /val prefs = currentPrefs\(ctx\)/);
+  assert.match(PUSH_KT, /val app = ctx\.applicationContext/, 'and the retry thread does not hold the activity');
+});

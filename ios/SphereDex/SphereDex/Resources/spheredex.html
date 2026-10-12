@@ -1911,7 +1911,7 @@ label.acctsetrow { align-items:center; }
   .pxempty{ margin:18px 0; color:var(--muted); font-size:14px; }
   /* The shops behind the stock line. Rows carry a dot AND a word in their title attribute, because the
      colour alone would fail the people most likely to need this. */
-  .sdshops{ list-style:none; margin:11px 0 0; padding:0; display:grid; gap:1px;
+  .sdshops{ list-style:none; margin:11px 0 0; padding:0; display:grid; grid-gap:1px; gap:1px; text-align:left;
     border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--line); }
   /* Current Chrome marks [hidden] !important so display:grid cannot beat it. The old WebViews this
      app still runs on do not, and there display:grid wins and nothing ever folds away. Same reason
@@ -1932,8 +1932,7 @@ label.acctsetrow { align-items:center; }
     background:none; border:0; color:var(--ink-faint); font:inherit; font-size:12.5px; text-align:left; }
   .sdmore b{ color:var(--ink-soft); font-weight:600; }
   .sdwhen{ font-size:11.5px; color:var(--ink-faint); margin:10px 2px 0; }
-  .no-flexgap .sdshops li{gap:0}.no-flexgap .sdshops li>*+*{margin-left:10px}
-  .no-flexgap .sdshops li i{margin-right:10px}
+  .no-flexgap .sdshops li{gap:0}.no-flexgap .sdshops li>*+*,.no-flexgap .sdshops li>a>*+*{margin-left:10px}
   .no-flexgap .sdmore{gap:0}.no-flexgap .sdmore>*+*{margin-left:7px}
 
   /* Stock at a glance. A dot plus words: colour alone would fail anyone who cannot separate red from
@@ -2731,8 +2730,8 @@ label.acctsetrow { align-items:center; }
           <input id="sealSearch" type="search" placeholder="Search sealed products…" autocomplete="off" />
         </label>
         <select class="sortsel" id="sealSort" aria-label="Sort sealed products">
+          <option value="release" selected>Sort · Release date</option>
           <option value="name">Sort · Name</option>
-          <option value="release">Sort · Release date</option>
           <option value="value">Sort · Value</option>
           <option value="rrp">Sort · RRP</option>
           <option value="owned">Sort · Owned first</option>
@@ -3518,8 +3517,8 @@ label.acctsetrow { align-items:center; }
   var LS_OK=(function(){ try{ localStorage.setItem("palvault-probe","1"); localStorage.removeItem("palvault-probe"); return true; }catch(e){ return false; } })();
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
-  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.1.
-  var APP_VERSION = "2.4.1";
+  // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.2.
+  var APP_VERSION = "2.4.2";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -3564,6 +3563,11 @@ label.acctsetrow { align-items:center; }
       "Sealed products show which shops have them in stock",
       "Pre orders switch to released on their release day",
       "Fixes to the price chart colours and to stock alerts"
+    ],
+    "2.4.2": [
+      "Sealed products sort by release date",
+      "Release day shows on Home and Releases again",
+      "Fixes for stock alerts and older Android phones"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
@@ -4899,7 +4903,7 @@ label.acctsetrow { align-items:center; }
     }
     var old=grid.querySelector('.card[data-cid="'+c.id+'"]');
     if(!old){ render(); return; }
-    old.replaceWith(cardEl(c));
+    old.parentNode.replaceChild(cardEl(c), old);   // replaceWith is missing on Android 7 WebViews
     stats();   // keep the Collection dashboard (completion, sets, binder value) in sync
     if(recentFilterOn()) recentCountLine(Array.prototype.map.call(grid.querySelectorAll(".card[data-cid]"), function(el){ return el.getAttribute("data-cid"); }));
   }
@@ -6464,7 +6468,7 @@ label.acctsetrow { align-items:center; }
   (function(){
     var ss=$("sealSearch"), so=$("sealSort"), sd=$("sealSortDir"), se=$("sealEd");
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
-    if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
+    if(so){ so.value=sealSortKey; so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); }); }
     if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ setEdition(e.target.value); }); }
     var sv2=$("sealView"); if(sv2){ sv2.value=(lsGet("palvault-sealview")||"auto"); sv2.addEventListener("change", function(e){ sealView=e.target.value; lsSet("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = "⇅ Reverse"; sd.classList.toggle("on", sealSortDir<0); sd.setAttribute("aria-pressed", sealSortDir<0?"true":"false"); } sp();
@@ -6983,7 +6987,7 @@ label.acctsetrow { align-items:center; }
     var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
     var changed=false;
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
-    SEALED.forEach(function(p){ if(!sealPreRaw(p) || (p.srv && p.date)) return;
+    SEALED.forEach(function(p){ if(!p.pre || (p.srv && p.date)) return;   // released: news cannot un-release it
       var keys=(p.nk&&p.nk.length)?p.nk:[p.set||p.name];
       for(var i=0;i<items.length;i++){ var it=items[i]||{};
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
@@ -6996,7 +7000,7 @@ label.acctsetrow { align-items:center; }
     return changed;
   }
   // Rebuild overrides from a news list and repaint Sealed / Releases if a date actually moved.
-  function refreshReleaseDates(items){ if(!buildReleaseOverrides(items)) return;
+  function refreshReleaseDates(items){ applyReleased(); if(!buildReleaseOverrides(items)) return;
     applyReleased();          // a date that moved may have just released a product, or put one back
     saveReleaseOverrides();   // hold the resolved date after the announcing item drops out of the feed
     try{ if(_curPage==="sealed" && typeof renderSealed==="function") renderSealed(); }catch(_){}
@@ -7108,7 +7112,7 @@ label.acctsetrow { align-items:center; }
       return pr;
     }).catch(function(){ delete _sealPulling[p.id]; done(); paintSlots(false); if(btn) toast("Price pull failed"); });
   }
-  var sealSortKey="name", sealSortDir=1, sealQ="", sealView=(lsGet("palvault-sealview")||"auto");
+  var sealSortKey="release", sealSortDir=1, sealQ="", sealView=(lsGet("palvault-sealview")||"auto");
   // Hide unowned keeps only the products you hold at least one of. A preorder has no count yet, so it
   // goes too. Reads the map directly: sealItem() would create an empty entry for every product it is asked about.
   function sealHideOn(){ return lsGet("palvault-sealhide")==="1"; }
@@ -7120,11 +7124,17 @@ label.acctsetrow { align-items:center; }
     var all=SEALED.filter(function(p){ return (!q || fold((p.set||"")+" "+p.name+" "+(p.sub||"")).indexOf(q)!==-1) && (!hide || sealOwned(p)); });
     var released=all.filter(function(p){ return !p.pre; }), pre=all.filter(function(p){ return p.pre; });
     function relDate(p){ return monDateTime(sealDate(p)); }
-    // Release-date sort: one chronological run of everything (released then upcoming), oldest first (reverse for newest first).
+    // Release-date sort: released products by date, oldest first (Reverse for newest first), then pre orders
+    // soonest first, exactly as the other sorts place them. Kept as two runs rather than one chronological run,
+    // because a product with no date reads as infinitely late, which would sink a released promo below the
+    // "Preorders, coming soon" divider.
     if(sealSortKey==="release"){
-      var chron=all.slice().sort(function(a,b){ return (relDate(a)-relDate(b)) || a.name.localeCompare(b.name); });
-      if(sealSortDir<0) chron.reverse();
-      return chron;
+      var byDate=function(a,b){ var da=relDate(a), db=relDate(b);
+        return (da===db ? 0 : (da<db ? -1 : 1)) || a.name.localeCompare(b.name); };
+      released.sort(byDate);
+      if(sealSortDir<0) released.reverse();
+      pre.sort(byDate);
+      return released.concat(pre);
     }
     released.sort(function(a,b){ var sa=sealItem(a.id), sb=sealItem(b.id);
       if(sealSortKey==="value") return ((+sb.qty||0)*sealUnit(sb))-((+sa.qty||0)*sealUnit(sa));   // mode-aware, matches the shown value
@@ -7415,6 +7425,8 @@ label.acctsetrow { align-items:center; }
       rest.hidden=open;
       btn.setAttribute("aria-expanded", open?"false":"true");
       btn.firstChild.textContent = open ? "\u25be" : "\u25b4";
+      var lbl=btn.lastChild && btn.lastChild.firstChild;
+      if(lbl && lbl.nodeType===3) lbl.nodeValue = open ? "Show the " : "Hide the ";
     };
   }
   // Fills the stock line once the fetch lands, but only on the sheet it was asked for: the line carries the
@@ -7455,7 +7467,7 @@ label.acctsetrow { align-items:center; }
       return;
     }
     var s=sealItem(p.id), pr=sealPrice(s), rrpShown=(+pr.rrp||defaultRRP(p.id));
-    var box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"", bl=sealBuyLinks(p);
+    var box=(window.CARD_IMG&&window.CARD_IMG[p.box])?window.CARD_IMG[p.box]:"";
     $("mMain").innerHTML=
       '<div class="mclosewrap"><button class="mclose" id="mClose" type="button" aria-label="Close">✕</button></div>'+
       '<div class="sealdet">'+
@@ -7465,7 +7477,7 @@ label.acctsetrow { align-items:center; }
         (sealDate(p)?'<div class="predate" style="margin:2px 0 10px">Released '+esc(sealDate(p))+'</div>':'')+
         (function(){ var willLoad=apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000);
         return '<div class="bubrow glance sealbubs">'+
-          '<a class="bub glancebub" id="sdRrp" href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener"><span class="gllab">RRP ↗</span><b class="glval">'+money(rrpShown)+'</b></a>'+
+          '<a class="bub glancebub" id="sdRrp" href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener"><span class="gllab">RRP ↗</span><b class="glval">'+(rrpShown>0?money(rrpShown):"n/a")+'</b></a>'+
           '<button class="bub glancebub priceui" id="sdSoldBtn" type="button"><span class="gllab">Last 5 sold</span><b class="glval" id="sdSold">'+(willLoad?SPIN:((+pr.sold>0)?money(pr.sold):"n/a"))+'</b></button>'+
           '<button class="bub glancebub priceui" id="sdListBtn" type="button"><span class="gllab">Live listings</span><b class="glval" id="sdList">'+(willLoad?SPIN:((+pr.list>0)?money(pr.list):"n/a"))+'</b></button>'+
           '<button class="bub glancebub priceui" id="sdValBtn" type="button"><span class="gllab">Your value</span><b class="glval" id="sdVal">'+money((+s.qty||0)*sealUnit(s))+'</b></button>'+
@@ -7482,8 +7494,6 @@ label.acctsetrow { align-items:center; }
             stockAlertBtn(p)+
           '</div>'+
           '<p class="qsub priceui" style="margin:8px 0 0;font-size:.76rem">Last 5 sold and live listings are pulled from the market, the same as cards. Your value uses your chosen price mode ('+(priceMode()==="sold"?"last sold":"live listings")+', change it in Settings).</p>'+
-          '<div class="buylabel">Buy sealed · '+esc(bl.region)+' market</div>'+
-          '<div class="buyrow">'+bl.links.filter(function(l){ return l.name!=="Official" && l.name.slice(0,4)!=="eBay"; }).map(function(l){ return '<a class="buybtn" href="'+l.url+'" target="_blank" rel="noopener">'+esc(l.name)+' <span class="lnk">↗</span></a>'; }).join('')+'</div>'+
         '</div>'+
       '</div>';
     _sealDetailId=p.id;   // let pullSealed update this sheet's price slots in place
@@ -10994,7 +11004,7 @@ label.acctsetrow { align-items:center; }
     try{
       var seenSet={};
       SEALED.forEach(function(p){
-        if(!p || !p.pre || seenSet[p.set]) return;
+        if(!p || !sealPreRaw(p) || seenSet[p.set]) return;   // declared pre order: its day may have just passed
         var d=sealDate(p); if(!sealDayKnown(d)) return;
         var t=monDateTime(d); if(!(t>prev && t<=now)) return;
         seenSet[p.set]=1;
@@ -11101,10 +11111,13 @@ label.acctsetrow { align-items:center; }
     var n=Math.round((t.getTime()-today.getTime())/86400000);   // round, not floor: a DST day is 23 or 25 hours
     return n<0 ? -1 : n;
   }
+  // Still a pre order, or out today. applyReleased() flips p.pre off at local midnight of the release day,
+  // and the countdowns that say "X today" have to keep seeing that one day as theirs.
+  function preOrToday(p){ return !!p && (!!p.pre || (sealPreRaw(p) && releaseDaysUntil(sealDate(p))===0)); }
   // The soonest exactly dated pre-order, named by its set (as the Releases timeline groups them), so a box
   // and its packs on the same day are one line. A tie keeps the earlier product in SEALED.
   function nextHomeReleaseGroup(){ var best=null;
-    (SEALED||[]).forEach(function(p){ if(!p||!p.pre) return;
+    (SEALED||[]).forEach(function(p){ if(!preOrToday(p)) return;
       var title=String(p.set||p.name||"").trim(); if(!title) return;
       var pd=sealDate(p), n=releaseDaysUntil(pd); if(n<0) return;
       if(!best || n<best.days) best={ title:title, date:pd, days:n }; });
@@ -11361,7 +11374,7 @@ label.acctsetrow { align-items:center; }
   // ---- Releases ----
   function renderReleases(){
     var sp=setProgress(), tl=$("timeline"); if(!tl) return;
-    var upcomingNames={}; SEALED.forEach(function(p){ if(p.pre) upcomingNames[p.set||p.name]=true; });
+    var upcomingNames={}; SEALED.forEach(function(p){ if(preOrToday(p)) upcomingNames[p.set||p.name]=true; });
     tl.innerHTML='<div class="releasehero"><div><div class="releaseeyebrow">'+icon('calendar')+' The road ahead</div><h3>Every set, in order</h3><p>Track every set, see what you have collected, and get ready for what launches next.</p></div><div class="releasecount"><b>'+Object.keys(upcomingNames).length+'</b><span>upcoming releases</span></div></div><div class="releasegroup-label">Card sets</div>';
     SET_ORDER.forEach(function(k){
       var m=SET_META[k]||{}, box=boxSrc(k), owned=sp.owned[k], tot=sp.tot[k], pct=pctOf(owned,tot);
@@ -11390,7 +11403,7 @@ label.acctsetrow { align-items:center; }
     }
     // Group pre-orders by set + date so a set's box/pack (or a pair of decks) is one dated row, not several.
     var ugroups=[], ugmap={};
-    SEALED.filter(function(p){ return p.pre; }).forEach(function(p){
+    SEALED.filter(preOrToday).forEach(function(p){
       var pd=sealDate(p), key=(p.set||p.name)+"|"+(pd||""), g=ugmap[key];
       if(!g){ g=ugmap[key]={ title:(p.set||p.name), date:pd, box:p.box, banner:p.banner, items:[], first:p }; ugroups.push(g); }
       var typ=(p.set&&p.name)?p.name:(p.sub||"");   // the product type shown under the set headline
