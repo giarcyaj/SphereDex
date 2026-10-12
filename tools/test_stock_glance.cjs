@@ -735,7 +735,13 @@ const SORT_SET = [
 test('Sealed sorts by release date by default, and the menu says so', () => {
   assert.match(source, /var sealSortKey="release"/);
   assert.match(source, /<option value="release" selected>Sort · Release date<\/option>/);
-  assert.match(source, /if\(so\)\{ so\.value=sealSortKey;/, 'the menu is set from the sort in use');
+  // The controls are wired at startup BEFORE var sealSortKey is assigned, so setting the menu there set it to
+  // undefined and the menu came up blank. Only renderSealed, which runs after startup, may set it.
+  const wire = source.indexOf('so=$("sealSort")'), assigned = source.indexOf('var sealSortKey="release"');
+  assert.ok(wire > 0 && assigned > wire, 'the wiring really does run before the assignment');
+  assert.doesNotMatch(source.slice(wire, source.indexOf('})();', wire)), /\.value=sealSortKey/,
+    'so the wiring must not set the menu from it');
+  assert.match(appFunction('renderSealed'), /sortSel\.value=sealSortKey/, 'the Sealed page keeps the menu in step');
 });
 
 test('release date order keeps released products above every pre order', () => {

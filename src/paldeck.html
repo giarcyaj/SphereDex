@@ -6468,7 +6468,8 @@ label.acctsetrow { align-items:center; }
   (function(){
     var ss=$("sealSearch"), so=$("sealSort"), sd=$("sealSortDir"), se=$("sealEd");
     if(ss) ss.addEventListener("input", function(e){ sealQ=e.target.value; renderSealed(); });
-    if(so){ so.value=sealSortKey; so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); }); }
+    // The menu is not set from sealSortKey here: this runs before that is assigned. renderSealed keeps it in step.
+    if(so) so.addEventListener("change", function(e){ sealSortKey=e.target.value; renderSealed(); });
     if(se){ se.value=SEAL_ED; se.addEventListener("change", function(e){ setEdition(e.target.value); }); }
     var sv2=$("sealView"); if(sv2){ sv2.value=(lsGet("palvault-sealview")||"auto"); sv2.addEventListener("change", function(e){ sealView=e.target.value; lsSet("palvault-sealview",sealView); renderSealed(); }); }
     if(sd){ function sp(){ sd.textContent = "⇅ Reverse"; sd.classList.toggle("on", sealSortDir<0); sd.setAttribute("aria-pressed", sealSortDir<0?"true":"false"); } sp();
@@ -7150,6 +7151,7 @@ label.acctsetrow { align-items:center; }
   function renderSealed(){
     var grid=$("sealedGrid"); if(!grid) return;
     applyReleased();   // a release day that arrived while the app was open still counts
+    var sortSel=$("sealSort"); if(sortSel && sealSortKey && sortSel.value!==sealSortKey) sortSel.value=sealSortKey;   // the menu names the sort in use
     grid.className = "sealedgrid" + (sealView!=="auto" ? " cols-"+sealView : "");
     grid.innerHTML="";
     var seenPre=false, list=sealedList();
