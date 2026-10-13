@@ -10694,10 +10694,12 @@ label.acctsetrow { align-items:center; }
   // the CSS markers, and all feat* logic sits between the logic markers below. tools/test_carousel.cjs
   // asserts the markers exist, that no carousel definition sits outside them, that all four copies of
   // the app carry an identical section, and that the behaviour still works against a stub DOM.
-  // The first thing on Home: five headliners, in this order.
-  // 1) latest official news, 2) latest update features (or "update available" when this install is
-  // behind the store), 3) movers in your collection, unless prices are off, 4) latest card reveal,
-  // 5) the next release date.
+  // The first thing on Home: six headliners, in this order.
+  // 1) latest official news, 2) what's new in this build, or an update available when this install
+  // is behind the store, 3) movers in your collection (the riser and the faller), unless prices are
+  // off, 4) card of the day, 5) the next release date, 6) the latest card reveal.
+  // A slide with nothing to show is left out. The ones that remain keep this order. The cap stays
+  // at six, so a full set still fits.
   // Every slide is built from data the app already holds - the news feed it caches, this build's
   // release lines, collection price moves, and the sealed pre-order list - so it renders offline.
   var FEAT_MS = 5200, _featIndex = 0, _featTimer = null, _featSig = "", _featPaused = false;
@@ -10802,33 +10804,7 @@ label.acctsetrow { align-items:center; }
       var oArt = official.image || featArt(newsSet);
       out.push({ kind:"news", badge:"Latest news", title:decodeEntities(official.title||"What\u2019s new"), meta:(dayLabel(official.date)||"Latest update")+" \u00b7 Official site", art:oArt, set:newsSet, image:official.image||"", link:official.link||OFFICIAL_NEWS });
     }
-    // 2 - card of the day: the biggest riser across the WHOLE catalogue.
-    // Deliberately not scoped to the collection and not hidden in collector mode, unlike the movers
-    // slide below, so a brand new install with nothing owned still gets a reason to come back daily.
-    // The source is the free one: PRICEBOOK and PRICEPREV are eBay live listings, refreshed nightly for
-    // every market at no cost, which is also what makes this honest to label "live listings". When this
-    // install has no day over day baseline yet (a first run, or a market that has only been read once)
-    // it falls back to Palworld Prices' weekly movers, and says so rather than implying it is today's.
-    (function(){
-      var pick=null;
-      try{
-        var m=(typeof moverCard==="function") ? moverCard("up","all") : null;
-        if(m && m.c) pick={ id:m.c.id, name:m.c.name, art:imgSrc(m.c), pct:m.pct, prev:m.prev, cur:m.cur, basis:"live listings", unit:"today", tint:featCotdTint(m.c), tint2:featCotdTint(m.c, true) };
-      }catch(e){}
-      if(!pick){
-        try{
-          var p=(typeof pwPick==="function") ? pwPick("up") : null;
-          if(p && p.c) pick={ id:p.c.id, name:p.c.name, art:imgSrc(p.c), pct:Math.abs(+p.m.pct)||0, prev:0, cur:0, basis:"Palworld Prices, this week", unit:"this week", tint:featCotdTint(p.c), tint2:featCotdTint(p.c, true) };
-        }catch(e){}
-      }
-      if(!pick || !(pick.pct>0)) return;
-      // meta is what puts the FIGURES into renderFeatured's repaint signature. Without it the slide is
-      // signed only by card name and art, so an unchanged top riser froze its percentage and prices at
-      // whatever the first render showed, including across a price refresh and a currency change.
-      var cotdMeta=(pick.prev>0&&pick.cur>0) ? money(pick.cur)+" from "+money(pick.prev)+" "+pick.pct.toFixed(1) : pick.basis+" "+pick.pct.toFixed(1);
-      out.push({ kind:"cotd", badge:"Card of the day", title:String(pick.name).split(" \u2013 ")[0], cotd:pick, art:pick.art, meta:cotdMeta });
-    })();
-    // 3 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
+    // 2 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
     (function(){
       var behind=typeof _latestAppVersion==="string" && _latestAppVersion && typeof verNum==="function" && typeof APP_VERSION==="string" && verNum(_latestAppVersion) > verNum(APP_VERSION);
       var ver=behind ? _latestAppVersion : featVersion();
@@ -10854,7 +10830,7 @@ label.acctsetrow { align-items:center; }
       if(behind) out.push(Object.assign({kind:"update"}, slide));
       else out.push(Object.assign({kind:"features"}, slide));
     })();
-    // 4 - movers among cards this collection owns. Hidden entirely when prices are off.
+    // 3 - movers among cards this collection owns. Hidden entirely when prices are off.
     (function(){
       if(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector") return;
       var art = liveArt.length ? featArt(liveArt[0]) : (live.length?featArt(live[0]):"");
@@ -10884,21 +10860,32 @@ label.acctsetrow { align-items:center; }
       try{ ownedP=CARDS.filter(function(c){return has(o(c.id));}).length; }catch(e){}
       out.push({kind:"collection", badge:"Your collection", title:"Movers in your collection", meta:ownedP+" / "+total+" cards \u00b7 No price moves in your collection yet", art:art});
     })();
-    // 4 - latest card reveal that is not the news slide
-    if(reveal){
-      var dup=false;
-      for(var d=0; d<out.length; d++){ if(out[d].image && reveal.image && out[d].image===reveal.image){ dup=true; break; } }
-      if(dup){
-        var alt=null;
-        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && cand!==official && featIsReveal(cand)){ alt=cand; break; } }
-        reveal=alt; dup=false;
-        if(reveal){ for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } }
+    // 4 - card of the day: the biggest riser across the WHOLE catalogue.
+    // Deliberately not scoped to the collection and not hidden in collector mode, unlike the movers
+    // slide, so a brand new install with nothing owned still gets a reason to come back daily.
+    // The source is the free one: PRICEBOOK and PRICEPREV are eBay live listings, refreshed nightly for
+    // every market at no cost, which is also what makes this honest to label "live listings". When this
+    // install has no day over day baseline yet (a first run, or a market that has only been read once)
+    // it falls back to Palworld Prices' weekly movers, and says so rather than implying it is today's.
+    (function(){
+      var pick=null;
+      try{
+        var m=(typeof moverCard==="function") ? moverCard("up","all") : null;
+        if(m && m.c) pick={ id:m.c.id, name:m.c.name, art:imgSrc(m.c), pct:m.pct, prev:m.prev, cur:m.cur, basis:"live listings", unit:"today", tint:featCotdTint(m.c), tint2:featCotdTint(m.c, true) };
+      }catch(e){}
+      if(!pick){
+        try{
+          var p=(typeof pwPick==="function") ? pwPick("up") : null;
+          if(p && p.c) pick={ id:p.c.id, name:p.c.name, art:imgSrc(p.c), pct:Math.abs(+p.m.pct)||0, prev:0, cur:0, basis:"Palworld Prices, this week", unit:"this week", tint:featCotdTint(p.c), tint2:featCotdTint(p.c, true) };
+        }catch(e){}
       }
-      if(reveal && !dup){
-        var revealX=featIsX(reveal);
-        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(dayLabel(reveal.date)||"Today")+" \u00b7 "+(revealX?"from @PalworldOCG_EN":"Official site"), art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||(revealX?"https://x.com/PalworldOCG_EN":OFFICIAL_NEWS) });
-      }
-    }
+      if(!pick || !(pick.pct>0)) return;
+      // meta is what puts the FIGURES into renderFeatured's repaint signature. Without it the slide is
+      // signed only by card name and art, so an unchanged top riser froze its percentage and prices at
+      // whatever the first render showed, including across a price refresh and a currency change.
+      var cotdMeta=(pick.prev>0&&pick.cur>0) ? money(pick.cur)+" from "+money(pick.prev)+" "+pick.pct.toFixed(1) : pick.basis+" "+pick.pct.toFixed(1);
+      out.push({ kind:"cotd", badge:"Card of the day", title:String(pick.name).split(" \u2013 ")[0], cotd:pick, art:pick.art, meta:cotdMeta });
+    })();
     // 5 - the soonest upcoming release. Pre-orders first, then a future set that is already in the catalogue.
     (function(){
       var now=Date.now(), best=null;
@@ -10938,12 +10925,22 @@ label.acctsetrow { align-items:center; }
       }
       if(best) out.push({ kind:"soon", badge:"Next release", title:best.title, meta:best.date, art:best.art, date:best.date });
     })();
-    // Someone who has not updated should meet that first. Everything else on Home still works on their
-    // old build; the update is the one thing they cannot get to any other way.
-    for(var u=0; u<out.length; u++){
-      if(out[u].kind==="update"){ out.unshift(out.splice(u,1)[0]); break; }
+    // 6 - latest card reveal that is not the news slide
+    if(reveal){
+      var dup=false;
+      for(var d=0; d<out.length; d++){ if(out[d].image && reveal.image && out[d].image===reveal.image){ dup=true; break; } }
+      if(dup){
+        var alt=null;
+        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && cand!==official && featIsReveal(cand)){ alt=cand; break; } }
+        reveal=alt; dup=false;
+        if(reveal){ for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } }
+      }
+      if(reveal && !dup){
+        var revealX=featIsX(reveal);
+        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(dayLabel(reveal.date)||"Today")+" \u00b7 "+(revealX?"from @PalworldOCG_EN":"Official site"), art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||(revealX?"https://x.com/PalworldOCG_EN":OFFICIAL_NEWS) });
+      }
     }
-    return out.slice(0,6);   // six headliner kinds since the card of the day; five silently dropped Next release
+    return out.slice(0,6);   // cap stays at six so the last headliner, the card reveal, is not dropped
   }
 
   // The update slide used to grow the carousel while it was the active one. It no longer does: every slide
