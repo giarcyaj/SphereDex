@@ -1,6 +1,17 @@
 {
-  "updated_at": "2026-10-12T06:15:06Z",
+  "updated_at": "2026-10-13T06:07:03Z",
   "items": [
+    {
+      "id": "x-com-palworldocg-en-status-2109826458185040061",
+      "title": "Card reveal: Chillet Ignis – Ember-Clad Dragon and Arsox – Blazing Fury (Legends Awaken)",
+      "url": "https://x.com/PalworldOCG_EN/status/2109826458185040061",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-13T02:00:00Z",
+      "category": "reveal",
+      "summary": "Official English account reveals Chillet Ignis – Ember-Clad Dragon (EBP02-004) and Arsox – Blazing Fury (EBP02-009) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "unconfirmed": false
+    },
     {
       "id": "x-com-palworldocg-en-status-2109464070680416290",
       "title": "Card reveal: Saya's Crescent Moon and Daedream – Blissful Dreams (Legends Awaken)",
@@ -140,7 +151,7 @@
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-04T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Seed Machine Gun (EBP02-072, Event) and Eikthyrdeer – Warden of the Woods (EBP02-009) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Seed Machine Gun (EBP02-072, Event) and Eikthyrdeer – Warden of the Woods (EBP02-099) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false,
       "id": "x-com-palworldocg-en-status-2106564969664004482"
     },
