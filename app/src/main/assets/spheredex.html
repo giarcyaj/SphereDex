@@ -3526,7 +3526,7 @@ label.acctsetrow { align-items:center; }
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.2.
-  var APP_VERSION = "2.4.2";
+  var APP_VERSION = "2.4.3";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -3576,6 +3576,11 @@ label.acctsetrow { align-items:center; }
       "Stock and price alerts are saved to your account",
       "Each account keeps its own cards on a shared phone",
       "Sealed sorts by release date, plus many fixes"
+    ],
+    "2.4.3": [
+      "Latest news from the official site and Official X",
+      "Five Home cards, always in the same order",
+      "A card of the day, every day"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
@@ -3587,7 +3592,8 @@ label.acctsetrow { align-items:center; }
     "2.1": "img/UPDATE_2_1.webp",
     "2.2": "img/UPDATE_2_2.webp",
     "2.3": "img/UPDATE_2_3.webp",
-    "2.4": "img/UPDATE_2_4.webp"
+    "2.4": "img/UPDATE_2_4.webp",
+    "2.4.3": "img/UPDATE_2_4_3.webp"
   };
   // Where someone whose store build is newer than this one goes to get it. Both wrappers hand http(s)
   // links to the system (Android shouldOverrideUrlLoading / onCreateWindow, iOS decidePolicyFor), so
@@ -10694,12 +10700,13 @@ label.acctsetrow { align-items:center; }
   // the CSS markers, and all feat* logic sits between the logic markers below. tools/test_carousel.cjs
   // asserts the markers exist, that no carousel definition sits outside them, that all four copies of
   // the app carry an identical section, and that the behaviour still works against a stub DOM.
-  // The first thing on Home: six headliners, in this order.
-  // 1) latest official news, 2) what's new in this build, or an update available when this install
-  // is behind the store, 3) movers in your collection (the riser and the faller), unless prices are
-  // off, 4) card of the day, 5) the next release date, 6) the latest card reveal.
-  // A slide with nothing to show is left out. The ones that remain keep this order. The cap stays
-  // at six, so a full set still fits.
+  // The first thing on Home: five headliners, always in this order.
+  // 1) the latest news from the official site or the official English X account (@PalworldOCG_EN),
+  // 2) what's new in this build, or an update available when this install is behind the store,
+  // 3) risers and fallers in your collection (unless prices are off), 4) card of the day, 5) the next
+  // release date. A slide with nothing to show is left out, and the ones that remain keep this order.
+  // Card reveals no longer have a slide of their own. The English account posts one most days, so the
+  // newest reveal is usually the latest news anyway, and a separate slide only showed it twice.
   // Every slide is built from data the app already holds - the news feed it caches, this build's
   // release lines, collection price moves, and the sealed pre-order list - so it renders offline.
   var FEAT_MS = 5200, _featIndex = 0, _featTimer = null, _featSig = "", _featPaused = false;
@@ -10751,6 +10758,17 @@ label.acctsetrow { align-items:center; }
     try{ if(typeof RELEASE_ART!=="undefined" && RELEASE_ART) src=RELEASE_ART[String(ver||"")]||""; }catch(e){}
     return src ? String(src) : "";
   }
+  // Products the catalogue has no set for yet, so a story about one still shows that box's art.
+  // Checked before the set map below, because "Dawn of Palpagos 2nd Edition" also names the first set.
+  function featNewsBanner(news){
+    var text=(String((news&&news.title)||"")+" "+String((news&&news.summary)||"")).toLowerCase();
+    var map=[["2nd edition","BOX_BANNER_EBP01_2E"],["td03","BOX_BANNER_TD03"],["td04","BOX_BANNER_TD04"],
+             ["legends awaken","BOX_BANNER_BP02"],["bp02","BOX_BANNER_BP02"],["eternal ascent","BOX_BANNER_BP03"],
+             ["bp03","BOX_BANNER_BP03"],["card set vol","BOX_BANNER_SS01"],["sleeve","BOX_BANNER_SS01"]];
+    var imgs=(typeof window!=="undefined" && window.CARD_IMG) || {};
+    for(var i=0;i<map.length;i++){ if(text.indexOf(map[i][0])>=0 && imgs[map[i][1]]) return String(imgs[map[i][1]]); }
+    return "";
+  }
   // Which product a headline is about, so the news slide shows that set's art instead of a stock image.
   // Deliberately a small keyword map: guessing wrong only costs one background image.
   function featNewsSet(news){
@@ -10766,10 +10784,41 @@ label.acctsetrow { align-items:center; }
   }
   // Seed items have no source and count as official. YouTube and X do not.
   function featOfficial(n){ if(!n || featIsX(n)) return false; var src=String(n.source||""); return !src || /official/i.test(src); }
-  // A reveal must say so or carry card-list art. Every official-site image lives on a
-  // palworld-official-cardgame host, so the host name alone proves nothing.
-  function featIsReveal(n){
-    return !!(n && n.image) && (/card reveal|\breveal|new card/i.test((n.title||"")+" "+(n.summary||"")) || /\/cardlist\//i.test(String(n.image)));
+  // The official English X account. Most news lands there first, often days before the website, so the
+  // news slide treats it as official. The Japanese account (@PalworldOCG) and other sites never lead the
+  // carousel: they stay in the News list.
+  function featIsEnX(n){
+    if(!featIsX(n)) return false;
+    return /palworldocg_en\b/i.test(String(n.source||"")) || /^https?:\/\/(www\.)?(x|twitter)\.com\/palworldocg_en\//i.test(String(n.link||""));
+  }
+  function featLeads(n){ return featOfficial(n) || featIsEnX(n); }
+  // Where a story came from, in the words the slide shows under its title.
+  function featNewsFrom(n){
+    if(featIsEnX(n)) return "Official X";   // short enough to fit beside the date on a phone
+    if(featIsX(n)){ var h=/@([A-Za-z0-9_]{1,15})/.exec(String(n.source||"")); return (h ? "@"+h[1]+" on X" : "X"); }
+    if(featOfficial(n)) return "Official site";
+    var src=String((n&&n.source)||"").replace(/\s+/g," ").trim();
+    return src || "News";
+  }
+  // Newest first. The day decides. On the same day the exact publish time decides, when both stories
+  // carry one (the server sends it for website and X posts); a story without one keeps its place. ISO
+  // dates and "Sep 11, 2026" both count, and an unreadable date sorts last.
+  function featNewer(a, b){
+    var ta=featTime(a&&a.date), tb=featTime(b&&b.date);
+    if(ta!==tb){
+      if(ta===Infinity) return 1;
+      if(tb===Infinity) return -1;
+      return tb-ta;
+    }
+    var pa=Date.parse(String((a&&a.published)||"")), pb=Date.parse(String((b&&b.published)||""));
+    if(isFinite(pa) && isFinite(pb) && pa!==pb) return pb-pa;
+    return 0;
+  }
+  // The whole feed, not just what the bell still lists: "Dismiss all" clears notifications, and it must
+  // not empty the news slide too. Read defensively, because the feed is declared further down the file.
+  function featNewsList(){
+    try{ if(typeof _newsList!=="undefined" && _newsList && typeof _newsList.length==="number") return _newsList; }catch(e){}
+    try{ return typeof visibleNews==="function" ? (visibleNews()||[]) : []; }catch(e){ return []; }
   }
   function featuredSlides(){
     function liveRank(k){ var t=featTime((SET_META[k]||{}).release); return t===Infinity ? 0 : t; }
@@ -10780,29 +10829,18 @@ label.acctsetrow { align-items:center; }
     });
     live.sort(function(a,b){ return liveRank(b)-liveRank(a) || SET_ORDER.indexOf(a)-SET_ORDER.indexOf(b); });
     var liveArt=live.filter(function(k){ return !!((SET_META[k]||{}).art); });
-    var list=(typeof visibleNews==="function"?visibleNews():[]);
-    // Newest first. ISO dates and "Sep 11, 2026" both count; an unreadable date stays in its original place.
-    list=list.slice().sort(function(a,b){
-      var ta=featTime(a&&a.date), tb=featTime(b&&b.date);
-      if(ta===tb) return 0;
-      if(ta===Infinity) return 1;
-      if(tb===Infinity) return -1;
-      return tb-ta;
-    });
-    // 1 - latest official news (source "official"; seed items have no source and count as official)
-    var official=null;
-    for(var i=0;i<list.length;i++){ if(featOfficial(list[i])){ official=list[i]; break; } }
-    if(!official) for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; official=n; break; }
-    if(!official && list.length) official=list[0];
-    // Latest card reveal, skipping the item already used as the news slide.
-    var reveal=null;
-    for(var r=0;r<list.length;r++){ if(featIsReveal(list[r]) && list[r]!==official){ reveal=list[r]; break; } }
+    var list=featNewsList().slice().sort(featNewer);
+    // 1 - the latest news: the newest story from the official site or @PalworldOCG_EN. Seed items have no
+    // source and count as official. With neither, any story that is not from X, then anything at all.
+    var lead=null;
+    for(var i=0;i<list.length;i++){ if(featLeads(list[i])){ lead=list[i]; break; } }
+    if(!lead) for(var i=0;i<list.length;i++){ var n=list[i]; if(!n || featIsX(n)) continue; lead=n; break; }
+    if(!lead && list.length) lead=list[0];
     var out=[];
-    // 1 - latest news
-    if(official){
-      var newsSet=featNewsSet(official)||liveArt[0]||live[0]||"";
-      var oArt = official.image || featArt(newsSet);
-      out.push({ kind:"news", badge:"Latest news", title:decodeEntities(official.title||"What\u2019s new"), meta:(dayLabel(official.date)||"Latest update")+" \u00b7 Official site", art:oArt, set:newsSet, image:official.image||"", link:official.link||OFFICIAL_NEWS });
+    if(lead){
+      var newsSet=featNewsSet(lead)||liveArt[0]||live[0]||"";
+      var oArt = lead.image || featNewsBanner(lead) || featArt(newsSet);
+      out.push({ kind:"news", badge:"Latest news", title:decodeEntities(lead.title||"What\u2019s new"), meta:(dayLabel(lead.date)||"Latest update")+" \u00b7 "+featNewsFrom(lead), art:oArt, set:newsSet, image:lead.image||"", link:lead.link||OFFICIAL_NEWS });
     }
     // 2 - latest update features. A newer store build says an update is ready; otherwise these are this build's lines.
     (function(){
@@ -10824,11 +10862,10 @@ label.acctsetrow { align-items:center; }
       var mapped = featReleaseArt(ver);
       // The whole point of this slide is the person who has NOT updated, and their build predates the
       // version it is announcing, so it carries no banner for it. Fall back to the one the server names.
-      if(!mapped && behind && typeof _latestArt==="string" && _latestArt) mapped=_latestArt;
+      // An up to date build without its own banner takes the server's too, when it names this version.
+      if(!mapped && typeof _latestArt==="string" && _latestArt && (behind || _latestAppVersion===ver)) mapped=_latestArt;
       var art = mapped || (liveArt.length ? featArt(liveArt[0]) : (live.length ? featArt(live[0]) : ""));
-      var slide = {badge: behind?"New update available":"Latest update features", title: behind?("SphereDex "+ver+" is here"):("What\u2019s new in "+ver), meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver, releaseArt:!!mapped};
-      if(behind) out.push(Object.assign({kind:"update"}, slide));
-      else out.push(Object.assign({kind:"features"}, slide));
+      out.push({kind: behind?"update":"features", badge: behind?"New update available":"Latest update features", title: behind?("SphereDex "+ver+" is here"):("What\u2019s new in "+ver), meta:notes.join(" \u00b7 "), notes:notes, art:art, version:ver, releaseArt:!!mapped});
     })();
     // 3 - movers among cards this collection owns. Hidden entirely when prices are off.
     (function(){
@@ -10879,11 +10916,27 @@ label.acctsetrow { align-items:center; }
           if(p && p.c) pick={ id:p.c.id, name:p.c.name, art:imgSrc(p.c), pct:Math.abs(+p.m.pct)||0, prev:0, cur:0, basis:"Palworld Prices, this week", unit:"this week", tint:featCotdTint(p.c), tint2:featCotdTint(p.c, true) };
         }catch(e){}
       }
-      if(!pick || !(pick.pct>0)) return;
+      if(pick && !(pick.pct>0)) pick=null;
+      // No riser anywhere (a quiet day, or a first run with no baseline yet): there is still a card of the
+      // day, so the slot never goes missing. The same card all day and a different one tomorrow, picked from
+      // the 30 most valuable cards this install has a price for, or from the chase rarities when it has none.
+      if(!pick){
+        try{
+          var day=(typeof todayKey==="function") ? todayKey() : new Date().toDateString(), h=0;
+          for(var hi=0; hi<day.length; hi++) h=(h*31+day.charCodeAt(hi))%2147483647;
+          var book=(typeof PRICEBOOK!=="undefined" && PRICEBOOK) || {};
+          var all=(typeof CARDS!=="undefined" && CARDS) || [];
+          var priced=all.filter(function(c){ return c && (+book[c.id]||0)>0; }).sort(function(a,b){ return (+book[b.id])-(+book[a.id]) || (a.id<b.id?-1:1); }).slice(0,30);
+          var pool=priced.length ? priced : all.filter(function(c){ return c && /^(SR|SP|SSP|OSR)$/.test(String(c.rare||"")); });
+          var fc=pool.length ? pool[h % pool.length] : null;
+          if(fc) pick={ id:fc.id, name:fc.name, art:imgSrc(fc), pct:0, prev:0, cur:+book[fc.id]||0, rare:String(fc.rare||""), basis:"Featured card", unit:"today", featured:true, tint:featCotdTint(fc), tint2:featCotdTint(fc, true) };
+        }catch(e){}
+      }
+      if(!pick) return;
       // meta is what puts the FIGURES into renderFeatured's repaint signature. Without it the slide is
       // signed only by card name and art, so an unchanged top riser froze its percentage and prices at
       // whatever the first render showed, including across a price refresh and a currency change.
-      var cotdMeta=(pick.prev>0&&pick.cur>0) ? money(pick.cur)+" from "+money(pick.prev)+" "+pick.pct.toFixed(1) : pick.basis+" "+pick.pct.toFixed(1);
+      var cotdMeta=pick.featured ? pick.basis+" "+(pick.cur>0 ? money(pick.cur) : pick.rare) : (pick.prev>0&&pick.cur>0) ? money(pick.cur)+" from "+money(pick.prev)+" "+pick.pct.toFixed(1) : pick.basis+" "+pick.pct.toFixed(1);
       out.push({ kind:"cotd", badge:"Card of the day", title:String(pick.name).split(" \u2013 ")[0], cotd:pick, art:pick.art, meta:cotdMeta });
     })();
     // 5 - the soonest upcoming release. Pre-orders first, then a future set that is already in the catalogue.
@@ -10899,11 +10952,14 @@ label.acctsetrow { align-items:center; }
         SEALED.forEach(function(p){
           if(!p || !p.pre) return;
           var pd=""; try{ pd=(typeof sealDate==="function")?sealDate(p):(p.date||""); }catch(e){ pd=p.date||""; }
-          var key=(p.set||p.name)+"|"+pd;
+          // A reprint names itself (rel), so it does not read as the set that came out in July. Its own
+          // banner, when the box image is one, comes before the set's banner for the same reason.
+          var title=p.rel||p.set||p.name;
+          var key=title+"|"+pd;
           if(seen[key]) return; seen[key]=true;
           var img="";
-          try{ if(window.CARD_IMG) img=window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; }catch(e){}
-          consider(p.set||p.name, pd, img);
+          try{ if(window.CARD_IMG){ var own=(p.box && /^BOX_BANNER_/.test(p.box)) ? p.box : ""; img=(own && window.CARD_IMG[own])||window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; } }catch(e){}
+          consider(title, pd, img);
         });
       }
       if(!best && typeof BROWSE_EXPANSIONS!=="undefined" && BROWSE_EXPANSIONS){
@@ -10925,22 +10981,7 @@ label.acctsetrow { align-items:center; }
       }
       if(best) out.push({ kind:"soon", badge:"Next release", title:best.title, meta:best.date, art:best.art, date:best.date });
     })();
-    // 6 - latest card reveal that is not the news slide
-    if(reveal){
-      var dup=false;
-      for(var d=0; d<out.length; d++){ if(out[d].image && reveal.image && out[d].image===reveal.image){ dup=true; break; } }
-      if(dup){
-        var alt=null;
-        for(var a=0;a<list.length;a++){ var cand=list[a]; if(cand!==reveal && cand!==official && featIsReveal(cand)){ alt=cand; break; } }
-        reveal=alt; dup=false;
-        if(reveal){ for(var d2=0; d2<out.length; d2++){ if(out[d2].image && reveal.image && out[d2].image===reveal.image){ dup=true; break; } } }
-      }
-      if(reveal && !dup){
-        var revealX=featIsX(reveal);
-        out.push({ kind:"reveal", badge:"Card reveal", title:decodeEntities(reveal.title||"New card revealed"), meta:(dayLabel(reveal.date)||"Today")+" \u00b7 "+(revealX?"from @PalworldOCG_EN":"Official site"), art:reveal.image, set:featNewsSet(reveal), image:reveal.image, link:reveal.link||(revealX?"https://x.com/PalworldOCG_EN":OFFICIAL_NEWS) });
-      }
-    }
-    return out.slice(0,6);   // cap stays at six so the last headliner, the card reveal, is not dropped
+    return out.slice(0,5);   // the five headliners, never more
   }
 
   // The update slide used to grow the carousel while it was the active one. It no longer does: every slide
@@ -11056,8 +11097,10 @@ label.acctsetrow { align-items:center; }
       // hero figure with a rising spark under it, and the two prices it moved between.
       if(s.kind==="cotd" && s.cotd){
         var cd=s.cotd, cid=esc(cd.id||"");
-        var pctTxt="+"+(Math.abs(+cd.pct)||0).toFixed(1)+"%";
-        var moved=(+cd.prev>0 && +cd.cur>0) ? money(cd.cur)+" from "+money(cd.prev) : cd.basis;
+        // A featured card (no riser today) has no gain to show, so its hero figure is its price, or its
+        // rarity when this install has no price for it yet.
+        var pctTxt=cd.featured ? (+cd.cur>0 ? money(cd.cur) : String(cd.rare||"")) : "+"+(Math.abs(+cd.pct)||0).toFixed(1)+"%";
+        var moved=cd.featured ? "No big movers yet today" : (+cd.prev>0 && +cd.cur>0) ? money(cd.cur)+" from "+money(cd.prev) : cd.basis;
         var cbg=s.art ? '<span class="featbg"><img src="'+esc(s.art)+'" alt="" loading="lazy" decoding="async"></span>' : '<span class="featbg featnoimg"></span>';
         var tintStyle=' style="--cotd-tint:'+(cd.tint||"var(--c-Colorless)")+';--cotd-tint2:'+(cd.tint2||cd.tint||"var(--c-Colorless)")+'"';
         return '<button class="featslide cotd'+(on?" on":"")+'" type="button" data-i="'+i+'" data-mover="'+cid+'"'+tintStyle+(on?"":' tabindex="-1" aria-hidden="true"')+'>'+
@@ -11066,7 +11109,7 @@ label.acctsetrow { align-items:center; }
           '<span class="featbody">'+
             '<span class="featbadge">'+icon("chart")+esc(s.badge)+'</span>'+
             '<span class="feattitle">'+esc(s.title)+'</span>'+
-            '<span class="cotdfig priceui"><b>'+esc(pctTxt)+'</b><i>'+esc(cd.unit||"today")+'</i></span>'+
+            '<span class="cotdfig priceui"><b>'+esc(pctTxt)+'</b><i>'+esc(cd.featured && !(+cd.cur>0) ? "rarity" : (cd.unit||"today"))+'</i></span>'+
             '<span class="cotdsub priceui">'+esc(moved)+'</span>'+
           '</span></button>';
       }
@@ -11172,7 +11215,8 @@ label.acctsetrow { align-items:center; }
   var FEATURED_CAROUSEL = {
     intervalMs: FEAT_MS,
     snapshot: function(){ return { index:_featIndex, timerActive:!!_featTimer, paused:_featPaused, slideCount:_featSlides.length, sig:_featSig }; },
-    slides: featuredSlides, time: featTime, art: featArt, newsSet: featNewsSet,
+    slides: featuredSlides, time: featTime, art: featArt, newsSet: featNewsSet, newsBanner: featNewsBanner,
+    newsFrom: featNewsFrom, leads: featLeads,
     target: featTarget, visible: featVisible,
     paint: featPaint, start: featStart, stop: featStop, pause: featPause,
     keys: featKeys, open: openFeatured, render: renderFeatured, bind: bindFeatured
@@ -13547,6 +13591,8 @@ label.acctsetrow { align-items:center; }
         if(SOLD_ASOF>lastMark){ try{ stampSoldMark(); lsSet("palvault-sold-mark-asof", String(SOLD_ASOF)); }catch(_){} } }
       renderFoot(); renderPriceSources();
       if(n){ render(); if(typeof renderSetBrowse==="function") renderSetBrowse(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
+      // The movers and card of the day slides read these prices too. render() repaints the card grid only.
+      if(n && _curPage==="home"){ try{ renderFeatured(); }catch(_){} }
       else if(!silent) toast("No market prices available yet");
       updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
     }).catch(function(){ if(silent) priceFetchFailed(); else toast("Price fetch failed"); });
@@ -13728,6 +13774,16 @@ label.acctsetrow { align-items:center; }
   }
   document.addEventListener("visibilitychange", onWake);
   window.addEventListener("pageshow", function(e){ if(e && e.persisted) onWake(); });   // bfcache restore
+  // Someone who leaves the app open on Home never wakes it, so news posted after they opened it never
+  // reached the carousel. Every 30 minutes while the page is on screen, fetch the news again, ask about
+  // the version (its own gap still applies) and replace the price book when it is stale. Each of these
+  // repaints the carousel itself when Home is showing.
+  setInterval(function(){
+    if(document.hidden) return;
+    try{ primeNewsBell(); }catch(e){}
+    try{ checkAppVersion(); }catch(e){}
+    try{ priceBookGate(); }catch(e){}
+  }, 30*60*1000);
   setTimeout(checkAppVersion, 4000);   // and once shortly after a cold start
   setTimeout(fetchCatalogue, 2500);    // new cards matter sooner than a version notice
   setTimeout(fetchReleases, 3000);

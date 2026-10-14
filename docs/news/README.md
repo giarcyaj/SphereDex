@@ -39,6 +39,7 @@ Newest item first. `items` may be empty. The seed in git is an empty list on pur
 | `category` | item | string | One of `official`, `release`, `reveal`, `preorder`, `pricing`, `tournament`, `community`, `leak`. |
 | `summary` | item | string | One sentence, one line, no line break. |
 | `unconfirmed` | item | boolean | `true` for leaks and rumours. `false` for everything confirmed. |
+| `image` | item, optional | string | Absolute `https` URL of the story's own picture, such as the banner at the top of an official page. The Home news card shows it. Leave it out rather than guess: a story without one shows its product's box art. |
 
 `source` values:
 

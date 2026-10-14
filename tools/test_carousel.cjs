@@ -78,8 +78,8 @@ test('the FEATURED_CAROUSEL API seam stays intact', () => {
   const a = app();
   assert.deepEqual(
     Object.keys(a.window.FEATURED_CAROUSEL).sort(),
-    ['art', 'bind', 'intervalMs', 'keys', 'newsSet', 'open', 'paint', 'pause', 'render',
-     'slides', 'snapshot', 'start', 'stop', 'target', 'time', 'visible'].sort()
+    ['art', 'bind', 'intervalMs', 'keys', 'leads', 'newsBanner', 'newsFrom', 'newsSet', 'open', 'paint', 'pause',
+     'render', 'slides', 'snapshot', 'start', 'stop', 'target', 'time', 'visible'].sort()
   );
   assert.equal(a.window.FEATURED_CAROUSEL.intervalMs, 5200);
 });
@@ -142,6 +142,13 @@ function stubElement(id) {
   el.querySelectorAll = (sel) => (sel === '.featslide' ? el._slides || [] : sel === '.featdot' ? el._dots || [] : []);
   return el;
 }
+// The carousel compares release dates against "now". Fixtures name real dates, so the suite runs on a
+// fixed clock: with the real one, every fixture release turned into a past one on the day it arrived.
+const NOW = Date.UTC(2026, 9, 14, 12, 0, 0);
+class FixedDate extends Date {
+  constructor(...a) { if (a.length) super(...a); else super(NOW); }
+  static now() { return NOW; }
+}
 function app(opts) {
   const host = stubElement('homeFeatured');
   const track = stubElement('featTrack');
@@ -160,7 +167,7 @@ function app(opts) {
   const toasts = [];
   const dispatch = (el, type, event) => (el._listeners[type] || []).forEach((fn) => fn(event));
   const sandbox = {
-    document: document_, window: window_, navigator: {}, location: { reload() {} },
+    document: document_, window: window_, navigator: {}, location: { reload() {} }, Date: FixedDate,
     setInterval(fn) { registry.sets.push(fn); return registry.sets.length; },
     clearInterval() { registry.cleared++; registry.sets.length = 0; },
     setTimeout() { return 0; }, clearTimeout() {},
@@ -228,7 +235,7 @@ test('official news becomes slide 1 and maps its set art by title', () => {
   assert.equal(slides[0].art, 'https://example.test/o.png');
 });
 
-test('home headliners are news, update features, collection movers, the next release, then a card reveal', () => {
+test('home headliners are news, update features, collection movers and the next release', () => {
   const a = app({
     visibleNews: () => [
       news({ title: 'Eternal Ascent preorders', date: '2026-09-11', source: 'Official site' }),
@@ -245,33 +252,33 @@ test('home headliners are news, update features, collection movers, the next rel
     sealDate: (p) => p.date,
   });
   const slides = a.api.slides();
-  assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,soon,reveal');
-  assert.equal(slides[0].title, 'Eternal Ascent preorders');
+  assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,soon');
+  // The English account's reveal is newer than the website post, so it is the latest news.
+  assert.equal(slides[0].title, 'Card Reveal');
+  assert.match(slides[0].meta, /Official X$/);
   assert.equal(slides[1].badge, 'Latest update features');
   assert.match(slides[1].title, /1\.11/);
   assert.equal(slides[2].title, 'Movers in your collection');
   assert.equal(slides[2].movers[0].name, 'Lamball');
   assert.equal(slides[3].title, 'Sleeve & Card Set Vol. 1');
   assert.equal(slides[3].meta, 'Oct 16, 2026');
-  assert.equal(slides[4].title, 'Card Reveal');
-  assert.match(slides[4].meta, /@PalworldOCG_EN/);
-  assert.equal(slides.some((s) => s.kind === 'ximage'), false);
+  assert.equal(slides.some((s) => s.kind === 'ximage' || s.kind === 'reveal'), false);
 });
 
-// The six headliners have one fixed order. A slide with nothing to show is omitted, and the
+// The five headliners have one fixed order. A slide with nothing to show is omitted, and the
 // others stay in this sequence. features/update share a slot, and so do movers and the
-// empty-collection fallback. The cap stays at six so a full set is not trimmed.
-test('home carousel order is news, what is new, movers, card of the day, next release, then card reveal', () => {
-  const SLOT_ORDER = ['news', 'update', 'movers', 'cotd', 'soon', 'reveal'];
+// empty-collection fallback.
+test('home carousel order is news, what is new, movers, card of the day, then next release', () => {
+  const SLOT_ORDER = ['news', 'update', 'movers', 'cotd', 'soon'];
   const slot = (kind) => ({ features: 'update', update: 'update', movers: 'movers', collection: 'movers' }[kind] || kind);
   function assertRelative(slides, label) {
     const kinds = slides.map((s) => s.kind);
     const positions = kinds.map((k) => SLOT_ORDER.indexOf(slot(k)));
-    assert.ok(positions.every((p) => p >= 0), label + ' uses only the six headliner slots: ' + kinds);
+    assert.ok(positions.every((p) => p >= 0), label + ' uses only the five headliner slots: ' + kinds);
     for (let i = 1; i < positions.length; i++) {
       assert.ok(positions[i] > positions[i - 1], label + ' keeps relative order, got ' + kinds.join(','));
     }
-    assert.ok(kinds.length <= 6, label + ' stays within six');
+    assert.ok(kinds.length <= 5, label + ' stays within five');
     assert.equal(new Set(kinds.map(slot)).size, kinds.length, label + ' has one slide per slot');
   }
   const catalogue = {
@@ -294,23 +301,22 @@ test('home carousel order is news, what is new, movers, card of the day, next re
   const full = app(catalogue);
   const slides = full.api.slides();
   // String(), not deepEqual: slides are built inside the vm, so their arrays are a different realm.
-  assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,cotd,soon,reveal');
-  assert.equal(slides.length, 6, 'a full set still fits under the cap of six');
+  assert.equal(String(slides.map((s) => s.kind)), 'news,features,movers,cotd,soon');
+  assert.equal(slides.length, 5, 'a full set is exactly five');
   assert.equal(slides[0].badge, 'Latest news');
   assert.equal(slides[1].badge, 'Latest update features');
   assert.equal(slides[2].movers.map((m) => m.dir).join(','), 'up,down', 'movers carries the riser and the faller');
   assert.equal(slides[3].badge, 'Card of the day');
   assert.equal(slides[3].title, 'Jormuntide');
   assert.equal(slides[4].badge, 'Next release');
-  assert.equal(slides[5].badge, 'Card reveal');
   assertRelative(slides, 'full');
 
   const behind = app({ ...catalogue, _latestAppVersion: '1.12' });
-  assert.equal(String(behind.api.slides().map((s) => s.kind)), 'news,update,movers,cotd,soon,reveal');
+  assert.equal(String(behind.api.slides().map((s) => s.kind)), 'news,update,movers,cotd,soon');
   assert.equal(behind.api.slides()[1].badge, 'New update available');
   assertRelative(behind.api.slides(), 'behind');
 
-  // News, movers and the reveal have nothing to show. What remains keeps the same order.
+  // News and movers have nothing to show. What remains keeps the same order.
   const sparse = app({
     visibleNews: () => [],
     SETTINGS: { mode: 'collector' },
@@ -323,7 +329,8 @@ test('home carousel order is news, what is new, movers, card of the day, next re
   assert.equal(String(sparse.api.slides().map((s) => s.kind)), 'features,cotd,soon');
   assertRelative(sparse.api.slides(), 'sparse');
 
-  // No next release: the card reveal stays after the movers slot. It does not climb past it.
+  // No next release and no riser: card of the day falls back to a featured card only when there is a
+  // catalogue to pick from, so with none the slide is left out and nothing else moves up.
   const noRelease = app({
     visibleNews: () => [
       news({ title: 'Eternal Ascent preorders', date: '2026-09-11', source: 'Official site' }),
@@ -335,11 +342,11 @@ test('home carousel order is news, what is new, movers, card of the day, next re
     SET_META: { EBP01: { name: 'Dawn of Palpagos', release: 'Jul 9, 2026', art: 'data:art-ebp01' } },
     SEALED: [],
   });
-  assert.equal(String(noRelease.api.slides().map((s) => s.kind)), 'news,features,collection,reveal');
+  assert.equal(String(noRelease.api.slides().map((s) => s.kind)), 'news,features,collection');
   assertRelative(noRelease.api.slides(), 'no release');
 });
 
-test('a card reveal that is already the news slide is not repeated', () => {
+test('a card reveal can be the news slide, and is never shown twice', () => {
   const dup = news({ title: 'Card reveal: new pal', image: 'https://pbs.twimg.com/media/x.jpg' });
   const a = app({ visibleNews: () => [dup], SET_ORDER: [] });
   assert.equal(String(a.api.slides().map((s) => s.kind)), 'news,features,collection');
@@ -510,14 +517,149 @@ test('slides put text and the sharp image in separate columns over a blurred bac
   assert.ok(slide.indexOf('class="featart') < slide.indexOf('class="featbody"'), 'image panel is its own element, not under the text');
 });
 
-test('slides cap at six', () => {
+test('slides cap at five', () => {
   const a = app({ visibleNews: () => Array.from({ length: 9 }, (_, i) => news({
     title: 'Card reveal ' + i, source: i % 2 ? 'x:PalworldOCG_EN' : 'official',
     image: 'https://pbs.twimg.com/media/' + i + '.jpg',
   })) });
-  assert.ok(a.api.slides().length <= 6, 'extra news items do not become extra slides');
-  assert.ok(a.api.slides().length < 9);
-  assert.match(srcSection('logic'), /return out\.slice\(0,\s*6\)/, 'the cap stays at six');
+  assert.ok(a.api.slides().length <= 5, 'extra news items do not become extra slides');
+  assert.equal(a.api.slides().filter((s) => s.kind === 'news').length, 1, 'one news slide however many stories');
+  assert.match(srcSection('logic'), /return out\.slice\(0,\s*5\)/, 'the cap is five');
+});
+
+// Today's feed, in miniature: the website last posted a week ago, the English account posted an
+// announcement and a reveal this morning, the Japanese account and a fan site posted later still.
+const FEED_OCT14 = [
+  news({ title: 'New cards from Booster Pack Vol. 2 revealed', date: '2026-10-14', published: '2026-10-14T09:00:00.000Z', source: 'X · @PalworldOCG', link: 'https://x.com/PalworldOCG/status/3', image: 'https://pbs.twimg.com/media/jp.jpg' }),
+  news({ title: 'A fan site story', date: '2026-10-15', source: 'FoilWire', link: 'https://foilwire.com/a' }),
+  news({ title: 'Important Announcement Regarding Legends Awaken Product Availability', date: '2026-10-14', published: '2026-10-14T01:00:02.000Z', source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/1' }),
+  news({ title: 'Card reveal: Pengullet (Legends Awaken)', date: '2026-10-14', published: '2026-10-14T02:00:01.000Z', source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/2' }),
+  news({ title: 'Legends Awaken Release Tournament', date: '2026-10-07', published: '2026-10-07T09:00:03.000Z', source: 'Official site', link: 'https://en.palworld-official-cardgame.com/events/la' }),
+  news({ title: '11 Million Packs', date: '2026-10-07', published: '2026-10-07T06:30:00.000Z', source: 'Official site', link: 'https://en.palworld-official-cardgame.com/news/post-20', image: 'https://example.test/press.jpg' }),
+];
+
+test('the news slide is the newest story from the official site or @PalworldOCG_EN', () => {
+  const a = app({ visibleNews: () => FEED_OCT14 });
+  const lead = a.api.slides()[0];
+  assert.equal(lead.kind, 'news');
+  // The 02:00 reveal beats the 01:00 announcement on the same day; the Japanese account and the fan site
+  // are newer still, but they never lead.
+  assert.equal(lead.title, 'Card reveal: Pengullet (Legends Awaken)');
+  assert.match(lead.meta, /Official X$/);
+  assert.equal(a.api.leads(FEED_OCT14[0]), false, 'the Japanese account does not lead');
+  assert.equal(a.api.leads(FEED_OCT14[1]), false, 'a fan site does not lead');
+  assert.equal(a.api.leads(FEED_OCT14[2]), true);
+  assert.equal(a.api.leads(news({ title: 'Seed item' })), true, 'seed items with no source still count as official');
+
+  // Without the English account the website leads again, labelled as such, newest publish time first.
+  const site = app({ visibleNews: () => FEED_OCT14.filter((n) => !/PalworldOCG_EN/.test(n.source)) });
+  assert.equal(site.api.slides()[0].title, 'Legends Awaken Release Tournament');
+  assert.match(site.api.slides()[0].meta, /Official site$/);
+});
+
+test('the news slide says where its story came from', () => {
+  const a = app();
+  assert.equal(a.api.newsFrom(news({ source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/1' })), 'Official X');
+  assert.equal(a.api.newsFrom(news({ source: 'x:PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/1' })), 'Official X');
+  assert.equal(a.api.newsFrom(news({ source: 'X · @PalworldOCG', link: 'https://x.com/PalworldOCG/status/1' })), '@PalworldOCG on X');
+  assert.equal(a.api.newsFrom(news({ source: 'Official site' })), 'Official site');
+  assert.equal(a.api.newsFrom(news({})), 'Official site');
+  assert.equal(a.api.newsFrom(news({ source: 'FoilWire' })), 'FoilWire');
+});
+
+test('a story with no picture shows the box art of the product it names', () => {
+  const a = app({ visibleNews: () => [news({ title: 'Legends Awaken Release Tournament', date: '2026-10-07', source: 'Official site' })] });
+  a.window.CARD_IMG = { BOX_BANNER_BP02: 'img/BOX_BANNER_BP02.webp', BOX_BANNER_EBP01_2E: 'img/BOX_BANNER_EBP01_2E.webp' };
+  assert.equal(a.api.slides()[0].art, 'img/BOX_BANNER_BP02.webp');
+  // The reprint is checked before the first set it also names.
+  assert.equal(a.api.newsBanner(news({ title: 'Dawn of Palpagos 2nd Edition ships late October' })), 'img/BOX_BANNER_EBP01_2E.webp');
+  // A story with its own picture keeps it.
+  const own = app({ visibleNews: () => [news({ title: 'Legends Awaken', source: 'Official site', image: 'https://example.test/own.jpg' })] });
+  own.window.CARD_IMG = { BOX_BANNER_BP02: 'img/BOX_BANNER_BP02.webp' };
+  assert.equal(own.api.slides()[0].art, 'https://example.test/own.jpg');
+  // No banner for the product: the set art fallback is unchanged.
+  const none = app({ visibleNews: () => [news({ title: 'Card List Added for "Dawn of Palpagos"', source: 'Official site' })] });
+  assert.equal(none.api.slides()[0].art, 'data:art-ebp01');
+});
+
+test('dismissing everything in the bell does not empty the news slide', () => {
+  const a = app({ visibleNews: () => [], _newsList: [news({ title: 'Still the latest', source: 'Official site' })] });
+  assert.equal(a.api.slides()[0].kind, 'news');
+  assert.equal(a.api.slides()[0].title, 'Still the latest');
+});
+
+test('card of the day is always there: a featured card when nothing rose today', () => {
+  const CARDS = [
+    { id: 'EBP01-001', name: 'Lamball', rare: 'C' },
+    { id: 'EBP01-010', name: 'Anubis', rare: 'OSR' },
+    { id: 'EBP01-011', name: 'Jetragon', rare: 'SR' },
+  ];
+  const priced = app({ CARDS, PRICEBOOK: { 'EBP01-001': 2, 'EBP01-010': 40 }, todayKey: () => '2026-10-14' });
+  const cotd = priced.api.slides().find((s) => s.kind === 'cotd');
+  assert.ok(cotd, 'the slot is filled with no riser at all');
+  assert.equal(cotd.badge, 'Card of the day');
+  assert.equal(cotd.cotd.featured, true);
+  assert.ok(['Lamball', 'Anubis'].includes(cotd.title), 'picked from the cards with a price: ' + cotd.title);
+  // The same card all day.
+  const again = app({ CARDS, PRICEBOOK: { 'EBP01-001': 2, 'EBP01-010': 40 }, todayKey: () => '2026-10-14' });
+  assert.equal(again.api.slides().find((s) => s.kind === 'cotd').title, cotd.title);
+  priced.api.render();
+  assert.match(priced.host.innerHTML, /No big movers yet today/);
+  assert.doesNotMatch(priced.host.innerHTML, /\+0\.0%/, 'never a zero gain');
+
+  // No prices yet: a chase rarity, shown with its rarity instead of a price.
+  const unpriced = app({ CARDS, todayKey: () => '2026-10-14' });
+  const pick = unpriced.api.slides().find((s) => s.kind === 'cotd');
+  assert.ok(['Anubis', 'Jetragon'].includes(pick.title), 'a chase card: ' + pick.title);
+  unpriced.api.render();
+  assert.match(unpriced.host.innerHTML, /<i>rarity<\/i>/);
+
+  // A real riser still wins.
+  const rising = app({ CARDS, PRICEBOOK: { 'EBP01-001': 2 }, moverCard: (dir, scope) => (scope === 'all' && dir === 'up'
+    ? { c: { id: 'EBP01-011', name: 'Jetragon' }, pct: 8.1, prev: 10, cur: 12 } : null) });
+  const real = rising.api.slides().find((s) => s.kind === 'cotd');
+  assert.equal(real.title, 'Jetragon');
+  assert.notEqual(real.cotd.featured, true);
+});
+
+test('the next release names a reprint and shows its own banner', () => {
+  const a = app({
+    SEALED: [
+      { id: 'box-ebp01-2e', set: 'Dawn of Palpagos', rel: 'Dawn of Palpagos 2nd Edition', box: 'BOX_BANNER_EBP01_2E', banner: 'BOX_BANNER_EBP01', pre: true, date: 'late Oct 2026' },
+      { id: 'box-bp02', set: 'Legends Awaken', box: 'BOX_EBP02', banner: 'BOX_BANNER_BP02', pre: true, date: 'Oct 30, 2026' },
+    ],
+    sealDate: (p) => p.date,
+  });
+  a.window.CARD_IMG = { BOX_BANNER_EBP01_2E: 'img/2e.webp', BOX_BANNER_EBP01: 'img/1e.jpg', BOX_BANNER_BP02: 'img/bp02.webp', BOX_EBP02: 'img/box.webp' };
+  const soon = a.api.slides().find((s) => s.kind === 'soon');
+  assert.equal(soon.title, 'Dawn of Palpagos 2nd Edition');
+  assert.equal(soon.art, 'img/2e.webp', 'the reprint banner, not the July set');
+  // A product whose box is a box shot, not a banner, keeps its banner.
+  const b = app({ SEALED: [{ id: 'box-bp02', set: 'Legends Awaken', box: 'BOX_EBP02', banner: 'BOX_BANNER_BP02', pre: true, date: 'Oct 30, 2026' }], sealDate: (p) => p.date });
+  b.window.CARD_IMG = { BOX_BANNER_BP02: 'img/bp02.webp', BOX_EBP02: 'img/box.webp' };
+  assert.equal(b.api.slides().find((s) => s.kind === 'soon').art, 'img/bp02.webp');
+});
+
+test('an up to date build with no banner of its own uses the one the server names for its version', () => {
+  const art = 'https://spheredex.app/app/img/UPDATE_1_11.webp';
+  const a = app({ RELEASE_ART: {}, _latestArt: art, _latestAppVersion: '1.11', RELEASE_HIGHLIGHTS: { '1.11': ['One', 'Two', 'Three'] } });
+  const feat = a.api.slides().find((s) => s.kind === 'features');
+  assert.equal(feat.art, art);
+  assert.equal(feat.releaseArt, true);
+  // A banner baked into the build still wins over the server's.
+  const baked = app({ RELEASE_ART: { '1.11': 'img/UPDATE_1_11.webp' }, _latestArt: art, _latestAppVersion: '1.11', RELEASE_HIGHLIGHTS: { '1.11': ['One'] } });
+  assert.equal(baked.api.slides().find((s) => s.kind === 'features').art, 'img/UPDATE_1_11.webp');
+  // Server art for some other version is never put on this one.
+  const other = app({ RELEASE_ART: {}, _latestArt: art, _latestAppVersion: '1.10', RELEASE_HIGHLIGHTS: { '1.11': ['One'], '1.09': ['Old'] } });
+  const f2 = other.api.slides().find((s) => s.kind === 'features');
+  assert.notEqual(f2 && f2.version, '1.11');
+});
+
+test('the app keeps Home current while it stays open, and new prices repaint the carousel', () => {
+  const source = fs.readFileSync(FILES.src, 'utf8');
+  const timer = /setInterval\(function\(\)\{\s*if\(document\.hidden\) return;\s*try\{ primeNewsBell\(\); \}catch\(e\)\{\}\s*try\{ checkAppVersion\(\); \}catch\(e\)\{\}\s*try\{ priceBookGate\(\); \}catch\(e\)\{\}\s*\}, 30\*60\*1000\);/;
+  assert.match(source, timer, 'a 30 minute refresh while the page is visible');
+  assert.match(source, /if\(n && _curPage==="home"\)\{ try\{ renderFeatured\(\); \}catch\(_\)\{\} \}/, 'fresh prices repaint the movers and card of the day');
 });
 
 test('renderFeatured paints slides, dots and wires autoplay through the API', () => {
