@@ -156,9 +156,12 @@ through `infisical run`, and the tool skips cleanly (the run still publishes off
 news) until the token exists.
 
 1. Create an app in the X developer console (<https://console.x.com>) and generate its
-   **Bearer Token** (app-only auth; read access is enough). The API is billed per use:
-   the workflow reads at most 10 posts twice a day, plus one username lookup per run
-   unless `X_USER_ID` is set.
+   **Bearer Token** (app-only auth; read access is enough). The API is billed per use.
+   The workflow runs every 4 hours and keeps a cursor between runs: about once a day it
+   reads the newest 10 posts of each account, and every other run asks only for posts
+   newer than the last one seen, so the only repeat reads are that daily full read. Each
+   account's user id is looked up once and then remembered in that cursor (`X_USER_ID`
+   skips the lookup for @PalworldOCG_EN entirely).
 2. In Infisical, open the project's **Development** environment and add
    `X_BEARER_TOKEN` with that value. Paste it into Infisical directly; never put it in
    `.env`, a workflow file or a GitHub secret.

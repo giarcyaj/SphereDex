@@ -4,17 +4,21 @@ name: Sieve Hourly Refresh
 #
 # Why this is a separate workflow from sieve-refresh.yml: three of the four fetchers hit the official
 # site's own WordPress REST API, which needs no key, has no quota and costs nothing, so there is no
-# reason for them to wait 12 hours. The fourth, tools/fetch_x_posts.py, is billed per post read and
-# has no since_id cursor, so running it hourly would pay roughly 12 times over for the same 10 posts.
-# They shared one job and one cron, which meant the free half could not be sped up without paying for
-# the metered one. X therefore stays in sieve-refresh.yml on its twice daily schedule.
+# reason for them to wait for the X schedule. The fourth, tools/fetch_x_posts.py, is billed per post
+# read. It now keeps a since_id cursor, so a read between full reads only pays for posts that are
+# genuinely new, but that cursor lives in exactly one place: sieve-refresh.yml's cache, behind its
+# one-run-at-a-time concurrency group. A second workflow reading X would restore its own copy, race
+# the other for the same new posts and pay twice, and an hourly read would add calls without getting
+# posts to the app meaningfully sooner. X therefore stays in sieve-refresh.yml, every 4 hours
+# (dispatched by the backend, with a cron as the backup clock), which already meets the target of an
+# @PalworldOCG_EN post reaching the app within about 4 hours.
 #
 # There is NO X step here on purpose. x_complete tells the backend to delete every stored X post that
 # is missing from the batch, and it is gated on the X fetch status, which this workflow never sets. A
 # run of this file can therefore never prune X posts, whatever else goes wrong.
 #
-# Note on timing: GitHub's scheduled runs drift under load, and this repo's twice daily Sieve has been
-# observed running 3 to 6 hours late. At 24 attempts a day that drift stops mattering, which is most
+# Note on timing: GitHub's scheduled runs drift under load, and this repo's scheduled Sieve has been
+# observed starting 3 to 10 hours late. At 24 attempts a day that drift stops mattering, which is most
 # of the point of this file.
 
 on:

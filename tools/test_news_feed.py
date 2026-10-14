@@ -113,6 +113,30 @@ class NewsFeedTests(unittest.TestCase):
         self.assertIn("robots.txt", messages[0])
         self.assertIn("Conservative", messages[0])
 
+    def test_passes_a_real_published_instant_through_in_utc(self):
+        session = self.session("x-session", "Latest @PalworldOCG_EN, @PalworldOCG posts")
+        (session / "result.json").write_text(json.dumps([
+            {"title": "Reveal", "date": "Oct 14, 2026", "link": "https://x.com/PalworldOCG_EN/status/20",
+             "published": "2026-10-14T02:00:01.000Z"},
+            {"title": "Japanese reveal", "date": "Oct 14, 2026", "link": "https://x.com/PalworldOCG/status/21",
+             "published": "2026-10-14T10:30:00+09:00"},
+        ]), encoding="utf-8")
+        items, _ = news_feed.build_news_feed(self.root)
+        self.assertEqual([item["published"] for item in items], ["2026-10-14T02:00:01Z", "2026-10-14T01:30:00Z"])
+        self.assertEqual([item["date"] for item in items], ["Oct 14, 2026", "Oct 14, 2026"], "date is untouched")
+
+    def test_omits_published_when_it_is_missing_or_not_an_instant(self):
+        session = self.session("session", "Extract news")
+        (session / "result.json").write_text(json.dumps([
+            {"title": f"Post {n}", "link": f"https://en.palworld-official-cardgame.com/news/post-{n}", **extra}
+            for n, extra in enumerate([{}, {"published": ""}, {"published": "soon"}, {"published": "2026-10-14"},
+                                       {"published": "2026-10-14T02:00:01"}, {"published": 5}])
+        ]), encoding="utf-8")
+        items, counts = news_feed.build_news_feed(self.root)
+        self.assertEqual(counts["official"], 6, "a bad published never costs the row itself")
+        self.assertTrue(all("published" not in item for item in items))
+        self.assertTrue(all(set(item) == {"title", "date", "summary", "link", "image", "source"} for item in items))
+
     def test_write_feed_always_emits_valid_json(self):
         output = Path(self.tmp.name) / "out" / "feed.json"
         counts = news_feed.write_news_feed(self.root, output)

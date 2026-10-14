@@ -3,7 +3,8 @@
 Replaces the Sieve scrape of en.palworld-official-cardgame.com/news/: the site's WordPress REST
 API (/wp-json/wp/v2/posts) carries every news post with its title, publish date, excerpt,
 permalink and featured image, free and structured, so no AI extraction (or credits) is needed.
-Rows use the {title, date, summary, link, image} shape the Sieve pipeline produced and are
+Rows use the {title, date, summary, link, image} shape the Sieve pipeline produced, plus
+"published" (the exact UTC publish time, from date_gmt) when the post has one, and are
 written as a session directory under stage/sieve, so tools/news_feed.py consolidates them
 unchanged alongside the card-reveal and X sessions.
 
@@ -43,6 +44,25 @@ def featured_image(post: dict) -> str:
     return str(media.get("source_url") or "")
 
 
+def published_instant(post: dict) -> str:
+    """The post's exact publish time as an ISO instant, '' when it has none.
+
+    WordPress gives date_gmt in UTC but writes it without a zone ("2026-09-11T10:00:37"), so the
+    zone is added here as Z. Without it the backend would have to guess, and the plain "date"
+    alone cannot order two posts made on the same day.
+    """
+    raw = str(post.get("date_gmt") or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = _dt.datetime.fromisoformat(raw[:-1] if raw.endswith("Z") else raw)
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(_dt.timezone.utc).replace(tzinfo=None)
+    except (ValueError, OverflowError):           # e.g. a draft's 0000-00-00T00:00:00
+        return ""
+    return parsed.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+
 def pick_row(post: dict) -> dict | None:
     title = strip_html(str((post.get("title") or {}).get("rendered") or ""))
     link = str(post.get("link") or "").strip()
@@ -53,13 +73,17 @@ def pick_row(post: dict) -> dict | None:
     if not summary:
         summary = strip_html(content_html)
     images = extract_images(content_html)
-    return {
+    row = {
         "title": title,
         "date": format_date(str(post.get("date_gmt") or post.get("date") or "")),
         "summary": summary[:300],
         "link": link,
         "image": featured_image(post) or (images[0] if images else ""),
     }
+    published = published_instant(post)
+    if published:
+        row["published"] = published
+    return row
 
 
 def rows_from_posts(posts: object) -> list[dict]:

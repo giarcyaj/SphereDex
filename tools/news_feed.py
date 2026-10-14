@@ -6,6 +6,7 @@ import csv
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -105,6 +106,27 @@ def _source_for(link: str, instruction: str = "", image: str = "") -> str:
     return "official"
 
 
+def _instant(value: Any) -> str:
+    """An ISO 8601 timestamp that carries a zone -> 'YYYY-MM-DDTHH:MM:SSZ' in UTC, else ''.
+
+    `published` is the exact time a post went out, which the backend uses to order two posts made on
+    the same day. A bare date or a clock time with no zone is not an instant, and passing one on would
+    invent a publish time, so the row keeps only its date instead.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text[-1] in "Zz":
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            return ""
+        return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (ValueError, OverflowError):
+        return ""
+
+
 def _normalise(row: dict[str, Any], instruction: str = "") -> dict[str, str] | None:
     title = str(row.get("title") or row.get("text") or row.get("content") or "").strip()
     link = str(row.get("link") or row.get("url") or "").strip()
@@ -125,6 +147,11 @@ def _normalise(row: dict[str, Any], instruction: str = "") -> dict[str, str] | N
     item["link"] = link
     item["image"] = image
     item["source"] = source
+    # Optional, and only when it is a real instant: the backend's normaliseSieved keeps it, and a row
+    # without one simply sorts by its date as before.
+    published = _instant(row.get("published"))
+    if published:
+        item["published"] = published
     return item
 
 
