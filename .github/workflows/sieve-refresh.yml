@@ -1,17 +1,43 @@
 name: Sieve Scheduled Refresh
 
-# Pulls News + Releases twice daily from the official Palworld TCG site (its WordPress REST API) and
-# @PalworldOCG_EN (official X API). No Sieve credits are spent: tools/sieve_run.py stays available
-# for one-off scrapes. X is optional; official news must still consolidate and publish.
+# Pulls News + Releases every 4 hours from the official Palworld TCG site (its WordPress REST API) and
+# both official X accounts, @PalworldOCG_EN and the Japanese @PalworldOCG (official X API). No Sieve
+# credits are spent: tools/sieve_run.py stays available for one-off scrapes. X is optional; official
+# news must still consolidate and publish.
 # Output: POST to the SphereDex backend /api/admin/news (X-Admin-Key) for the app's News and Home feed.
+#
+# Why every 4 hours: @PalworldOCG_EN posts every day around 01:00 to 02:00 UTC, and a post should reach
+# the app within about 4 hours, with its image and its exact publish time. This used to run twice a day
+# at 08:00 and 20:00, and GitHub often started it 6 to 10 hours late, so the morning post could take
+# most of a day to appear. The backend dispatches this workflow (workflow_dispatch) at 02:00, 06:00,
+# 10:00, 14:00, 18:00 and 22:00 UTC once it has a GitHub token, because a dispatch starts within a
+# minute or two. The cron below is the backup clock, 37 minutes after each of those: when a dispatch
+# never arrives the cron still gets a run in that window, and when it did arrive the cron run finds
+# almost nothing new and, thanks to the X cursor, pays for almost nothing.
+#
+# The official site half also runs every hour in sieve-hourly.yml; this file is the only one that reads X.
 
 on:
   schedule:
-    - cron: "0 8,20 * * *"
+    - cron: "37 2-23/4 * * *"
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Full X read: re-read the newest 10 posts per account, which also lets the backend drop posts deleted on X"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
+
+# One run at a time, and a queued run waits instead of cancelling the one in progress. Two runs at once
+# would restore the same X cursor and pay twice for the same new posts, and cancelling a run part way
+# throws away X reads that were already paid for, because its cursor is only saved when the job
+# finishes successfully.
+concurrency:
+  group: sieve-refresh
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -48,17 +74,40 @@ jobs:
           restore-keys: |
             x-translations-
 
+      # Where the X reads got to (the newest post id seen per account, and when the last full read
+      # was), carried between runs like the translations. actions/cache only saves when the job
+      # succeeds, so a run whose POST failed does not move the cursor on and the next run reads those
+      # posts again rather than losing them. A miss (the first run, or a week with no run) costs one
+      # full read, which is what every run used to do.
+      - name: Restore X read cursor
+        uses: actions/cache@v4
+        with:
+          path: stage/sieve/x_cursor.json
+          key: x-cursor-${{ github.run_id }}
+          restore-keys: |
+            x-cursor-
+
       # x.com's robots.txt is Disallow: /, so Sieve refuses to scrape it; posts come from the
-      # official X API v2 instead (pay-per-use, at most 10 posts per run). Needs X_BEARER_TOKEN
-      # (optionally X_USER_ID) in Infisical; without it the step skips and the feed still publishes.
+      # official X API v2 instead, which is billed per post read. Needs X_BEARER_TOKEN (optionally
+      # X_USER_ID) in Infisical; without it the step skips and the feed still publishes.
+      # The cursor makes most runs INCREMENTAL: each account is asked only for posts newer than the
+      # last one seen (since_id), so a run every 4 hours usually reads none or one post per account.
+      # About once a day (when the last full read is over 20 hours old, or when dispatched with
+      # full) the run is a FULL read of the newest 10 per account, the only kind that can tell the
+      # backend which stored posts were deleted on X. Before the cursor, every run read 10 posts per
+      # account whether or not anything had changed, 40 reads a day at two runs; now it is about one
+      # full read a day (20 reads) plus each genuinely new post once, so running every 4 hours costs
+      # less than running twice a day did.
       # XAI_API_KEY, also from Infisical, turns Japanese headlines into English ones. It is
       # optional in exactly the same way: without it the Japanese posts publish untranslated.
       - name: Fetch X posts (official X API)
         id: scrape_x
         continue-on-error: true
+        env:
+          X_FULL: ${{ inputs.full && '--full' || '' }}
         run: |
           export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
-          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/fetch_x_posts.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
+          infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/fetch_x_posts.py --root stage/sieve --cursor stage/sieve/x_cursor.json $X_FULL --github-output "$GITHUB_OUTPUT"
 
       # Option A for the Home card-reveal slide (docs/x-reveal-source-proposal.md): the official
       # site's REST API is robots-permitted and carries reveal posts with cardlist art. Stages a
@@ -102,12 +151,35 @@ jobs:
           # A successful call that returns ZERO posts is not evidence the account is empty, but
           # x_complete makes the backend delete every stored X post before merging. Require a
           # post count as well as an ok status, or one quiet response wipes the app's X news.
+          # Incremental runs (posts newer than the cursor only) report "incremental", never "ok", so
+          # they can never prune: a batch of new posts says nothing about which older ones still exist.
+          # Only the daily full read, with every account answering, sends x_complete.
           if [ "$X_STATUS" = "ok" ] && [ "${X_POSTS:-0}" -gt 0 ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
           echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news (X status: ${X_STATUS:-none})"
           curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-post.json -w "\nHTTP %{http_code}\n"
 
       - name: Report scrape status
         if: always()
+        env:
+          # Minutes since the newest @PalworldOCG_EN item in an /api/news response (stdin), using its
+          # exact published time when it has one and the start of its day otherwise. Prints nothing
+          # when the feed holds no such item.
+          X_AGE_PY: |
+            import json, sys, time
+            from datetime import datetime, timezone
+            newest = None
+            for item in json.loads(sys.stdin.buffer.read()).get("items") or []:
+                if not isinstance(item, dict) or item.get("source") != "X \u00b7 @PalworldOCG_EN":
+                    continue
+                stamp = str(item.get("published") or "") or str(item.get("date") or "") + "T00:00:00Z"
+                try:
+                    when = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                when = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+                newest = when if newest is None or when > newest else newest
+            if newest is not None:
+                print(int((time.time() - newest.timestamp()) // 60))
         run: |
           if [ "${{ steps.scrape_official.outcome }}" = "failure" ]; then
             echo "::warning::Official-news fetch failed. Its error (the site's REST API response) is in the step log."
@@ -120,10 +192,31 @@ jobs:
             echo "::warning::X posts skipped: X_BEARER_TOKEN is not set in Infisical (dev). See SECRETS.md."
           elif [ "${{ steps.scrape_x.outcome }}" = "failure" ]; then
             echo "::warning::X API fetch failed. Its error (HTTP status and API detail) is in the step log. Do not fall back to scraping x.com; its robots.txt is Disallow: /."
+          elif [ "${{ steps.scrape_x.outputs.status }}" = "incremental" ] && [ "${{ steps.consolidate.outputs.x_items }}" = "0" ]; then
+            # Normal for most runs: nothing was posted since the last read, and nothing was paid for.
+            echo "No new X posts since the last read (incremental read)."
           elif [ "${{ steps.consolidate.outputs.x_items }}" = "0" ]; then
             echo "::warning::X API returned no usable posts. Inspect the x-api session in the uploaded artifact."
           else
-            echo "X feed items published: ${{ steps.consolidate.outputs.x_items }}"
+            echo "X feed items published: ${{ steps.consolidate.outputs.x_items }} (${{ steps.scrape_x.outputs.status }} read)"
+          fi
+          # Freshness, judged from what the app actually serves rather than from this run's own steps:
+          # @PalworldOCG_EN posts every day, so its newest item in the public feed should never be much
+          # more than a day old. Over 30 hours means its posts are not reaching the app, whatever the
+          # cause (token, credits, schedule, backend). A warning only, never a failure: a failed job
+          # would also skip saving the X cursor.
+          news_url=https://spheredex-backend.craigjayedit.workers.dev/api/news
+          if news=$(curl -fsS --max-time 30 "$news_url"); then
+            age_min=$(printf '%s' "$news" | python -c "$X_AGE_PY" 2>/dev/null || true)
+            if [ -z "$age_min" ]; then
+              echo "::warning::No readable @PalworldOCG_EN item in $news_url, so its posts are not reaching the app."
+            elif [ "$age_min" -gt 1800 ]; then
+              echo "::warning::The newest @PalworldOCG_EN item in $news_url is $((age_min / 60)) hours old (over 30). The account posts daily, so its posts are not reaching the app."
+            else
+              echo "Newest @PalworldOCG_EN item in the app feed: $((age_min / 60)) hours old."
+            fi
+          else
+            echo "::warning::Could not read $news_url for the X freshness check (this does not fail the run)."
           fi
           if [ "${{ steps.releases.outcome }}" = "failure" ]; then
             echo "::warning::Release sweep failed. Its error is in the step log; app release data was not updated."
