@@ -63,22 +63,11 @@ jobs:
         continue-on-error: true
         run: python tools/fetch_official_news.py --root stage/sieve --github-output "$GITHUB_OUTPUT"
 
-      # Headline translations, carried between runs. An X post never changes, so its translation
-      # never needs redoing; without this the Japanese posts would be re-translated every run. A cache
-      # miss is not a failure, it just costs one translation call.
-      - name: Restore translation cache
-        uses: actions/cache@v4
-        with:
-          path: stage/sieve/translations.json
-          key: x-translations-${{ github.run_id }}
-          restore-keys: |
-            x-translations-
-
       # Where the X reads got to (the newest post id seen per account, and when the last full read
-      # was), carried between runs like the translations. actions/cache only saves when the job
-      # succeeds, so a run whose POST failed does not move the cursor on and the next run reads those
-      # posts again rather than losing them. A miss (the first run, or a week with no run) costs one
-      # full read, which is what every run used to do.
+      # was), carried between runs. actions/cache only saves when the job succeeds, so a run whose
+      # POST failed does not move the cursor on and the next run reads those posts again rather than
+      # losing them. A miss (the first run, or a week with no run) costs one full read, which is what
+      # every run used to do.
       - name: Restore X read cursor
         uses: actions/cache@v4
         with:
@@ -98,8 +87,8 @@ jobs:
       # account whether or not anything had changed, 40 reads a day at two runs; now it is about one
       # full read a day (20 reads) plus each genuinely new post once, so running every 4 hours costs
       # less than running twice a day did.
-      # XAI_API_KEY, also from Infisical, turns Japanese headlines into English ones. It is
-      # optional in exactly the same way: without it the Japanese posts publish untranslated.
+      # Posts from the Japanese account are staged in their original Japanese. The backend translates
+      # them into English when it receives them, so this step needs no translation key of its own.
       - name: Fetch X posts (official X API)
         id: scrape_x
         continue-on-error: true

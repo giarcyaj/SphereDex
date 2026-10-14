@@ -157,8 +157,8 @@ class MainHarness(unittest.TestCase):
 
     def run_main(self, *argv, env=None, get=None):
         out = io.StringIO()
-        # Never the real X API (billed per post) or xAI: an unstubbed call fails the test loudly.
-        base = {"XAI_API_KEY": "", "X_USER_ID": ""}
+        # Never the real X API (billed per post): an unstubbed call fails the test loudly.
+        base = {"X_USER_ID": ""}
         with mock.patch.dict(os.environ, {**base, **(env or {})}, clear=False), \
                 mock.patch.object(fetch_x_posts, "_get_json", side_effect=AssertionError("network call in a test")), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -522,6 +522,32 @@ class CursorTests(MainHarness):
         saved = self.saved()
         self.assertIn("full_at", saved)
         self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1010")
+
+    def test_japanese_posts_are_staged_exactly_as_posted(self):
+        # The backend translates them, so the fetch must hand over the original words, nothing added.
+        reveal = "新カード公開！「目覚めし伝説」"
+        jp = {"data": [{"id": str(2010 - n), "created_at": "2026-10-14T01:00:00.000Z",
+                        "text": f"{reveal} {n}\nアグニドラが登場！"
+                                " 発売は10月30日です。",
+                        "attachments": {"media_keys": ["3_9"]}}
+                       for n in range(10)],
+              "includes": {"media": [{"media_key": "3_9", "type": "photo",
+                                      "url": "https://pbs.twimg.com/media/jp-reveal.jpg"}]},
+              "meta": {"result_count": 10, "newest_id": "2010"}}
+        fake = FakeX({EN_ID: timeline(*ids(1010, 10)), JP_ID: jp})
+        code, out, result = self.run_x(fake)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["status"], "ok")
+        staged = json.loads(next((self.dir / "sieve").glob("x-api-*/files/scrape_results.json"))
+                            .read_text(encoding="utf-8"))
+        japanese = [r for r in staged if "/PalworldOCG/status/" in r["link"]]
+        self.assertEqual(len(japanese), 10)
+        self.assertEqual(japanese[0]["title"], f"{reveal} 0")
+        self.assertIn("アグニドラ", japanese[0]["summary"])
+        for row in japanese:
+            self.assertNotIn("title_original", row)
+            self.assertNotIn("summary_original", row)
+        self.assertNotIn("translat", out)
 
     def test_a_full_read_follows_at_most_three_pages(self):
         for per_page, status in ((1, "ok"), (0, "partial")):

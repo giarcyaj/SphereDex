@@ -110,3 +110,60 @@ Example only. Do not paste this into `palworld-tcg.json`.
 The News screen (More, then News) has a **Palworld TCG** section under the existing official headlines. It fetches the live URL, shows items newest-first with the source, date, category badge, and an Unconfirmed label when `unconfirmed` is true, and opens `url` on tap.
 
 If the fetch fails, the section shows the last good copy saved on that device (kept for 30 days), then the empty copy bundled in the app (`TCG_NEWS_FALLBACK` in `src/paldeck.html`). The bundled copy stays empty so this JSON can grow without an app release. The app also drops a row that does not match the rules above and sorts the rest newest-first, so one bad row does not blank the list. The test requires every row in the file to pass those rules anyway.
+
+## Japanese name glossary (`ja-glossary.json`)
+
+A second file lives next to the news list. It is not news and the app does not read it: the backend does, when it translates posts from the official Japanese X account (@PalworldOCG) into English with Cloudflare Workers AI. A general model does not know this game and tends to spell Japanese names out in Latin letters, so a reveal of アグニドラ would read "Agunidora" instead of Jormuntide Ignis. The glossary hands the model the official English for every card, Pal and epithet the app knows, plus a short list of set and product names.
+
+| | |
+| --- | --- |
+| Path in this repo | `docs/news/ja-glossary.json` |
+| Live URL | `https://spheredex.app/news/ja-glossary.json` |
+| Built by | `python tools/build_ja_glossary.py` |
+| Checked by | `python tools/build_ja_glossary.py --check`, and `tools/test_build_ja_glossary.py` fails while it is out of date |
+
+Because Pages serves it, a new set reaches the translator once the change is on `main`, but allow up to about an hour and ten minutes: Pages caches the file for about ten minutes, and the backend keeps its own copy for an hour before it fetches again. No backend deploy is needed.
+
+### Document
+
+```json
+{
+  "updated_at": "2026-10-14T16:01:39Z",
+  "terms": [
+    {"ja": "荒ぶる溶岩竜 – アグニドラ", "en": "Jormuntide Ignis – Savage Lava Dragon", "kind": "card"},
+    {"ja": "目覚めし伝説", "en": "Legends Awaken", "kind": "set"},
+    {"ja": "アグニドラ", "en": "Jormuntide Ignis", "kind": "pal"}
+  ]
+}
+```
+
+| Field | Where | Type | Rule |
+| --- | --- | --- | --- |
+| `updated_at` | top level | string | ISO 8601 UTC. Moves only when the terms change, so a rerun with nothing new leaves the file as it was. |
+| `terms` | top level | array | Longest `ja` first, so a translator that walks the list matches a full card name before the Pal name inside it. |
+| `ja` | term | string | The Japanese as printed. Each one appears once in the file. |
+| `en` | term | string | The official English. |
+| `kind` | term | string | One of `card`, `pal`, `epithet`, `set`, `term`. |
+
+| `kind` | Meaning |
+| --- | --- |
+| `card` | A full card name, such as `荒ぶる溶岩竜 – アグニドラ` or `パルスフィア` (Pal Sphere). |
+| `pal` | The Pal half of a Pal card's name, such as `アグニドラ` (Jormuntide Ignis). |
+| `epithet` | The other half, such as `荒ぶる溶岩竜` (Savage Lava Dragon). |
+| `set` | A set or product name, such as `目覚めし伝説` (Legends Awaken). |
+| `term` | A game or rules word, such as `ブースターパック` (Booster Pack) or `ラッキーパル` (Lucky Pal). |
+
+### Where the terms come from
+
+- **Cards.** Both languages are read from `src/paldeck.html`: the English name each card is built with (the `RAW` and `RAW2` tables) and its printed Japanese name (`CARD_TEXT_JA`, baked by `tools/bake_card_text_ja.py` from the official Japanese site and verified card by card). The two languages order a Pal card's name differently: Japanese prints the epithet first (`荒ぶる溶岩竜 – アグニドラ`), English prints the Pal first (`Jormuntide Ignis – Savage Lava Dragon`). The build checks that order against the data and refuses to write if it ever flips.
+- **Ambiguous names are left out.** A Japanese term that would map to two different English ones is dropped rather than guessed. Every Japanese Soul card prints `ソウル`, for example, whatever Pals are on it.
+- **Fixed terms.** Set names, product lines and card kinds are a hand checked list, `FIXED_TERMS` in `tools/build_ja_glossary.py`, and always win over anything derived. Each entry was confirmed on the official Japanese site and the official English one (same product page and same release date for the sets). Anything that could not be confirmed is left out.
+
+Card names keep the en dash they are printed with, because that is the official name. The English words in `FIXED_TERMS` are ours, so they follow the copy rule and carry no hyphens or dashes.
+
+### How to extend it
+
+1. New cards: bake their Japanese text first (`python tools/bake_card_text_ja.py`), then run `python tools/build_ja_glossary.py`.
+2. A new set or product name: add it to `FIXED_TERMS` with a comment saying where it was confirmed, then run the build. Only add a name that both official sites show for the same product.
+3. Do not edit `ja-glossary.json` by hand. The next build would overwrite the edit, and the test fails until the file matches the build.
+4. Run `cd tools && python -m unittest test_build_ja_glossary` and open a pull request with the script change (if any) and the regenerated JSON.

@@ -17,7 +17,7 @@ back to `.env`, so wrapping the command is the entire change.
 | `SIEVE_API_KEY` | `tools/sieve.py`, `tools/sieve_run.py` | `android/.env` (gitignored) |
 | `SIEVE_BASE_URL` | `tools/sieve.py` | unset — defaults to the production host |
 | `X_BEARER_TOKEN` | `tools/fetch_x_posts.py` (Sieve refresh workflow) | Infisical `dev` only — see [X API token](#x-api-token) |
-| `XAI_API_KEY` | `tools/translate_posts.py` (Sieve refresh workflow) | Infisical `dev` only, optional — see [xAI API key](#xai-api-key-english-headlines-for-the-japanese-account) |
+| `XAI_API_KEY` | nothing (no longer used) | can be deleted from Infisical `dev` — see [xAI API key (no longer used)](#xai-api-key-no-longer-used) |
 | `X_USER_ID` | `tools/fetch_x_posts.py` | optional, Infisical `dev` — not secret, saves a lookup call per run |
 | `KEYSTORE_*`, `KEY_ALIAS`, `GOOGLE_SERVICES_JSON_BASE64` | `.github/workflows/*.yml` | GitHub's encrypted repo secrets, never a file |
 
@@ -176,45 +176,18 @@ infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-ch
 
 Rotate the token from the developer console if it ever reaches a log or a file.
 
-## xAI API key (English text for the Japanese account)
+## xAI API key (no longer used)
 
-`tools/fetch_x_posts.py` follows both official accounts, and @PalworldOCG posts in
-Japanese. `tools/translate_posts.py` turns those posts into English so the feed does
-not show Japanese text to an English reader. It translates both the headline and the body
-a reader sees under it, each on its own, so a field that was already English is never
-rewritten. It translates text only: every post is already fetched through the official X
-API, so nothing here can invent a post.
+Nothing in this repo reads `XAI_API_KEY` or `XAI_MODEL` any more. `tools/fetch_x_posts.py`
+still follows both official accounts, but it now stages @PalworldOCG's posts in their
+original Japanese, and translating them into English is the backend's job (Cloudflare
+Workers AI, reading the official card, Pal and set names from `docs/news/ja-glossary.json`,
+which `tools/build_ja_glossary.py` builds). The old `tools/translate_posts.py` and its
+translation cache step in the Sieve refresh workflow are gone.
 
-Everything about this is optional. Without the key the Japanese posts publish in their
-original form, which is exactly what happens today, and the step says so rather than
-failing.
-
-1. Create a key in the xAI console (<https://console.x.ai>). It is billed per token; the
-   work is about 1.4k tokens for ten posts, and results are cached by post link so the
-   same post is never translated twice.
-2. In Infisical, open the project's **Development** environment and add `XAI_API_KEY`
-   with that value. Paste it into the dashboard rather than the CLI: `infisical secrets
-   set` would put the key in your shell history. Never put it in `.env`, a workflow file
-   or a GitHub secret.
-3. Optional: add `XAI_MODEL` to pin a model. The default is `grok-4.3`; the module's
-   docstring records what each candidate model actually did on this feed.
-4. No workflow change is needed. The X step already runs under `infisical run`, so the
-   key is injected the moment it exists.
-5. Check it locally without printing the value:
-
-```bash
-infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-check
-```
-
-   The run reports `translated N post(s), M from cache, P part done, K left in the
-   original`. Any field it could not translate keeps its Japanese text, and
-   `title_original` and `summary_original` carry the originals either way. Only a complete
-   answer is cached, so a post that came back half translated is retried on the next run.
-
-The cache lives at `stage/sieve/translations.json` and is carried between CI runs by
-`actions/cache`. Deleting it costs one round of translation, nothing more.
-
-Rotate the key from the xAI console if it ever reaches a log or a file.
+If `XAI_API_KEY` (or `XAI_MODEL`) is still in the project's **Development** environment in
+Infisical, delete it there: nothing will notice it has gone. If the key was never revoked,
+revoke it in the xAI console as well, so a copy that leaked anywhere stops working.
 
 ## CI, staging and production
 

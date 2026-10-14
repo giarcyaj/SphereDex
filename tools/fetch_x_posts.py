@@ -6,7 +6,8 @@ is the sanctioned route. This tool turns recent posts into the same
 post's exact time as an ISO instant, so two posts made on the same day keep their order),
 written as a session directory under stage/sieve so tools/news_feed.py consolidates them
 unchanged. Links point at x.com and images at pbs.twimg.com, so news_feed classifies them as
-x:<handle> and the app credits them to X.
+x:<handle> and the app credits them to X. Every post is staged in the language it was posted in;
+the backend translates the Japanese account's posts into English when it receives them.
 
 Secrets (Infisical, never a file): X_BEARER_TOKEN is required; X_USER_ID is optional and
 saves the username lookup call for the first account. When the token is unset the tool stages
@@ -53,16 +54,14 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, NamedTuple
 
-try:                                   # translation is a nicety, never a reason not to fetch
-    import translate_posts
-except ImportError:                    # pragma: no cover
-    translate_posts = None
-
 API = "https://api.x.com/2"
 # Both official accounts. The Japanese one posts reveals and countdowns most days, usually ahead
 # of the English account, and its posts are in Japanese: the app shows each one credited to its
-# own handle so the reader can see which is which. USERNAME stays the default for every helper
-# signature below, so single account callers and the tests are unchanged.
+# own handle so the reader can see which is which. Its rows are staged exactly as posted. The
+# backend translates them into English when they arrive (Cloudflare Workers AI, with the official
+# names from docs/news/ja-glossary.json), so nothing here rewrites a word of any post.
+# USERNAME stays the default for every helper signature below, so single account callers and the
+# tests are unchanged.
 USERNAMES = ["PalworldOCG_EN", "PalworldOCG"]
 USERNAME = USERNAMES[0]
 TITLE_MAX = 120
@@ -423,26 +422,6 @@ def tidy_rows(rows: list[dict]) -> list[dict]:
     return out
 
 
-def translated(rows: list[dict], root: Path) -> list[dict]:
-    """English headlines and bodies for the Japanese account, cached between runs.
-
-    Japanese posts are the reason this exists: the app is English and Japanese text reads as a bug.
-    Everything here degrades to "publish it in Japanese": no module, no key, no network and a
-    confused model all leave the rows exactly as they arrived.
-    """
-    if translate_posts is None:
-        return rows
-    try:
-        rows, stats = translate_posts.translate_rows(rows, translate_posts.cache_path_for(root))
-    except Exception as exc:                       # never let a nicety break the fetch
-        print(f"x-api: translation skipped ({exc})", file=sys.stderr)
-        return rows
-    if stats["considered"]:
-        print("x-api: translated {translated} post(s), {cached} from cache, {partial} part done, "
-              "{failed} left in the original".format(**stats))
-    return rows
-
-
 def api_error(data: dict) -> str:
     errors = data.get("errors") or []
     first = errors[0] if errors and isinstance(errors[0], dict) else data
@@ -498,9 +477,7 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
     failed: list[str] = []
     status = "ok"
     if args.offline:
-        rows = translated(
-            tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8")))),
-            args.root)
+        rows = tidy_rows(rows_from_payload(json.loads(args.offline.read_text(encoding="utf-8"))))
     else:
         token = os.environ.get("X_BEARER_TOKEN", "").strip()
         if not token:
@@ -570,7 +547,6 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
             save_cursor(args.cursor, cursor)
             write_github_output(args.github_output, "failed", 0, counts)
             return 1
-        rows = translated(rows, args.root)
         if failed or short:
             status = "partial"
         elif mode == "incremental":
