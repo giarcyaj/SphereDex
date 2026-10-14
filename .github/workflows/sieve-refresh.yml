@@ -153,7 +153,11 @@ jobs:
           # post count as well as an ok status, or one quiet response wipes the app's X news.
           # Incremental runs (posts newer than the cursor only) report "incremental", never "ok", so
           # they can never prune: a batch of new posts says nothing about which older ones still exist.
-          # Only the daily full read, with every account answering, sends x_complete.
+          # Only the daily full read, with every account answering, sends x_complete. The same goes
+          # for each account on its own: a full read in which either account returned fewer than 3
+          # posts reports "partial", because the other account's posts would keep the total above 0
+          # while the quiet account's stored posts were deleted. The Report step prints the per
+          # account counts (the step's posts_<handle> outputs).
           if [ "$X_STATUS" = "ok" ] && [ "${X_POSTS:-0}" -gt 0 ]; then jq '{items: ., x_complete: true}' stage/news-feed.json > stage/news-post.json; else cp stage/news-feed.json stage/news-post.json; fi
           echo "POSTing $(jq length stage/news-feed.json) items to $BACKEND_URL/api/admin/news (X status: ${X_STATUS:-none})"
           curl --fail-with-body -sS -X POST "$BACKEND_URL/api/admin/news" -H "Content-Type: application/json" -H "X-Admin-Key: $INGEST_KEY" --data-binary @stage/news-post.json -w "\nHTTP %{http_code}\n"
@@ -199,6 +203,7 @@ jobs:
             echo "::warning::X API returned no usable posts. Inspect the x-api session in the uploaded artifact."
           else
             echo "X feed items published: ${{ steps.consolidate.outputs.x_items }} (${{ steps.scrape_x.outputs.status }} read)"
+            echo "X posts read per account: @PalworldOCG_EN ${{ steps.scrape_x.outputs.posts_PalworldOCG_EN || 0 }}, @PalworldOCG ${{ steps.scrape_x.outputs.posts_PalworldOCG || 0 }}"
           fi
           # Freshness, judged from what the app actually serves rather than from this run's own steps:
           # @PalworldOCG_EN posts every day, so its newest item in the public feed should never be much

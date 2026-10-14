@@ -175,7 +175,8 @@ class MainTests(MainHarness):
         self.assertEqual(code, 0)
         self.assertIn("skipping", out)
         self.assertFalse((self.dir / "sieve").exists())
-        self.assertIn("status=skipped", gh.read_text(encoding="utf-8"))
+        self.assertEqual(gh.read_text(encoding="utf-8").splitlines(),
+                         ["status=skipped", "posts=0", "posts_PalworldOCG_EN=0", "posts_PalworldOCG=0"])
 
     def test_fetch_failure_returns_1_without_printing_the_token(self):
         gh = self.dir / "gh.txt"
@@ -211,6 +212,16 @@ def timeline(*ids, newest=None, next_token=None):
     if next_token:
         payload["meta"]["next_token"] = next_token
     return payload
+
+
+def ids(newest, count):
+    """count post ids counting down from newest, newest first, the order the API returns them in."""
+    return [str(newest - n) for n in range(count)]
+
+
+def counts(en, jp):
+    """The per account lines of --github-output, as run_x reads them back."""
+    return {"posts_PalworldOCG_EN": str(en), "posts_PalworldOCG": str(jp)}
 
 
 class FakeX:
@@ -285,10 +296,10 @@ class CursorTests(MainHarness):
         self.assertEqual(fetch_x_posts.read_mode(at(hours=4), now, force_full=True)[0], "full")
 
     def test_no_cursor_file_means_a_full_read_that_records_full_at(self):
-        fake = FakeX({EN_ID: timeline("1001", "1000"), JP_ID: timeline("2001")})
+        fake = FakeX({EN_ID: timeline("1001", "1000", "999"), JP_ID: timeline("2001", "2000", "1999")})
         code, _, result = self.run_x(fake)
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "ok", "posts": "3"})
+        self.assertEqual(result, {"status": "ok", "posts": "6", **counts(3, 3)})
         for uid in (EN_ID, JP_ID):
             (query,) = fake.reads(uid)
             self.assertNotIn("since_id", query)
@@ -304,7 +315,7 @@ class CursorTests(MainHarness):
         fake = FakeX({EN_ID: timeline("1002"), JP_ID: timeline()})
         code, out, result = self.run_x(fake)
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "incremental", "posts": "1"})
+        self.assertEqual(result, {"status": "incremental", "posts": "1", **counts(1, 0)})
         self.assertIn("incremental read", out)
         (en,) = fake.reads(EN_ID)
         (jp,) = fake.reads(JP_ID)
@@ -320,7 +331,7 @@ class CursorTests(MainHarness):
         for hours, extra in ((21, ()), (2, ("--full",))):
             with self.subTest(hours=hours, extra=extra):
                 before = self.write_cursor(full_hours_ago=hours)
-                fake = FakeX({EN_ID: timeline("1003", "1002"), JP_ID: timeline("2002")})
+                fake = FakeX({EN_ID: timeline("1004", "1003", "1002"), JP_ID: timeline("2004", "2003", "2002")})
                 code, _, result = self.run_x(fake, *extra)
                 self.assertEqual(code, 0)
                 self.assertEqual(result["status"], "ok")
@@ -330,7 +341,7 @@ class CursorTests(MainHarness):
                     self.assertEqual(query["max_results"], ["10"])
                 saved = self.saved()
                 self.assertGreater(saved["full_at"], before["full_at"])
-                self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1003")
+                self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1004")
 
     def test_the_cursor_advances_to_meta_newest_id_even_when_the_feed_drops_that_post(self):
         self.write_cursor(full_hours_ago=4)
@@ -343,7 +354,8 @@ class CursorTests(MainHarness):
                                                      {"id": "2004", "text": "Card reveal: Pengullet"}]}})
         code, _, result = self.run_x(fake)
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "incremental", "posts": "3"})
+        # posts counts the staged rows, the per account lines what the API returned (the dropped post too).
+        self.assertEqual(result, {"status": "incremental", "posts": "3", **counts(2, 2)})
         staged = json.loads(next((self.dir / "sieve").glob("x-api-*/files/scrape_results.json"))
                             .read_text(encoding="utf-8"))
         self.assertNotIn("https://x.com/PalworldOCG_EN/status/1005", [r["link"] for r in staged])
@@ -356,7 +368,7 @@ class CursorTests(MainHarness):
         fake = FakeX({EN_ID: timeline("1002"), JP_ID: OSError("connection reset")})
         code, _, result = self.run_x(fake)
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "partial", "posts": "1"})
+        self.assertEqual(result, {"status": "partial", "posts": "1", **counts(1, 0)})
         accounts = self.saved()["accounts"]
         self.assertEqual(accounts["PalworldOCG_EN"], {"since_id": "1002", "user_id": EN_ID})
         # The old since_id stays; the remembered user id is forgotten so a stale one cannot lock it out.
@@ -377,7 +389,7 @@ class CursorTests(MainHarness):
         fake = FakeX({EN_ID: OSError("down"), JP_ID: OSError("down")})
         code, _, result = self.run_x(fake)
         self.assertEqual(code, 1)
-        self.assertEqual(result, {"status": "failed", "posts": "0"})
+        self.assertEqual(result, {"status": "failed", "posts": "0", **counts(0, 0)})
         saved = self.saved()
         self.assertEqual(saved["full_at"], before["full_at"])
         self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1001")
@@ -397,13 +409,13 @@ class CursorTests(MainHarness):
             with self.subTest(content=content):
                 self.cursor.parent.mkdir(parents=True, exist_ok=True)
                 self.cursor.write_bytes(content)
-                fake = FakeX({EN_ID: timeline("1001"), JP_ID: timeline("2001")})
+                fake = FakeX({EN_ID: timeline(*ids(1003, 3)), JP_ID: timeline(*ids(2003, 3))})
                 code, out, result = self.run_x(fake)
                 self.assertEqual(code, 0)
                 self.assertEqual(result["status"], "ok")
                 self.assertIn("full read", out)
                 self.assertNotIn("since_id", fake.reads(EN_ID)[0])
-                self.assertEqual(self.saved()["accounts"]["PalworldOCG_EN"]["since_id"], "1001")
+                self.assertEqual(self.saved()["accounts"]["PalworldOCG_EN"]["since_id"], "1003")
 
     def test_a_junk_since_id_is_never_sent_to_the_api(self):
         self.write_cursor(full_hours_ago=4, en="1; DROP TABLE")
@@ -422,7 +434,7 @@ class CursorTests(MainHarness):
         fake = FakeX({EN_ID: [first, second], JP_ID: timeline()})
         code, _, result = self.run_x(fake)
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "incremental", "posts": "7"})
+        self.assertEqual(result, {"status": "incremental", "posts": "7", **counts(7, 0)})
         reads = fake.reads(EN_ID)
         self.assertEqual(len(reads), 2, "two pages of 5 reach --max 10, so page3 is never asked for")
         self.assertEqual(reads[1]["pagination_token"], ["page2"])
@@ -444,12 +456,84 @@ class CursorTests(MainHarness):
 
     def test_without_cursor_every_run_is_a_full_read_and_nothing_is_saved(self):
         gh = self.dir / "gh.txt"
-        fake = FakeX({EN_ID: timeline("1001"), JP_ID: timeline("2001")})
+        fake = FakeX({EN_ID: timeline(*ids(1003, 3)), JP_ID: timeline(*ids(2003, 3))})
         code, _ = self.run_main("--root", str(self.dir / "sieve"), "--github-output", str(gh),
                                 env={"X_BEARER_TOKEN": "tok"}, get=fake)
         self.assertEqual(code, 0)
         self.assertIn("status=ok", gh.read_text(encoding="utf-8"))
         self.assertFalse(self.cursor.exists())
+
+    # A full read is the only kind that prunes stored posts, so an account that answered a working call
+    # with almost nothing must not be trusted: the other account's posts made the batch look complete,
+    # and the quiet account's stored posts were all deleted.
+
+    def test_a_full_read_where_one_account_comes_back_empty_reports_partial(self):
+        fake = FakeX({EN_ID: timeline(*ids(1010, 10)), JP_ID: timeline()})
+        code, out, result = self.run_x(fake)
+        self.assertEqual(code, 0)
+        self.assertEqual(result, {"status": "partial", "posts": "10", **counts(10, 0)})
+        self.assertIn("@PalworldOCG returned only 0 post(s) on a full read", out)
+        saved = self.saved()
+        self.assertNotIn("full_at", saved, "the next run must try the full read again")
+        self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1010")
+        self.assertEqual(saved["accounts"]["PalworldOCG"], {"user_id": JP_ID}, "nothing returned, nothing to move to")
+        staged = json.loads(next((self.dir / "sieve").glob("x-api-*/files/scrape_results.json"))
+                            .read_text(encoding="utf-8"))
+        self.assertEqual(len(staged), 10, "the posts that did arrive are still staged")
+
+    def test_a_full_read_where_one_account_returns_two_posts_reports_partial_until_a_good_one(self):
+        before = self.write_cursor(full_hours_ago=21)
+        fake = FakeX({EN_ID: timeline(*ids(1010, 10)), JP_ID: timeline("2003", "2002")})
+        code, _, result = self.run_x(fake)
+        self.assertEqual(code, 0)
+        self.assertEqual(result, {"status": "partial", "posts": "12", **counts(10, 2)})
+        saved = self.saved()
+        self.assertEqual(saved["full_at"], before["full_at"], "a short full read never moves full_at")
+        self.assertEqual(saved["accounts"]["PalworldOCG"]["since_id"], "2003", "its since_id still moves on")
+        # The old full_at is still over 20 hours old, so the next run reads both accounts in full again.
+        fake = FakeX({EN_ID: timeline(*ids(1012, 10)), JP_ID: timeline(*ids(2012, 10))})
+        _, out, result = self.run_x(fake)
+        self.assertIn("full read", out)
+        self.assertEqual(result, {"status": "ok", "posts": "20", **counts(10, 10)})
+        self.assertNotIn("since_id", fake.reads(JP_ID)[0])
+        self.assertGreater(self.saved()["full_at"], before["full_at"])
+
+    def test_a_full_read_where_both_accounts_return_ten_reports_ok(self):
+        fake = FakeX({EN_ID: timeline(*ids(1010, 10), next_token="more"), JP_ID: timeline(*ids(2010, 10))})
+        code, _, result = self.run_x(fake)
+        self.assertEqual(code, 0)
+        self.assertEqual(result, {"status": "ok", "posts": "20", **counts(10, 10)})
+        self.assertEqual(len(fake.reads(EN_ID)), 1, "ten posts is --max, so the next page is never asked for")
+        self.assertIn("full_at", self.saved())
+
+    def test_a_short_first_page_on_a_full_read_follows_the_next_token(self):
+        # Two posts survived the API's reply filter on the first page: too few on their own.
+        first = timeline("1010", "1009", next_token="page2")
+        second = timeline("1008", "1007", "1006", "1005")
+        fake = FakeX({EN_ID: [first, second], JP_ID: timeline(*ids(2010, 10))})
+        code, _, result = self.run_x(fake)
+        self.assertEqual(code, 0)
+        self.assertEqual(result, {"status": "ok", "posts": "16", **counts(6, 10)})
+        reads = fake.reads(EN_ID)
+        self.assertEqual(len(reads), 2)
+        self.assertEqual(reads[1]["pagination_token"], ["page2"])
+        self.assertEqual(reads[1]["max_results"], ["10"], "a later page keeps the page size of the chain")
+        self.assertNotIn("since_id", reads[1])
+        saved = self.saved()
+        self.assertIn("full_at", saved)
+        self.assertEqual(saved["accounts"]["PalworldOCG_EN"]["since_id"], "1010")
+
+    def test_a_full_read_follows_at_most_three_pages(self):
+        for per_page, status in ((1, "ok"), (0, "partial")):
+            with self.subTest(per_page=per_page):
+                pages = [timeline(*ids(1010 - n, per_page), next_token=f"page{n + 2}") for n in range(5)]
+                fake = FakeX({EN_ID: pages, JP_ID: timeline(*ids(2010, 10))})
+                code, _, result = self.run_x(fake, "--full")
+                self.assertEqual(code, 0)
+                self.assertEqual(len(fake.reads(EN_ID)), 3)
+                self.assertEqual(len(pages), 2, "the pages past the cap are never asked for")
+                self.assertEqual(result["posts_PalworldOCG_EN"], str(3 * per_page))
+                self.assertEqual(result["status"], status)
 
 
 if __name__ == "__main__":

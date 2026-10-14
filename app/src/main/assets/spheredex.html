@@ -10800,9 +10800,11 @@ label.acctsetrow { align-items:center; }
     var src=String((n&&n.source)||"").replace(/\s+/g," ").trim();
     return src || "News";
   }
-  // Newest first. The day decides. On the same day the exact publish time decides, when both stories
-  // carry one (the server sends it for website and X posts); a story without one keeps its place. ISO
-  // dates and "Sep 11, 2026" both count, and an unreadable date sorts last.
+  // Newest first. The day decides. On the same day a story with an exact publish time (the server sends
+  // it for website and X posts) ranks by that time, newest first, and a story without one ranks after
+  // every timed story of that day; two untimed stories tie. Letting an untimed story tie with everything
+  // on its day was not a consistent order, so the sort could put an older story on card 1 depending on
+  // the order the feed arrived in. ISO dates and "Sep 11, 2026" both count, and an unreadable date sorts last.
   function featNewer(a, b){
     var ta=featTime(a&&a.date), tb=featTime(b&&b.date);
     if(ta!==tb){
@@ -10811,7 +10813,9 @@ label.acctsetrow { align-items:center; }
       return tb-ta;
     }
     var pa=Date.parse(String((a&&a.published)||"")), pb=Date.parse(String((b&&b.published)||""));
-    if(isFinite(pa) && isFinite(pb) && pa!==pb) return pb-pa;
+    var timedA=isFinite(pa), timedB=isFinite(pb);
+    if(timedA && timedB) return pb-pa;
+    if(timedA!==timedB) return timedA ? -1 : 1;
     return 0;
   }
   // The whole feed, not just what the bell still lists: "Dismiss all" clears notifications, and it must
@@ -13590,9 +13594,12 @@ label.acctsetrow { align-items:center; }
       if(SOLD_ASOF){ var lastMark=+lsGet("palvault-sold-mark-asof")||0;
         if(SOLD_ASOF>lastMark){ try{ stampSoldMark(); lsSet("palvault-sold-mark-asof", String(SOLD_ASOF)); }catch(_){} } }
       renderFoot(); renderPriceSources();
-      if(n){ render(); if(typeof renderSetBrowse==="function") renderSetBrowse(); if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
-      // The movers and card of the day slides read these prices too. render() repaints the card grid only.
-      if(n && _curPage==="home"){ try{ renderFeatured(); }catch(_){} }
+      if(n){ render(); if(typeof renderSetBrowse==="function") renderSetBrowse();
+        // The movers and card of the day slides read these prices too. render() repaints the card grid only.
+        // Keep it inside the n check: a separate if here would take the else below, and a successful
+        // Refresh now on Settings would then end by saying no prices were available.
+        if(_curPage==="home"){ try{ renderFeatured(); }catch(_){} }
+        if(!silent) toast("Updated "+n+" market price"+(n>1?"s":"")); }
       else if(!silent) toast("No market prices available yet");
       updateRefreshLabel();   // reflect the server refresh time even when no book prices changed
     }).catch(function(){ if(silent) priceFetchFailed(); else toast("Price fetch failed"); });

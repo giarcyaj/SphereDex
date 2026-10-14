@@ -33,17 +33,22 @@ function readSection(file, kind) {
   return text.slice(text.lastIndexOf('\n', begin) + 1, end);
 }
 const srcSection = (kind) => readSection(FILES.src, kind);
-// A real app function from outside the section, for helpers the section calls whose behaviour the tests rely on.
-function appFunction(name) {
+// The source text of a real app function from outside the section: the shortest slice from its
+// declaration to a closing brace that parses on its own.
+function appFunctionSource(name) {
   const source = fs.readFileSync(FILES.src, 'utf8');
   const match = new RegExp('\\bfunction\\s+' + name + '\\s*\\(').exec(source);
   assert.ok(match, 'App function exists: ' + name);
   for (let end = source.indexOf('}', match.index); end >= 0; end = source.indexOf('}', end + 1)) {
     const declaration = source.slice(match.index, end + 1);
     try { new vm.Script('(' + declaration + ')'); } catch (_) { continue; }
-    return vm.runInNewContext('(' + declaration + ')');
+    return declaration;
   }
   throw new Error('Could not extract ' + name);
+}
+// A real app function from outside the section, for helpers the section calls whose behaviour the tests rely on.
+function appFunction(name) {
+  return vm.runInNewContext('(' + appFunctionSource(name) + ')');
 }
 
 // ---- structural guards -------------------------------------------------------------------
@@ -557,6 +562,64 @@ test('the news slide is the newest story from the official site or @PalworldOCG_
   assert.match(site.api.slides()[0].meta, /Official site$/);
 });
 
+// One day of the feed where some English account posts carry no publish time. The old comparator let an
+// untimed story tie with everything on its day, which is not a consistent order, so card 1 depended on
+// the order the feed arrived in.
+const FEED_OCT07_MIXED = [
+  news({ title: '11 Million Packs', date: '2026-10-07', published: '2026-10-07T06:30:00.000Z', source: 'Official site', link: 'https://en.palworld-official-cardgame.com/news/post-20' }),
+  news({ title: 'Untimed reveal A', date: '2026-10-07', source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/11' }),
+  news({ title: 'Untimed reveal B', date: '2026-10-07', source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/12' }),
+  news({ title: 'Legends Awaken Release Tournament', date: '2026-10-07', published: '2026-10-07T09:00:00.000Z', source: 'Official site', link: 'https://en.palworld-official-cardgame.com/events/la' }),
+  news({ title: 'Card reveal at two', date: '2026-10-07', published: '2026-10-07T02:00:00.000Z', source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/13' }),
+];
+function permutations(list) {
+  if (list.length <= 1) return [list.slice()];
+  const out = [];
+  list.forEach((item, i) => {
+    const rest = list.slice(0, i).concat(list.slice(i + 1));
+    permutations(rest).forEach((p) => out.push([item].concat(p)));
+  });
+  return out;
+}
+
+test('card 1 is the newest timed story of the day whatever order the feed arrives in', () => {
+  let feed = FEED_OCT07_MIXED;
+  const a = app({ visibleNews: () => feed });
+  const orders = permutations(FEED_OCT07_MIXED);
+  assert.equal(orders.length, 120);
+  for (const order of orders) {
+    feed = order;
+    const lead = a.api.slides()[0];
+    const seen = order.map((n) => n.title).join(' | ');
+    assert.equal(lead.kind, 'news', seen);
+    assert.equal(lead.title, 'Legends Awaken Release Tournament', seen);
+    assert.match(lead.meta, /Official site$/, seen);
+  }
+});
+
+test('within a day an untimed story sorts after every timed one, and two untimed stories tie', () => {
+  const featNewer = app().sandbox.featNewer;
+  assert.equal(typeof featNewer, 'function');
+  const [packs, untimedA, untimedB, tournament, reveal] = FEED_OCT07_MIXED;
+  for (const timed of [packs, tournament, reveal]) {
+    assert.ok(featNewer(untimedA, timed) > 0, 'untimed after ' + timed.title);
+    assert.ok(featNewer(timed, untimedA) < 0, timed.title + ' before untimed');
+  }
+  assert.equal(featNewer(untimedA, untimedB), 0, 'two untimed stories tie');
+  assert.ok(featNewer(tournament, packs) < 0, '09:00 before 06:30');
+  assert.ok(featNewer(packs, reveal) < 0, '06:30 before 02:00');
+  // The day still comes first: an untimed story from a newer day beats a timed one from an older day.
+  const nextDay = news({ title: 'Next day, untimed', date: '2026-10-08', source: 'Official site' });
+  assert.ok(featNewer(nextDay, tournament) < 0);
+  assert.ok(featNewer(tournament, nextDay) > 0);
+  // Every input order sorts to the same timed sequence, with the untimed pair last.
+  for (const order of permutations(FEED_OCT07_MIXED)) {
+    const titles = order.slice().sort(featNewer).map((n) => n.title);
+    assert.deepEqual(titles.slice(0, 3), ['Legends Awaken Release Tournament', '11 Million Packs', 'Card reveal at two']);
+    assert.deepEqual(titles.slice(3).sort(), ['Untimed reveal A', 'Untimed reveal B']);
+  }
+});
+
 test('the news slide says where its story came from', () => {
   const a = app();
   assert.equal(a.api.newsFrom(news({ source: 'X · @PalworldOCG_EN', link: 'https://x.com/PalworldOCG_EN/status/1' })), 'Official X');
@@ -655,11 +718,70 @@ test('an up to date build with no banner of its own uses the one the server name
   assert.notEqual(f2 && f2.version, '1.11');
 });
 
-test('the app keeps Home current while it stays open, and new prices repaint the carousel', () => {
+// Runs the real fetchServerPrices against a stubbed price server, recording every toast and repaint.
+async function refreshPrices({ live, page, silent }) {
+  const calls = { toasts: [], render: 0, renderFeatured: 0, renderSetBrowse: 0, refreshLabel: 0 };
+  const store = {};
+  const sandbox = {
+    _curPage: page,
+    apiBase: () => 'https://api.example.test', ebayReg: () => 'uk',
+    api: () => Promise.resolve({ ok: true, body: { prices: {}, live, sold: {} } }),
+    toast: (m) => calls.toasts.push(String(m)),
+    priceFetchOk() {}, priceFetchFailed() {}, priceErr: () => 'price error',
+    saneSold: (id, v) => v, stampSoldMark() {},
+    lsGet: (k) => (k in store ? store[k] : null), lsSet: (k, v) => { store[k] = String(v); },
+    localStorage: { setItem(k, v) { store[k] = String(v); }, removeItem(k) { delete store[k]; }, getItem: (k) => store[k] || null },
+    console: { warn() {} },
+    renderFoot() {}, renderPriceSources() {},
+    render: () => { calls.render++; },
+    renderSetBrowse: () => { calls.renderSetBrowse++; },
+    renderFeatured: () => { calls.renderFeatured++; },
+    updateRefreshLabel: () => { calls.refreshLabel++; },
+    PRICEBOOK: {}, PRICEMETA: {}, PRICEPREV: {}, PRICESRC: {},
+    PRICEBOOK_SOLD: {}, PRICEMETA_SOLD: {}, PRICESRC_SOLD: {},
+    PRICEASOF: 0, LIVE_ASOF: 0, SOLD_ASOF: 0, LIVE_COV: null, SOLD_COV: null,
+  };
+  const context = vm.createContext(sandbox);
+  const fetchServerPrices = vm.runInContext('(' + appFunctionSource('fetchServerPrices') + ')', context);
+  await fetchServerPrices(silent);
+  return { calls, sandbox };
+}
+const TWO_PRICES = { 'EBP01-001': { market: 2, source: 'ebay' }, 'EBP01-010': { market: 40, source: 'ebay' } };
+
+test('the app keeps Home current while it stays open', () => {
   const source = fs.readFileSync(FILES.src, 'utf8');
   const timer = /setInterval\(function\(\)\{\s*if\(document\.hidden\) return;\s*try\{ primeNewsBell\(\); \}catch\(e\)\{\}\s*try\{ checkAppVersion\(\); \}catch\(e\)\{\}\s*try\{ priceBookGate\(\); \}catch\(e\)\{\}\s*\}, 30\*60\*1000\);/;
   assert.match(source, timer, 'a 30 minute refresh while the page is visible');
-  assert.match(source, /if\(n && _curPage==="home"\)\{ try\{ renderFeatured\(\); \}catch\(_\)\{\} \}/, 'fresh prices repaint the movers and card of the day');
+});
+
+test('Refresh now on Settings says how many prices it updated, and nothing else', async () => {
+  const { calls, sandbox } = await refreshPrices({ live: TWO_PRICES, page: 'settings', silent: false });
+  assert.deepEqual(calls.toasts, ['Updated 2 market prices'], 'one toast, and never "No market prices available yet"');
+  assert.ok(calls.toasts[0].startsWith('Updated'));
+  assert.equal(calls.render, 1);
+  assert.equal(calls.renderFeatured, 0, 'the carousel is not repainted off Home');
+  assert.equal(sandbox.PRICEBOOK['EBP01-010'], 40);
+});
+
+test('new prices repaint the carousel on Home, with the same single toast', async () => {
+  const { calls } = await refreshPrices({ live: TWO_PRICES, page: 'home', silent: false });
+  assert.equal(calls.renderFeatured, 1, 'the movers and card of the day are repainted once');
+  assert.equal(calls.toasts.length, 1);
+  assert.ok(calls.toasts[0].startsWith('Updated'), calls.toasts[0]);
+  // A background refresh repaints Home just the same, without a toast.
+  const quiet = await refreshPrices({ live: TWO_PRICES, page: 'home', silent: true });
+  assert.equal(quiet.calls.renderFeatured, 1);
+  assert.deepEqual(quiet.calls.toasts, []);
+});
+
+test('a refresh that brings no prices says so once, and repaints nothing', async () => {
+  for (const page of ['settings', 'home']) {
+    const { calls } = await refreshPrices({ live: {}, page, silent: false });
+    assert.deepEqual(calls.toasts, ['No market prices available yet'], page);
+    assert.equal(calls.render, 0, page);
+    assert.equal(calls.renderFeatured, 0, page);
+    assert.equal(calls.refreshLabel, 1, page + ': the refresh label still updates');
+  }
 });
 
 test('renderFeatured paints slides, dots and wires autoplay through the API', () => {

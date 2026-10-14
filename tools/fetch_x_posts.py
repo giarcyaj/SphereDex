@@ -17,11 +17,13 @@ on every run pays twice for nothing. --cursor names a small JSON file that remem
 post id seen per account (and each account's user id, which saves the lookup call), and with it
 every run is one of two kinds:
 
-  full         the newest --max posts per account (default 10, the API minimum is 5), exactly
-               as every run used to be. Used when there is no readable cursor, when the last
-               full read is over 20 hours old, or with --full. Only a full read in which every
-               account answered reports status "ok", and "ok" is what lets the workflow tell the
-               backend to drop stored posts that were deleted on X.
+  full         the newest --max posts per account (default 10, the API minimum is 5), following
+               the API's next page (at most 3 pages) while an account is still short of --max.
+               Used when there is no readable cursor, when the last full read is over 20 hours
+               old, or with --full. Only a full read in which every account answered with at
+               least 3 posts reports status "ok", and "ok" is what lets the workflow tell the
+               backend to drop stored posts that were deleted on X. Anything less is "partial",
+               and the next run tries the full read again.
   incremental  only the posts newer than each account's since_id, 5 per page (the API minimum),
                following the API's next page while it says there are more, up to --max per
                account. It reports status "incremental", never "ok": a batch of new posts says
@@ -74,6 +76,16 @@ INCREMENTAL_PAGE = 5
 # 4 hours and never on the exact second, so a 24 hour rule would keep landing a few minutes short and
 # push the full read back a whole run; 20 hours gives about one full read a day, whatever the drift.
 FULL_EVERY = _dt.timedelta(hours=20)
+# The API takes retweets and replies out of a page after cutting it (exclude=retweets,replies), so a
+# page can hold fewer posts than were asked for even when the account has plenty. A full read follows
+# the next page until it has --max posts, but gives up after 3 pages so a timeline of nothing but
+# replies cannot keep the run paying.
+FULL_PAGES = 3
+# A full read is what lets the backend delete every stored post missing from the batch, so an account
+# that answers a working call with fewer posts than this is not trusted as its current set: one quiet
+# answer from X would otherwise wipe that account's posts from the app. Both accounts post most days, so
+# a genuine full read clears this easily.
+MIN_FULL_POSTS = 3
 
 GetJson = Callable[[str, str], dict]
 
@@ -238,15 +250,35 @@ def newest_post_id(payload: dict, current: str = "") -> str:
     return max(ids, key=int) if ids else ""
 
 
+def post_ids(payload: dict) -> list[str]:
+    """Every post id in a raw API payload, counted before the feed drops any of them."""
+    data = payload.get("data") if isinstance(payload.get("data"), list) else []
+    return [i for i in (_post_id(tweet.get("id")) for tweet in data if isinstance(tweet, dict)) if i]
+
+
+def next_page(payload: dict) -> str:
+    """The token for the API's next page, or "" when it says there are no more."""
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    return str(meta.get("next_token") or "")
+
+
 class AccountRead(NamedTuple):
     rows: list[dict]
     newest_id: str      # the newest post id the API returned, "" when it returned none
     user_id: str        # the account's numeric id, worth remembering: looking it up is a billed call
+    posts: int = 0      # how many posts the API returned, before the feed drops any of them
 
 
 def fetch_account(token: str, user_id: str = "", max_results: int = 10, username: str = USERNAME,
                   get: GetJson | None = None, since_id: str = "") -> AccountRead:
     """Read one account. Without since_id this is the full read of its newest max_results posts.
+
+    A full read follows the API's next page while the account is still short of max_results posts,
+    because the API takes retweets and replies out of a page after cutting it and one page can come
+    back nearly empty. Every page asks for the same max_results: X's pagination docs only ever pair a
+    pagination_token with the page size that produced it, so changing it mid chain is not something to
+    rely on. FULL_PAGES caps the number of calls, and X bills a post read once per UTC day however
+    many pages it shows up on.
 
     With since_id only newer posts come back, INCREMENTAL_PAGE at a time. The pages are followed
     while the API offers another, because a busy reveal morning can bring more than five posts
@@ -257,19 +289,19 @@ def fetch_account(token: str, user_id: str = "", max_results: int = 10, username
     get = get or _get_json
     uid = user_id or resolve_user_id(token, username, get)
     max_results = max(5, min(100, max_results))
-    if not since_id:
-        payload = fetch_page(token, uid, max_results, get=get)
-        return AccountRead(tidy_rows(rows_from_payload(payload, username)), newest_post_id(payload), uid)
     rows: list[dict] = []
+    seen: set[str] = set()
     newest, page = "", ""
-    for _ in range(-(-max_results // INCREMENTAL_PAGE)):
-        payload = fetch_page(token, uid, INCREMENTAL_PAGE, since_id, page, get)
+    for _ in range(-(-max_results // INCREMENTAL_PAGE) if since_id else FULL_PAGES):
+        ask = INCREMENTAL_PAGE if since_id else max_results
+        payload = fetch_page(token, uid, ask, since_id, page, get)
         rows.extend(rows_from_payload(payload, username))
+        seen.update(post_ids(payload))
         newest = newest_post_id(payload, newest)
-        page = str((payload.get("meta") or {}).get("next_token") or "")
-        if not page:
+        page = next_page(payload)
+        if not page or len(seen) >= max_results:
             break
-    return AccountRead(tidy_rows(rows), newest, uid)
+    return AccountRead(tidy_rows(rows), newest, uid, len(seen))
 
 
 def fetch_rows(token: str, user_id: str = "", max_results: int = 10,
@@ -432,10 +464,18 @@ def stage_session(rows: list[dict], root: Path, stamp: str | None = None) -> Pat
     return session
 
 
-def write_github_output(path: Path | None, status: str, posts: int) -> None:
+def write_github_output(path: Path | None, status: str, posts: int,
+                        accounts: dict[str, int] | None = None) -> None:
+    """status= and posts= (the staged rows), then posts_<handle>= for each account read.
+
+    The per account lines count what the API returned for that account, before the feed drops any,
+    so the log shows which account came back short when a full read reports "partial".
+    """
     if path:
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(f"status={status}\nposts={posts}\n")
+        lines = [f"status={status}", f"posts={posts}"]
+        lines += [f"posts_{handle}={count}" for handle, count in (accounts or {}).items()]
+        with path.open("a", encoding="utf-8") as out:
+            out.write("\n".join(lines) + "\n")
 
 
 def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
@@ -449,10 +489,13 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
     parser.add_argument("--full", action="store_true", help="do a full read even when the cursor allows an incremental one")
     parser.add_argument("--print", dest="print_rows", action="store_true", help="print staged rows as JSON")
     parser.add_argument("--offline", type=Path, help="stage rows from a saved /2/users/:id/tweets payload instead of fetching")
-    parser.add_argument("--github-output", type=Path, help="write status/posts to GitHub Actions output")
+    parser.add_argument("--github-output", type=Path,
+                        help="write status, posts and posts_<handle> for each account to GitHub Actions output")
     args = parser.parse_args(argv)
 
     cursor: dict | None = None
+    counts: dict[str, int] | None = None
+    failed: list[str] = []
     status = "ok"
     if args.offline:
         rows = translated(
@@ -462,7 +505,7 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
         token = os.environ.get("X_BEARER_TOKEN", "").strip()
         if not token:
             print("x-api: X_BEARER_TOKEN is not set - skipping X posts (not an error)")
-            write_github_output(args.github_output, "skipped", 0)
+            write_github_output(args.github_output, "skipped", 0, {handle: 0 for handle in USERNAMES})
             return 0
         now = _dt.datetime.now(_dt.timezone.utc)
         cursor = load_cursor(args.cursor)
@@ -470,8 +513,11 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
         print(f"x-api: {mode} read ({why})")
         # One account failing must not look like a complete set: the backend treats an "ok" status as
         # permission to delete every stored X post, so a partial fetch reports "partial" instead and
-        # the workflow leaves the stored posts alone.
-        rows, failed = [], []
+        # the workflow leaves the stored posts alone. The same goes for an account whose full read
+        # worked but came back with fewer than MIN_FULL_POSTS posts ("short"): the other account's
+        # posts would still make the batch look complete, and that account's stored posts would go.
+        rows, short = [], []
+        counts = {handle: 0 for handle in USERNAMES}
         pinned_id = os.environ.get("X_USER_ID", "").strip()
         for i, handle in enumerate(USERNAMES):
             entry = dict(cursor["accounts"].get(handle) or {})
@@ -500,6 +546,14 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
                 if got.newest_id:
                     entry["since_id"] = got.newest_id
                 print(f"x-api: @{handle}: {len(got.rows)} post(s)" + (f" newer than {since}" if since else ""))
+                counts[handle] = got.posts
+                if mode == "full" and got.posts < MIN_FULL_POSTS:
+                    # Its rows are still staged and its since_id still moves on, exactly as for any
+                    # read that worked; only the status and full_at treat it like a failure.
+                    short.append(handle)
+                    print(f"x-api: @{handle} returned only {got.posts} post(s) on a full read, fewer than "
+                          f"{MIN_FULL_POSTS}, so this run reports partial and the next run reads in full again",
+                          file=sys.stderr)
             if handle in failed:
                 # Forget a remembered user id after a failure, so a stale one can never lock an
                 # account out for good. It costs one lookup on the next run.
@@ -508,21 +562,23 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
                 cursor["accounts"][handle] = entry
             else:
                 cursor["accounts"].pop(handle, None)
-        if mode == "full" and not failed:
+        # Left alone after a failed or short account, so the next run is a full read again rather
+        # than waiting most of a day for the next chance to prune.
+        if mode == "full" and not failed and not short:
             cursor["full_at"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
         if len(failed) == len(USERNAMES):
             save_cursor(args.cursor, cursor)
-            write_github_output(args.github_output, "failed", 0)
+            write_github_output(args.github_output, "failed", 0, counts)
             return 1
         rows = translated(rows, args.root)
-        if failed:
+        if failed or short:
             status = "partial"
         elif mode == "incremental":
             # Never "ok": the workflow only sends x_complete (which prunes) on "ok", and a batch of
             # new posts is not the account's current set.
             status = "incremental"
     session = stage_session(rows, args.root)
-    if status == "partial":
+    if failed:
         print(f"x-api: staged {len(rows)} post(s) from "
               f"{len(USERNAMES) - len(failed)} of {len(USERNAMES)} accounts -> {session}")
     else:
@@ -530,7 +586,7 @@ def main(argv: list[str] | None = None, get: GetJson | None = None) -> int:
     if cursor is not None:
         # Saved only once the posts are staged, so a run that dies before then reads them again.
         save_cursor(args.cursor, cursor)
-    write_github_output(args.github_output, status, len(rows))
+    write_github_output(args.github_output, status, len(rows), counts)
     if args.print_rows:
         print(json.dumps(rows, ensure_ascii=False, indent=2))
     return 0
