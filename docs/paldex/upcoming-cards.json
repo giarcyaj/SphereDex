@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-13T06:08:46Z",
+  "updated_at": "2026-10-14T06:04:00Z",
   "entries": [
     {
       "pal": "Jetragon",
@@ -410,6 +410,16 @@
       "card_number": "EBP02-009",
       "source_url": "https://x.com/PalworldOCG_EN/status/2109826458185040061",
       "revealed_at": "2026-10-13T02:00:00Z"
+    },
+    {
+      "pal": "Pengullet",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Pengullet – Locked and Loaded",
+      "card_number": "EBP02-033",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2110188847837610367",
+      "revealed_at": "2026-10-14T02:00:01Z"
     }
   ]
 }
