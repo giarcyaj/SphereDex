@@ -1613,6 +1613,15 @@ label.acctsetrow { align-items:center; }
   .rulestext { margin:0; font-size:.88rem; line-height:1.45; color:var(--ink); white-space:pre-wrap; }
   .kwnote { margin:8px 0 0; padding:8px 10px; border-radius:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-soft); font-size:.8rem; line-height:1.4; }
   .kwnote b { color:var(--ink); }
+  .chasecheck { margin:12px 0 0; border:1px solid var(--line-strong); border-radius:12px; padding:0; background:var(--card, transparent); }
+  .chasecheck > summary { cursor:pointer; padding:10px 12px; font-weight:600; font-size:.88rem; list-style:none; }
+  .chasecheck > summary::-webkit-details-marker { display:none; }
+  .chasecheck .ccbody { padding:0 12px 12px; font-size:.82rem; line-height:1.45; color:var(--ink-soft); }
+  .chasecheck .ccbody p { margin:8px 0 0; }
+  .chasecheck .ccwarn { color:var(--ink); font-weight:600; }
+  .chasecheck .ccerr { padding:6px 8px; border-radius:8px; border:1px solid var(--line-strong); color:var(--ink); }
+  .chasecheck .ccask { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .chasecheck .ccask input { width:7rem; }
   .tdline { margin:10px 0 0; color:var(--ink-soft); font-size:.8rem; line-height:1.4; }
   .tdline .tdstaple { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; border:1px solid var(--line-strong); color:var(--ink); font:700 .7rem var(--font-display); white-space:nowrap; }
   .pcost { margin:12px 0 0; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); display:flex; flex-direction:column; gap:6px; }
@@ -2332,6 +2341,7 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .ownpill{gap:0}.no-flexgap .ownpill>*+*{margin-left:6px}
   .no-flexgap .ggrow{gap:0}.no-flexgap .ggrow>*+*{margin-left:8px}
   .no-flexgap .ctopic{gap:0}.no-flexgap .ctopic>*+*{margin-left:10px}
+  .no-flexgap .chasecheck .ccask{gap:0}.no-flexgap .chasecheck .ccask>*+*{margin-left:8px}
   /* These two put a bare TEXT NODE next to the dot, and an adjacent sibling selector cannot reach a text
      node, so the leading dot carries the spacing itself. Checked in the browser with gap forced off. */
   .no-flexgap .sdstock{gap:0}.no-flexgap .sdstock i{margin-right:8px}.no-flexgap .sdstock>*+*{margin-left:8px}
@@ -5355,6 +5365,7 @@ label.acctsetrow { align-items:center; }
       dateAddedHtml+
       deckUseLine(c)+
       promoContext(c)+
+      chaseCheckHtml(c)+
       '<div class="meditor">'+
       // ---- Collection action bubbles ----
       '<div class="bubrow">'+
@@ -5627,7 +5638,15 @@ label.acctsetrow { align-items:center; }
     // True once the sold figures on screen came from the US fallback rather than the user's own region.
     // The listings panel has always said so; the sold panel said nothing, so a US sale read as a local one.
     var soldUS=false;
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 '+(soldUS?'US ':'')+'sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 '+(soldUS?'US ':'')+'sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a');  paintChaseVerdict(); }
+    function paintChaseVerdict(){
+      var inp=$("ccAsking"), out=$("ccVerdict"); if(!inp||!out) return;
+      // US fallback sold prices are in dollars while the asking price is in the user's own currency, so no verdict.
+      var v=soldUS ? "unknown" : chasePriceVerdict(inp.value, salesWork.map(function(x){ return x.p; }));
+      out.hidden = v!=="far-below";
+      out.textContent = v==="far-below" ? "That asking price is far below the recent sold average. That is a reason to check the card closely, not proof of a fake." : "";
+    }
+    (function(){ var inp=$("ccAsking"); if(inp) inp.oninput=paintChaseVerdict; })();
     // Once all the price pulls have settled, swap any spinners still showing for "n/a".
     function finishLoading(){ glLoading=false; refreshAvg(); paintRange(); ["glList","glPsa"].forEach(function(id){ var el=$(id); if(el && el.querySelector && el.querySelector(".dspin")) el.innerHTML='n/a'; }); }
     // ---- Graded price guide (per grade; PSA by default, set in Settings) ----
@@ -10294,6 +10313,41 @@ label.acctsetrow { align-items:center; }
   }
   function tdPhrase(n, m){ return (n>0 && m>0) ? "In "+n+" of "+m+" winning decks at official events" : ""; }
   // Nothing at all for a card no winning deck played, or when no deck data loaded.
+  // ---- Buying a chase card second hand: guidance, not a verdict ----
+  // Only the premium rarities get the panel, since that is where fakes and real money meet. The price check
+  // compares an asking price with the recent sold figures and only ever says "far below" or nothing, because
+  // a low price is a reason to look closer, never proof that a card is fake.
+  var CHASE_RARITIES = {SSS:1, SSP:1, SP:1, OSR:1, TSP:1, TSR:1};
+  // Official error prints, keyed by card id. Add an entry only once the error is confirmed from an official source.
+  var CHASE_ERRATA = {
+    "ETD01-024TSR": "Ribbuny (ETD01-024TSR) has a known official error print. Compare the card number and text with the official card list before paying a premium for either version."
+  };
+  function chaseCheckApplies(c){
+    return !!(c && CHASE_RARITIES[c.rare]);
+  }
+  function chaseErrata(c){ return (c && CHASE_ERRATA[c.id]) || ""; }
+  // asking and sold are numbers in the same currency. Returns "far-below", "ok" or "unknown".
+  // The test is against the AVERAGE of the recent sold figures, so the wording on screen says average
+  // too: with one lowball comp in the last five, a price can be under half the average while still
+  // sitting inside the range the sold list shows, and the panel must not claim otherwise.
+  function chasePriceVerdict(asking, sold){
+    var a=+asking;
+    var v=(sold||[]).map(function(x){ return +x; }).filter(function(n){ return n>0; }).slice(-5);
+    if(!(a>0) || v.length<2) return "unknown";
+    var avg=v.reduce(function(x,y){ return x+y; },0)/v.length;
+    return a < avg*0.5 ? "far-below" : "ok";
+  }
+  function chaseCheckHtml(c){
+    if(!chaseCheckApplies(c)) return "";
+    var err=chaseErrata(c);
+    return '<details class="chasecheck" id="chaseCheck"><summary>Buying one second hand?</summary><div class="ccbody">'+
+      (err?'<p class="ccerr">'+esc(err)+'</p>':'')+
+      '<p>A genuine copy has sharp, even printing, the same card number and rarity mark as the card list here, and the same feel and thickness as your other cards. Blurry text, washed out colour, a wrong font or a flat finish on a card that should be holo are all reasons to ask for more photos.</p>'+
+      '<p>Ask for clear photos of the front, back and edges in daylight, and buy from sellers with a returns policy where you can.</p>'+
+      '<div class="ccask priceui"><label for="ccAsking">Asking price</label><input id="ccAsking" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
+      '<p class="ccwarn" id="ccVerdict" role="status" hidden></p>'+
+      '</div></details>';
+  }
   function tdSheetHtml(card, stats){
     var f=tdFigure(card, stats);
     if(!f || !f.n) return "";
