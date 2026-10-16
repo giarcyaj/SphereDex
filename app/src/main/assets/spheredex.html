@@ -7340,7 +7340,8 @@ label.acctsetrow { align-items:center; }
     }
     paintSlots(true);
     return Promise.all([getSold(region), getList(region)]).then(function(res){
-      if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]) return Promise.all([getSold("com"), getList("com")]);
+      if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]){ pr.fbUS=true; return Promise.all([getSold("com"), getList("com")]); }
+      pr.fbUS=false;
       return res;
     }).then(function(got){
       delete _sealPulling[p.id];
@@ -7492,6 +7493,9 @@ label.acctsetrow { align-items:center; }
         // rather than stored over the current reading.
         if(req!==_stockReq || ebayReg()!==reg) return null;
         STOCK={ region:reg, asOf:j.asOf||null, seen:j.seen||null, state:j.state, shops:j.shops||null, at:Date.now() };
+        // The Sealed list draws a price versus RRP badge from this reading, so a list painted before it landed
+        // repaints now rather than staying on the market price fallback until something else redraws it.
+        var spg=document.getElementById("page-sealed"); if(spg && spg.classList.contains("active") && typeof renderSealed==="function") renderSealed();
         return STOCK;
       }).catch(function(){ return null; });
   }
@@ -7607,6 +7611,9 @@ label.acctsetrow { align-items:center; }
     if(!p || p.pre) return null;
     var sh=sealCheapestShop(p.id);
     if(sh) return { src:"shop", delta:sh.delta, price:sh.price, cur:sh.cur, shop:sh.shop };
+    // A price pulled from ebay.com as the US fallback is in dollars whatever market is selected, so it is never
+    // set against that market's RRP.
+    if(pr.fbUS) return null;
     var mk=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:0), d=rrpDelta(mk, rrpShown);
     return d ? { src:"market", delta:d, price:mk } : null;
   }

@@ -117,3 +117,16 @@ test('the detail sheet and the list both draw it, and the stock paint refreshes 
   assert.match(source, /sealRrpBadgeHtml\(p, pr, rrpShown\)/);
   assert.match(source, /rw\.innerHTML=sealRrpLineHtml\(\{id:id\}/);
 });
+
+test('a price pulled from the US fallback is never set against the local RRP', () => {
+  const sb = sandbox();
+  assert.equal(sb.sealRrpReading({ id: 'box-ebp01' }, { sold: 115.98, list: 0, fbUS: true }, 45.6), null);
+  assert.equal(sb.sealRrpReading({ id: 'box-ebp01' }, { sold: 115.98, list: 0, fbUS: false }, 45.6).src, 'market');
+});
+
+test('pullSealed records whether the fallback was used, and the stock fetch repaints the Sealed list', () => {
+  assert.match(source, /pr\.fbUS=true; return Promise\.all/);
+  assert.match(source, /pr\.fbUS=false;/);
+  const m = /function fetchStock\(\)\{[\s\S]*?\n  \}\n/.exec(source);
+  assert.ok(m && /page-sealed/.test(m[0]) && /renderSealed\(\)/.test(m[0]));
+});
