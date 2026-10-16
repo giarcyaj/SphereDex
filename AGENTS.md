@@ -55,6 +55,7 @@ node tools/test_v21.cjs
 node tools/test_card_language.cjs
 node tools/test_price_chart.cjs
 node tools/test_stock_glance.cjs
+node tools/test_price_vs_rrp.cjs
 node tools/test_release_startup.cjs
 node tools/test_import_trackers.cjs
 node tools/test_tcg_news.cjs
