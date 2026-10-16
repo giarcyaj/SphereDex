@@ -149,6 +149,9 @@ jobs:
       - name: Accounts on one device, synced follows, account settings merge (startup ordering guards)
         run: node tools/test_account_sync.cjs
 
+      - name: Promo How to get it copy (EPR-010 and EPR-011)
+        run: node tools/test_promo_sources.cjs
+
   python:
     name: Pipeline tests + bundle sync (Python)
     runs-on: ubuntu-latest
