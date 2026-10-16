@@ -1947,6 +1947,9 @@ label.acctsetrow { align-items:center; }
   /* Stock at a glance. A dot plus words: colour alone would fail anyone who cannot separate red from
      green, and this is exactly the sort of line that matters most to them. */
   .sdstock{ display:flex; align-items:center; gap:8px; margin:10px 0 0; font-size:13px; font-weight:600; }
+  .rrpvs{ margin:8px 0 0; font-size:.8rem; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+  .rrpvs b{ color:var(--ink); font-weight:700; }
+  .rrpbadge{ display:inline-block; margin:4px 0 0; padding:1px 8px; border-radius:999px; border:1px solid var(--line,rgba(128,128,128,.35)); font-size:.72rem; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
   .sdstock i{ width:9px; height:9px; border-radius:50%; flex:none; }
   .sdstock.in{ color:var(--el-Grass); } .sdstock.in i{ background:var(--el-Grass); }
   .sdstock.out{ color:var(--el-Fire); } .sdstock.out i{ background:var(--el-Fire); }
@@ -7352,11 +7355,22 @@ label.acctsetrow { align-items:center; }
       var a=$("sdSold"); if(a) a.innerHTML = loading? SPIN : ((+pr.sold>0)?money(pr.sold):"n/a");
       var b=$("sdList"); if(b) b.innerHTML = loading? SPIN : ((+pr.list>0)?money(pr.list):"n/a");
       var v=$("sdVal"); if(v && !loading) v.textContent = money((+s.qty||0)*sealUnit(s));
-      if(!loading) paintSealPanels(p, s, pr);
+      if(!loading){ paintSealPanels(p, s, pr); var rw=$("sdRrpWrap"); if(rw) rw.innerHTML=sealRrpLineHtml(p, pr, (+pr.rrp||defaultRRP(p.id))); }
     }
     paintSlots(true);
     return Promise.all([getSold(region), getList(region)]).then(function(res){
-      if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]) return Promise.all([getSold("com"), getList("com")]);
+      // fbUS has to describe the price that is STORED, not what this pull attempted. getSold and getList only
+      // overwrite their field when a figure comes back (true); an empty answer (false) or a failure (null)
+      // leaves the old figure in place, so it must leave the flag alone too. Otherwise a dollar price from an
+      // earlier fallback outlived its warning and was measured against a local RRP, and an offline pull
+      // marked a perfectly good local price as a US one.
+      if(region==="com" || res[0]===true || res[1]===true){ pr.fbUS=false; return res; }
+      if(SETTINGS.fallbackUS && region!=="com"){
+        return Promise.all([getSold("com"), getList("com")]).then(function(us){
+          if(us[0]===true || us[1]===true) pr.fbUS=true;
+          return us;
+        });
+      }
       return res;
     }).then(function(got){
       delete _sealPulling[p.id];
@@ -7452,6 +7466,7 @@ label.acctsetrow { align-items:center; }
             '<div class="qtyrow"><span class="stepper"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
               '<span class="sealval">'+money((+s.qty||0)*sealUnit(s))+'</span></div>'+
             '<div class="sealprices priceui"><span class="spx"><i class="spdot spsold"></i>Sold '+((+pr.sold>0)?money(pr.sold):'n/a')+'</span><span class="spx"><i class="spdot splive"></i>Live '+((+pr.list>0)?money(pr.list):'n/a')+'</span></div>'+
+            sealRrpBadgeHtml(p, pr, rrpShown)+
             (apiBase()?'<button class="addgrade sealpull priceui" type="button">'+icon('refresh')+' Refresh</button>':'')+
           '</div>';
         el.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ s.qty=Math.max(0,(+s.qty||0)+parseInt(b.getAttribute("data-d"),10)); save(); renderSealed(); renderHome(); }; });
@@ -7507,6 +7522,9 @@ label.acctsetrow { align-items:center; }
         // rather than stored over the current reading.
         if(req!==_stockReq || ebayReg()!==reg) return null;
         STOCK={ region:reg, asOf:j.asOf||null, seen:j.seen||null, state:j.state, shops:j.shops||null, at:Date.now() };
+        // The Sealed list draws a price versus RRP badge from this reading, so a list painted before it landed
+        // repaints now rather than staying on the market price fallback until something else redraws it.
+        var spg=document.getElementById("page-sealed"); if(spg && spg.classList.contains("active") && typeof renderSealed==="function") renderSealed();
         return STOCK;
       }).catch(function(){ return null; });
   }
@@ -7591,6 +7609,63 @@ label.acctsetrow { align-items:center; }
   // A pre order no shop row covers yet (no reading, or no shop lists it) still has somewhere to go: the official
   // product page. Never eBay.
   function stockOfficialHtml(){ return '<p class="sdwhen"><a href="'+SEAL_OFFICIAL_URL+'" target="_blank" rel="noopener">Official product page \u2197</a></p>'; }
+  // Price versus RRP. A neutral reading, never a verdict: it says how far a price sits from the RRP and leaves
+  // "is that fair" to the reader. Both prices must be in the SAME currency or the number means nothing, so the
+  // callers only pass a pair they know share one. Returns null when either side is unknown.
+  function rrpDelta(price, rrp){
+    price=+price; rrp=+rrp;
+    if(!(price>0) || !(rrp>0)) return null;
+    var pct=Math.round((price/rrp-1)*100);
+    if(pct===0) return { pct:0, text:"At RRP" };
+    return { pct:pct, text:(pct>0?"+"+pct+"% over RRP":Math.abs(pct)+"% under RRP") };
+  }
+  // The cheapest shop in the reader's market that currently has the product, with its RRP in that shop's own
+  // currency (shop prices are in the market's currency, not the reader's). Null when the reading is stale,
+  // nothing is confirmed in stock, or the RRP for that currency is not known.
+  function sealCheapestShop(id){
+    var g=stockGlance(id, false);
+    if(!g || g.cls!=="in") return null;
+    var rows=stockShops(id), best=null, i;
+    for(i=0;i<rows.length;i++){
+      if(rows[i].status==="in" && +rows[i].price>0 && (!best || +rows[i].price<+best.price)) best=rows[i];
+    }
+    if(!best) return null;
+    var cur=REGION_CUR[ebayReg()]||"GBP", m=SEAL_RRP[id], rrp=(m && m[cur]) || 0;
+    var d=rrpDelta(best.price, rrp);
+    return d ? { shop:best.shop, price:+best.price, cur:cur, delta:d } : null;
+  }
+  // The best price-versus-RRP reading for one sealed product: the cheapest in-stock shop when there is one,
+  // otherwise the market price (last sold, else live listings) against the RRP shown. Null when neither exists.
+  function sealRrpReading(p, pr, rrpShown){
+    if(!p || p.pre) return null;
+    // SEAL_RRP holds English retail only, and the shop rows list English product, so on the Japanese edition
+    // there is nothing to measure against: say nothing rather than set a Japanese price against the English box.
+    if(SEAL_ED==="jp") return null;
+    var sh=sealCheapestShop(p.id);
+    if(sh) return { src:"shop", delta:sh.delta, price:sh.price, cur:sh.cur, shop:sh.shop };
+    // A price pulled from ebay.com as the US fallback is in dollars whatever market is selected, so it is never
+    // set against that market's RRP.
+    if(pr.fbUS) return null;
+    // Market prices arrive in the selected market's own currency and are never converted, while the RRP is in
+    // the reader's display currency. When those two differ the percentage would be meaningless, so there is
+    // no reading at all.
+    if(CUR && (REGION_CUR[ebayReg()]||CUR.code)!==CUR.code) return null;
+    var mk=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:0), d=rrpDelta(mk, rrpShown);
+    return d ? { src:"market", delta:d, price:mk } : null;
+  }
+  function sealRrpLineHtml(p, pr, rrpShown){
+    var r=sealRrpReading(p, pr, rrpShown);
+    if(!r) return "";
+    var what=(r.src==="shop")
+      ? 'Cheapest in stock <b>'+esc(moneyIn(r.price, r.cur))+'</b> at '+esc(r.shop)
+      : 'Market price <b>'+esc(money(r.price))+'</b>';
+    // priceui, like every other price surface: collector mode turns prices off and this is a price statement.
+    return '<p class="rrpvs priceui" id="sdRrpVs">'+what+' \u00b7 <b>'+esc(r.delta.text)+'</b></p>';
+  }
+  function sealRrpBadgeHtml(p, pr, rrpShown){
+    var r=sealRrpReading(p, pr, rrpShown);
+    return r ? '<div class="rrpbadge priceui" title="'+(r.src==="shop"?"Cheapest in stock shop":"Market price")+' against the RRP">'+esc(r.delta.text)+'</div>' : "";
+  }
   function stockGlanceHtml(id, pre){
     var g=stockGlance(id, pre);
     if(!g) return pre ? stockOfficialHtml() : "";
@@ -7674,6 +7749,7 @@ label.acctsetrow { align-items:center; }
     var keep=stockShopsOpen(id);
     el.innerHTML=stockGlanceHtml(id, pre);
     wireStockShops(keep);
+    var rw=$("sdRrpWrap"); if(rw && !pre){ var it=sealItem(id), pr0=sealPrice(it); rw.innerHTML=sealRrpLineHtml({id:id}, pr0, (+pr0.rrp||defaultRRP(id))); }
     return true;
   }
   function openSealedDetail(p){
@@ -7723,6 +7799,7 @@ label.acctsetrow { align-items:center; }
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
         '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, false)+'</div>'+
+        '<div id="sdRrpWrap" class="priceui">'+sealRrpLineHtml(p, pr, rrpShown)+'</div>'+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
           '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
