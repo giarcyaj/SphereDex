@@ -32,6 +32,8 @@ function sandbox(opts) {
     SEAL_RRP: { 'box-ebp01': { USD: 57.99, GBP: 45.6 } },
     REGION_CUR: { 'co.uk': 'GBP' },
     ebayReg: () => 'co.uk',
+    SEAL_ED: opts.ed || 'en',
+    CUR: { code: opts.cur || 'GBP', dec: 2 },
     esc: (s) => String(s),
     money: (n) => '$' + Number(n).toFixed(2),
     moneyIn: (n, c) => (c === 'GBP' ? '£' : '$') + Number(n).toFixed(2),
@@ -106,10 +108,33 @@ test('a pre order and a product with no prices draw nothing', () => {
 
 test('a shop in a currency with no known RRP falls back instead of guessing', () => {
   const sb = sandbox({ state: { 'box-ebp01': 'in' }, shops: { 'box-ebp01': [{ shop: 'B', status: 'in', price: 91.2 }] } });
-  sb.REGION_CUR['co.uk'] = 'SEK';
+  delete sb.SEAL_RRP['box-ebp01'].GBP;
   const r = sb.sealRrpReading({ id: 'box-ebp01' }, { sold: 57.99, list: 0 }, 57.99);
   assert.equal(r.src, 'market');
   assert.equal(r.delta.text, 'At RRP');
+});
+
+test('the Japanese edition says nothing, because the RRP table is English retail', () => {
+  const jp = sandbox({ ed: 'jp' });
+  assert.equal(jp.sealRrpReading({ id: 'box-ebp01' }, { sold: 24.5, list: 0 }, 45.6), null);
+  assert.equal(jp.sealRrpLineHtml({ id: 'box-ebp01' }, { sold: 24.5 }, 45.6), '');
+  assert.equal(jp.sealRrpBadgeHtml({ id: 'box-ebp01' }, { sold: 24.5 }, 45.6), '');
+  // The same product does read on the English edition, so the guard is the edition and nothing else.
+  assert.equal(sandbox().sealRrpReading({ id: 'box-ebp01' }, { sold: 45.6, list: 0 }, 45.6).delta.text, 'At RRP');
+});
+
+test('a market price is not compared when the display currency is not the market currency', () => {
+  // Market prices come back in the market's own currency with no conversion, so a reader on the UK market
+  // showing dollars would be comparing dollars with a pound RRP.
+  const sb = sandbox({ cur: 'USD' });
+  assert.equal(sb.sealRrpReading({ id: 'box-ebp01' }, { sold: 115.98, list: 0 }, 57.99), null);
+});
+
+test('the reading hides with prices off, like every other price surface', () => {
+  const sb = sandbox();
+  assert.match(sb.sealRrpLineHtml({ id: 'box-ebp01' }, { sold: 115.98 }, 57.99), /class="rrpvs priceui"/);
+  assert.match(sb.sealRrpBadgeHtml({ id: 'box-ebp01' }, { sold: 115.98 }, 57.99), /class="rrpbadge priceui"/);
+  assert.match(source, /id="sdRrpWrap" class="priceui"/);
 });
 
 test('the detail sheet and the list both draw it, and the stock paint refreshes it', () => {
@@ -125,8 +150,11 @@ test('a price pulled from the US fallback is never set against the local RRP', (
 });
 
 test('pullSealed records whether the fallback was used, and the stock fetch repaints the Sealed list', () => {
-  assert.match(source, /pr\.fbUS=true; return Promise\.all/);
-  assert.match(source, /pr\.fbUS=false;/);
+  // The flag describes the price that is stored: set only when a dollar figure actually landed, cleared only
+  // when this market answered, and left alone by an empty answer or a failure.
+  assert.match(source, /if\(us\[0\]===true \|\| us\[1\]===true\) pr\.fbUS=true;/);
+  assert.match(source, /if\(region==="com" \|\| res\[0\]===true \|\| res\[1\]===true\)\{ pr\.fbUS=false; return res; \}/);
+  assert.doesNotMatch(source, /pr\.fbUS=true; return Promise\.all/);
   const m = /function fetchStock\(\)\{[\s\S]*?\n  \}\n/.exec(source);
   assert.ok(m && /page-sealed/.test(m[0]) && /renderSealed\(\)/.test(m[0]));
 });

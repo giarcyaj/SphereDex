@@ -7340,8 +7340,18 @@ label.acctsetrow { align-items:center; }
     }
     paintSlots(true);
     return Promise.all([getSold(region), getList(region)]).then(function(res){
-      if(SETTINGS.fallbackUS && region!=="com" && !res[0] && !res[1]){ pr.fbUS=true; return Promise.all([getSold("com"), getList("com")]); }
-      pr.fbUS=false;
+      // fbUS has to describe the price that is STORED, not what this pull attempted. getSold and getList only
+      // overwrite their field when a figure comes back (true); an empty answer (false) or a failure (null)
+      // leaves the old figure in place, so it must leave the flag alone too. Otherwise a dollar price from an
+      // earlier fallback outlived its warning and was measured against a local RRP, and an offline pull
+      // marked a perfectly good local price as a US one.
+      if(region==="com" || res[0]===true || res[1]===true){ pr.fbUS=false; return res; }
+      if(SETTINGS.fallbackUS && region!=="com"){
+        return Promise.all([getSold("com"), getList("com")]).then(function(us){
+          if(us[0]===true || us[1]===true) pr.fbUS=true;
+          return us;
+        });
+      }
       return res;
     }).then(function(got){
       delete _sealPulling[p.id];
@@ -7609,11 +7619,18 @@ label.acctsetrow { align-items:center; }
   // otherwise the market price (last sold, else live listings) against the RRP shown. Null when neither exists.
   function sealRrpReading(p, pr, rrpShown){
     if(!p || p.pre) return null;
+    // SEAL_RRP holds English retail only, and the shop rows list English product, so on the Japanese edition
+    // there is nothing to measure against: say nothing rather than set a Japanese price against the English box.
+    if(SEAL_ED==="jp") return null;
     var sh=sealCheapestShop(p.id);
     if(sh) return { src:"shop", delta:sh.delta, price:sh.price, cur:sh.cur, shop:sh.shop };
     // A price pulled from ebay.com as the US fallback is in dollars whatever market is selected, so it is never
     // set against that market's RRP.
     if(pr.fbUS) return null;
+    // Market prices arrive in the selected market's own currency and are never converted, while the RRP is in
+    // the reader's display currency. When those two differ the percentage would be meaningless, so there is
+    // no reading at all.
+    if(CUR && (REGION_CUR[ebayReg()]||CUR.code)!==CUR.code) return null;
     var mk=(+pr.sold>0)?+pr.sold:((+pr.list>0)?+pr.list:0), d=rrpDelta(mk, rrpShown);
     return d ? { src:"market", delta:d, price:mk } : null;
   }
@@ -7623,11 +7640,12 @@ label.acctsetrow { align-items:center; }
     var what=(r.src==="shop")
       ? 'Cheapest in stock <b>'+esc(moneyIn(r.price, r.cur))+'</b> at '+esc(r.shop)
       : 'Market price <b>'+esc(money(r.price))+'</b>';
-    return '<p class="rrpvs" id="sdRrpVs">'+what+' \u00b7 <b>'+esc(r.delta.text)+'</b></p>';
+    // priceui, like every other price surface: collector mode turns prices off and this is a price statement.
+    return '<p class="rrpvs priceui" id="sdRrpVs">'+what+' \u00b7 <b>'+esc(r.delta.text)+'</b></p>';
   }
   function sealRrpBadgeHtml(p, pr, rrpShown){
     var r=sealRrpReading(p, pr, rrpShown);
-    return r ? '<div class="rrpbadge" title="'+(r.src==="shop"?"Cheapest in stock shop":"Market price")+' against the RRP">'+esc(r.delta.text)+'</div>' : "";
+    return r ? '<div class="rrpbadge priceui" title="'+(r.src==="shop"?"Cheapest in stock shop":"Market price")+' against the RRP">'+esc(r.delta.text)+'</div>' : "";
   }
   function stockGlanceHtml(id, pre){
     var g=stockGlance(id, pre);
@@ -7762,7 +7780,7 @@ label.acctsetrow { align-items:center; }
         '<div class="bubpanel priceui" id="sdPanelList" hidden><div class="glabel"><span>Live listings</span><a class="ebaysearch" href="'+sealEbayUrl(p,false)+'" target="_blank" rel="noopener">'+icon('search')+' Search live on eBay ↗</a></div><div class="salesavg" id="sdListHint"></div><div id="sdListRows">'+sealRowsHtml(pr.listings, "live")+'</div></div>'+
         '<div class="bubpanel priceui" id="sdPanelVal" hidden><div class="glabel"><span>Your value</span></div><div class="salesavg" id="sdValBreak"></div></div>'; })()+
         '<div id="sdStock" data-pid="'+esc(p.id)+'">'+stockGlanceHtml(p.id, false)+'</div>'+
-        '<div id="sdRrpWrap">'+sealRrpLineHtml(p, pr, rrpShown)+'</div>'+
+        '<div id="sdRrpWrap" class="priceui">'+sealRrpLineHtml(p, pr, rrpShown)+'</div>'+
         '<div class="meditor">'+
           '<div class="field"><label>Owned</label><span class="stepper sdstep"><button data-d="-1" type="button" aria-label="Remove one">–</button><span class="qv">'+s.qty+'</span><button data-d="1" type="button" aria-label="Add one">+</button></span></div>'+
           '<div class="field paidui"><label for="sdPaid">Paid each</label><input id="sdPaid" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" value="'+((s.paid!=null && s.paid!=="")?s.paid:"")+'"></div>'+
