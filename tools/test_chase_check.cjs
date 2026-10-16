@@ -38,6 +38,21 @@ test('price verdict only flags an asking price far below recent sold', () => {
   assert.equal(sb.chasePriceVerdict(10, []), 'unknown');
 });
 
+test('the warning names the average, because that is what is measured', () => {
+  // One lowball comp can put a fair price under half the average while it is still inside the range the
+  // sold list shows, so the sentence says average and the test documents that case.
+  assert.equal(sb.chasePriceVerdict(35, [20, 100, 110, 100, 100]), 'far-below');
+  assert.match(source, /far below the recent sold average/);
+  assert.doesNotMatch(source, /far below the recent sold range/);
+});
+
+test('the asking price row keeps the no-flexgap fallback working', () => {
+  // Old Android WebViews drop flex gap, so the row needs its margin pair or the label sits flush
+  // against the input. AGENTS.md: keep the .no-flexgap margin fallback working.
+  assert.match(source, /\.chasecheck \.ccask \{ display:flex; gap:8px;/);
+  assert.match(source, /\.no-flexgap \.chasecheck \.ccask\{gap:0\}\.no-flexgap \.chasecheck \.ccask>\*\+\*\{margin-left:8px\}/);
+});
+
 test('panel copy has no dashes', () => {
   const html = sb.chaseCheckHtml({ id: 'X', rare: 'SSP' }).replace(/<[^>]*>/g, '');
   assert.doesNotMatch(html, /[-–—]/);

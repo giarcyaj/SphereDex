@@ -2341,6 +2341,7 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .ownpill{gap:0}.no-flexgap .ownpill>*+*{margin-left:6px}
   .no-flexgap .ggrow{gap:0}.no-flexgap .ggrow>*+*{margin-left:8px}
   .no-flexgap .ctopic{gap:0}.no-flexgap .ctopic>*+*{margin-left:10px}
+  .no-flexgap .chasecheck .ccask{gap:0}.no-flexgap .chasecheck .ccask>*+*{margin-left:8px}
   /* These two put a bare TEXT NODE next to the dot, and an adjacent sibling selector cannot reach a text
      node, so the leading dot carries the spacing itself. Checked in the browser with gap forced off. */
   .no-flexgap .sdstock{gap:0}.no-flexgap .sdstock i{margin-right:8px}.no-flexgap .sdstock>*+*{margin-left:8px}
@@ -5643,7 +5644,7 @@ label.acctsetrow { align-items:center; }
       // US fallback sold prices are in dollars while the asking price is in the user's own currency, so no verdict.
       var v=soldUS ? "unknown" : chasePriceVerdict(inp.value, salesWork.map(function(x){ return x.p; }));
       out.hidden = v!=="far-below";
-      out.textContent = v==="far-below" ? "That asking price is far below the recent sold range. That is a reason to check the card closely, not proof of a fake." : "";
+      out.textContent = v==="far-below" ? "That asking price is far below the recent sold average. That is a reason to check the card closely, not proof of a fake." : "";
     }
     (function(){ var inp=$("ccAsking"); if(inp) inp.oninput=paintChaseVerdict; })();
     // Once all the price pulls have settled, swap any spinners still showing for "n/a".
@@ -10326,6 +10327,9 @@ label.acctsetrow { align-items:center; }
   }
   function chaseErrata(c){ return (c && CHASE_ERRATA[c.id]) || ""; }
   // asking and sold are numbers in the same currency. Returns "far-below", "ok" or "unknown".
+  // The test is against the AVERAGE of the recent sold figures, so the wording on screen says average
+  // too: with one lowball comp in the last five, a price can be under half the average while still
+  // sitting inside the range the sold list shows, and the panel must not claim otherwise.
   function chasePriceVerdict(asking, sold){
     var a=+asking;
     var v=(sold||[]).map(function(x){ return +x; }).filter(function(n){ return n>0; }).slice(-5);
