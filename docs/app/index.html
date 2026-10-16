@@ -5637,10 +5637,11 @@ label.acctsetrow { align-items:center; }
     // True once the sold figures on screen came from the US fallback rather than the user's own region.
     // The listings panel has always said so; the sold panel said nothing, so a US sale read as a local one.
     var soldUS=false;
-    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 '+(soldUS?'US ':'')+'sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a'); }
+    function refreshAvg(){ var a=avgLast5(salesWork); var fa=$("fAvg"); if(fa) fa.value = a? a.toFixed(CUR.dec) : 0; var sa=$("salesAvg"); if(sa) sa.innerHTML = a? ('Average of last 5 '+(soldUS?'US ':'')+'sold: <b>'+money(a)+'</b>') : 'No sold data yet. Tap Refresh to pull the latest.'; var gl=$("glSold"); if(gl) gl.innerHTML = a? money(a) : (glLoading? SPIN : 'n/a');  paintChaseVerdict(); }
     function paintChaseVerdict(){
       var inp=$("ccAsking"), out=$("ccVerdict"); if(!inp||!out) return;
-      var v=chasePriceVerdict(inp.value, salesWork.map(function(x){ return x.p; }));
+      // US fallback sold prices are in dollars while the asking price is in the user's own currency, so no verdict.
+      var v=soldUS ? "unknown" : chasePriceVerdict(inp.value, salesWork.map(function(x){ return x.p; }));
       out.hidden = v!=="far-below";
       out.textContent = v==="far-below" ? "That asking price is far below the recent sold range. That is a reason to check the card closely, not proof of a fake." : "";
     }
