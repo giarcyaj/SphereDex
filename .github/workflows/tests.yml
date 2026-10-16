@@ -144,11 +144,17 @@ jobs:
       - name: Native scanner card numbers (English and Japanese)
         run: node tools/test_native_scan_numbers.cjs
 
+      - name: Chase card second hand check
+        run: node tools/test_chase_check.cjs
+
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
 
       - name: Accounts on one device, synced follows, account settings merge (startup ordering guards)
         run: node tools/test_account_sync.cjs
+
+      - name: Promo How to get it copy (EPR-010 and EPR-011)
+        run: node tools/test_promo_sources.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)
