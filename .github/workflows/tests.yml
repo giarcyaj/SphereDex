@@ -147,6 +147,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Market index and like for like split
+        run: node tools/test_market_index.cjs
+
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
 
