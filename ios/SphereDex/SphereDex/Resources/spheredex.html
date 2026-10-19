@@ -1111,6 +1111,9 @@
   .tbadge.soon { color:var(--r-SSP); border-color:color-mix(in srgb,var(--r-SSP) 38%,var(--line-strong)); background:color-mix(in srgb,var(--r-SSP) 9%,var(--surface)); }
   .trow .tdate { font-family:var(--font-mono); font-size:.76rem; color:var(--accent-ink); font-weight:650; }
   .trow .tcountdown { display:flex; align-items:center; margin-top:6px; font-size:.8rem; font-weight:700; color:var(--ink); overflow-wrap:anywhere; }
+  .trow .tcalbtn { display:inline-flex; align-items:center; gap:5px; }
+  .trow .tcalbtn svg { width:14px; height:14px; flex:none; }
+  .no-flexgap .trow .tcalbtn{gap:0}.no-flexgap .trow .tcalbtn>*+*{margin-left:5px}
   .trow .tcountdown svg { width:14px; height:14px; flex:none; margin-right:5px; color:var(--accent-ink); }
   .trow .tprog { font-family:var(--font-mono); font-size:.76rem; color:var(--ink-faint); margin-top:8px; }
   .treleasebar { height:6px; max-width:360px; margin-top:6px; overflow:hidden; border-radius:999px; background:var(--surface-2); }
@@ -1416,6 +1419,8 @@ label.acctsetrow { align-items:center; }
   .backbtn.pageback { display:inline-flex; align-items:center; gap:4px; margin:0 0 8px; opacity:.9; }
   .backbtn.pageback:hover, .backbtn.pageback:focus-visible { opacity:1; }
   .pcbig .pcchart { height:240px; }
+  .mxbox { margin-top:18px; }
+  .mxbox .pdstats .hs .n b { font-size:1.1rem; }
   .pdstats { display:flex; gap:10px; margin-top:16px; }
   .pdstats .hs { flex:1; text-align:center; background:var(--surface-2,var(--surface)); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
   .pdstats .hs .n { display:block; font-family:var(--font-display); font-weight:850; font-size:1.1rem; }
@@ -7331,6 +7336,79 @@ label.acctsetrow { align-items:center; }
     });
     return {cost:cost, value:value, gain:value-cost, copies:copies, best:best, worst:worst};
   }
+  // ---- SphereDex market index ----
+  // An equal weight price index built from the nightly price book history, base 1,000 on the first day.
+  // Each day is chained to the one before using only cards priced on both days, so a card entering or
+  // leaving the book never moves the index. Pure functions: they take plain maps so tests can feed them.
+  function marketIndexSeries(days){
+    var out=[], idx=1000, prev=null;
+    (days||[]).forEach(function(day){
+      var m=day.map||{};
+      if(prev){
+        var sum=0, n=0, id;
+        for(id in m){ var a=+prev[id], b=+m[id]; if(a>0 && b>0){ sum+=b/a; n++; } }
+        if(n) idx=idx*(sum/n); else if(!Object.keys(m).length) return;
+      } else if(!Object.keys(m).length) return;
+      out.push({d:day.d, v:idx, n:Object.keys(m).length});
+      prev=m;
+    });
+    return out;
+  }
+  // Percent move from the latest point at least `span` days old to the last point. Null when the history is too short.
+  function marketIndexMove(series, span, endDay, addDays){
+    if(!series || series.length<2) return null;
+    var last=series[series.length-1], cut=addDays(endDay, -span), base=null;
+    series.forEach(function(p){ if(p.d<=cut && p.d<last.d) base=p; });
+    if(!base || !(base.v>0)) return null;
+    return (last.v/base.v-1)*100;
+  }
+  // What price moves alone did to the cards you hold now: current copies at today's price against the
+  // same copies at the earlier price, using only cards priced on both days. Cards you added or removed
+  // since then are not in this number, which is the point.
+  function likeForLikeChange(qtyById, nowMap, thenMap){
+    var now=0, then=0, n=0, id;
+    for(id in qtyById){ var q=+qtyById[id]||0, a=+thenMap[id], b=+nowMap[id]; if(q>0 && a>0 && b>0){ then+=q*a; now+=q*b; n++; } }
+    return {change:now-then, base:then, pct:then>0?(now/then-1)*100:null, n:n};
+  }
+  // Everything in the total that the price effect does not explain (cards, sealed or graded added or removed).
+  // Only valid when the portfolio baseline day is the same day as the price baseline, otherwise market movement
+  // in the gap would be reported as holdings changes, so it returns null.
+  function otherChange(pts, cut, priceDay, priceChange){
+    var base=null; (pts||[]).forEach(function(p){ if(p.d<=cut && p.d<pts[pts.length-1].d) base=p; });
+    if(!base || base.d!==priceDay || !pts.length) return null;
+    return pts[pts.length-1].v-base.v-priceChange;
+  }
+  function marketIndexHtml(mode, pts){
+    var today=todayKey(), srv=_srvHist.days, book=(mode==="sold")?PRICEBOOK_SOLD:PRICEBOOK, k=(mode==="sold")?1:0;
+    var days=Object.keys(srv).sort().filter(function(d){ return d<today; }).map(function(d){ var m={}, day=srv[d]; for(var id in day){ if(day[id][k]>0) m[id]=day[id][k]; } return {d:d, map:m}; });
+    var nowMap={}; for(var id in book){ if(+book[id]>0) nowMap[id]=+book[id]; }
+    if(Object.keys(nowMap).length) days.push({d:today, map:nowMap});
+    var series=marketIndexSeries(days);
+    function sgn(n){ return n>0.005?"+":(n<-0.005?"−":""); }
+    function cls(n){ return n>0.005?"up":(n<-0.005?"down":"flat"); }
+    function mv(p){ return p==null?'<b class="pcflat">Building</b>':'<b class="pcchg '+cls(p)+'">'+sgn(p)+Math.abs(p).toFixed(1)+'%</b>'; }
+    if(series.length<2) return '<div class="mxbox"><h2 class="sech">Market index</h2><p class="matchnote">The SphereDex index fills in as the nightly price book builds up history.</p></div>';
+    var week=marketIndexMove(series,7,today,dayKeyAdd), month=marketIndexMove(series,30,today,dayKeyAdd);
+    var html='<div class="mxbox"><h2 class="sech">Market index</h2>'+
+      '<div class="pdstats">'+
+      '<div class="hs"><span class="n">'+mv(week)+'</span><span class="l">This week</span></div>'+
+      '<div class="hs"><span class="n">'+mv(month)+'</span><span class="l">This month</span></div></div>'+
+      '<p class="matchnote">Every card counts equally, so one pricey card cannot swing it.</p>';
+    var qty={}; CARDS.forEach(function(c){ var q=rawCount(o(c.id).qty); if(q>0) qty[c.id]=q; });
+    if(Object.keys(qty).length){
+      var rows="";
+      [[7,"week","This week"],[30,"month","This month"]].forEach(function(r){
+        var cut=dayKeyAdd(today,-r[0]), bd=null; days.forEach(function(d){ if(d.d<=cut && d.d<today) bd=d; });
+        if(!bd) return;
+        var lf=likeForLikeChange(qty, nowMap, bd.map); if(!lf.n) return;
+        var added=otherChange(pts, cut, bd.d, lf.change);
+        rows+='<div class="prow"><span>'+r[2]+', prices only</span><b class="gain '+cls(lf.change)+'">'+sgn(lf.change)+money(Math.abs(lf.change))+(lf.pct!=null?' ('+sgn(lf.pct)+Math.abs(lf.pct).toFixed(1)+'%)':'')+'</b></div>'+
+          (added!=null?'<div class="prow"><span>'+r[2]+', added, removed or other items</span><b class="gain '+cls(added)+'">'+sgn(added)+money(Math.abs(added))+'</b></div>':'');
+      });
+      if(rows) html+='<div class="pcost"><div class="prow"><span><b>Your collection, like for like</b></span><span></span></div>'+rows+'<p class="matchnote">Prices only keeps your copies the same and shows what the market did. Adding a box of pulls raises your total but is not a price gain.</p></div>';
+    }
+    return html+'</div>';
+  }
   function portfolioCostHtml(){
     var b=collectionCostBasis();
     function sgn(n){ return n>0.005?"+":(n<-0.005?"−":""); }
@@ -8053,6 +8131,7 @@ label.acctsetrow { align-items:center; }
       '<div class="pctop"><div><div class="pcval" style="font-size:2.2rem">'+money(cur)+'</div><div class="pclab">Portfolio · '+esc(activeCol().name)+'</div></div>'+
         '<div class="pcchg '+dir+'">'+sign+money(Math.abs(delta))+' ('+sign+Math.abs(pct).toFixed(1)+'%)<span style="color:var(--ink-faint);font-weight:500"> since '+fmtDate(pts[0].d)+'</span></div></div>'+
       portfolioCostHtml()+
+      marketIndexHtml(mode, pts)+
       '<div class="pcchartwrap pcbig'+(isSold?' pcsold':'')+'" id="pdWrap">'+ chartSVG(pts, {single:true, color:(isSold?"var(--azure)":"var(--up)"), gradId:"pdg"})+
         '<div class="pcmark" id="pdMark" hidden></div><div class="pctip" id="pdTip" hidden></div>'+
         (soldRefreshing?'<div class="pcgraphspin" aria-hidden="true">'+SPIN+'</div>':'')+'</div>'+
@@ -11777,6 +11856,41 @@ label.acctsetrow { align-items:center; }
     showPage("collection"); showCollGrid(true); render();
   }
 
+  // ---- Add to calendar (Releases) ----
+  // An exact day ("Jan 29, 2027" or ISO) as [year, month, day], or null. A month only date such as
+  // "Oct 2026" gives null: a calendar entry on a guessed day would be wrong, so those rows get no button.
+  function releaseYmd(d){
+    var s=String(d||""), iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if(iso) return [+iso[1], +iso[2], +iso[3]];
+    if(!/[A-Za-z]{3}[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}/.test(s)) return null;
+    var ms=monDateTime(s); if(!Number.isFinite(ms)) return null;
+    var t=new Date(ms); return [t.getFullYear(), t.getMonth()+1, t.getDate()];
+  }
+  function icsEscape(t){ return String(t==null?"":t).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n"); }
+  function icsFold(line){ var out=[], rest=line; while(rest.length>73){ out.push(rest.slice(0,73)); rest=" "+rest.slice(73); } out.push(rest); return out.join("\r\n"); }
+  // One all day event for a release date, as an .ics file body. Empty text when the date is not an exact day.
+  function releaseIcs(title, date, note, uid){
+    var ymd=releaseYmd(date); if(!ymd) return "";
+    var pad=function(n){ return (n<10?"0":"")+n; }, fmt=function(d){ return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate()); };
+    var start=new Date(Date.UTC(ymd[0], ymd[1]-1, ymd[2])), end=new Date(start.getTime()+86400000);
+    var stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+    var lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//SphereDex//Releases//EN","CALSCALE:GREGORIAN","BEGIN:VEVENT",
+      "UID:"+fileSlug(uid||title,"release")+"-"+fmt(start)+"@spheredex.app","DTSTAMP:"+stamp,
+      "DTSTART;VALUE=DATE:"+fmt(start),"DTEND;VALUE=DATE:"+fmt(end),"SUMMARY:"+icsEscape(title)];
+    if(note) lines.push("DESCRIPTION:"+icsEscape(note));
+    lines.push("TRANSP:TRANSPARENT","END:VEVENT","END:VCALENDAR");
+    return lines.map(icsFold).join("\r\n")+"\r\n";
+  }
+  function addReleaseToCalendar(title, date, note){
+    var ics=releaseIcs(title, date, note, title); if(!ics){ toast("This release has no exact date yet"); return; }
+    saveTextFile(fileSlug(title,"release")+".ics", "text/calendar", ics, function(){ toast("Calendar file ready"); });
+  }
+  function calButtonHtml(date){ return releaseYmd(date) ? '<button type="button" class="tcalbtn" data-action="cal">'+icon('calendar')+'Add to calendar</button>' : ""; }
+  function wireCalButton(row, title, date, note){
+    var b=row.querySelector('[data-action="cal"]'); if(!b) return;
+    b.onclick=function(e){ e.stopPropagation(); addReleaseToCalendar(title, date, note); };
+  }
+
   // ---- Releases ----
   function renderReleases(){
     var sp=setProgress(), tl=$("timeline"); if(!tl) return;
@@ -11791,8 +11905,9 @@ label.acctsetrow { align-items:center; }
         '<div class="tinfo"><div class="treleasetop"><span class="tbadge '+(live?'live':'soon')+'">'+(live?'● Available':'✦ Coming soon')+'</span><span class="tdate">'+esc(m.release||"Release date TBA")+'</span></div><h3 class="tlink">'+esc(SETS[k].name)+' →</h3>'+
           (m.blurb?'<div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(m.blurb)+'</div>':'')+
           '<div class="tprog">'+owned+' / '+tot+' collected · '+pct+'%</div><div class="treleasebar" aria-label="'+pct+' percent collected"><span style="width:'+pct+'%"></span></div>'+
-          '<div class="treleaseactions"><button type="button" class="primary" data-action="set">View set</button><button type="button" data-action="wish">Wishlist missing</button></div>'+
+          '<div class="treleaseactions"><button type="button" class="primary" data-action="set">View set</button><button type="button" data-action="wish">Wishlist missing</button>'+(live?"":calButtonHtml(m.release))+'</div>'+
         '</div>';
+      wireCalButton(row, SETS[k].name+" release", m.release, "Release day for "+SETS[k].name+". Palworld TCG.");
       row.onclick=function(){ openSet(k); };
       row.querySelector('[data-action="set"]').onclick=function(e){ e.stopPropagation(); openSet(k,"missing"); };
       row.querySelector('[data-action="wish"]').onclick=function(e){ e.stopPropagation(); addMissingToWishlist(missingItems(CARDS.filter(function(c){ return c.set===k; }))); };
@@ -11825,7 +11940,9 @@ label.acctsetrow { align-items:center; }
       up.innerHTML='<div class="tbox">'+(img?'<img src="'+img+'" alt="'+esc(g.title)+'">':'<span class="ph">Soon</span>')+'</div>'+
         '<div class="tinfo"><div class="treleasetop"><span class="tbadge soon">✦ On the horizon</span><span class="tdate">'+esc(g.date||"Date TBA")+'</span></div><h3>'+esc(g.title)+' →</h3>'+
         (subline?'<div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(subline)+'</div>':'')+
-        (function(c){ return c?'<div class="tcountdown">'+icon('calendar')+'<span>'+esc(c)+'</span>'+'</div>':''; })(releaseCountdown(g.date))+'</div>';
+        (function(c){ return c?'<div class="tcountdown">'+icon('calendar')+'<span>'+esc(c)+'</span>'+'</div>':''; })(releaseCountdown(g.date))+
+        (releaseYmd(g.date)?'<div class="treleaseactions">'+calButtonHtml(g.date)+'</div>':'')+'</div>';
+      wireCalButton(up, g.title+" release", g.date, "Release day for "+g.title+(subline?" ("+subline+")":"")+". Palworld TCG.");
       up.onclick=function(){ openSealedDetail(g.first); }; tapTarget(up);
       tl.appendChild(up);
     });
