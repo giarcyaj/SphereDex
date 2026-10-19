@@ -1889,8 +1889,12 @@ label.acctsetrow { align-items:center; }
   .setsphere .ssmeta { display:block; margin-top:4px; color:var(--ink-faint); font-size:.72rem; line-height:1.3; }
   .setsphere.earned .ssmeta { color:var(--el-Grass); }
   @keyframes rwglow { 0%,100%{ filter:none; } 50%{ filter:drop-shadow(0 0 9px var(--rc)); } }
-  /* Pal Effigies: 13 separate effigies on stone pedestals, glowing at night · offered at the Statue of Power (Lv 9) for permanent ranks · Lifmunk green and deepest, 8 commons 20 ranks, 3 rares 4 each, Mimog 92 from capture bonuses. */
+  /* Pal Effigies: one tile per collection milestone, plus the Statue of Power for sharing the app.
+     A tile is dim until it is earned, then it lights in its own colour, which each badge passes in
+     as --eff. Only the statue is actionable, so only the statue is a button (.achaction), and it has
+     to look like the tiles either side of it rather than like a button. */
   .achievementgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:10px; max-width:720px; }
+  .achaction { appearance:none; -webkit-appearance:none; font:inherit; cursor:pointer; width:100%; display:block; }
   .achievement { position:relative; text-align:center; padding:12px 8px 11px; border:1.5px solid var(--line); border-radius:16px; background: linear-gradient(180deg, var(--surface), var(--surface-2)); color:var(--ink-faint); overflow:hidden; }
   .achievement::before { content:""; position:absolute; inset:0; background: radial-gradient(ellipse at 50% 16%, color-mix(in srgb, var(--eff, var(--accent)) 18%, transparent), transparent 62%); opacity:0; transition:opacity .25s; }
   .achievement.earned { border-color:color-mix(in srgb, var(--eff, var(--accent)) 55%, var(--line)); color:var(--ink); background: color-mix(in srgb, var(--eff, var(--accent)) 8%, var(--surface)); }
@@ -2655,9 +2659,10 @@ label.acctsetrow { align-items:center; }
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
     <p class="rwintro">Pal is available from the start. Higher themes unlock as your collection reaches milestones and remain available once earned, even when a new set adds more cards. Set one as your app icon and colour theme; the header orb becomes that Sphere and the app recolours to match. On Android the home-screen icon changes too.</p>
     <div class="spherethemes" id="sphereThemes"></div>
-    <h2 class="sech" style="margin-top:30px">Pal Effigies · Collection milestones</h2>
-    <p class="rwintro">13 Pal effigies, one per milestone · find them glowing in the wild at night, offer them at the Statue of Power · Lifmunk is green, 12 Pals each feed a different stat · each stays earned like capture power at level 9.</p>
+    <h2 class="sech" style="margin-top:30px">Pal Effigies &amp; the Statue of Power</h2>
+    <p class="rwintro">One effigy for each milestone in your collection, and a statue for sharing the app. An effigy lights up the moment you reach its milestone, and once it is lit it stays lit, even when a new set makes the collection bigger.</p>
     <div class="achievementgrid" id="achievementGrid"></div>
+    <div class="rwcap" id="rateCap"></div>
   </section>
 
   <section class="page" id="page-collection">
@@ -6912,6 +6917,7 @@ label.acctsetrow { align-items:center; }
     chev:'<path d="M6 9l6 6 6-6"/>',
     menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
     dots:'<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+    statue:'<circle cx="12" cy="5.2" r="2.4"/><path d="M12 7.6v2.6"/><path d="M10.5 10.2h3l.8 5.4h-4.6z"/><path d="M8.3 15.6h7.4v2H8.3z"/><path d="M6.1 17.6h11.8v2.4H6.1z"/>',
     effigy:'<path d="M12 3l2 7h-2l-1 9 1-9H8l2-7z" stroke-width="1.8"/><path d="M12 12v2"/><path d="M9 16h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLifmunk:'<path d="M12 3c1.2 1.2 2 2.2 2 3.5 0 1.8-1.2 3.2-2.8 3.6l.8 5.2H9l.8-5.2C8.1 9.7 7 8.3 7 6.5c0-1.3.8-2.3 2-3.5h3z" fill="none"/><circle cx="12" cy="7.2" r="1.2" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLamball:'<circle cx="12" cy="8" r="3.2" fill="none"/><path d="M9 7l-2-1M15 7l2-1"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
@@ -10920,6 +10926,31 @@ label.acctsetrow { align-items:center; }
     var fb=effigySVG(name).replace('class="effigy-svg"','class="effigy-svg effigy-svg-fallback" style="display:none"');
     return "<img class=\"effigy-img\" src=\"img/"+f+"\" alt=\"\" loading=\"lazy\" decoding=\"async\" width=\"44\" height=\"44\" onerror=\"this.onerror=null;this.style.display='none';var n=this.nextElementSibling;if(n) n.style.display='block'\">"+fb;
   }
+  // The statue is the one reward that is not about how many cards you own. It is earned by sharing
+  // SphereDex, which is something a person chooses to do for the app, and it is remembered on the device
+  // rather than in the collection, so it survives switching collections and signing in somewhere else.
+  // NOT earned by leaving a review: the App Store and Google Play both forbid offering anything in
+  // return for one, and an unlockable is something. The Rate link under the grid asks for nothing back.
+  function statueShared(){ return lsGet("palvault-shared")==="1"; }
+  // Earned for opening the share sheet, not for completing the share: nothing can tell us whether it was
+  // sent, and on iOS the sheet suspends the page, so this is marked before the sheet rather than after.
+  function shareSphereDex(){
+    var url="https://spheredex.app/app/", text="SphereDex, a free tracker for the Palworld TCG";
+    var first=!statueShared();
+    lsSet("palvault-shared","1");
+    try{ renderAchievements(); }catch(e){}
+    try{
+      if(navigator.share){
+        var p=navigator.share({ title:"SphereDex", text:text, url:url });
+        if(p && p.then) p.then(null, function(){});                 // a cancelled share is not an error
+        if(first) toast("Statue of Power earned. Thank you.");
+        return;
+      }
+    }catch(e){}
+    copyPlainText(text+" "+url,
+      first ? "Link copied. Statue of Power earned, thank you." : "Link copied. Thank you for sharing.",
+      "Share SphereDex", "Select this link and send it to anyone who collects.");
+  }
   function renderAchievements(){
     var host=$("achievementGrid"); if(!host) return;
     var owned=CARDS.filter(function(c){return has(o(c.id));}).length, ds=decks().length, completed=SET_SPHERE_TRACKS.filter(function(track){return !!(activeCol().setSpheres||{})[track.id];}).length;
@@ -10929,6 +10960,8 @@ label.acctsetrow { align-items:center; }
       var need=0, haveN=0; ids.forEach(function(id){ var q=+d.cards[id]||0; need+=q; haveN+=Math.min(q,(activeCol().own[id]&&activeCol().own[id].qty)||0); });
       if(need&&haveN>=need) decksDone++; });
     var badges=[
+      {name:"Statue of Power",how:statueShared()?"Thank you for sharing SphereDex":"Share SphereDex with someone",
+       ok:statueShared(), icon:"statue", eff:"var(--gold)", act:"share"},
       {name:"Lifmunk Effigy",how:"Collect your first card",ok:owned>=1, icon:"effigyLifmunk", eff:"var(--el-Grass)"},
       {name:"Lamball Effigy",how:"Collect 25 cards",ok:owned>=25, icon:"effigyLamball", eff:"var(--el-Electric)"},
       {name:"Pengullet Effigy",how:"Collect 50 cards",ok:owned>=50, icon:"effigyPengullet", eff:"var(--el-Water)"},
@@ -10945,8 +10978,18 @@ label.acctsetrow { align-items:center; }
     ];
     host.innerHTML=badges.map(function(b){
       var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'</div>';
-      return '<div class="achievement '+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'">'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+esc(b.how)+'</span></div>';
+      var tag=b.act?"button":"div", open=b.act?'<button type="button" class="achievement achaction ':'<div class="achievement ';
+      return open+(b.ok?'earned':'')+'" style="--eff:'+b.eff+'"'+(b.act?' data-act="'+b.act+'"':'')+'>'+fig+'<b>'+(b.ok?icon('check')+' ':'')+esc(b.name)+'</b><span>'+esc(b.how)+'</span></'+tag+'>';
     }).join("");
+    var shareBtn=host.querySelector('[data-act="share"]');
+    if(shareBtn) shareBtn.onclick=function(){ shareSphereDex(); };
+    // A rating is worth asking for on its own terms, well away from anything it could unlock. Only the
+    // store builds have a store to rate in, so the web app says nothing.
+    var cap=$("rateCap");
+    if(cap){
+      var su=""; try{ su=storeUrl(); }catch(e){}
+      cap.innerHTML = su ? 'Enjoying SphereDex? <a href="'+esc(su)+'" target="_blank" rel="noopener" style="color:var(--accent-ink)">Rate it on the '+(isIosApp()?'App Store':'Play Store')+' \u2197</a> so other collectors can find it.' : '';
+    }
   }
   // openSet chooses the set as well as its product (a product pick alone is ignored by setFilterCodes) and
   // repaints the Show and Set chips, so the grid, the chips and the Filters badge all agree.
