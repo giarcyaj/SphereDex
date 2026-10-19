@@ -189,7 +189,7 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
     'Number,Qty',
     'BP01-045,1',
     'BP02-001,1',
-    'SS01-001-OSR,2',
+    'BP03-001,2',
     'SOUL-010,1',
     'Lamball,1',
     ',1',
@@ -198,13 +198,27 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
   assert.deepEqual(Object.keys(res.own), ['EBP01-045']);
   assert.deepEqual(plain(res.unmatched), [
     { row: 3, raw: 'BP02-001', reason: 'Not in SphereDex yet' },
-    { row: 4, raw: 'SS01-001-OSR', reason: 'Not in SphereDex yet' },
+    { row: 4, raw: 'BP03-001', reason: 'Not in SphereDex yet' },
     { row: 5, raw: 'SOUL-010', reason: 'Not in SphereDex yet' },
     { row: 6, raw: 'Lamball', reason: 'Not a card number' },
     { row: 7, raw: '', reason: 'No card number' },
     { row: 8, raw: 'BP01-046', reason: 'Quantity “lots” not readable' }
   ]);
   assert.equal(res.skipped, 6);
+});
+
+test('Sleeve & Card Set numbers import, parallel rares included', () => {
+  // SS01 used to be this suite's example of a card SphereDex did not carry. The set shipped on
+  // 16 October 2026, so its numbers now resolve, in every form another tracker writes them.
+  const res = A.parseCsvCollection(csv([
+    'Number,Qty',
+    'SS01-001,1',
+    'SS01-001-OSR,2',
+    'ESS01-005OSR,1'
+  ]));
+  assert.deepEqual(Object.keys(res.own).sort(), ['ESS01-001', 'ESS01-001OSR', 'ESS01-005OSR']);
+  assert.equal(res.own['ESS01-001OSR'].qty, 2);
+  assert.deepEqual(plain(res.unmatched), []);
 });
 
 test('header synonyms, delimiters, a BOM and quoted fields', () => {

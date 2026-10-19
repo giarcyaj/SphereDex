@@ -3374,9 +3374,21 @@ label.acctsetrow { align-items:center; }
     ["EPR-020","Cattiva – My First Pal","Pal","Normal Pal","PR","Colorless","Neutral","Harvesting|Crafting|Collecting|Transporting","2","200","1","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174317/EPR-020_1_4C.png","PR2026"],
     ["ESOUL-014","Lamball, Cattiva & Chikipi","Soul","","PR","","","","","","","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174319/ESOUL-014_1_4C.png","PR2026"],
     ["ESOUL-015","Chillet Ignis & Chillet","Soul","","PR","","","","","","","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174321/ESOUL-015_1_4C.png","PR2026"],
-    ["ESOUL-016","Depresso & Grizzbolt","Soul","","PR","","","","","","","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174323/ESOUL-016_1_4C.png","PR2026"]];
-  var SETS = { EBP01:{name:"Booster · Dawn of Palpagos", short:"Booster"}, ETD01:{name:"Trial Deck · Red · Blue", short:"Trial R·B"}, ETD02:{name:"Trial Deck · Green · Purple", short:"Trial G·P"}, PR2026:{name:"Promo Cards (2026)", short:"Promo"} };
-  var SET_ORDER = ["EBP01","ETD01","ETD02","PR2026"];
+    ["ESOUL-016","Depresso & Grizzbolt","Soul","","PR","","","","","","","https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/09/02174323/ESOUL-016_1_4C.png","PR2026"],
+    // --- Added 2026-10-19: Sleeve & Card Set Vol. 1 (ESS01), out 16 Oct 2026. Five cards, each with a
+    // parallel OSR, staged from the official card list with tools/stage_set.py. ---
+    ["ESS01-001","Grizzbolt – Cascading Voltage","Pal","Normal Pal","R","Red","Electric","Electricity|Crafting|Collecting|Transporting","6","1000","2","ESS01/ESS01-001.png","ESS01"],
+    ["ESS01-001OSR","Grizzbolt – Cascading Voltage","Pal","Normal Pal","OSR","Red","Electric","Electricity|Crafting|Collecting|Transporting","6","1000","2","ESS01/ESS01-001OSR.png","ESS01"],
+    ["ESS01-002","Chillet – Final Frostneedle","Pal","Normal Pal","R","Blue","Ice|Dragon","Harvesting|Cooling","6","1000","2","ESS01/ESS01-002.png","ESS01"],
+    ["ESS01-002OSR","Chillet – Final Frostneedle","Pal","Normal Pal","OSR","Blue","Ice|Dragon","Harvesting|Cooling","6","1000","2","ESS01/ESS01-002OSR.png","ESS01"],
+    ["ESS01-003","Depresso – Midnight Overdrive","Pal","Normal Pal","R","Purple","Dark","Crafting|Collecting|Transporting|Farming","3","300","1","ESS01/ESS01-003.png","ESS01"],
+    ["ESS01-003OSR","Depresso – Midnight Overdrive","Pal","Normal Pal","OSR","Purple","Dark","Crafting|Collecting|Transporting|Farming","3","300","1","ESS01/ESS01-003OSR.png","ESS01"],
+    ["ESS01-004","Cattiva – Brimming Bravado","Pal","Normal Pal","R","Colorless","Neutral","Harvesting|Crafting|Collecting|Transporting","3","300","1","ESS01/ESS01-004.png","ESS01"],
+    ["ESS01-004OSR","Cattiva – Brimming Bravado","Pal","Normal Pal","OSR","Colorless","Neutral","Harvesting|Crafting|Collecting|Transporting","3","300","1","ESS01/ESS01-004OSR.png","ESS01"],
+    ["ESS01-005","Quivern – Breath of the Wyvern","Pal","Lucky Pal","R","Colorless","Dragon","Harvesting|Crafting|Collecting|Transporting","6","1300","2","ESS01/ESS01-005.png","ESS01"],
+    ["ESS01-005OSR","Quivern – Breath of the Wyvern","Pal","Lucky Pal","OSR","Colorless","Dragon","Harvesting|Crafting|Collecting|Transporting","6","1300","2","ESS01/ESS01-005OSR.png","ESS01"]];
+  var SETS = { EBP01:{name:"Booster · Dawn of Palpagos", short:"Booster"}, ETD01:{name:"Trial Deck · Red · Blue", short:"Trial R·B"}, ETD02:{name:"Trial Deck · Green · Purple", short:"Trial G·P"}, PR2026:{name:"Promo Cards (2026)", short:"Promo"}, ESS01:{name:"Sleeve & Card Set Vol. 1", short:"Sleeve Set"} };
+  var SET_ORDER = ["EBP01","ETD01","ETD02","ESS01","PR2026"];
   // Filters > Set: the real sets (plus Promo), each with its products as Product sub filters. Only products that
   // print their own card codes are listed (a booster pack shares the booster box's codes). Upcoming sets carry
   // their codes already, so their cards filter as soon as they are added. Keep in step with SETS when staging a set.
@@ -3384,6 +3396,7 @@ label.acctsetrow { align-items:center; }
     { key:"dop", name:"Dawn of Palpagos", products:[ {code:"EBP01", name:"Booster Box"}, {code:"ETD01", name:"Trial Deck Red · Blue"}, {code:"ETD02", name:"Trial Deck Green · Purple"} ] },
     { key:"la", name:"Legends Awaken", products:[ {code:"EBP02", name:"Booster Box"} ] },
     { key:"ea", name:"Eternal Ascent", products:[ {code:"EBP03", name:"Booster Box"}, {code:"ETD03", name:"Trial Deck Red · Green"}, {code:"ETD04", name:"Trial Deck Blue · Purple"} ] },
+    { key:"ss01", name:"Sleeve & Card Set Vol. 1", products:[ {code:"ESS01", name:"Sleeve & Card Set"} ] },
     { key:"promo", name:"Promo", products:[ {code:"PR2026", name:"Promo Cards"} ] }
   ];
   function filterSetOf(code){ for(var i=0;i<FILTER_SETS.length;i++){ if(FILTER_SETS[i].products.some(function(p){ return p.code===code; })) return FILTER_SETS[i]; } return null; }
@@ -6920,7 +6933,8 @@ label.acctsetrow { align-items:center; }
     EBP01: { release:"Jul 30, 2026", box:"BOX_BANNER_EBP01", logo:DOP_LOGO, art:BP01_ART, blurb:"The flagship 162 card booster set." },
     ETD01: { release:"Jul 30, 2026", box:"BOX_BANNER_ETD01", logo:DOP_LOGO, art:TD01_ART, blurb:"Ready to play Red · Blue starter deck." },
     ETD02: { release:"Jul 30, 2026", box:"BOX_BANNER_ETD02", logo:DOP_LOGO, art:TD02_ART, blurb:"Ready to play Green · Purple starter deck." },
-    PR2026:{ release:"2026", box:"EPR-001", blurb:"Promotional cards from events & campaigns." }
+    PR2026:{ release:"2026", box:"EPR-001", blurb:"Promotional cards from events & campaigns." },
+    ESS01: { release:"Oct 16, 2026", box:"BOX_SS01", blurb:"Five cards and 75 sleeves. Every set holds two parallel rares." }
   };
   function boxSrc(setKey){ var k=(SET_META[setKey]||{}).box; return (k && window.CARD_IMG && window.CARD_IMG[k]) ? window.CARD_IMG[k] : ""; }
   // A box image sourced from a card (portrait) needs 'contain', not 'cover' crop.
@@ -6952,6 +6966,7 @@ label.acctsetrow { align-items:center; }
   // booster + both trial decks), then the upcoming ones (informational, they have no cards in-app yet).
   var BROWSE_EXPANSIONS = [
     { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"Jul 30, 2026", logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
+    { name:"Sleeve & Card Set Vol. 1", sets:["ESS01"], release:"Oct 16, 2026", logo:"BOX_BANNER_SS01" },
     { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", logo:"LOGO_BP02" },
     { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", logo:"LOGO_BP03" }
   ];

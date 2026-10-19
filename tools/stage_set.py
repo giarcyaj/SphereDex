@@ -110,12 +110,25 @@ def to_row(card, set_code):
 
 
 def resize_jpeg(src_png, dst_jpg):
-    """PNG bytes on disk -> 315x440 JPEG via macOS sips. Returns True on success."""
-    r = subprocess.run(
-        ["sips", "-s", "format", "jpeg", "-s", "formatOptions", str(JPEG_Q),
-         "-z", str(TARGET_H), str(TARGET_W), src_png, "--out", dst_jpg],
-        capture_output=True, text=True)
-    return r.returncode == 0 and os.path.exists(dst_jpg)
+    """PNG on disk -> 315x440 JPEG. macOS `sips` when it is there, Pillow otherwise, so the
+    tool also runs on the Windows PC. Both paths produce the same size and quality."""
+    try:
+        r = subprocess.run(
+            ["sips", "-s", "format", "jpeg", "-s", "formatOptions", str(JPEG_Q),
+             "-z", str(TARGET_H), str(TARGET_W), src_png, "--out", dst_jpg],
+            capture_output=True, text=True)
+        if r.returncode == 0 and os.path.exists(dst_jpg):
+            return True
+    except (OSError, FileNotFoundError):
+        pass                      # no sips on this machine: fall through to Pillow
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    with Image.open(src_png) as im:
+        im = im.convert("RGB").resize((TARGET_W, TARGET_H), Image.LANCZOS)
+        im.save(dst_jpg, "JPEG", quality=JPEG_Q)
+    return os.path.exists(dst_jpg)
 
 
 def main():
