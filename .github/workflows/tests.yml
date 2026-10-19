@@ -147,6 +147,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Add to calendar on Releases (.ics)
+        run: node tools/test_release_calendar.cjs
+
       - name: Market index and like for like split
         run: node tools/test_market_index.cjs
 
