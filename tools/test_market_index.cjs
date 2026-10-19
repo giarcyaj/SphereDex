@@ -69,3 +69,24 @@ test('other changes are withheld unless portfolio and price baselines are the sa
   // portfolio only has 10-05 at or before the cut while prices start 10-12: mismatch, no split
   assert.equal(ctx.otherChange(pts.slice(0, 1).concat(pts[2]), '2026-10-12', '2026-10-12', -10), null);
 });
+
+test('the Home market figure counts the same holdings as every other total', () => {
+  // It used to be binderValue(), which is cards and slabs only, under the words "Collection value" and a
+  // button to a page that adds sealed. Someone with a booster box saw two different totals one tap apart,
+  // and the tile's own "vs cost" line, which does count sealed, contradicted the figure above it.
+  assert.match(
+    source,
+    /value=cardsValue\(\)\+sealedValue\(\)/,
+    'the Home tile totals cards and sealed, the expression every other total uses',
+  );
+  assert.doesNotMatch(source, /value=binderValue\(\)/, 'and no longer the cards only one');
+
+  // binderValue stays, because the Collection page panel that uses it is honestly called Binder value.
+  const callers = source.match(/binderValue\(/g) || [];
+  assert.equal(callers.length, 2, 'binderValue is defined once and called once, by the Binder value panel');
+  assert.match(source, /money\(binderValue\(valueBasis\)\)/, 'and that caller is the Collection page panel');
+
+  // The four figures that already covered cards and sealed are untouched, so Home now agrees with them.
+  assert.match(source, /money\(sealedValue\(\)\+cardsValue\(\)\)/, 'Sealed page Total portfolio');
+  assert.match(source, /clampMoney\(cardsValue\(\)\+sealedValue\(\)\)/, 'the saved daily value history');
+});

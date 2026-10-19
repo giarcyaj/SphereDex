@@ -198,9 +198,16 @@ function app(opts) {
     moverCard: () => null, pwPick: () => null,
     storeUrl: () => '',
     roadmapUrl: (v) => 'https://spheredex.app/roadmap#v' + String(v || '').replace(/\./g, '-'),
+    MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     ...opts,
   };
   const context = vm.createContext(sandbox);
+  // The release timeline slide reads real dates, so give the sandbox the app's own date helpers.
+  // They run INSIDE the context, not through appFunction, because they call each other and monDateTime.
+  vm.runInContext(
+    ['releaseYmd', 'releaseDaysUntil', 'shortReleaseDate'].map(appFunctionSource).join('\n') + '\n',
+    context,
+  );
   vm.runInContext(srcSection('logic') + '\n', context);
   return {
     window: window_, host, track, shown, toasts, opened, registry, sandbox, dispatch,
@@ -266,7 +273,15 @@ test('home headliners are news, update features, collection movers and the next 
   assert.equal(slides[2].title, 'Movers in your collection');
   assert.equal(slides[2].movers[0].name, 'Lamball');
   assert.equal(slides[3].title, 'Sleeve & Card Set Vol. 1');
-  assert.equal(slides[3].meta, 'Oct 16, 2026');
+  // The release slide is a timeline now: a countdown and a short date on the headline, and the
+  // releases after it as rows. With one upcoming release there are no rows and it reads as before.
+  assert.equal(slides[3].meta, 'In 2 days · 16 Oct');
+  // The reprint after it has a month only date, so it is a row with its own words and no countdown:
+  // releaseYmd refuses to invent a day and the timeline refuses to guess one.
+  assert.equal(slides[3].rows.length, 1);
+  assert.equal(slides[3].rows[0].date, 'late Oct 2026');
+  assert.equal(slides[3].rows[0].name, 'Dawn reprint');
+  assert.equal(slides[3].badge, 'Release timeline');
   assert.equal(slides.some((s) => s.kind === 'ximage' || s.kind === 'reveal'), false);
 });
 
@@ -695,8 +710,21 @@ test('the next release names a reprint and shows its own banner', () => {
   });
   a.window.CARD_IMG = { BOX_BANNER_EBP01_2E: 'img/2e.webp', BOX_BANNER_EBP01: 'img/1e.jpg', BOX_BANNER_BP02: 'img/bp02.webp', BOX_EBP02: 'img/box.webp' };
   const soon = a.api.slides().find((s) => s.kind === 'soon');
-  assert.equal(soon.title, 'Dawn of Palpagos 2nd Edition');
-  assert.equal(soon.art, 'img/2e.webp', 'the reprint banner, not the July set');
+  // The headline needs a real day, so the reprint's "late Oct 2026" cannot hold it while a dated release
+  // is waiting. It still names itself, as a row, which is where a date with no day belongs.
+  assert.equal(soon.title, 'Legends Awaken');
+  assert.equal(soon.rows[0].name, 'Dawn of Palpagos 2nd Edition');
+  assert.equal(soon.rows[0].date, 'late Oct 2026');
+  // On its own the reprint is the headline again, with its own banner rather than the July set's.
+  const only = app({
+    SEALED: [{ id: 'box-ebp01-2e', set: 'Dawn of Palpagos', rel: 'Dawn of Palpagos 2nd Edition', box: 'BOX_BANNER_EBP01_2E', banner: 'BOX_BANNER_EBP01', pre: true, date: 'late Oct 2026' }],
+    sealDate: (p) => p.date,
+  });
+  only.window.CARD_IMG = { BOX_BANNER_EBP01_2E: 'img/2e.webp', BOX_BANNER_EBP01: 'img/1e.jpg' };
+  const alone = only.api.slides().find((s) => s.kind === 'soon');
+  assert.equal(alone.title, 'Dawn of Palpagos 2nd Edition');
+  assert.equal(alone.art, 'img/2e.webp', 'the reprint banner, not the July set');
+  assert.equal(alone.badge, 'Next release', 'one release is not a timeline');
   // A product whose box is a box shot, not a banner, keeps its banner.
   const b = app({ SEALED: [{ id: 'box-bp02', set: 'Legends Awaken', box: 'BOX_EBP02', banner: 'BOX_BANNER_BP02', pre: true, date: 'Oct 30, 2026' }], sealDate: (p) => p.date });
   b.window.CARD_IMG = { BOX_BANNER_BP02: 'img/bp02.webp', BOX_EBP02: 'img/box.webp' };

@@ -922,6 +922,16 @@
   .feattitle { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; max-width:100%;
     font-family:var(--font-display); font-weight:800; font-size:1rem; line-height:1.25; }
   .featmeta { display:block; max-width:100%; font-size:.72rem; color:rgba(255,255,255,.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* The release timeline rows under the headline. Grid rather than flex gap: the old WebViews this app
+     still runs on collapse flex gap, and .homegrid already leans on grid gap working there. */
+  .feattl { display:grid; gap:3px; margin-top:5px; max-width:100%; font-size:.66rem; line-height:1.3; }
+  .feattlrow { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; align-items:baseline; }
+  .feattlrow b { font-weight:700; color:var(--accent-ink); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .feattlrow i { font-style:normal; color:rgba(255,255,255,.86); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* A release name is long and there are four of them, so on a phone the timeline takes the whole slide
+     and leans on the blurred backdrop for its picture. The art panel returns at the wider sizes below. */
+  .featslide.reltl .featart { display:none; }
+  .featslide.reltl .featbody { right:14px; }
   .featpoints { display:block; max-width:100%; font-size:.68rem; line-height:1.35; color:rgba(255,255,255,.88); }
   .featpoints span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .featpoints span::before { content:"\2022  "; opacity:.9; }
@@ -958,7 +968,8 @@
   @media (max-width:390px) { .feattitle { font-size:.9rem; -webkit-line-clamp:4; } .featbody { padding-left:14px; } }
   @media (min-width:760px) { .featured { height:240px; } .featbody { padding:18px 14px 34px 22px; } .featdots { left:22px; bottom:14px; }
     .featart { top:16px; bottom:16px; right:16px; max-width:340px; } .featslide.pair .featart { max-width:320px; }
-    .featbody, .featslide.pair .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
+    .featbody, .featslide.pair .featbody { right:372px; }
+    .featslide.reltl .featart { display:flex; } .featslide.reltl .featbody { right:372px; } .feattitle { font-size:1.2rem; } .featpoints span { white-space:normal; } }
   @media (prefers-reduced-motion:reduce) { .feattrack { transition:none; } .featslide.on .featart-img.zoom { animation:none; } }
   /* Version banners are 16:9 collages that already carry their own title, their three lines and the credit.
      So the slide shows the banner and nothing else, inside the carousel's ordinary height, exactly like the
@@ -11180,13 +11191,20 @@ label.acctsetrow { align-items:center; }
       var cotdMeta=pick.featured ? pick.basis+" "+(pick.cur>0 ? money(pick.cur) : pick.rare) : (pick.prev>0&&pick.cur>0) ? money(pick.cur)+" from "+money(pick.prev)+" "+pick.pct.toFixed(1) : pick.basis+" "+pick.pct.toFixed(1);
       out.push({ kind:"cotd", badge:"Card of the day", title:String(pick.name).split(" \u2013 ")[0], cotd:pick, art:pick.art, meta:cotdMeta });
     })();
-    // 5 - the soonest upcoming release. Pre-orders first, then a future set that is already in the catalogue.
+    // 5 - what is coming, soonest first. Pre-orders first, then a future set that is already in the
+    // catalogue. The soonest one is the headline and up to three more sit under it as a timeline, which
+    // is the same list the Releases page draws, cut to what fits. With only one it is the card this
+    // always was, so a quiet month costs nothing.
     (function(){
-      var now=Date.now(), best=null;
-      function consider(title, date, art){
+      var now=Date.now(), found=[], seenGroup={};
+      function consider(title, date, art, kind){
         var t=featTime(date);
         if(!title || t===Infinity || t<=now) return;
-        if(!best || t<best.t) best={title:title, date:date, t:t, art:art||""};
+        // One row per release group: a box and its packs share a day and a name, and the Releases page
+        // collapses them the same way. The first product in the group keeps its kind for the label.
+        var k=title+"|"+String(date||"");
+        if(seenGroup[k]) return; seenGroup[k]=true;
+        found.push({title:title, date:date, t:t, art:art||"", kind:kind||""});
       }
       if(typeof SEALED!=="undefined" && SEALED){
         var seen={};
@@ -11200,10 +11218,10 @@ label.acctsetrow { align-items:center; }
           if(seen[key]) return; seen[key]=true;
           var img="";
           try{ if(window.CARD_IMG){ var own=(p.box && /^BOX_BANNER_/.test(p.box)) ? p.box : ""; img=(own && window.CARD_IMG[own])||window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; } }catch(e){}
-          consider(title, pd, img);
+          consider(title, pd, img, p.name);
         });
       }
-      if(!best && typeof BROWSE_EXPANSIONS!=="undefined" && BROWSE_EXPANSIONS){
+      if(!found.length && typeof BROWSE_EXPANSIONS!=="undefined" && BROWSE_EXPANSIONS){
         BROWSE_EXPANSIONS.forEach(function(x){
           if(!x || !x.upcoming) return;
           var img="";
@@ -11211,7 +11229,7 @@ label.acctsetrow { align-items:center; }
           consider(x.name, x.release, img);
         });
       }
-      if(!best && typeof SET_ORDER!=="undefined"){
+      if(!found.length && typeof SET_ORDER!=="undefined"){
         SET_ORDER.forEach(function(k){
           var m=SET_META[k]||{};
           var t=featTime(m.release);
@@ -11220,7 +11238,31 @@ label.acctsetrow { align-items:center; }
           consider(name, m.release, featArt(k));
         });
       }
-      if(best) out.push({ kind:"soon", badge:"Next release", title:best.title, meta:best.date, art:best.art, date:best.date });
+      if(!found.length) return;
+      found.sort(function(a,b){ return a.t-b.t; });
+      // The headline is the soonest release with a REAL day. featTime() will happily rank "late Oct 2026"
+      // first by guessing a day inside the month, which is how this slide and the line above the cards
+      // ended up naming different releases. A month only date is still worth showing, as a row.
+      var hi=0; while(hi<found.length && releaseDaysUntil(found[hi].date)<0) hi++;
+      if(hi>=found.length) hi=0;
+      var titles={};
+      found.forEach(function(g){ titles[g.title]=(titles[g.title]||0)+1; });
+      function label(g){
+        var w=titles[g.title]>1 ? releaseKindWord(g.kind) : "";
+        return w ? g.title+" "+w : g.title;
+      }
+      var best=found[hi], rows=[];
+      for(var ri=0; ri<found.length && rows.length<3; ri++){
+        if(ri===hi) continue;
+        rows.push({ date:shortReleaseDate(found[ri].date), name:label(found[ri]) });
+      }
+      // The countdown sits on the headline only. Three of them in a row is noise, and nobody counts in
+      // 102 days. A month only date has no day to count to, so it shows its date and nothing more.
+      var bd=releaseDaysUntil(best.date);
+      var cd=bd===0 ? "Out today" : bd===1 ? "Tomorrow" : bd>0 ? "In "+bd+" days" : "";
+      var sub=(cd ? cd+" \u00b7 " : "")+shortReleaseDate(best.date);
+      out.push({ kind:"soon", badge:rows.length?"Release timeline":"Next release", title:label(best),
+                 meta:sub, art:best.art, date:best.date, rows:rows });
     })();
     return out.slice(0,5);   // the five headliners, never more
   }
@@ -11325,7 +11367,7 @@ label.acctsetrow { align-items:center; }
     var slides=featuredSlides();
     featStop();
     if(!slides.length){ host.hidden=true; host.innerHTML=""; _featSig=""; if(host.classList) host.classList.remove("banneropen"); return; }
-    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta+"|"+(s.art||"")+"|"+(s.releaseArt?1:0)+"|"+(s.notes?s.notes.join("|"):""); }).join("~");
+    var sig=slides.map(function(s){ return s.kind+"|"+s.title+"|"+s.meta+"|"+(s.art||"")+"|"+(s.releaseArt?1:0)+"|"+(s.notes?s.notes.join("|"):"")+"|"+(s.rows?s.rows.map(function(r){ return r.date+" "+r.name; }).join("/"):""); }).join("~");
     // renderHome runs on every collection change; rebuilding identical slides would restart the scroll
     // animation mid-way, so only repaint when the content itself has moved on.
     if(sig===_featSig && !host.hidden){ featStart(); return; }
@@ -11377,6 +11419,10 @@ label.acctsetrow { align-items:center; }
           var moved=(+m.prev>0 && +m.cur>0) ? '<span class="featmoveprice" data-mover="'+mid+'">'+money(m.prev)+' \u2192 '+money(m.cur)+'</span>' : '';
           return '<span class="featmove '+(up?'up':'down')+'" data-mover="'+mid+'"><b>'+(up?"↑ +":"↓ −")+Math.abs(+m.pct).toFixed(1)+'%</b><span>'+esc(String(m.name).split(" \u2013 ")[0])+'</span></span>'+moved;
         }).join("")+'</span>';
+      } else if(s.rows && s.rows.length){
+        bodyMeta='<span class="featmeta">'+esc(s.meta)+'</span><span class="feattl">'+s.rows.map(function(r){
+          return '<span class="feattlrow"><b>'+esc(r.date)+'</b><i>'+esc(r.name)+'</i></span>';
+        }).join("")+'</span>';
       } else if((s.kind==="update" || s.kind==="features") && s.notes && s.notes.length){
         bodyMeta='<span class="featpoints">'+s.notes.map(function(t){ return '<span>'+esc(t)+'</span>'; }).join("")+'</span>';
       } else {
@@ -11387,7 +11433,7 @@ label.acctsetrow { align-items:center; }
       // than every other one. The alt text above carries the same words for a screen reader.
       var body=s.releaseArt ? "" : ('<span class="featbody"><span class="featbadge">'+icon(badgeIcon)+esc(s.badge)+'</span>'+
         '<span class="feattitle">'+esc(s.title)+'</span>'+bodyMeta+'</span>');
-      return '<button class="featslide'+(on?" on":"")+(art?"":" noart")+(s.releaseArt?" release":"")+(movers&&movers.length>1?" pair":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
+      return '<button class="featslide'+(on?" on":"")+(art?"":" noart")+(s.releaseArt?" release":"")+(movers&&movers.length>1?" pair":"")+((s.rows&&s.rows.length)?" reltl":"")+'" type="button" data-i="'+i+'"'+(on?"":' tabindex="-1" aria-hidden="true"')+
         '>'+bg+art+body+'</button>';
     }).join("");
     var dots=slides.length>1 ? '<span class="featdots">'+slides.map(function(s,i){
@@ -11608,6 +11654,22 @@ label.acctsetrow { align-items:center; }
     var n=Math.round((t.getTime()-today.getTime())/86400000);   // round, not floor: a DST day is 23 or 25 hours
     return n<0 ? -1 : n;
   }
+  // "Oct 30, 2026" as a timeline row reads "30 Oct", and carries the year only when it is not this one.
+  // A month only date such as "late Oct 2026" keeps its own words: releaseYmd refuses to invent a day
+  // and so does this.
+  // "Trial Deck, Red \u00b7 Green" is a product name, not something to print in a timeline row. A set
+  // that ships twice needs its rows told apart, and this is the shortest true way to do it.
+  function releaseKindWord(n){
+    var k=String(n||"");
+    if(/^trial deck/i.test(k)) return "Trial Decks";
+    if(/^booster/i.test(k)) return "Boosters";
+    return k.split(",")[0];
+  }
+  function shortReleaseDate(d){
+    var y=releaseYmd(d); if(!y) return String(d||"");
+    var t=y[2]+" "+MONTHS[y[1]-1];
+    return y[0]===new Date().getFullYear() ? t : t+" "+y[0];
+  }
   // Still a pre order, or out today. applyReleased() flips p.pre off at local midnight of the release day,
   // and the countdowns that say "X today" have to keep seeing that one day as theirs.
   function preOrToday(p){ return !!p && (!!p.pre || (sealPreRaw(p) && releaseDaysUntil(sealDate(p))===0)); }
@@ -11630,7 +11692,7 @@ label.acctsetrow { align-items:center; }
     try{ renderHomeNextRelease(); }catch(e){}
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=pctOf(ownedP,total);
-    var rk=sphereRank(pct), sphere=nextSphereMissingGoal(), closest=closestSetMissingGoal(), deck=deckMissingGoal(), wish=wishlistMissingGoal(), value=binderValue(), closestIsSphere=!!(closest&&(SET_SPHERE_TRACKS||[]).some(function(t){return t.available&&t.id===closest.set;}));
+    var rk=sphereRank(pct), sphere=nextSphereMissingGoal(), closest=closestSetMissingGoal(), deck=deckMissingGoal(), wish=wishlistMissingGoal(), value=cardsValue()+sealedValue(), closestIsSphere=!!(closest&&(SET_SPHERE_TRACKS||[]).some(function(t){return t.available&&t.id===closest.set;}));
     var wishCards=CARDS.filter(function(c){ return isWished(c.id)&&!has(o(c.id)); }), deckWish=deck?wishCards.filter(function(c){ return deck.items.some(function(item){return item.card.id===c.id;}); }).length:0, sphereWish=sphere?wishCards.filter(function(c){ return sphere.items.some(function(item){return item.card.id===c.id;}); }).length:0, drops=wishCards.filter(function(c){ var now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; return now>0&&before>0&&now<before*.99; }).length;
     var marketMove=0, marketMoveCount=0; CARDS.forEach(function(c){ var e=o(c.id), now=+PRICEBOOK[c.id]||0, before=+PRICEPREV[c.id]||0; if((+e.qty||0)>0&&now>0&&before>0){ marketMove+=(+e.qty||0)*(now-before); marketMoveCount++; } });
     var away=$("homeAway");
