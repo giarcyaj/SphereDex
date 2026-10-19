@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-14T06:04:00Z",
+  "updated_at": "2026-10-19T08:30:00Z",
   "entries": [
     {
       "pal": "Jetragon",
@@ -420,6 +420,56 @@
       "card_number": "EBP02-033",
       "source_url": "https://x.com/PalworldOCG_EN/status/2110188847837610367",
       "revealed_at": "2026-10-14T02:00:01Z"
+    },
+    {
+      "pal": "Nox",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Nox – One-Way Ticket",
+      "card_number": null,
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
+      "revealed_at": "2026-10-19T02:00:00Z"
+    },
+    {
+      "pal": "Tombat",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Tombat – Resonance of Shadows",
+      "card_number": "EBP02-075",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
+      "revealed_at": "2026-10-19T02:00:00Z"
+    },
+    {
+      "pal": "Shroomer Noct",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Shroomer Noct – Spores of the Void",
+      "card_number": "EBP02-077",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2111638397685215466",
+      "revealed_at": "2026-10-18T02:00:01Z"
+    },
+    {
+      "pal": "Quivern Botan",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Quivern Botan – Meadow's Grace",
+      "card_number": "EBP02-054",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2111276012453401079",
+      "revealed_at": "2026-10-17T02:00:01Z"
+    },
+    {
+      "pal": "Mammorest",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Mammorest – Gaia Crusher",
+      "card_number": "EBP02-050",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2110679809831645670",
+      "revealed_at": "2026-10-15T10:30:55Z"
     }
   ]
 }
