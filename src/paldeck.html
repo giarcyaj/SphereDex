@@ -7352,6 +7352,14 @@ label.acctsetrow { align-items:center; }
     for(id in qtyById){ var q=+qtyById[id]||0, a=+thenMap[id], b=+nowMap[id]; if(q>0 && a>0 && b>0){ then+=q*a; now+=q*b; n++; } }
     return {change:now-then, base:then, pct:then>0?(now/then-1)*100:null, n:n};
   }
+  // Everything in the total that the price effect does not explain (cards, sealed or graded added or removed).
+  // Only valid when the portfolio baseline day is the same day as the price baseline, otherwise market movement
+  // in the gap would be reported as holdings changes, so it returns null.
+  function otherChange(pts, cut, priceDay, priceChange){
+    var base=null; (pts||[]).forEach(function(p){ if(p.d<=cut && p.d<pts[pts.length-1].d) base=p; });
+    if(!base || base.d!==priceDay || !pts.length) return null;
+    return pts[pts.length-1].v-base.v-priceChange;
+  }
   function marketIndexHtml(mode, pts){
     var today=todayKey(), srv=_srvHist.days, book=(mode==="sold")?PRICEBOOK_SOLD:PRICEBOOK, k=(mode==="sold")?1:0;
     var days=Object.keys(srv).sort().filter(function(d){ return d<today; }).map(function(d){ var m={}, day=srv[d]; for(var id in day){ if(day[id][k]>0) m[id]=day[id][k]; } return {d:d, map:m}; });
@@ -7364,7 +7372,7 @@ label.acctsetrow { align-items:center; }
     if(series.length<2) return '<div class="mxbox"><h2 class="sech">Market index</h2><p class="matchnote">The SphereDex index fills in as the nightly price book builds up history.</p></div>';
     var week=marketIndexMove(series,7,today,dayKeyAdd), month=marketIndexMove(series,30,today,dayKeyAdd);
     var html='<div class="mxbox"><h2 class="sech">Market index</h2>'+
-      '<div class="pdstats"><div class="hs"><span class="n">'+Math.round(series[series.length-1].v).toLocaleString()+'</span><span class="l">Index, base 1,000</span></div>'+
+      '<div class="pdstats">'+
       '<div class="hs"><span class="n">'+mv(week)+'</span><span class="l">This week</span></div>'+
       '<div class="hs"><span class="n">'+mv(month)+'</span><span class="l">This month</span></div></div>'+
       '<p class="matchnote">Every card counts equally, so one pricey card cannot swing it.</p>';
@@ -7375,10 +7383,9 @@ label.acctsetrow { align-items:center; }
         var cut=dayKeyAdd(today,-r[0]), bd=null; days.forEach(function(d){ if(d.d<=cut && d.d<today) bd=d; });
         if(!bd) return;
         var lf=likeForLikeChange(qty, nowMap, bd.map); if(!lf.n) return;
-        var base=null; (pts||[]).forEach(function(p){ if(p.d<=cut && p.d<today) base=p; });
-        var cur=pts&&pts.length?pts[pts.length-1].v:null, added=(base&&cur!=null)?(cur-base.v-lf.change):null;
+        var added=otherChange(pts, cut, bd.d, lf.change);
         rows+='<div class="prow"><span>'+r[2]+', prices only</span><b class="gain '+cls(lf.change)+'">'+sgn(lf.change)+money(Math.abs(lf.change))+(lf.pct!=null?' ('+sgn(lf.pct)+Math.abs(lf.pct).toFixed(1)+'%)':'')+'</b></div>'+
-          (added!=null?'<div class="prow"><span>'+r[2]+', cards added or removed</span><b class="gain '+cls(added)+'">'+sgn(added)+money(Math.abs(added))+'</b></div>':'');
+          (added!=null?'<div class="prow"><span>'+r[2]+', added, removed or other items</span><b class="gain '+cls(added)+'">'+sgn(added)+money(Math.abs(added))+'</b></div>':'');
       });
       if(rows) html+='<div class="pcost"><div class="prow"><span><b>Your collection, like for like</b></span><span></span></div>'+rows+'<p class="matchnote">Prices only keeps your copies the same and shows what the market did. Adding a box of pulls raises your total but is not a price gain.</p></div>';
     }

@@ -20,7 +20,7 @@ function appFunction(name) {
   throw new Error('Could not extract ' + name);
 }
 const ctx = vm.createContext({});
-vm.runInContext(['marketIndexSeries', 'marketIndexMove', 'likeForLikeChange'].map(appFunction).join('\n'), ctx);
+vm.runInContext(['marketIndexSeries', 'marketIndexMove', 'likeForLikeChange', 'otherChange'].map(appFunction).join('\n'), ctx);
 const addDays = (k, n) => { const d = new Date(k + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 test('index starts at 1000 and tracks the average price ratio', () => {
@@ -60,4 +60,12 @@ test('prices fell but a box of pulls was added: like for like is negative', () =
   // before: 1 card at 10. now: that card at 8 plus 3 new cards worth 30. Total rose, price effect fell.
   const lf = ctx.likeForLikeChange({ a: 1 }, { a: 8, n1: 10, n2: 10, n3: 10 }, { a: 10, n1: 10, n2: 10, n3: 10 });
   assert.equal(lf.change, -2);
+});
+
+test('other changes are withheld unless portfolio and price baselines are the same day', () => {
+  const pts = [{ d: '2026-10-05', v: 100 }, { d: '2026-10-12', v: 100 }, { d: '2026-10-19', v: 90 }];
+  // price baseline 10-12 matches the portfolio point: -10 total, -10 from prices -> 0 added
+  assert.equal(ctx.otherChange(pts, '2026-10-12', '2026-10-12', -10), 0);
+  // portfolio only has 10-05 at or before the cut while prices start 10-12: mismatch, no split
+  assert.equal(ctx.otherChange(pts.slice(0, 1).concat(pts[2]), '2026-10-12', '2026-10-12', -10), null);
 });
