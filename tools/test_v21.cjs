@@ -1258,3 +1258,35 @@ test('an unreadable store does not break the card', () => {
   assert.equal(box.awayRowsOnce().length, 1, 'and the card still works');
   box.awayRemember(['x']);   // must not throw
 });
+
+test('a Browse by set tile never shows a broken logo, or a name over its artwork', () => {
+  // The Sleeve & Card Set shipped with a CARD_IMG key where this tile wanted a source. The key rendered
+  // as a broken image, and a broken image shows its alt text, so the set name sat over its own cards.
+  const ctx = {};
+  vm.createContext(ctx);
+  ctx.window = { CARD_IMG: { LOGO_BP02: 'img/LOGO_BP02.webp' } };
+  vm.runInContext(appFunction('browseLogoSrc'), ctx);
+  assert.equal(ctx.browseLogoSrc('LOGO_BP02'), 'img/LOGO_BP02.webp');
+  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), '', 'a key with no image resolves to nothing, not a broken src');
+  assert.equal(ctx.browseLogoSrc('data:image/webp;base64,AA'), 'data:image/webp;base64,AA');
+  assert.equal(ctx.browseLogoSrc('img/LOGO_BP03.webp'), 'img/LOGO_BP03.webp');
+  assert.equal(ctx.browseLogoSrc(''), '');
+  assert.equal(ctx.browseLogoSrc(undefined), '');
+
+  // Both tile builders go through it, so neither can put a raw string into a src again.
+  assert.match(source, /var col=setGroupCollageHTML\(x\.sets\), lg=browseLogoSrc\(x\.logo\);/);
+  assert.match(source, /var logo=browseLogoSrc\(x\.logo\);/);
+
+  // Every logo the tiles actually carry resolves against the built page's artwork map.
+  const built = fs.readFileSync(path.join(root, 'docs', 'app', 'index.html'), 'utf8');
+  const map = /window\.CARD_IMG=\{(.*?)\};/.exec(built);
+  assert.ok(map, 'the built page carries a CARD_IMG map');
+  const keys = new Set((map[1].match(/"([^"]+)":/g) || []).map((k) => k.slice(1, -2)));
+  const block = /var BROWSE_EXPANSIONS = \[([\s\S]*?)\n  \];/.exec(source);
+  assert.ok(block, 'BROWSE_EXPANSIONS is present');
+  const logos = (block[1].match(/logo:\s*"([^"]*)"/g) || []).map((m) => m.replace(/^logo:\s*"/, '').replace(/"$/, ''));
+  logos.filter(Boolean).forEach((logo) => {
+    const ok = keys.has(logo) || /^(data:|https?:|img\/|\.\/)/.test(logo);
+    assert.ok(ok, 'BROWSE_EXPANSIONS logo resolves: ' + logo);
+  });
+});

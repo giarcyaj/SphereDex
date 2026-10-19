@@ -6966,7 +6966,7 @@ label.acctsetrow { align-items:center; }
   // booster + both trial decks), then the upcoming ones (informational, they have no cards in-app yet).
   var BROWSE_EXPANSIONS = [
     { name:"Dawn of Palpagos", sets:["EBP01","ETD01","ETD02"], release:"Jul 30, 2026", logo:(typeof DOP_LOGO!=="undefined"?DOP_LOGO:"") },
-    { name:"Sleeve & Card Set Vol. 1", sets:["ESS01"], release:"Oct 16, 2026", logo:"BOX_BANNER_SS01" },
+    { name:"Sleeve & Card Set Vol. 1", sets:["ESS01"], release:"Oct 16, 2026", logo:"" },
     { name:"Legends Awaken", upcoming:true, release:"Oct 30, 2026", logo:"LOGO_BP02" },
     { name:"Eternal Ascent", upcoming:true, release:"Dec 18, 2026", logo:"LOGO_BP03" }
   ];
@@ -11749,16 +11749,24 @@ label.acctsetrow { align-items:center; }
     el.querySelector(".missbtn").onclick=function(ev){ ev.stopPropagation(); openSet(k, miss>0?"missing":"all"); };
     return el;
   }
+  // A tile's logo is either a real source (the baked Dawn of Palpagos logo is a data URI) or a CARD_IMG
+  // key like LOGO_BP02. Anything else resolves to nothing: an unresolved key used to render as a broken
+  // image, and a broken image shows its alt text, which put the set's name back over its artwork.
+  function browseLogoSrc(logo){
+    if(!logo) return "";
+    if(window.CARD_IMG && window.CARD_IMG[logo]) return window.CARD_IMG[logo];
+    return /^(data:|https?:|img\/|\.\/)/.test(logo) ? logo : "";
+  }
   // A merged expansion tile (Dawn of Palpagos = booster + both trial decks): combined progress, one drill-down.
   function expansionTile(x, sp){
     var owned=0, tot=0; x.sets.forEach(function(k){ owned+=sp.owned[k]||0; tot+=sp.tot[k]||0; });
     var w=pctOf(owned,tot), miss=tot-owned;
     var el=document.createElement("div"); el.className="setcard";
     // Cover = the set's own card artwork (collage of its priciest cards) with the set logo over it.
-    var col=setGroupCollageHTML(x.sets);
+    var col=setGroupCollageHTML(x.sets), lg=browseLogoSrc(x.logo);
     var boxInner = col
-      ? col+(x.logo?'<img class="lhlogo" src="'+x.logo+'" alt="'+esc(x.name)+'">':'')
-      : (x.logo?'<img class="setlogo" src="'+x.logo+'" alt="'+esc(x.name)+'">':'<span class="ph">'+esc(x.name)+'</span>');
+      ? col+(lg?'<img class="lhlogo" src="'+lg+'" alt="'+esc(x.name)+'">':'')
+      : (lg?'<img class="setlogo" src="'+lg+'" alt="'+esc(x.name)+'">':'<span class="ph">'+esc(x.name)+'</span>');
     el.innerHTML=
       '<div class="setbox'+(col?' collagebox logohero':' logobox')+'">'+boxInner+'</div>'+
       '<div class="sbody">'+
@@ -11773,7 +11781,7 @@ label.acctsetrow { align-items:center; }
   }
   // An upcoming set tile (no cards in-app yet): its promo banner + release date, taps through to Releases.
   function upcomingTile(x){
-    var logo=(x.logo&&window.CARD_IMG&&window.CARD_IMG[x.logo])?window.CARD_IMG[x.logo]:"";
+    var logo=browseLogoSrc(x.logo);
     var el=document.createElement("div"); el.className="setcard upcomingcard";
     // Released-less sets: the official logo on a plain dark tile, or just the title when no logo exists yet.
     var inner=logo?('<img class="plainlogo" src="'+logo+'" alt="'+esc(x.name)+'">'):('<span class="plaintitle">'+esc(x.name)+'</span>');
