@@ -1290,3 +1290,22 @@ test('a Browse by set tile never shows a broken logo, or a name over its artwork
     assert.ok(ok, 'BROWSE_EXPANSIONS logo resolves: ' + logo);
   });
 });
+
+test('collector mode never opens a page whose every section is hidden', () => {
+  // Market and a price day carry .priceui on every section, so in the no-prices collector mode the page
+  // had nothing left to draw: the More menu still offered Market and it opened to header and footer only.
+  assert.match(
+    source,
+    /if\(\(p==="portfolio" \|\| p==="day"\) && SETTINGS\.mode==="collector"\) p="home";/,
+    'showPage sends the price only pages home in collector mode',
+  );
+  assert.match(
+    source,
+    /\.collector \.tab\[data-page="portfolio"\], \.collector \.navitem\[data-page="portfolio"\],/,
+    'and collector mode hides the way in, the way it already does for Graded',
+  );
+  // The guard has to sit before the page is marked active, or the blank page still paints for a frame.
+  const guard = source.indexOf('p==="portfolio" || p==="day"');
+  const paint = source.indexOf('el.classList.toggle("active", el.id==="page-"+real)');
+  assert.ok(guard > 0 && paint > 0 && guard < paint, 'the redirect runs before the page is shown');
+});

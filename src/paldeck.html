@@ -2259,6 +2259,8 @@ label.acctsetrow { align-items:center; }
   html:not(.trackpaid) .paidui{ display:none !important; }
   .collector .card .val, .collector .valsum, .collector .priceg, .collector .sealval, .collector #curSel{ display:none !important; }
   /* Graded / PSA slab tracking is a value feature, so it follows the prices toggle: hidden in the no-prices collector mode. */
+  /* Market is a price page end to end, so collector mode hides the way in as well. */
+  .collector .tab[data-page="portfolio"], .collector .navitem[data-page="portfolio"],
   .collector .tab[data-page="graded"], .collector .navitem[data-page="graded"],
   .collector #ownGradedTog, .collector .gradedbadge,
   .collector #typeSeg, .collector #gradedAdd, .collector #gradeList,
@@ -3557,7 +3559,7 @@ label.acctsetrow { align-items:center; }
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.2.
-  var APP_VERSION = "2.4.3";
+  var APP_VERSION = "2.4.4";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -3612,6 +3614,11 @@ label.acctsetrow { align-items:center; }
       "Latest news from the official site and Official X",
       "Five Home cards, always in the same order",
       "A card of the day, every day"
+    ],
+    "2.4.4": [
+      "Market index \u00b7 how the whole market moved, and your cards without new buys",
+      "Sealed shows price against RRP \u00b7 plus a second hand check on chase cards",
+      "Sleeve & Card Set Vol. 1 and its ten cards \u00b7 Add to calendar on Releases"
     ]
   };
   // Wide 16:9 art for the Home "latest update" slide, keyed by the version that slide describes.
@@ -3624,7 +3631,8 @@ label.acctsetrow { align-items:center; }
     "2.2": "img/UPDATE_2_2.webp",
     "2.3": "img/UPDATE_2_3.webp",
     "2.4": "img/UPDATE_2_4.webp",
-    "2.4.3": "img/UPDATE_2_4_3.webp"
+    "2.4.3": "img/UPDATE_2_4_3.webp",
+    "2.4.4": "img/UPDATE_2_4_4.webp"
   };
   // Where someone whose store build is newer than this one goes to get it. Both wrappers hand http(s)
   // links to the system (Android shouldOverrideUrlLoading / onCreateWindow, iOS decidePolicyFor), so
@@ -9787,6 +9795,10 @@ label.acctsetrow { align-items:center; }
   function showPage(p, _pop){
     // Graded is a value feature; in the no-prices collector mode fall back to the plain collection view.
     if(p==="graded" && SETTINGS.mode==="collector") p="collection";
+    // Market and a price day are nothing but prices, so every section on them carries .priceui. In
+    // collector mode that left the page itself with nothing to draw, which reads as a blank screen,
+    // so go Home instead. This also covers a deep link and a page restored from a previous visit.
+    if((p==="portfolio" || p==="day") && SETTINGS.mode==="collector") p="home";
     if((p==="decks" || p==="match") && !playerToolsOn()) p="home";
     // Wishlist, Favourites & Graded are modes of the collection page, so they inherit its search / sort / filters.
     var virtual = (p==="favourites" || p==="graded" || p==="wishlist" || p==="owned");
