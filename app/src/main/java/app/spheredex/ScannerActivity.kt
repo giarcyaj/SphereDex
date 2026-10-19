@@ -54,7 +54,7 @@ fun extractCardNumber(text: String): String? =
 // words, rules text numbers and the tail of an E number cannot match. Only the spaces around the hyphen
 // and before a short rarity tail (001 OSR) are closed up, so a word before the number stays a separate
 // word. Mirrors iOS jpCardNumberRegex.
-private val JP_CARD_NUMBER = Regex("(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
+private val JP_CARD_NUMBER = Regex("(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|SS\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
 private val SPACED_HYPHEN = Regex(" *- *")
 private val SPACED_RARITY = Regex("(?<=\\d) +(?=[A-Z]{1,3}(?![A-Z0-9]))")
 fun extractJapaneseCardNumber(text: String): String? =

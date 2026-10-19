@@ -20,7 +20,7 @@ func extractCardNumber(from text: String) -> String? {
 // words, rules text numbers and the tail of an E number cannot match. Only the spaces around the hyphen
 // and before a short rarity tail (001 OSR) are closed up, so a word before the number stays a separate
 // word. Mirrors Android JP_CARD_NUMBER.
-private let jpCardNumberRegex = try! NSRegularExpression(pattern: "(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
+private let jpCardNumberRegex = try! NSRegularExpression(pattern: "(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|SS\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}")
 
 func extractJapaneseCardNumber(from text: String) -> String? {
     let t = text.uppercased()

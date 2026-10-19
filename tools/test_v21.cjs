@@ -1267,7 +1267,12 @@ test('a Browse by set tile never shows a broken logo, or a name over its artwork
   ctx.window = { CARD_IMG: { LOGO_BP02: 'img/LOGO_BP02.webp' } };
   vm.runInContext(appFunction('browseLogoSrc'), ctx);
   assert.equal(ctx.browseLogoSrc('LOGO_BP02'), 'img/LOGO_BP02.webp');
-  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), '', 'a key with no image resolves to nothing, not a broken src');
+  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), '', 'a name with no image behind it resolves to nothing, not a broken src');
+  // And a key that IS in the map resolves to its path, which is why the sleeve set carries no logo at all:
+  // leaving a real key there would paint that product art over its own cards.
+  ctx.window.CARD_IMG.BOX_BANNER_SS01 = 'img/BOX_BANNER_SS01.webp';
+  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), 'img/BOX_BANNER_SS01.webp');
+  delete ctx.window.CARD_IMG.BOX_BANNER_SS01;
   assert.equal(ctx.browseLogoSrc('data:image/webp;base64,AA'), 'data:image/webp;base64,AA');
   assert.equal(ctx.browseLogoSrc('img/LOGO_BP03.webp'), 'img/LOGO_BP03.webp');
   assert.equal(ctx.browseLogoSrc(''), '');

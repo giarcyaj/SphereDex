@@ -27,7 +27,7 @@ const SOURCE = read('src', 'paldeck.html');
 // ---- the mirror ----
 
 const E_PATTERN = 'E[A-Z]{1,4}\\d{0,2}-?\\d{3}[A-Z]{0,3}';
-const JP_PATTERN = '(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}';
+const JP_PATTERN = '(?<![A-Z0-9])(?:BP\\d{2}|TD\\d{2}|SS\\d{2}|PR|SOUL)-?\\d{3}(?!\\d)[A-Z]{0,3}';
 const SPACED_HYPHEN = ' *- *';
 const SPACED_RARITY = '(?<=\\d) +(?=[A-Z]{1,3}(?![A-Z0-9]))';
 const E_RE = new RegExp(E_PATTERN);
