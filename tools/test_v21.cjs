@@ -453,10 +453,16 @@ test('home bars only measure a goal that has a total', () => {
   assert.match(box.homeTrack(0, true), /width:0%/);
   assert.match(box.homeTrack(140, true), /width:100%/);
   assert.match(box.homeTrack(-5, true), /width:0%/);
-  assert.match(source, /homeTrack\(pct, total>0\)/);
-  assert.match(source, /homeTrack\(sphere\.percent, sphere\.total>0\)/);
-  assert.match(source, /homeTrack\(closest\.percent, closest\.total>0\)/);
+  // Three tiles traded their bar for the object they are about: the collection weave, the Set Sphere
+  // ring and the holes still to fill. The bar stays where a bar is still the honest shape.
   assert.match(source, /homeTrack\(deck\.percent, deck\.total>0\)/);
+  assert.match(source, /\+homeWeave\(\)\+/, 'the collection tile draws its catalogue');
+  assert.match(source, /homeSphereOrb\(sphere\.percent, sphere\.track\)/, 'the Sphere tile draws its sphere');
+  assert.match(source, /homeSlots\(closest\.remaining\)/, 'the closest set draws its gaps');
+  assert.match(source, /\(face\?"":homeValueChart\(\)\)/, 'and the market draws its own line, on the face that owns it');
+  assert.doesNotMatch(source, /homeTrack\(pct, total>0\)/);
+  assert.doesNotMatch(source, /homeTrack\(sphere\.percent/);
+  assert.doesNotMatch(source, /homeTrack\(closest\.percent/);
   assert.match(source, /homeTrack\(0, false\)/);
   assert.match(source, /homeTrack\(wishPct, wishCount\(\)>0\)/);
   const market = source.slice(source.indexOf('$("homeMarket").innerHTML'), source.indexOf('$("homeCollection").onclick'));
@@ -1313,4 +1319,51 @@ test('collector mode never opens a page whose every section is hidden', () => {
   const guard = source.indexOf('p==="portfolio" || p==="day"');
   const paint = source.indexOf('el.classList.toggle("active", el.id==="page-"+real)');
   assert.ok(guard > 0 && paint > 0 && guard < paint, 'the redirect runs before the page is shown');
+});
+
+test('the Home tiles draw their own object, and draw nothing when there is nothing to draw', () => {
+  const box = {};
+  vm.createContext(box);
+  box.CARDS = [
+    { id: 'A1', color: 'Red', set: 'S1' }, { id: 'A2', color: 'Blue', set: 'S1' },
+    { id: 'B1', color: 'Green', set: 'S2' }, { id: 'B2', color: 'Nonsense', set: 'S2' },
+  ];
+  box.has = (e) => !!e && e.qty > 0;
+  box.o = (id) => (id === 'A1' || id === 'B1' ? { qty: 1 } : {});
+  box.Math = Math;
+  vm.runInContext(['homeWeave', 'homeSlots', 'homeValueChart'].map(appFunction).join('\n') + '\nvar WEAVE_CLASS={ Red:"r", Blue:"b", Green:"g", Purple:"p", Colorless:"n" };', box);
+
+  // The weave: one cell per card, one block per set, lit for what is owned, and a colour the app does
+  // not know falls back to colourless rather than drawing nothing.
+  const weave = box.homeWeave();
+  assert.equal((weave.match(/<i /g) || []).length, 4, 'one cell per card');
+  assert.equal((weave.match(/sdx-wset/g) || []).length, 2, 'one block per set');
+  assert.equal((weave.match(/ on"/g) || []).length, 2, 'lit for the two owned');
+  assert.match(weave, /class="n"/, 'an unknown colour is colourless, not missing');
+  box.CARDS = [];
+  assert.equal(box.homeWeave(), '', 'and an empty catalogue draws nothing at all');
+
+  // The holes: one per card still missing, capped at what the tile holds.
+  assert.equal((box.homeSlots(3).match(/class="sdx-slot"/g) || []).length, 3);
+  assert.equal((box.homeSlots(7).match(/class="sdx-slot"/g) || []).length, 7);
+  assert.equal((box.homeSlots(89).match(/class="sdx-slot"/g) || []).length, 7, 'capped, never a wall of holes');
+  assert.equal(box.homeSlots(0), '', 'a finished set has no holes');
+  assert.equal(box.homeSlots(-2), '');
+
+  // The value line: one reading is not a line.
+  box.activeCol = () => ({ hist: { '2026-10-18': { v: 10, vLive: 10 } } });
+  box.priceMode = () => 'live';
+  assert.equal(box.homeValueChart(), '', 'one day is not a line');
+  box.activeCol = () => ({ hist: {} });
+  assert.equal(box.homeValueChart(), '', 'and neither is no day at all');
+  box.activeCol = () => ({
+    hist: { '2026-10-17': { v: 10, vLive: 10 }, '2026-10-18': { v: 12, vLive: 12 }, '2026-10-19': { v: 11, vLive: 11 } },
+  });
+  const chart = box.homeValueChart();
+  assert.match(chart, /<svg viewBox="0 0 300 46"/);
+  assert.equal((chart.match(/ L\d/g) || []).length >= 2, true, 'the line joins every day it has');
+  assert.match(chart, /var\(--up\)/, 'ending above where it started reads as a rise');
+  // A collection worth the same every day still draws a line rather than dividing by zero.
+  box.activeCol = () => ({ hist: { a: { v: 5, vLive: 5 }, b: { v: 5, vLive: 5 } } });
+  assert.match(box.homeValueChart(), /<path/);
 });
