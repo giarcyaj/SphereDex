@@ -89,6 +89,32 @@ def sets_table(src):
     return json.loads(body)
 
 
+ART_BASE = "https://spheredex.app/app/"
+WEB = os.path.join(HERE, "..", "docs", "app", "index.html")
+
+
+def art_map(ids):
+    """Absolute art urls for these card ids, read from the built page's hand kept CARD_IMG block.
+
+    A build that shipped before a set has no picture for its cards, so without this the delivered rows
+    draw as empty tiles. Entries the build already carries are ignored by the app, so sending them all
+    is harmless. A data: entry is skipped: it is already inside every build that has the card.
+    """
+    try:
+        page = io.open(WEB, encoding="utf-8").read()
+    except OSError:
+        return {}
+    m = re.search(r"window\.CARD_IMG\s*=\s*\{(.*?)\};", page, re.S)
+    if not m:
+        return {}
+    out = {}
+    for cid, path in re.findall(r'"([^"]+)"\s*:\s*"([^"]+)"', m.group(1)):
+        if cid not in ids or path.startswith("data:"):
+            continue
+        out[cid] = path if path.startswith("http") else ART_BASE + path
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", type=int, required=True, help="catalogue version; must match CATALOGUE_VERSION in the build that bakes these cards in")
@@ -122,12 +148,13 @@ def main():
         "rows": picked,
         "sets": {c: all_sets[c] for c in codes if c in all_sets},
         "setOrder": codes,
-        "img": {},      # only needed for art that is not bundled with the build, as an absolute https url
+        "img": art_map({r[0] for r in picked}),   # absolute urls, so a build without the pictures still draws the cards
     }
     text = json.dumps(payload, ensure_ascii=False)
     if a.out:
         io.open(a.out, "w", encoding="utf-8").write(text)
-        print("wrote %s: %d cards across %s (version %d)" % (a.out, len(picked), ", ".join(codes), a.version))
+        print("wrote %s: %d cards across %s (version %d), %d art urls"
+              % (a.out, len(picked), ", ".join(codes), a.version, len(payload["img"])))
     else:
         sys.stdout.write(text)
 
