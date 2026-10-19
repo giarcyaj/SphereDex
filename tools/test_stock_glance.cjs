@@ -693,7 +693,7 @@ test('every release day line reads the release day aware check, not the raw flag
   const away = appFunction('awayRows');
   assert.match(away, /!sealPreRaw\(p\)/, 'While you were away reads the declared pre order flag');
   assert.doesNotMatch(away, /!p\.pre \|\|/, 'not the auto flipped one');
-  assert.match(appFunction('nextHomeReleaseGroup'), /preOrToday\(p\)/, 'the Home countdown');
+  assert.match(appFunction('homeReleaseGroups'), /preOrToday\(p\)/, 'the Home release list');
   const rel = appFunction('renderReleases');
   assert.match(rel, /if\(preOrToday\(p\)\) upcomingNames/, 'the Releases upcoming names');
   assert.match(rel, /SEALED\.filter\(preOrToday\)/, 'the Releases timeline rows');
@@ -785,7 +785,7 @@ test('the 2nd Edition box is announced as the 2nd Edition, not as the July set',
   assert.equal(sb.releaseName({ set: 'Legends Awaken', name: 'Booster Box' }), 'Legends Awaken');
   assert.equal(sb.releaseName(null), '');
   assert.match(appFunction('awayRows'), /var nm=releaseName\(p\);/);
-  assert.match(appFunction('nextHomeReleaseGroup'), /var title=releaseName\(p\);/);
+  assert.match(appFunction('homeReleaseGroups'), /var title=releaseName\(p\);/);
 });
 
 test('a sealed sheet brings the release flag up to date before it picks its layout', () => {

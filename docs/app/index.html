@@ -679,13 +679,15 @@
   #homeAway .hcname { font-size:1.05rem; }
   #homeAway .hcmeta { font-size:.76rem; color:var(--ink-soft); margin-top:4px; }
   /* The next exactly dated release, one quiet line above the Home cards; it opens Releases. */
-  .homenextrel { display:flex; align-items:center; width:100%; margin:0 0 12px; padding:2px 0; border:0; background:none; font:inherit; font-size:.85rem; font-weight:600; color:var(--ink-soft); text-align:left; cursor:pointer; overflow-wrap:anywhere; }
-  .homenextrel[hidden] { display:none; }
-  .homenextrel svg { width:14px; height:14px; flex:none; margin-right:6px; color:var(--accent-ink); }
   .homegrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; margin-bottom:13px; }
   .homegrid .homecard { margin:0; min-height:150px; display:flex; flex-direction:column; }
   .homegrid .hcname { font-size:1rem; } .homegrid .hcvalue { font-size:1.4rem; margin-top:14px; }
   .homegrid .hcfoot { margin-top:auto; padding-top:8px; }
+  /* Which of the two market readings is showing. Same idea as the carousel dots, at tile scale. */
+  .hcfaces { display:flex; gap:5px; align-items:center; }
+  .hcface { width:6px; height:6px; padding:0; border:0; border-radius:50%; background:var(--line-strong); cursor:pointer; }
+  .hcface.on { background:var(--accent-ink); }
+  .no-flexgap .hcfaces > * + * { margin-left:5px; }
   /* Every Home card now shares one compact tile rhythm: it is easier to scan and keeps a long title or
      a market value from making its neighbours look accidental. The content still has its own accent. */
   .homegrid.uniform { grid-auto-rows:184px; align-items:stretch; }
@@ -2532,7 +2534,6 @@ label.acctsetrow { align-items:center; }
   <section class="page active" id="page-home">
     <section class="featured" id="homeFeatured" hidden></section>
     <section class="homecard" id="homeAway" hidden></section>
-    <button class="homenextrel" type="button" id="homeNextRelease" hidden></button>
     <div class="homegrid uniform">
       <section class="homecard collection" id="homeCollection"></section>
       <section class="homecard priceui" id="homeMarket"></section>
@@ -11206,20 +11207,10 @@ label.acctsetrow { align-items:center; }
         if(seenGroup[k]) return; seenGroup[k]=true;
         found.push({title:title, date:date, t:t, art:art||"", kind:kind||""});
       }
-      if(typeof SEALED!=="undefined" && SEALED){
-        var seen={};
-        SEALED.forEach(function(p){
-          if(!p || !p.pre) return;
-          var pd=""; try{ pd=(typeof sealDate==="function")?sealDate(p):(p.date||""); }catch(e){ pd=p.date||""; }
-          // A reprint names itself (rel), so it does not read as the set that came out in July. Its own
-          // banner, when the box image is one, comes before the set's banner for the same reason.
-          var title=p.rel||p.set||p.name;
-          var key=title+"|"+pd;
-          if(seen[key]) return; seen[key]=true;
-          var img="";
-          try{ if(window.CARD_IMG){ var own=(p.box && /^BOX_BANNER_/.test(p.box)) ? p.box : ""; img=(own && window.CARD_IMG[own])||window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; } }catch(e){}
-          consider(title, pd, img, p.name);
-        });
+      // One list for the whole of Home. A reprint names itself through releaseName, so it does not read as
+      // the set that came out in July, and its own banner comes before the set's for the same reason.
+      if(typeof homeReleaseGroups==="function"){
+        homeReleaseGroups().forEach(function(g){ consider(g.title, g.date, g.art, g.kind); });
       }
       if(!found.length && typeof BROWSE_EXPANSIONS!=="undefined" && BROWSE_EXPANSIONS){
         BROWSE_EXPANSIONS.forEach(function(x){
@@ -11673,23 +11664,34 @@ label.acctsetrow { align-items:center; }
   // Still a pre order, or out today. applyReleased() flips p.pre off at local midnight of the release day,
   // and the countdowns that say "X today" have to keep seeing that one day as theirs.
   function preOrToday(p){ return !!p && (!!p.pre || (sealPreRaw(p) && releaseDaysUntil(sealDate(p))===0)); }
-  // The soonest exactly dated pre-order, named by its set (as the Releases timeline groups them), so a box
-  // and its packs on the same day are one line. A tie keeps the earlier product in SEALED.
-  function nextHomeReleaseGroup(){ var best=null;
+  // Every upcoming release, soonest first, named by its set (as the Releases timeline groups them) so a
+  // box and its packs on the same day are one line. days is -1 for a month only date, which releaseDaysUntil
+  // refuses to guess a day for; such a release still belongs in the list, it just cannot be counted down to.
+  // kind is the product name, used only to tell two dates of the same set apart. Everything release shaped
+  // on Home reads this one list, because when it did not, two widgets a few pixels apart named different sets.
+  function homeReleaseGroups(){ var out=[], seen={};
     (SEALED||[]).forEach(function(p){ if(!preOrToday(p)) return;
       var title=releaseName(p); if(!title) return;
-      var pd=sealDate(p), n=releaseDaysUntil(pd); if(n<0) return;
-      if(!best || n<best.days) best={ title:title, date:pd, days:n }; });
-    return best; }
-  function homeReleaseCountdownCopy(name, n){
-    return name+(n===0 ? " today" : (n===1 ? " tomorrow" : " in "+n+" days")); }
-  function renderHomeNextRelease(){ var el=$("homeNextRelease"); if(!el) return;
-    var g=nextHomeReleaseGroup();
-    if(!g){ el.hidden=true; el.innerHTML=""; el.onclick=null; return; }
-    el.innerHTML=icon("calendar")+"<span>"+esc(homeReleaseCountdownCopy(g.title, g.days))+"</span>";
-    el.onclick=function(){ showPage("releases"); }; el.hidden=false; }
+      var pd=sealDate(p), k=title+"|"+String(pd||"");
+      if(seen[k]) return;
+      var art=""; try{ if(window.CARD_IMG){ var own=(p.box && /^BOX_BANNER_/.test(p.box)) ? p.box : "";
+        art=(own && window.CARD_IMG[own])||window.CARD_IMG[p.banner]||window.CARD_IMG[p.box]||""; } }catch(e){}
+      seen[k]=1;
+      out.push({ title:title, date:pd, days:releaseDaysUntil(pd), kind:p.name||"", art:art }); });
+    out.sort(function(a,b){ return featTime(a.date)-featTime(b.date); });
+    return out; }
+  // The soonest release there is a real day for. A month only date has nothing to count down to.
+  function nextHomeReleaseGroup(){ var g=homeReleaseGroups();
+    for(var i=0;i<g.length;i++){ if(g[i].days>=0) return g[i]; }
+    return null; }
+  // Which reading the market tile is showing: 0 everything you own, 1 the cards on their own. Swiping
+  // the tile moves between them, and the choice is remembered, because someone who thinks in singles
+  // thinks in singles every day.
+  var _mktFace = (function(){ try{ return lsGet("palvault-mktface")==="cards" ? 1 : 0; }catch(e){ return 0; } })();
+  function setMktFace(f){ _mktFace = f ? 1 : 0;
+    try{ lsSet("palvault-mktface", _mktFace ? "cards" : "all"); }catch(e){}
+    try{ renderHome(); }catch(e){} }
   function renderHome(){
-    try{ renderHomeNextRelease(); }catch(e){}
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=pctOf(ownedP,total);
     var rk=sphereRank(pct), sphere=nextSphereMissingGoal(), closest=closestSetMissingGoal(), deck=deckMissingGoal(), wish=wishlistMissingGoal(), value=cardsValue()+sealedValue(), closestIsSphere=!!(closest&&(SET_SPHERE_TRACKS||[]).some(function(t){return t.available&&t.id===closest.set;}));
@@ -11737,13 +11739,41 @@ label.acctsetrow { align-items:center; }
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
     var marketDetail=marketBasis+(estimateCount?" · "+estimateCount+" estimated":" · native market data");
     try{ if(trackPaidOn()){ var spent=collectionCostBasis(); if(spent.copies){ var cg=spent.gain; marketDetail+=" · "+(cg>0.005?"+":(cg<-0.005?"−":""))+money(Math.abs(cg))+" vs cost"; } } }catch(e){}
-    $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">Collection value</div></div><div class="hcvalue">'+money(value)+'<small>'+esc(marketDetail)+'</small></div></div><div class="hcfoot"><span>'+esc(moveText)+'</span><button class="homeaction" type="button">View market</button></div>';
+    // Sealed is the whole difference between the two readings, so with none owned there is nothing to
+    // swipe to and the tile stays exactly as it was.
+    var sealedHeld=0; try{ sealedHeld=sealedValue(); }catch(e){}
+    var twoFaced=sealedHeld>0, face=twoFaced?_mktFace:0;
+    var shown=face ? value-sealedHeld : value;
+    var faceName=face ? 'Cards only' : 'Collection value';
+    var faceNote=face ? 'sealed not counted' : '';
+    var dots=twoFaced ? '<span class="hcfaces">'
+        +'<button class="hcface'+(face?'':' on')+'" type="button" data-face="0" aria-label="Show everything you own"></button>'
+        +'<button class="hcface'+(face?' on':'')+'" type="button" data-face="1" aria-label="Show the cards on their own"></button></span>' : '';
+    $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">'+esc(faceName)+'</div></div><div class="hcvalue">'+money(shown)+'<small>'+esc(marketDetail+(faceNote?' \u00b7 '+faceNote:''))+'</small></div></div><div class="hcfoot"><span>'+esc(moveText)+'</span>'+dots+'<button class="homeaction" type="button">View market</button></div>';
     $("homeCollection").onclick=openAllCards; $("homeCollection").style.cursor="pointer"; $("homeCollection").querySelector("button").onclick=function(e){ e.stopPropagation(); openAllCards(); };
     $("homeSphere").onclick=function(){ showPage("rewards"); }; $("homeSphere").style.cursor="pointer"; (function(){ var b=$("homeSphere").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); showPage("rewards"); }; })();
     $("homeClosest").onclick=function(){ if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; $("homeClosest").style.cursor="pointer"; (function(){ var b=$("homeClosest").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; })();
     $("homeDeck").onclick=function(){ showPage("decks"); }; $("homeDeck").style.cursor="pointer"; $("homeDeck").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("decks"); };
     $("homeWishlist").onclick=function(){ showPage("wishlist"); }; $("homeWishlist").style.cursor="pointer"; $("homeWishlist").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("wishlist"); };
-    $("homeMarket").onclick=function(){ showPage("portfolio"); }; $("homeMarket").style.cursor="pointer"; $("homeMarket").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("portfolio"); };
+    (function(){
+      var el=$("homeMarket"), x0=0, y0=0, swiped=false;
+      Array.prototype.forEach.call(el.querySelectorAll(".hcface"), function(b){
+        b.onclick=function(e){ e.stopPropagation(); setMktFace(+b.getAttribute("data-face")); };
+      });
+      // A swipe on a tile that is also a link has to cancel the link, or every swipe opens the Market page.
+      el.addEventListener("touchstart", function(e){
+        var t=e.touches&&e.touches[0]; if(!t) return; x0=t.clientX; y0=t.clientY; swiped=false;
+      }, {passive:true});
+      el.addEventListener("touchend", function(e){
+        if(!twoFaced) return;
+        var t=e.changedTouches&&e.changedTouches[0]; if(!t) return;
+        var dx=t.clientX-x0, dy=t.clientY-y0;
+        if(Math.abs(dx)<34 || Math.abs(dx)<=Math.abs(dy)) return;   // a scroll is not a swipe
+        swiped=true; setMktFace(dx<0 ? 1 : 0);
+      }, {passive:true});
+      el.onclick=function(){ if(swiped){ swiped=false; return; } showPage("portfolio"); };
+      el.style.cursor="pointer";
+    })(); $("homeMarket").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("portfolio"); };
     renderFeatured();
     checkRewards();
     renderRewards();
@@ -14107,7 +14137,8 @@ label.acctsetrow { align-items:center; }
     // this at one edge cached request every 15 minutes.
     try{ if(typeof primeNewsBell==="function") primeNewsBell(); }catch(e){}
     try{ if(typeof renderReleases==="function" && _curPage==="releases") renderReleases(); }catch(e){}   // release countdowns roll over at local midnight
-    try{ if(typeof renderHomeNextRelease==="function") renderHomeNextRelease(); }catch(e){}   // and so does the Home line
+    try{ if(typeof renderFeatured==="function" && _curPage==="home") renderFeatured(); }catch(e){}   // and so does the
+    // release timeline on the last carousel card, whose countdown is in its repaint signature
     try{ if(typeof renderDecks==="function" && _curPage==="decks") renderDecks(); }catch(e){}   // deck needs follow a collection synced from another device
     try{ if(typeof autoRefreshPrices==="function") autoRefreshPrices(); }catch(e){}
     // Say again what this device wants notified. Every send of these is best effort: the one that goes

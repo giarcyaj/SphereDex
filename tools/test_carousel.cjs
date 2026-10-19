@@ -199,13 +199,16 @@ function app(opts) {
     storeUrl: () => '',
     roadmapUrl: (v) => 'https://spheredex.app/roadmap#v' + String(v || '').replace(/\./g, '-'),
     MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    sealDate: (p) => (p && p.date) || '',
+    SEALED: [],
     ...opts,
   };
   const context = vm.createContext(sandbox);
   // The release timeline slide reads real dates, so give the sandbox the app's own date helpers.
   // They run INSIDE the context, not through appFunction, because they call each other and monDateTime.
   vm.runInContext(
-    ['releaseYmd', 'releaseDaysUntil', 'shortReleaseDate'].map(appFunctionSource).join('\n') + '\n',
+    ['releaseYmd', 'releaseDaysUntil', 'shortReleaseDate', 'releaseName', 'sealPreRaw', 'preOrToday',
+      'homeReleaseGroups'].map(appFunctionSource).join('\n') + '\n',
     context,
   );
   vm.runInContext(srcSection('logic') + '\n', context);
