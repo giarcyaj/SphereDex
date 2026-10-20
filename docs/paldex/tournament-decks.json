@@ -398,6 +398,401 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Grand Release Tournament – Tokyo",
+      "date": "2026-10-05",
+      "date_kind": "published",
+      "published": "2026-10-05",
+      "source_url": "https://en.palworld-official-cardgame.com/deckrecipe/grand-release-tournament_tokyo",
+      "decks": [
+        {
+          "placement": "Champion",
+          "player": "knight",
+          "deck_code": "4XRRZ",
+          "source_id": 10,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=10",
+          "cards": [
+            {"number": "EBP01-001", "count": 4, "zone": "pal"},
+            {"number": "EBP01-005", "count": 4, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-006", "count": 4, "zone": "pal"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 4, "zone": "gear"},
+            {"number": "EBP01-019", "count": 4, "zone": "gear"},
+            {"number": "EBP01-023", "count": 2, "zone": "event"},
+            {"number": "EBP01-047", "count": 4, "zone": "event"},
+            {"number": "EBP01-048", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "専業",
+          "deck_code": "59CTD",
+          "source_id": 11,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=11",
+          "cards": [
+            {"number": "EBP01-074", "count": 2, "zone": "pal"},
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "EBP01-002", "count": 3, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "EBP01-084", "count": 3, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "ETD02-014", "count": 3, "zone": "pal"},
+            {"number": "ETD01-023", "count": 4, "zone": "pal"},
+            {"number": "ETD02-023", "count": 4, "zone": "pal"},
+            {"number": "EBP01-090", "count": 1, "zone": "structure"},
+            {"number": "EBP01-091", "count": 2, "zone": "structure"},
+            {"number": "EBP01-016", "count": 4, "zone": "structure"},
+            {"number": "ETD01-008", "count": 2, "zone": "structure"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 4, "zone": "gear"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "Akogare",
+          "deck_code": "5XKAX",
+          "source_id": 12,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=12",
+          "cards": [
+            {"number": "EBP01-001", "count": 1, "zone": "pal"},
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "EBP01-004", "count": 3, "zone": "pal"},
+            {"number": "EBP01-084", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "ETD02-014", "count": 4, "zone": "pal"},
+            {"number": "ETD01-024", "count": 4, "zone": "pal"},
+            {"number": "ETD02-023", "count": 4, "zone": "pal"},
+            {"number": "EBP01-015", "count": 4, "zone": "structure"},
+            {"number": "EBP01-016", "count": 4, "zone": "structure"},
+            {"number": "ETD01-008", "count": 4, "zone": "structure"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "ドゥースー",
+          "deck_code": "5FNU3",
+          "source_id": 13,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=13",
+          "cards": [
+            {"number": "EBP01-001", "count": 4, "zone": "pal"},
+            {"number": "EBP01-005", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 2, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-098", "count": 4, "zone": "pal"},
+            {"number": "EBP01-006SR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-020SR", "count": 4, "zone": "gear"},
+            {"number": "EBP01-045", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 4, "zone": "gear"},
+            {"number": "EBP01-019SR", "count": 4, "zone": "gear"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "すこ",
+          "deck_code": "7T2EF",
+          "source_id": 14,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=14",
+          "cards": [
+            {"number": "EBP01-054", "count": 2, "zone": "pal"},
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "EBP01-049", "count": 4, "zone": "pal"},
+            {"number": "EBP01-062", "count": 4, "zone": "pal"},
+            {"number": "EBP01-050", "count": 4, "zone": "pal"},
+            {"number": "EBP01-051", "count": 4, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "ETD02-001", "count": 2, "zone": "pal"},
+            {"number": "EBP01-076", "count": 4, "zone": "pal"},
+            {"number": "EBP01-058", "count": 4, "zone": "pal"},
+            {"number": "ETD02-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-090", "count": 4, "zone": "structure"},
+            {"number": "EBP01-092", "count": 4, "zone": "structure"},
+            {"number": "ETD02-021", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "logical",
+          "deck_code": "3EVK9",
+          "source_id": 15,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=15",
+          "cards": [
+            {"number": "EBP01-078", "count": 4, "zone": "pal"},
+            {"number": "ETD02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 3, "zone": "pal"},
+            {"number": "EBP01-026OSR", "count": 1, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "EBP01-044", "count": 4, "zone": "gear"},
+            {"number": "ETD01-021", "count": 4, "zone": "gear"},
+            {"number": "EBP01-047", "count": 4, "zone": "event"},
+            {"number": "ETD02-021", "count": 2, "zone": "event"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "はいれぞ",
+          "deck_code": "4L5KZ",
+          "source_id": 16,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=16",
+          "cards": [
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "ETD02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 3, "zone": "pal"},
+            {"number": "EBP01-077SR", "count": 2, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "ETD01-014", "count": 4, "zone": "pal"},
+            {"number": "EBP01-044", "count": 4, "zone": "gear"},
+            {"number": "ETD01-021", "count": 4, "zone": "gear"},
+            {"number": "ETD02-021", "count": 3, "zone": "event"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Grand Release Tournament – Osaka",
+      "date": "2026-10-05",
+      "date_kind": "published",
+      "published": "2026-10-05",
+      "source_url": "https://en.palworld-official-cardgame.com/deckrecipe/grand-release-tournament_osaka",
+      "decks": [
+        {
+          "placement": "Champion",
+          "player": "bet",
+          "deck_code": "48D3H",
+          "source_id": 6,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=6",
+          "cards": [
+            {"number": "EBP01-001", "count": 4, "zone": "pal"},
+            {"number": "EBP01-005", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 4, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "EBP01-045", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 4, "zone": "gear"},
+            {"number": "EBP01-044", "count": 2, "zone": "gear"},
+            {"number": "EBP01-047", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "もんじゅ",
+          "deck_code": "1GVVV",
+          "source_id": 7,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=7",
+          "cards": [
+            {"number": "EBP01-078SR", "count": 2, "zone": "pal"},
+            {"number": "ETD02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 2, "zone": "pal"},
+            {"number": "EBP01-077SR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "ETD01-014TSR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-044SR", "count": 4, "zone": "gear"},
+            {"number": "ETD01-021", "count": 4, "zone": "gear"},
+            {"number": "ETD02-021", "count": 2, "zone": "event"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "はるきーに",
+          "deck_code": "2GPET",
+          "source_id": 8,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=8",
+          "cards": [
+            {"number": "EBP01-074", "count": 4, "zone": "pal"},
+            {"number": "EBP01-073", "count": 4, "zone": "pal"},
+            {"number": "EBP01-077", "count": 4, "zone": "pal"},
+            {"number": "EBP01-038", "count": 2, "zone": "pal"},
+            {"number": "EBP01-085", "count": 4, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "ETD02-014", "count": 4, "zone": "pal"},
+            {"number": "EBP01-079SR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-088SR", "count": 4, "zone": "structure"},
+            {"number": "EBP01-090", "count": 4, "zone": "structure"},
+            {"number": "ETD02-021", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "りうむ",
+          "deck_code": "3R4FV",
+          "source_id": 9,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=9",
+          "cards": [
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "ETD02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-077", "count": 2, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "ETD02-017", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 2, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "ETD01-014", "count": 4, "zone": "pal"},
+            {"number": "EBP01-044", "count": 4, "zone": "gear"},
+            {"number": "ETD01-021", "count": 4, "zone": "gear"},
+            {"number": "ETD02-021", "count": 2, "zone": "event"},
+            {"number": "EBP01-046", "count": 2, "zone": "event"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Grand Release Tournament – Nagoya",
+      "date": "2026-10-05",
+      "date_kind": "published",
+      "published": "2026-10-05",
+      "source_url": "https://en.palworld-official-cardgame.com/deckrecipe/grand-release-tournament_nagoya",
+      "decks": [
+        {
+          "placement": "Champion",
+          "player": "シミズ",
+          "deck_code": "30LGX",
+          "source_id": 17,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=17",
+          "cards": [
+            {"number": "EBP01-001SSP", "count": 4, "zone": "pal"},
+            {"number": "EBP01-005SR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026SP", "count": 2, "zone": "pal"},
+            {"number": "EBP01-025SSP", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028SR", "count": 4, "zone": "pal"},
+            {"number": "ETD01-023TSR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-016", "count": 4, "zone": "structure"},
+            {"number": "EBP01-017", "count": 2, "zone": "structure"},
+            {"number": "EBP01-020SR", "count": 4, "zone": "gear"},
+            {"number": "EBP01-045", "count": 3, "zone": "gear"},
+            {"number": "ETD01-010", "count": 3, "zone": "gear"},
+            {"number": "EBP01-044SR", "count": 2, "zone": "gear"},
+            {"number": "EBP01-047SR", "count": 2, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "あるけい。",
+          "deck_code": "36WHM",
+          "source_id": 18,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=18",
+          "cards": [
+            {"number": "EBP01-027", "count": 4, "zone": "pal"},
+            {"number": "EBP01-078", "count": 2, "zone": "pal"},
+            {"number": "EBP01-026", "count": 3, "zone": "pal"},
+            {"number": "EBP01-077", "count": 2, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "ETD01-014", "count": 4, "zone": "pal"},
+            {"number": "EBP01-044", "count": 4, "zone": "gear"},
+            {"number": "ETD01-021", "count": 4, "zone": "gear"},
+            {"number": "ETD02-021", "count": 3, "zone": "event"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "ヤマダ",
+          "deck_code": "5W2LF",
+          "source_id": 19,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=19",
+          "cards": [
+            {"number": "EBP01-001", "count": 2, "zone": "pal"},
+            {"number": "EBP01-002", "count": 2, "zone": "pal"},
+            {"number": "EBP01-026", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-007", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 2, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "EBP01-098", "count": 2, "zone": "pal"},
+            {"number": "EBP01-008", "count": 4, "zone": "pal"},
+            {"number": "EBP01-032", "count": 4, "zone": "pal"},
+            {"number": "ETD02-023", "count": 4, "zone": "pal"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 2, "zone": "gear"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "bet",
+          "deck_code": "48D3H",
+          "source_id": 20,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=20",
+          "cards": [
+            {"number": "EBP01-001", "count": 4, "zone": "pal"},
+            {"number": "EBP01-005", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026", "count": 4, "zone": "pal"},
+            {"number": "EBP01-038", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "EBP01-020", "count": 4, "zone": "gear"},
+            {"number": "EBP01-045", "count": 4, "zone": "gear"},
+            {"number": "ETD01-010", "count": 4, "zone": "gear"},
+            {"number": "EBP01-044", "count": 2, "zone": "gear"},
+            {"number": "EBP01-047", "count": 4, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "Champion",
+          "player": "AP",
+          "deck_code": "5QL4P",
+          "source_id": 21,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=21",
+          "cards": [
+            {"number": "EBP01-078SR", "count": 3, "zone": "pal"},
+            {"number": "ETD02-012TSR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-026OSR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-077", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "ETD02-017", "count": 1, "zone": "pal"},
+            {"number": "EBP01-025SSP", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "EBP01-028SR", "count": 4, "zone": "pal"},
+            {"number": "EBP01-098", "count": 4, "zone": "pal"},
+            {"number": "EBP01-047", "count": 2, "zone": "event"},
+            {"number": "ETD02-021TSR", "count": 4, "zone": "event"},
+            {"number": "EBP01-095OSR", "count": 4, "zone": "event"},
+            {"number": "EBP01-048", "count": 4, "zone": "event"}
+          ]
+        }
+      ]
     }
   ]
 }
