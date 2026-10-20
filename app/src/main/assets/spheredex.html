@@ -824,16 +824,38 @@
   .setbox.artbox .setart { width:100%; height:100%; object-fit:cover; display:block; }
   .setbox.artbox .setlogobadge { position:absolute; top:7px; left:8px; width:42%; max-width:104px; height:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.7)); pointer-events:none; }
   /* Promo "hero": a forest-lit 3-card scene that echoes the All Cards collection image, built live from promo art */
+  /* A band of colour behind each of the three cards, taken from those cards. --setc1, --setc2 and
+     --setc3 are the left, centre and right cards in the order they are drawn, stamped on the box by
+     the builder, so each band sits under the card it came from. --setc is the dominant of the three
+     and only serves as a fallback here.
+     The stops are long ramps on purpose. The ground this replaced was a warm blob that faded out at
+     58% of its radius under a screen blended streak with stops at 24, 33 and 45 percent: a gradient
+     that stops changing part way leaves a seam, and that seam was the hard line across the top of
+     every tile. The flat colour on the line above is the real fallback: a browser that cannot parse
+     color-mix drops the whole declaration, and an old WebView would otherwise get a transparent box. */
   .collagebox { position:relative; overflow:hidden;
+    background:#0a1420;
     background:
-      radial-gradient(72% 58% at 20% 8%, rgba(255,244,205,.34), rgba(255,244,205,0) 58%),
-      radial-gradient(135% 118% at 50% 122%, #18421f 0%, #0d2416 52%, #061309 100%); }
-  .collagebox::before { content:""; position:absolute; inset:-20% -10% auto -10%; height:150%; z-index:1; pointer-events:none;
-    background:linear-gradient(122deg, rgba(255,240,200,.24) 0%, rgba(255,240,200,0) 24%, rgba(255,240,200,.12) 33%, rgba(255,240,200,0) 45%);
-    mix-blend-mode:screen; }
-  .collagebox::after { content:""; position:absolute; left:50%; bottom:6%; width:80%; height:15%; z-index:1; pointer-events:none;
+      linear-gradient(180deg, rgba(4,9,15,.74) 0%, rgba(4,9,15,.06) 50%, rgba(4,9,15,.42) 100%),
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--setc1, var(--setc, var(--accent))) 90%, #0a1420) 0%,
+        color-mix(in srgb, var(--setc1, var(--setc, var(--accent))) 90%, #0a1420) 16%,
+        color-mix(in srgb, var(--setc2, var(--setc, var(--accent))) 94%, #0a1420) 50%,
+        color-mix(in srgb, var(--setc3, var(--setc, var(--accent))) 90%, #0a1420) 84%,
+        color-mix(in srgb, var(--setc3, var(--setc, var(--accent))) 90%, #0a1420) 100%); }
+  /* One long sheen across the corner, ending in nothing. No second band, so no second edge. */
+  .collagebox::before { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(126deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,0) 62%); }
+  /* The shadow the fanned cards sit on. It lives inside .collage, which fills the box, so the box's
+     own ::after is free to be the logo scrim: both used to be ::after on the same element, where the
+     scrim won inset and background while this one kept the width, height, radius and transform,
+     leaving a half clipped ellipse in the top left corner of every tile that has a logo.
+     .collage carries z-index 2 and so is its own stacking context: -1 puts the shadow behind the
+     cards inside it while still painting over the tile's ground. */
+  .collagebox .collage::after { content:""; position:absolute; left:50%; bottom:6%; width:80%; height:15%; z-index:-1; pointer-events:none;
     transform:translateX(-50%); border-radius:50%;
     background:radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.6), rgba(0,0,0,0) 70%); }
+  .collagebox::after { content:none; }
   .collage { position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
   .collage img { position:absolute; height:80%; border-radius:6px; box-shadow:var(--shadow-sm); border:1.5px solid rgba(255,255,255,.16); background:var(--surface); }
   .collage.n1 img { position:static; height:88%; }
@@ -860,8 +882,15 @@
   .smeta .soonlbl { color:var(--accent-ink); font-weight:700; }
   /* Expansion cover: the set's card-art collage with its logo laid over a soft bottom scrim. */
   .setbox.logohero { position:relative; }
-  .setbox.logohero::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,21,31,.04) 34%, rgba(8,21,31,.66)); pointer-events:none; }
-  .setbox.logohero .lhlogo { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); width:66%; max-width:240px; height:auto; z-index:2; filter:drop-shadow(0 3px 9px rgba(0,0,0,.85)); }
+  /* Ramps the whole way rather than holding flat to 34% and then starting, which left its own edge.
+     The geometry is spelled out rather than inherited, because this is the same pseudo-element the
+     card shadow used to claim and nothing should be left over from it. z-index 2 matches .collage,
+     and a pseudo-element paints after its siblings at the same level, so the scrim lands over the
+     cards and under the logo. */
+  .setbox.logohero::after { content:""; position:absolute; inset:0; width:auto; height:auto;
+    border-radius:0; transform:none; z-index:2; pointer-events:none;
+    background:linear-gradient(180deg, rgba(8,21,31,0) 0%, rgba(8,21,31,.12) 46%, rgba(8,21,31,.68) 100%); }
+  .setbox.logohero .lhlogo { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); width:66%; max-width:240px; height:auto; z-index:3; filter:drop-shadow(0 3px 9px rgba(0,0,0,.85)); }
   /* Upcoming set: its logo (or just the title, if no logo revealed yet) on a plain dark tile. Fixed
      dark so the transparent logo's soft edges blend seamlessly (the logo is built for a dark ground). */
   .setbox.plainbox { background:#0d1922; display:grid; place-items:center; }
@@ -7047,28 +7076,57 @@ label.acctsetrow { align-items:center; }
   };
   function boxSrc(setKey){ var k=(SET_META[setKey]||{}).box; return (k && window.CARD_IMG && window.CARD_IMG[k]) ? window.CARD_IMG[k] : ""; }
   // A box image sourced from a card (portrait) needs 'contain', not 'cover' crop.
+  // The colour to build a set tile's ground from: whichever colour most of the cards ON THAT TILE
+  // share, with the centre card winning a tie because it is the one drawn on top and read first.
+  // Returns a style attribute ready to drop on the box, or "" when the cards say nothing useful.
+  function collageTintStyle(cards){
+    var cs=[], i, col;
+    for(i=0;i<(cards||[]).length;i++){ if(cards[i] && cards[i].color) cs.push(cards[i]); }
+    if(!cs.length) return "";
+    // Fewer than three cards repeats the last one, so the ground still has three colours to place.
+    // A colour name is letters or it is not a colour. featCotdTint guards the same value the same
+    // way before it reaches a style attribute; this keeps the two consistent.
+    function at(k){ var v=cs[k<cs.length?k:cs.length-1].color; return /^[A-Za-z]+$/.test(v) ? colVar(v) : "var(--accent)"; }
+    var count={}, best="", n=0;
+    for(i=0;i<cs.length;i++){ col=cs[i].color; count[col]=(count[col]||0)+1; }
+    var prefer=cs[Math.floor((cs.length-1)/2)].color;    // the centre card, drawn on top, breaks a tie
+    for(col in count){
+      if(!Object.prototype.hasOwnProperty.call(count,col)) continue;
+      if(count[col]>n || (count[col]===n && col===prefer)){ n=count[col]; best=col; }
+    }
+    var dom=/^[A-Za-z]+$/.test(best) ? colVar(best) : "var(--accent)";
+    return ' style="--setc:'+dom+';--setc1:'+at(0)+';--setc2:'+at(1)+';--setc3:'+at(2)+'"';
+  }
   function boxIsCard(setKey){ var k=(SET_META[setKey]||{}).box||""; return k && k.indexOf("BOX_")!==0; }
   // Promo has no box, fan its cards into a small collage, with a colourful
   // (non-Soul) card as the centrepiece so the dark Soul tokens sit behind it.
-  function collageHTML(setKey){
+  function promoCards(setKey){
     var cs=CARDS.filter(function(c){ return c.set===setKey; });
-    if(!cs.length) return "";
+    if(!cs.length) return [];
     var hero=null; for(var i=0;i<cs.length;i++){ if(cs[i].kind!=="Soul"){ hero=cs[i]; break; } } if(!hero) hero=cs[0];
     var others=cs.filter(function(c){ return c!==hero; });
     var ordered=[others[0], hero, others[1]].filter(Boolean).slice(0,3); // centre (nth-child 2) sits on top
-    if(ordered.length===1) ordered=[hero];
+    return ordered.length===1 ? [hero] : ordered;
+  }
+  function collageHTML(setKey){
+    var ordered=promoCards(setKey);
+    if(!ordered.length) return "";
     return '<div class="collage n'+ordered.length+'">'+ordered.map(function(c){
       return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">';
     }).join("")+'</div>';
   }
   // The three highest-priced cards, fanned into a collage for the "All Cards" hero (mirrors the Promo one).
-  function topCollageHTML(){
+  function topCards(){
     var book=(priceMode()==="sold")?PRICEBOOK_SOLD:PRICEBOOK;
     function pr(id){ return +book[id]||+PRICEBOOK[id]||0; }
     var ranked=CARDS.filter(function(c){ return pr(c.id)>0; }).sort(function(a,b){ return pr(b.id)-pr(a.id); });
-    if(!ranked.length) return "";                          // prices not loaded yet -> caller uses the baked image
+    if(!ranked.length) return [];                          // prices not loaded yet -> caller uses the baked image
     var top=ranked.slice(0,3);
-    var ordered = (top.length>=3) ? [top[1], top[0], top[2]] : top;   // highest in the centre (drawn on top)
+    return (top.length>=3) ? [top[1], top[0], top[2]] : top;   // highest in the centre (drawn on top)
+  }
+  function topCollageHTML(){
+    var ordered=topCards();
+    if(!ordered.length) return "";
     return '<div class="collage n'+ordered.length+'">'+ordered.map(function(c){ return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">'; }).join("")+'</div>';
   }
   // Browse-by-Set expansions: the released products grouped into their real set (Dawn of Palpagos = the
@@ -7091,13 +7149,18 @@ label.acctsetrow { align-items:center; }
     return { done:done, tot:tot };
   }
   // Highest-priced cards among a group of sets, fanned into a collage (the Dawn of Palpagos tile artwork).
-  function setGroupCollageHTML(sets){
+  // The cards a set's tile shows: its three priciest, centre one drawn on top. Split out from the
+  // markup so the tile can tint its ground from the same three cards it is about to draw.
+  function setGroupCards(sets){
     var book=(priceMode()==="sold")?PRICEBOOK_SOLD:PRICEBOOK;
     function pr(id){ return +book[id]||+PRICEBOOK[id]||0; }
     var cs=CARDS.filter(function(c){ return sets.indexOf(c.set)>=0 && c.kind!=="Soul"; });
     cs.sort(function(a,b){ return pr(b.id)-pr(a.id); });   // priciest first; stable catalogue order when prices are equal/absent
     var top=cs.slice(0,3);
-    var ordered=(top.length>=3)?[top[1],top[0],top[2]]:top;
+    return (top.length>=3)?[top[1],top[0],top[2]]:top;
+  }
+  function setGroupCollageHTML(sets){
+    var ordered=setGroupCards(sets);
     if(!ordered.length) return "";
     return '<div class="collage n'+ordered.length+'">'+ordered.map(function(c){ return '<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'">'; }).join("")+'</div>';
   }
@@ -12013,7 +12076,7 @@ label.acctsetrow { align-items:center; }
     var aw=pctOf(oAll,tAll), topC=topCollageHTML();
     var all=document.createElement("div"); all.className="setcard allcard";
     all.innerHTML=
-      '<div class="setbox '+(topC?"collagebox":"allbox")+'">'+(topC||'<img src="'+ALLCARDS_IMG+'" alt="All cards">')+'</div>'+
+      '<div class="setbox '+(topC?"collagebox":"allbox")+'"'+(topC?collageTintStyle(topCards()):"")+'>'+(topC||'<img src="'+ALLCARDS_IMG+'" alt="All cards">')+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">All Cards</div>'+
         '<div class="smeta"><span>'+aw+'% complete</span><b>'+oAll+'/'+tAll+'</b></div>'+
@@ -12063,11 +12126,12 @@ label.acctsetrow { align-items:center; }
     var owned=sp.owned[k], tot=sp.tot[k], w=pctOf(owned,tot), box=boxSrc(k), miss=tot-owned, meta=SET_META[k]||{}, logo=meta.logo, art=meta.art;
     var el=document.createElement("div"); el.className="setcard";
     var boxCls = art?' artbox':(logo?' logobox':(k==="PR2026"?' collagebox':(boxIsCard(k)?' contain':'')));
+    var boxTint = (k==="PR2026") ? collageTintStyle(promoCards(k)) : "";
     var boxInner = art
       ? '<img class="setart" src="'+art+'" alt="'+esc(SETS[k].name)+'">'+(logo?'<img class="setlogobadge" src="'+logo+'" alt="Dawn of Palpagos">':'')
       : (logo?'<img class="setlogo" src="'+logo+'" alt="'+esc(SETS[k].name)+'">':(k==="PR2026"?collageHTML(k):(box?'<img src="'+box+'" alt="'+esc(SETS[k].name)+'">':'<span class="ph">'+esc(SETS[k].short)+'</span>')));
     el.innerHTML=
-      '<div class="setbox'+boxCls+'">'+boxInner+'</div>'+
+      '<div class="setbox'+boxCls+'"'+boxTint+'>'+boxInner+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">'+esc(SETS[k].name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
@@ -12097,7 +12161,7 @@ label.acctsetrow { align-items:center; }
       ? col+(lg?'<img class="lhlogo" src="'+lg+'" alt="'+esc(x.name)+'">':'')
       : (lg?'<img class="setlogo" src="'+lg+'" alt="'+esc(x.name)+'">':'<span class="ph">'+esc(x.name)+'</span>');
     el.innerHTML=
-      '<div class="setbox'+(col?' collagebox logohero':' logobox')+'">'+boxInner+'</div>'+
+      '<div class="setbox'+(col?' collagebox logohero':' logobox')+'"'+(col?collageTintStyle(setGroupCards(x.sets)):"")+'>'+boxInner+'</div>'+
       '<div class="sbody">'+
         '<div class="snm">'+esc(x.name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
