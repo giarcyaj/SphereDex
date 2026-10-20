@@ -3732,6 +3732,10 @@ label.acctsetrow { align-items:center; }
   // The store build the version check learns about ("" until the first check completes).
   // Persisted so an offline behind user still sees the update headliner from the last check.
   var _latestAppVersion = (function(){ try{ return String(localStorage.getItem("palvault-latest")||""); }catch(e){ return ""; } })();
+  // The newest version live on BOTH stores, which is what the carousel announces. _latestAppVersion
+  // is what THIS front can install and drives the update offer; the two differ while a release is
+  // part way through the stores. Empty on a build that has never heard from a server that sends it.
+  var _releasedVersion = (function(){ try{ return String(localStorage.getItem("palvault-released")||""); }catch(e){ return ""; } })();
   var _latestNotes = (function(){ try{ var j=JSON.parse(localStorage.getItem("palvault-latest-notes")||"null"); return Array.isArray(j)?j.slice(0,3).map(String):null; }catch(e){ return null; } })();
   // The banner for the store build, which an older install has no bundled art for. It becomes an
   // <img> src, and it arrives over the network, so only our own https banner is accepted.
@@ -11077,10 +11081,19 @@ label.acctsetrow { align-items:center; }
   // build once it deploys ahead of the backend. So every platform, web included, shows its own lines only once
   // the server says this platform's latest has reached it. Until then, or with no answer yet, it stays on the
   // newest release the server does offer.
+  // Which release the carousel talks about. A release is announced once it is live on every front,
+  // so an iPhone that already updated waits for Play and the web waits for both: the server works
+  // that out across the two store listings and sends it as the released field. Without it (an older server,
+  // or no check has landed yet) this falls back to what THIS front can install, which is the rule
+  // every build before this one used.
+  // Whatever it picks is a key of RELEASE_HIGHLIGHTS or this build's own version, so the slide is
+  // never handed a release this build has no lines or banner for.
   function featVersion(){
     var own=typeof APP_VERSION==="string" ? APP_VERSION : "";
     if(!own || typeof verNum!=="function") return own;
-    var latest=typeof _latestAppVersion==="string" ? _latestAppVersion : "";
+    var rel=typeof _releasedVersion==="string" ? _releasedVersion : "";
+    if(rel && !/^[0-9]+(\.[0-9]+){0,2}$/.test(rel)) rel="";
+    var latest=rel || (typeof _latestAppVersion==="string" ? _latestAppVersion : "");
     if(latest && verNum(latest) >= verNum(own)) return own;
     var best="";
     try{
@@ -14272,6 +14285,13 @@ label.acctsetrow { align-items:center; }
           try{ localStorage.setItem("palvault-latest", _latestAppVersion); }catch(e){}
           try{ if(_latestNotes && _latestNotes.length) localStorage.setItem("palvault-latest-notes", JSON.stringify(_latestNotes)); else localStorage.removeItem("palvault-latest-notes"); }catch(e){}
           try{ if(_latestArt) localStorage.setItem("palvault-latest-art", _latestArt); else localStorage.removeItem("palvault-latest-art"); }catch(e){}
+        }
+        // Sent on its own: a server that knows what both stores are serving says so even when this
+        // front's own number has not moved. An older server does not send it, and then nothing changes.
+        var rel=j && j.released ? String(j.released) : "";
+        if(rel && /^[0-9]+(\.[0-9]+){0,2}$/.test(rel)){
+          _releasedVersion = rel;
+          try{ localStorage.setItem("palvault-released", rel); }catch(e){}
         }
         if(latest && verNum(latest) > verNum(APP_VERSION)) offerUpdate(latest);
         try{ if(typeof renderFeatured==="function") renderFeatured(); }catch(e){}

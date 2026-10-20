@@ -987,6 +987,63 @@ function releaseTables() {
 }
 const featuresSlide = (a) => a.api.slides().find((s) => s.kind === 'features');
 
+test('the carousel announces a release only once BOTH stores are serving it', () => {
+  // An app can only see its own front. The server watches both store listings and sends the newest
+  // version live on both as `released`; this is the gate that makes the carousel follow it.
+  // Patch numbers are the whole point here, so these must use the real verNum: the default sandbox
+  // stubs it as parseFloat, under which 2.4.3 and 2.4.4 are the same number.
+  const t = releaseTables();
+  assert.equal(t.verNum('2.4.4') > t.verNum('2.4.3'), true, 'the real compare separates patch levels');
+
+  // Both stores live with this build: say so.
+  const both = featuresSlide(app({ ...t, APP_VERSION: '2.4.4', _latestAppVersion: '2.4.4', _releasedVersion: '2.4.4' }));
+  assert.equal(both.version, '2.4.4');
+  assert.equal(both.title, 'What\u2019s new in 2.4.4');
+  assert.equal(both.art, 'img/UPDATE_2_4_4.webp');
+  assert.equal(both.releaseArt, true);
+
+  // THE RULE: the App Store approved 2.4.4 and Play has not, so released is still 2.4.3. An iPhone
+  // that already updated waits for Play rather than announcing a release half the users cannot get.
+  const waiting = featuresSlide(app({ ...t, APP_VERSION: '2.4.4', _latestAppVersion: '2.4.4', _releasedVersion: '2.4.3' }));
+  assert.equal(waiting.version, '2.4.3', 'a release waits for the slower store, even on a build that has it');
+  assert.equal(waiting.art, 'img/UPDATE_2_4_3.webp');
+  assert.deepEqual([...waiting.notes], [...t.RELEASE_HIGHLIGHTS['2.4.3'].slice(0, 3)]);
+
+  // The stores outrank this front's own number. Without that, the web (whose number is still raised by
+  // hand on a push) would announce a release days before either store had it.
+  const web = featuresSlide(app({ ...t, APP_VERSION: '2.4.4', _latestAppVersion: '2.4.4', _releasedVersion: '2.4.2' }));
+  assert.equal(web.version, '2.4.2', 'released outranks this front\u2019s own latest');
+
+  // A client older than the announcement must never be handed a version it has no lines for. This is
+  // the one that would have emptied Home card 2: a stale web build whose own number lags while the
+  // stores have moved on. It shows its own release instead, with its own banner.
+  const stale = featuresSlide(app({ ...t, APP_VERSION: '2.4.3', _latestAppVersion: '2.4.3', _releasedVersion: '2.4.4' }));
+  assert.ok(stale, 'the slide is still there, so Home keeps its five cards');
+  assert.equal(stale.version, '2.4.3', 'never announces a release this build predates');
+  assert.equal(stale.art, 'img/UPDATE_2_4_3.webp');
+  assert.deepEqual([...stale.notes], [...t.RELEASE_HIGHLIGHTS['2.4.3'].slice(0, 3)]);
+
+  // Someone who has not updated is still OFFERED the newer build, and that offer is per platform:
+  // it names what THEIR store can give them, which released deliberately does not decide.
+  const behind = app({ ...t, APP_VERSION: '2.4.3', _latestAppVersion: '2.4.4', _releasedVersion: '2.4.4' })
+    .api.slides().find((sl) => sl.kind === 'update');
+  assert.ok(behind, 'an install behind its own store is still told there is an update');
+  assert.equal(behind.version, '2.4.4');
+
+  // An older server sends no released at all, and nothing changes: this is the rule every build
+  // before this one used, and it is what the four tests below still pin.
+  for (const missing of ['', undefined]) {
+    const old = featuresSlide(app({ ...t, APP_VERSION: '2.4.4', _latestAppVersion: '2.4.4', _releasedVersion: missing }));
+    assert.equal(old.version, '2.4.4', 'with no answer it falls back to this front\u2019s own latest');
+  }
+  // Anything that is not a version is not an answer. A listing can legitimately say "Varies with
+  // device", and believing that would announce nothing at all.
+  for (const junk of ['Varies with device', 'v2.4.4', '2.4.4.1']) {
+    const bad = featuresSlide(app({ ...t, APP_VERSION: '2.4.4', _latestAppVersion: '2.4.4', _releasedVersion: junk }));
+    assert.equal(bad.version, '2.4.4', 'junk is ignored rather than believed: ' + junk);
+  }
+});
+
 test('in the iOS and Android apps the 2.4 slide waits until the store offers 2.4', () => {
   const t = releaseTables();
   for (const platform of [{ isIosApp: () => true, isAndroidApp: () => false }, { isIosApp: () => false, isAndroidApp: () => true }]) {
