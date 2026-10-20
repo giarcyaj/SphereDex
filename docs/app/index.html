@@ -14195,7 +14195,8 @@ label.acctsetrow { align-items:center; }
   // force closed. The web has the same shape, since a pinned tab is never reloaded either. So: when the
   // app becomes visible again, and at most once every 15 minutes, refresh the things that go stale and
   // ask the server whether a newer build exists.
-  // updateAt paces the update TOAST; verAt paces the request itself. With only the first, an app that was
+  // updateAt paces the update TOAST; verAt paces the request itself, and a request that never lands
+  // gives the stamp back so the next wake tries again. With only the first, an app that was
   // already up to date never set it, so it checked in on every wake while an app on an old build checked in
   // once an hour, and the digest's "percent behind" counted the wrong people four times as often.
   var WAKE_AT=Date.now(), WAKE_GAP=15*60*1000, updateAt=0, verAt=0, UPDATE_GAP=60*60*1000;
@@ -14274,7 +14275,11 @@ label.acctsetrow { align-items:center; }
         }
         if(latest && verNum(latest) > verNum(APP_VERSION)) offerUpdate(latest);
         try{ if(typeof renderFeatured==="function") renderFeatured(); }catch(e){}
-      }).catch(function(){});
+      }).catch(function(){
+        // The hour is meant to pace answers, not failures. Give the stamp back so the next wake or
+        // the half hourly tick asks again, rather than going quiet until the hour is up.
+        verAt=0;
+      });
     // The web also has a service worker holding the shell: let it look for a new one on the same beat.
     try{
       if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){

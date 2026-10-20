@@ -237,3 +237,23 @@ test('every sealed picture the bundled image list names is baked in, and its pro
     });
   });
 });
+
+test('a version check that never lands gives its hour back instead of going quiet', () => {
+  // checkAppVersion stamps verAt before the fetch (so two tabs cannot both ask), and every retry path
+  // is gated on that same stamp. Without a rollback on failure, one offline cold start means no second
+  // attempt for UPDATE_GAP, and the carousel keeps naming the cached version for the whole hour.
+  const fn = /function checkAppVersion\(\)\{[\s\S]*?\n  \}/.exec(source);
+  assert.ok(fn, 'checkAppVersion is in the source');
+  const body = fn[0];
+  assert.match(body, /if\(!apiBase\(\) \|\| \(verAt && Date\.now\(\)-verAt < UPDATE_GAP\)\) return;/, 'still gated on the stamp');
+  assert.ok(body.indexOf('verAt=Date.now();') < body.indexOf('fetch(apiBase()'), 'the stamp is taken before the request');
+  // The rollback is the point, and only for the version request. checkAppVersion also nudges the
+  // service worker, and that call keeps its own bare catch, because nothing is paced on it.
+  const start = body.indexOf('fetch(apiBase()+"/api/version');
+  const end = body.indexOf('navigator.serviceWorker', start);
+  assert.ok(start > 0 && end > start, 'the version request and the worker nudge are both still here');
+  const request = body.slice(start, end);
+  assert.doesNotMatch(request, /\}\)\.catch\(function\(\)\{\}\);/, 'the version request no longer swallows a failure whole');
+  assert.match(request, /\.catch\(function\(\)\{[\s\S]*?verAt=0;[\s\S]*?\}\);/, 'a failed request resets verAt so the next wake retries');
+  assert.match(body.slice(end), /\.catch\(function\(\)\{\}\)/, 'the worker nudge is still allowed to fail quietly');
+});
