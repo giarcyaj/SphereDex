@@ -716,21 +716,53 @@
   .sdx-orb > svg { position:absolute; left:0; top:0; width:100%; height:100%; }
   /* .rwsphere dims itself until the reward is earned. Here the sphere is the subject of the tile,
      and the ring around it already says how far off it is, so it is drawn at full strength. */
-  .sdx-orbart { position:absolute; left:19%; top:19%; width:62%; height:62%; margin:0; filter:none; }
+  /* .rwsphere is declared later in this stylesheet and at the same strength, so it used to win and
+     hand the art its own 66px size, its auto side margins and the filter that dims a reward until it
+     is earned: the sphere ended up 21px right of its own ring and greyed out. Naming the parent wins
+     on specificity, and centring by transform holds whatever size applies. */
+  .sdx-orb .sdx-orbart { position:absolute; left:50%; top:50%; width:62%; height:62%; margin:0;
+    transform:translate(-50%,-50%); filter:none; }
   /* .hctop's flex gap is the only thing holding the orb off the text, and the app has no fallback for
      it, so on an old WebView the two would touch. The pattern #homeAway already uses. */
   .no-flexgap .sdx-sphtile .hctop { gap:0; }
   .no-flexgap .sdx-sphtile .hctop > * + * { margin-left:14px; }
   /* One card shaped hole per card still missing. Inline block with symmetric margins rather than a
      flex row, so there is no gap to collapse. */
-  .sdx-slots { position:absolute; left:0; right:0; bottom:0; text-align:center; white-space:nowrap; }
-  .sdx-slot { display:inline-block; width:30px; height:42px; margin:0 4px; border-radius:4px;
-    vertical-align:bottom; border:1.5px dashed var(--el-Grass); background:var(--surface-2);
-    border-color:color-mix(in srgb,var(--el-Grass) 72%,var(--ink));
-    background:color-mix(in srgb,var(--el-Grass) 12%,var(--surface-2)); }
-  .sdx-slot + .sdx-slot { margin-left:4px; }
+  /* The cards a tile is actually about. Overlapped rather than spaced, so five of them still fit
+     across a phone, and the later ones sit on top so it reads as a spread hand. */
+  .sdx-fan { position:absolute; left:0; right:0; bottom:0; text-align:center; white-space:nowrap; }
+  .sdx-card { display:inline-block; width:38px; height:53px; border-radius:4px; overflow:hidden;
+    vertical-align:bottom; background:var(--surface-2); border:1px solid var(--line-strong);
+    box-shadow:0 2px 7px rgba(0,0,0,.34); }
+  .sdx-card + .sdx-card { margin-left:-12px; }
+  .sdx-card img { width:100%; height:100%; display:block; object-fit:cover; }
+  /* A card whose picture is missing, and the empty deck tile, keep the dashed outline. */
+  /* Blanks carry no picture and no drop shadow, so overlapped they would read as one box with
+     lines through it. The ring in the tile colour gives each one its edge back. */
+  .sdx-card.bare { border-style:dashed; box-shadow:0 0 0 1.5px var(--surface);
+    border-color:color-mix(in srgb,var(--eff,var(--accent)) 66%,var(--line-strong));
+    background:color-mix(in srgb,var(--eff,var(--accent)) 11%,var(--surface-2)); }
+  #homeClosest .sdx-card.bare { --eff:var(--el-Grass); }
+  #homeDeck .sdx-card.bare { --eff:var(--r-PR); }
   .homegrid .hcfoot { margin-top:auto; padding-top:8px; }
   /* Which of the two market readings is showing. Same idea as the carousel dots, at tile scale. */
+  /* Two readings, and only a phone can swipe between them, so a pointer gets something to click.
+     The tile itself opens Market, hence the stopPropagation on these. */
+  /* Opaque, and quiet by colour rather than by opacity: the value line runs across this band, and a
+     translucent button would have it showing through the disc. It also kept the chevron under the
+     3:1 a control is meant to hold against its background in the light theme. */
+  .hcarrow { position:absolute; top:50%; transform:translateY(-50%); width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center; padding:0; border-radius:50%;
+    border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-soft);
+    cursor:pointer; transition:color .16s, border-color .16s; z-index:2; }
+  .hcarrow:hover { color:var(--accent-ink); border-color:var(--accent-ink); }
+  /* The app's focus ring squares every control off at 6px, which would un-round these two. */
+  .hcarrow:focus-visible { border-radius:50%; }
+  .hcarrow svg { width:15px; height:15px; }
+  .hcarrow.prev { left:5px; } .hcarrow.prev svg { transform:rotate(90deg); }
+  .hcarrow.next { right:5px; } .hcarrow.next svg { transform:rotate(-90deg); }
+  /* The arrows are placed against the tile, so it has to be the thing they are placed against. */
+  .homegrid.uniform #homeMarket { position:relative; }
   .hcfaces { display:flex; gap:5px; align-items:center; }
   .hcface { width:6px; height:6px; padding:0; border:0; border-radius:50%; background:var(--line-strong); cursor:pointer; }
   .hcface.on { background:var(--accent-ink); }
@@ -11853,14 +11885,27 @@ label.acctsetrow { align-items:center; }
       '</svg>'+
       '<span class="sdx-orbart rwsphere" style="--rc:'+c+'">'+sphereSVG(c,"home")+'</span></div>';
   }
-  // The holes still to fill, one card shape each. Seven is what the tile holds at 375px, and the
-  // closest set goal is a small number by definition, so the count is usually exact. Above that the
-  // holes stop counting and the figure above them carries the number.
-  function homeSlots(left){
-    var n=+left||0; if(n<1) return "";
-    var show=(n>7?7:n), s="", i;
-    for(i=0;i<show;i++) s+='<span class="sdx-slot"></span>';
-    return '<div class="sdx-band"><div class="sdx-slots" aria-hidden="true">'+s+'</div></div>';
+  // The cards a tile is about: the ones still missing from a set, the ones on the wishlist, the ones
+  // a deck still needs. Up to five, because past that they stop being cards and become a texture.
+  // `blanks` is the empty state: how many outlines to draw when there are no cards to show, which is
+  // what gives the deck tile something to look at before a deck exists.
+  function homeCards(items, blanks){
+    var show=(items||[]).slice(0,5), s="", i, c, src;
+    for(i=0;i<show.length;i++){
+      c=show[i] && (show[i].card||show[i]); if(!c) continue;
+      src=""; try{ src=imgSrc(c); }catch(e){}
+      s+= src ? '<span class="sdx-card"><img src="'+esc(src)+'" alt="" loading="lazy" decoding="async"></span>'
+              : '<span class="sdx-card bare"></span>';
+    }
+    if(!s){ var n=+blanks||0; if(n>5) n=5; for(i=0;i<n;i++) s+='<span class="sdx-card bare"></span>'; }
+    if(!s) return "";
+    return '<div class="sdx-band"><div class="sdx-fan" aria-hidden="true">'+s+'</div></div>';
+  }
+  // Every card in a deck, for a deck that needs nothing: it still has cards worth showing.
+  function deckOwnCards(d){
+    var out=[], ids=Object.keys((d&&d.cards)||{}), i, c;
+    for(i=0;i<ids.length;i++){ c=byNumberIdx[ids[i].toUpperCase()]; if(c) out.push(c); }
+    return out;
   }
   function renderHome(){
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
@@ -11897,14 +11942,14 @@ label.acctsetrow { align-items:center; }
     $("homeCollection").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('grid')+'Your collection</div><div class="hcname">'+ownedP+' / '+total+' cards</div></div><div class="hcvalue">'+pct+'%<small>complete</small></div></div>'+homeWeave()+'<div class="hcfoot"><span>'+Object.keys(setProgress().tot).length+' sets tracked</span><button class="homeaction" type="button">View collection</button></div>';
         if(sphere){ $("homeSphere").className="homecard sdx-sphtile"; $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Next Set Sphere</div><div class="hcname">'+esc(sphere.track.name)+'</div><div class="hcvalue">'+sphere.remaining+'<small>'+(sphere.remaining===1?'card':'cards')+' left to earn it</small></div></div>'+homeSphereOrb(sphere.percent, sphere.track)+'</div>'+'<div class="hcfoot"><span>'+esc(sphere.track.sphere.name)+'</span><button class="homeaction" type="button">View rewards</button></div>'; }
     else { $("homeSphere").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('sphere')+'Set Spheres</div><div class="hcname">Available Spheres earned</div></div><div class="hcvalue">100%<small>complete</small></div></div>'+homeTrack(100, true)+'<div class="hcfoot"><span>All Spheres earned</span><button class="homeaction" type="button">View rewards</button></div>'; }
-    if(closest){ $("homeClosest").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('star')+'Closest set goal</div><div class="hcname">'+esc(SETS[closest.set].name)+'</div></div><div class="hcvalue">'+closest.remaining+'<small>'+(closest.remaining===1?'card':'cards')+' left</small></div></div>'+homeSlots(closest.remaining)+'<div class="hcfoot"><span>'+(closestIsSphere?closest.percent+'% · Set Sphere reward':'No Set Sphere reward')+'</span><button class="homeaction" type="button">View missing</button></div>'; }
+    if(closest){ $("homeClosest").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('star')+'Closest set goal</div><div class="hcname">'+esc(SETS[closest.set].name)+'</div></div><div class="hcvalue">'+closest.remaining+'<small>'+(closest.remaining===1?'card':'cards')+' left</small></div></div>'+homeCards(closest.items, closest.remaining)+'<div class="hcfoot"><span>'+(closestIsSphere?closest.percent+'% · Set Sphere reward':'No Set Sphere reward')+'</span><button class="homeaction" type="button">View missing</button></div>'; }
     else { $("homeClosest").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('star')+'Closest completion</div><div class="hcname">Every set complete</div></div><div class="hcvalue">100%<small>complete</small></div></div>'+homeTrack(100, true)+'<div class="hcfoot"><span>All sets complete</span><button class="homeaction" type="button">View PalDex</button></div>'; }
-    if(deck){ $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your deck</div><div class="hcname">'+esc(deck.deck.name)+'</div></div><div class="hcvalue">'+(deck.total?deck.owned+' / '+deck.total+'<small>'+deck.remaining+' left</small>':'0<small>cards</small>')+'</div></div>'+homeTrack(deck.percent, deck.total>0)+'<div class="hcfoot"><span>'+esc(deck.deck.format||'Deck')+' · '+(deck.total?deck.percent+'%':'empty')+'</span><button class="homeaction" type="button">View deck</button></div>'; }
-    else { $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your decks</div><div class="hcname">Build your first deck</div></div><div class="hcvalue">0<small>decks</small></div></div>'+homeTrack(0, false)+'<div class="hcfoot"><span>No decks yet</span><button class="homeaction" type="button">Build a deck</button></div>'; }
+    if(deck){ $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your deck</div><div class="hcname">'+esc(deck.deck.name)+'</div></div><div class="hcvalue">'+(deck.total?deck.owned+' / '+deck.total+'<small>'+deck.remaining+' left</small>':'0<small>cards</small>')+'</div></div>'+homeCards(deck.items.length?deck.items:deckOwnCards(deck.deck), 3)+'<div class="hcfoot"><span>'+esc(deck.deck.format||'Deck')+' · '+(deck.total?deck.percent+'%':'empty')+'</span><button class="homeaction" type="button">View deck</button></div>'; }
+    else { $("homeDeck").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('layers')+'Your decks</div><div class="hcname">Build your first deck</div></div><div class="hcvalue">0<small>decks</small></div></div>'+homeCards([], 3)+'<div class="hcfoot"><span>No decks yet</span><button class="homeaction" type="button">Build a deck</button></div>'; }
     var wishSignals=[]; if(deckWish) wishSignals.push(deckWish+' for your deck'); if(sphereWish) wishSignals.push(sphereWish+' for next Sphere'); if(drops) wishSignals.push(drops+' price drop'+(drops===1?'':'s'));
     var wishPct=pctOf(wishCount()-wish.remaining, wishCount());
 
-    $("homeWishlist").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' card'+(wishCount()===1?'':'s')+'</div></div><div class="hcvalue">'+wish.remaining+'<small>to acquire</small></div></div>'+homeTrack(wishPct, wishCount()>0)+'<div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
+    $("homeWishlist").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' card'+(wishCount()===1?'':'s')+'</div></div><div class="hcvalue">'+wish.remaining+'<small>to acquire</small></div></div>'+homeCards(wish.items.length?wish.items:CARDS.filter(function(c){ return isWished(c.id); }), 0)+'<div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
     var moveText=marketMoveCount?(marketMove>=0?'+':'−')+money(Math.abs(marketMove))+' today':'Awaiting market movement';
     var estimateCount=CARDS.filter(function(c){ return has(o(c.id))&&isConverted(c.id); }).length;
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
@@ -11920,7 +11965,9 @@ label.acctsetrow { align-items:center; }
     var dots=twoFaced ? '<span class="hcfaces">'
         +'<button class="hcface'+(face?'':' on')+'" type="button" data-face="0" aria-label="Show everything you own"></button>'
         +'<button class="hcface'+(face?' on':'')+'" type="button" data-face="1" aria-label="Show the cards on their own"></button></span>' : '';
-    $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">'+esc(faceName)+'</div></div><div class="hcvalue">'+money(shown)+'<small>'+esc(marketDetail+(faceNote?' \u00b7 '+faceNote:''))+'</small></div></div>'+(face?"":homeValueChart())+'<div class="hcfoot"><span>'+esc(moveText)+'</span>'+dots+'<button class="homeaction" type="button">View market</button></div>';
+    $("homeMarket").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('chart')+'Your market</div><div class="hcname">'+esc(faceName)+'</div></div><div class="hcvalue">'+money(shown)+'<small>'+esc(marketDetail+(faceNote?' \u00b7 '+faceNote:''))+'</small></div></div>'+(face?"":homeValueChart())+'<div class="hcfoot"><span>'+esc(moveText)+'</span>'+dots+'<button class="homeaction" type="button">View market</button></div>'
+      + (twoFaced ? '<button class="hcarrow prev" type="button" aria-label="Previous reading">'+icon('chev')+'</button>'
+                  + '<button class="hcarrow next" type="button" aria-label="Next reading">'+icon('chev')+'</button>' : '');
     $("homeCollection").onclick=openAllCards; $("homeCollection").style.cursor="pointer"; $("homeCollection").querySelector("button").onclick=function(e){ e.stopPropagation(); openAllCards(); };
     $("homeSphere").onclick=function(){ showPage("rewards"); }; $("homeSphere").style.cursor="pointer"; (function(){ var b=$("homeSphere").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); showPage("rewards"); }; })();
     $("homeClosest").onclick=function(){ if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; $("homeClosest").style.cursor="pointer"; (function(){ var b=$("homeClosest").querySelector("button"); if(b) b.onclick=function(e){ e.stopPropagation(); if(closest){ missingGoal="set"; showPage("missing"); } else showPage("paldex"); }; })();
@@ -11930,6 +11977,10 @@ label.acctsetrow { align-items:center; }
       var el=$("homeMarket"), x0=0, y0=0, swiped=false;
       Array.prototype.forEach.call(el.querySelectorAll(".hcface"), function(b){
         b.onclick=function(e){ e.stopPropagation(); setMktFace(+b.getAttribute("data-face")); };
+      });
+      // Only two readings, so either arrow is just "the other one".
+      Array.prototype.forEach.call(el.querySelectorAll(".hcarrow"), function(b){
+        b.onclick=function(e){ e.stopPropagation(); setMktFace(_mktFace ? 0 : 1); };
       });
       // A swipe on a tile that is also a link has to cancel the link, or every swipe opens the Market page.
       el.addEventListener("touchstart", function(e){
@@ -11944,7 +11995,10 @@ label.acctsetrow { align-items:center; }
       }, {passive:true});
       el.onclick=function(){ if(swiped){ swiped=false; return; } showPage("portfolio"); };
       el.style.cursor="pointer";
-    })(); $("homeMarket").querySelector("button").onclick=function(e){ e.stopPropagation(); showPage("portfolio"); };
+      // By class, not by tag: this tile holds the face dots and the two arrows as well, so picking
+      // the first button by tag picks a DOT and hands it the open Market handler.
+      el.querySelector(".homeaction").onclick=function(e){ e.stopPropagation(); showPage("portfolio"); };
+    })();
     renderFeatured();
     checkRewards();
     renderRewards();

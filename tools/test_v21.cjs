@@ -455,19 +455,30 @@ test('home bars only measure a goal that has a total', () => {
   assert.match(box.homeTrack(-5, true), /width:0%/);
   // Three tiles traded their bar for the object they are about: the collection weave, the Set Sphere
   // ring and the holes still to fill. The bar stays where a bar is still the honest shape.
-  assert.match(source, /homeTrack\(deck\.percent, deck\.total>0\)/);
+  assert.match(source, /homeCards\(deck\.items\.length\?deck\.items:deckOwnCards\(deck\.deck\), 3\)/, 'the deck tile draws its deck');
   assert.match(source, /\+homeWeave\(\)\+/, 'the collection tile draws its catalogue');
   assert.match(source, /homeSphereOrb\(sphere\.percent, sphere\.track\)/, 'the Sphere tile draws its sphere');
-  assert.match(source, /homeSlots\(closest\.remaining\)/, 'the closest set draws its gaps');
+  assert.match(source, /homeCards\(closest\.items, closest\.remaining\)/, 'the closest set draws the cards it is missing');
   assert.match(source, /\(face\?"":homeValueChart\(\)\)/, 'and the market draws its own line, on the face that owns it');
   assert.doesNotMatch(source, /homeTrack\(pct, total>0\)/);
   assert.doesNotMatch(source, /homeTrack\(sphere\.percent/);
   assert.doesNotMatch(source, /homeTrack\(closest\.percent/);
-  assert.match(source, /homeTrack\(0, false\)/);
-  assert.match(source, /homeTrack\(wishPct, wishCount\(\)>0\)/);
+  assert.match(source, /homeCards\(\[\], 3\)/, 'a collection with no deck still has something to look at');
+  assert.match(source, /homeCards\(wish\.items\.length\?wish\.items:/, 'the wishlist draws the cards on it');
+  // homeTrack is not retired, it is just down to the one place a bar is still the honest shape.
+  assert.match(source, /homeTrack\(100, true\)/, 'a finished collection still fills a bar');
+  assert.doesNotMatch(source, /homeSlots/, 'the dashed holes gave way to the cards themselves');
   const market = source.slice(source.indexOf('$("homeMarket").innerHTML'), source.indexOf('$("homeCollection").onclick'));
   assert.equal(market.includes('hctrack'), false);
   assert.equal(market.includes('pricedPct'), false);
+  // The market tile is the only one with more than one button: two face dots, two arrows and the
+  // action. Picking by tag hands the first DOT the open Market handler, so the dot that should
+  // switch the reading navigates away instead. Every other tile may pick by tag; this one may not.
+  const wiring = source.slice(source.indexOf('var el=$("homeMarket")'), source.indexOf('renderFeatured();'));
+  assert.doesNotMatch(wiring, /querySelector\("button"\)/, 'the market tile picks its action by class');
+  assert.match(wiring, /querySelector\("\.homeaction"\)/);
+  assert.match(wiring, /querySelectorAll\("\.hcface"\)/, 'and the dots keep their own handler');
+  assert.match(wiring, /querySelectorAll\("\.hcarrow"\)/, 'and so do the arrows');
 });
 
 function binom(n, k) {
@@ -1331,7 +1342,9 @@ test('the Home tiles draw their own object, and draw nothing when there is nothi
   box.has = (e) => !!e && e.qty > 0;
   box.o = (id) => (id === 'A1' || id === 'B1' ? { qty: 1 } : {});
   box.Math = Math;
-  vm.runInContext(['homeWeave', 'homeSlots', 'homeValueChart'].map(appFunction).join('\n') + '\nvar WEAVE_CLASS={ Red:"r", Blue:"b", Green:"g", Purple:"p", Colorless:"n" };', box);
+  box.esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  box.imgSrc = (c) => (c.pic === false ? '' : 'img/' + c.id + '.jpg');
+  vm.runInContext(['homeWeave', 'homeCards', 'homeValueChart'].map(appFunction).join('\n') + '\nvar WEAVE_CLASS={ Red:"r", Blue:"b", Green:"g", Purple:"p", Colorless:"n" };', box);
 
   // The weave: one cell per card, one block per set, lit for what is owned, and a colour the app does
   // not know falls back to colourless rather than drawing nothing.
@@ -1343,12 +1356,30 @@ test('the Home tiles draw their own object, and draw nothing when there is nothi
   box.CARDS = [];
   assert.equal(box.homeWeave(), '', 'and an empty catalogue draws nothing at all');
 
-  // The holes: one per card still missing, capped at what the tile holds.
-  assert.equal((box.homeSlots(3).match(/class="sdx-slot"/g) || []).length, 3);
-  assert.equal((box.homeSlots(7).match(/class="sdx-slot"/g) || []).length, 7);
-  assert.equal((box.homeSlots(89).match(/class="sdx-slot"/g) || []).length, 7, 'capped, never a wall of holes');
-  assert.equal(box.homeSlots(0), '', 'a finished set has no holes');
-  assert.equal(box.homeSlots(-2), '');
+  // The cards: the tile shows the ones it is actually about, five at most, because past that they
+  // stop being cards and become a texture.
+  const cards = (n) => Array.from({ length: n }, (_, i) => ({ card: { id: 'C' + i } }));
+  const fan = box.homeCards(cards(3), 0);
+  assert.equal((fan.match(/class="sdx-card"/g) || []).length, 3, 'one card each');
+  assert.equal((fan.match(/<img /g) || []).length, 3, 'drawn with their own picture');
+  assert.match(fan, /src="img\/C0\.jpg"/, 'and it is that card\u2019s picture');
+  assert.equal((box.homeCards(cards(5), 0).match(/class="sdx-card"/g) || []).length, 5);
+  assert.equal((box.homeCards(cards(89), 0).match(/class="sdx-card"/g) || []).length, 5, 'capped, never a wall');
+
+  // A bare card is the fallback, not the normal case: a card whose picture is missing keeps the shape.
+  const noPic = box.homeCards([{ card: { id: 'X', pic: false } }], 0);
+  assert.match(noPic, /class="sdx-card bare"/, 'a card with no picture still holds its place');
+  assert.doesNotMatch(noPic, /<img /);
+
+  // Plain cards work as well as {card} rows, because the wishlist passes them straight through.
+  assert.equal((box.homeCards([{ id: 'W1' }, { id: 'W2' }], 0).match(/class="sdx-card"/g) || []).length, 2);
+
+  // Nothing to show: the blank count is what gives the deck tile something before a deck exists.
+  assert.equal(box.homeCards([], 0), '', 'no cards and no blanks asked for draws nothing');
+  assert.equal((box.homeCards([], 3).match(/class="sdx-card bare"/g) || []).length, 3, 'the empty deck tile');
+  assert.equal((box.homeCards([], 89).match(/class="sdx-card bare"/g) || []).length, 5, 'blanks are capped too');
+  assert.equal(box.homeCards(null, 0), '', 'and a tile with no list at all is not an error');
+  assert.equal(box.homeCards([null, undefined], 0), '', 'nor is a list of nothing');
 
   // The value line: one reading is not a line.
   box.activeCol = () => ({ hist: { '2026-10-18': { v: 10, vLive: 10 } } });
