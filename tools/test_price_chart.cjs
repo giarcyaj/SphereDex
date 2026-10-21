@@ -38,7 +38,7 @@ const sandbox = {
   // The chart names where a card's prices came from, so the sandbox needs the same lookups the app has.
   PRICESRC: { 'EBP01-002': 'ebay-active' },
   PRICESRC_SOLD: { 'EBP01-002': 'openwebninja' },
-  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
+  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' || v === 'cardtrader' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
   isConverted: () => false,
 };
 vm.createContext(sandbox);
@@ -49,7 +49,7 @@ function appConstant(name) {
 }
 vm.runInContext(appConstant('PX_SRC_NAME'), sandbox);
 vm.runInContext(
-  ['fmtFull', 'pxDayNum', 'pxTickLabel', 'pxSeriesPath', 'pxSinceLabel', 'pxSourceLine', 'trendSparkHtml',
+  ['fmtFull', 'pxDayNum', 'pxTickLabel', 'pxSeriesPath', 'pxSinceLabel', 'linkPriceSources', 'pxSourceLine', 'trendSparkHtml',
     'priceTrendHtml', 'fullPriceChartHtml']
     .map(appFunction).join('\n'),
   sandbox
@@ -201,9 +201,17 @@ test('the chart names where these particular prices came from', () => {
   sandbox.PRICESRC_SOLD['EBP01-003'] = 'openwebninja';
   assert.equal(sandbox.pxSourceLine('EBP01-003'),
     'Live listings from TCGplayer. Last sold from eBay.', 'two different sources are both named');
+  sandbox.PRICESRC['EBP01-004'] = 'cardtrader';
+  assert.equal(sandbox.pxSourceLine('EBP01-004'),
+    'Live listings from CardTrader (EU asking prices).', 'the cardtrader tag keeps its own label');
   assert.equal(sandbox.pxSourceLine('NOT-A-CARD'), '', 'a card with no known source claims nothing');
   sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([['2026-09-24', 2], ['2026-10-07', 3]]) : []);
   assert.match(sandbox.fullPriceChartHtml('EBP01-002'), /class="pxsrc"/);
+  const eu = sandbox.fullPriceChartHtml('EBP01-004');
+  assert.match(eu, /href="https:\/\/www\.cardtrader\.com"/, 'a CardTrader figure links back to CardTrader');
+  sandbox.PRICESRC['EBP01-005'] = 'palworld';
+  assert.match(sandbox.fullPriceChartHtml('EBP01-005'), /href="https:\/\/palworldprices\.com"/,
+    'a Palworld Prices figure links back to palworldprices.com');
 });
 
 // ---- where the credits live -----------------------------------------------------------------------------
@@ -245,6 +253,16 @@ test('every source with a licence obligation is named on the licences page', () 
   assert.match(page, /OFL-baloo2\.txt/);
   assert.match(page, /exchangerate-api\.com/, 'Exchange Rate API is linked, not only named');
   assert.match(page, /palworldprices\.com/, 'Palworld Prices gets its required link back');
+  assert.match(page, /https:\/\/www\.cardtrader\.com/, 'CardTrader is credited with a link');
+  assert.ok(page.includes('EU asking prices'), 'CardTrader is described as EU asking prices');
+});
+
+test('Palworld Prices keeps a link back on the public pages that name it', () => {
+  const home = fs.readFileSync(path.join(root, 'docs', 'index.html'), 'utf8');
+  const privacy = fs.readFileSync(path.join(root, 'docs', 'privacy.html'), 'utf8');
+  assert.match(home, /href="https:\/\/palworldprices\.com"/);
+  assert.match(privacy, /href="https:\/\/palworldprices\.com"/);
+  assert.match(source, /href="https:\/\/palworldprices\.com"/, 'the in app source list links back too');
 });
 
 test('there is a close X as well as the Done button', () => {
