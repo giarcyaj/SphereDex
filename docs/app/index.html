@@ -4108,7 +4108,8 @@ label.acctsetrow { align-items:center; }
   // as though somebody had really sold a card for that.
   var PRICEMETA_SOLD={};
   // id -> where each book price came from, as the server reports it ("openwebninja"/"ebay" sold, "ebay-active",
-  // "tcgplayer", "palworld"), so Settings can say what the numbers on screen are made of.
+  // "tcgplayer", "palworld", or "fallback-fx:<market>" for a live price copied from another marketplace),
+  // so Settings can say what the numbers on screen are made of.
   var PRICESRC={}, PRICESRC_SOLD={};
   var PRICEASOF=0;    // ms timestamp the SERVER last refreshed the price book (its daily 1am cron), 0 if unknown
   var LIVE_ASOF=0, SOLD_ASOF=0;  // per-mode server refresh times (live = daily, sold = weekly) so the label names the right one
@@ -4183,8 +4184,19 @@ label.acctsetrow { align-items:center; }
   function implausiblePull(id, e){
     if(!(+e.pAt>0)) return false;
     return saneSold(id, Math.max(+e.sold||0, +e.mkt||0, +e.list||0), null)==null; }
-  // Server source name -> the kind of figure it is. "" when the book predates source tracking.
-  function srcKind(s){ return s==="tcgplayer"||s==="palworld" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
+  // A live price copied from another marketplace. The suffix is that marketplace ("de", "com", "co.uk").
+  function isFallbackSrc(s){ return typeof s==="string" && s.indexOf("fallback-fx:")===0; }
+  // Server source name -> the kind of figure it is. "" when the book predates source tracking, or the name
+  // is one this build does not recognise. Sold names are listed on purpose. A catch-all used to call every
+  // other string sold, which labelled a cross-market live estimate as a sale and would do the same to any
+  // future source.
+  function srcKind(s){
+    if(s==="tcgplayer"||s==="palworld") return s;
+    if(s==="ebay-active") return "list";
+    if(isFallbackSrc(s)) return "estimate";
+    if(s==="ebay"||s==="openwebninja") return "sold";
+    return "";
+  }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
   function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
@@ -7060,8 +7072,8 @@ label.acctsetrow { align-items:center; }
       var why={}; if(!unitOfEntry(c.id, null, e, why) || !why.k) return;
       n[why.k]=(n[why.k]||0)+1; total++; });
     if(total){
-      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
-      h+='<br>Your cards: '+["sold","list","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
+      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", estimate:"estimated live", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
+      h+='<br>Your cards: '+["sold","list","estimate","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
         .map(function(k){ return n[k]+' '+SRC_LABEL[k]; }).join(' · ')+'.';
     }
     return h+'</div>';
@@ -8138,9 +8150,22 @@ label.acctsetrow { align-items:center; }
       return;
     }
     var behind=n? (" · "+n+" card"+(n===1?"":"s")+" older than 2 days") : "";
-    el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind)
+    // The same "N estimated" the last sold line adds. The server's liveCoverage.filled is the count of
+    // cross-market copies; the rows already in the book are that count when an older reply has no field.
+    // Zero either way until those rows exist, so this line is unchanged on an older backend.
+    var filled=liveEstimateCount();
+    el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind
+                          + (filled? (" · "+filled+" estimated"):""))
                           : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)+behind)
                                        : "Prices not loaded yet"); }
+  function liveEstimateCount(){
+    if(LIVE_COV && LIVE_COV.filled!=null) return +LIVE_COV.filled||0;
+    var n=0, id;
+    for(id in PRICESRC){
+      if(Object.prototype.hasOwnProperty.call(PRICESRC,id) && srcKind(PRICESRC[id])==="estimate") n++;
+    }
+    return n;
+  }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
   //   both=false (default, used by the quick on-open refresh): one value via the ladder
@@ -8480,18 +8505,44 @@ label.acctsetrow { align-items:center; }
   // Provider names only. The series are already named by the key above, so repeating "live listings from
   // eBay live listings" would just read badly.
   var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", palworld:"Palworld Prices" };
+  // The marketplace a fallback-fx row was copied from. "" when this source is not one of those rows.
+  function pxFallbackSite(s){
+    if(!isFallbackSrc(s)) return "";
+    var reg=s.slice(12);
+    var site={com:"eBay.com","co.uk":"eBay.co.uk",de:"eBay.de","com.au":"eBay.com.au",ca:"eBay.ca",fr:"eBay.fr",it:"eBay.it",es:"eBay.es"};
+    return (reg && site[reg]) || "another eBay market";
+  }
+  // True only when the copy actually changed currency. A euro market filled from another euro market
+  // is the same money, so Exchange Rate API is not credited for it.
+  function pxFallbackFx(s){
+    if(!isFallbackSrc(s)) return false;
+    var from=REGION_CUR[s.slice(12)], view=REGION_CUR[ebayReg()];
+    return !!(from && view && from!==view);
+  }
   function pxSourceLine(id){
-    var live=PX_SRC_NAME[srcKind(PRICESRC[id])]||"", sold=PX_SRC_NAME[srcKind(PRICESRC_SOLD[id])]||"";
+    var liveSrc=PRICESRC[id]||"", soldSrc=PRICESRC_SOLD[id]||"";
+    var liveFb=pxFallbackSite(liveSrc), soldFb=pxFallbackSite(soldSrc);
+    var live=liveFb?"":(PX_SRC_NAME[srcKind(liveSrc)]||""), sold=soldFb?"":(PX_SRC_NAME[srcKind(soldSrc)]||"");
     var text="";
     if(live && sold && live===sold) text="Live listings and last sold from "+live+".";
     else {
       var bits=[];
       if(live) bits.push("Live listings from "+live);
       if(sold) bits.push("Last sold from "+sold);
-      if(!bits.length) return "";
-      text=bits.join(". ")+".";
+      if(bits.length) text=bits.join(". ")+".";
     }
-    if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
+    // A converted Palworld or TCGplayer figure is still a US dollar baseline. A fallback row is not:
+    // it names the marketplace it was copied from, and credits the rate provider only when the
+    // currencies differed. No named source and no fallback still claims nothing, same as before.
+    if(text && ((isConverted(id,"live") && !isFallbackSrc(liveSrc)) || (isConverted(id,"sold") && !isFallbackSrc(soldSrc))))
+      text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
+    var sites=[];
+    if(liveFb) sites.push(liveFb);
+    if(soldFb && sites.indexOf(soldFb)<0) sites.push(soldFb);
+    if(sites.length){
+      var fx=pxFallbackFx(liveSrc)||pxFallbackFx(soldSrc);
+      text+=(text?" ":"")+"Some figures are an estimate from "+sites.join(" and ")+(fx?", rates by Exchange Rate API.":".");
+    }
     return text;
   }
   // Colours follow the app's one rule for prices: live listings are --up (green), last sold is --azure
