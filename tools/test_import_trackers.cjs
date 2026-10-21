@@ -188,7 +188,7 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
   const res = A.parseCsvCollection(csv([
     'Number,Qty',
     'BP01-045,1',
-    'BP02-001,1',
+    'BP02-005,1',
     'BP03-001,2',
     'SOUL-010,1',
     'Lamball,1',
@@ -197,7 +197,7 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
   ]));
   assert.deepEqual(Object.keys(res.own), ['EBP01-045']);
   assert.deepEqual(plain(res.unmatched), [
-    { row: 3, raw: 'BP02-001', reason: 'Not in SphereDex yet' },
+    { row: 3, raw: 'BP02-005', reason: 'Not in SphereDex yet' },
     { row: 4, raw: 'BP03-001', reason: 'Not in SphereDex yet' },
     { row: 5, raw: 'SOUL-010', reason: 'Not in SphereDex yet' },
     { row: 6, raw: 'Lamball', reason: 'Not a card number' },
@@ -205,6 +205,24 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
     { row: 8, raw: 'BP01-046', reason: 'Quantity “lots” not readable' }
   ]);
   assert.equal(res.skipped, 6);
+});
+
+test('Legends Awaken numbers import, parallels included', () => {
+  // BP02-001 used to be this suite's example of a card SphereDex did not carry. The revealed
+  // Legends Awaken cards are in the catalogue now, including the parallel printings.
+  const res = A.parseCsvCollection(csv([
+    'Number,Qty',
+    'BP02-001,1',
+    'BP02-001-SSP,1',
+    'EBP02-002SP,2',
+    'BP02-100,1',
+    'BP02-005,1'
+  ]));
+  assert.deepEqual(Object.keys(res.own).sort(), ['EBP02-001', 'EBP02-001SSP', 'EBP02-002SP', 'EBP02-100']);
+  assert.equal(res.own['EBP02-002SP'].qty, 2);
+  assert.deepEqual(plain(res.unmatched), [
+    { row: 6, raw: 'BP02-005', reason: 'Not in SphereDex yet' }
+  ]);
 });
 
 test('Sleeve & Card Set numbers import, parallel rares included', () => {
@@ -248,10 +266,10 @@ test('header synonyms, delimiters, a BOM and quoted fields', () => {
   assert.equal(check.zero, 2);
   assert.deepEqual(plain(check.unmatched), []);
   // A header the reader does not know still falls back to the tolerant line reader.
-  const loose = A.parseCsvCollection('BP01-045 2\nbp01-045,x3\nBP02-001 1\nhello\n');
+  const loose = A.parseCsvCollection('BP01-045 2\nbp01-045,x3\nBP02-005 1\nhello\n');
   assert.equal(loose.own['EBP01-045'].qty, 5);
   assert.deepEqual(plain(loose.unmatched), [
-    { row: 3, raw: 'BP02-001', reason: 'Not in SphereDex yet' },
+    { row: 3, raw: 'BP02-005', reason: 'Not in SphereDex yet' },
     { row: 4, raw: 'hello', reason: 'No card number found' }
   ]);
   const semicolonsWin = A.parseCsvCollection('Number;Quantity;Notes, more\nBP01-001;3;a, b\n');
@@ -321,7 +339,7 @@ test('the preview lists what will be added, in catalogue order, before anything 
     'BP01-001,1,,,,',
     'BP01-001-OSR,1,,Graded,PSA,10',
     'BOX1,1,,Sealed,,',
-    'BP02-001,1,,,,'
+    'BP02-005,1,,,,'
   ]));
   assert.deepEqual(plain(A.importPreview(res)), [
     { id: 'EBP01-001', name: A.byNumberIdx['EBP01-001'].name, qty: 2, what: 'Japanese' },
@@ -349,7 +367,7 @@ test('the closing toast uses the preview wording and counts each left out row on
     'BP01-001,10',
     'BP01-002,6',
     'BP01-003,0',
-    'BP02-001,1',
+    'BP02-005,1',
     'Lamball,1'
   ]));
   assert.equal(res.cards, 16);
