@@ -38,8 +38,9 @@ const sandbox = {
   // The chart names where a card's prices came from, so the sandbox needs the same lookups the app has.
   PRICESRC: { 'EBP01-002': 'ebay-active' },
   PRICESRC_SOLD: { 'EBP01-002': 'openwebninja' },
-  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
   isConverted: () => false,
+  // Viewer market for a fallback row. Tests that care switch this.
+  ebayReg: () => 'de',
 };
 vm.createContext(sandbox);
 function appConstant(name) {
@@ -48,9 +49,10 @@ function appConstant(name) {
   return match[0];
 }
 vm.runInContext(appConstant('PX_SRC_NAME'), sandbox);
+vm.runInContext(appConstant('REGION_CUR'), sandbox);
 vm.runInContext(
-  ['fmtFull', 'pxDayNum', 'pxTickLabel', 'pxSeriesPath', 'pxSinceLabel', 'pxSourceLine', 'trendSparkHtml',
-    'priceTrendHtml', 'fullPriceChartHtml']
+  ['isFallbackSrc', 'srcKind', 'pxFallbackSite', 'pxFallbackFx', 'fmtFull', 'pxDayNum', 'pxTickLabel',
+    'pxSeriesPath', 'pxSinceLabel', 'pxSourceLine', 'trendSparkHtml', 'priceTrendHtml', 'fullPriceChartHtml']
     .map(appFunction).join('\n'),
   sandbox
 );
@@ -204,6 +206,163 @@ test('the chart names where these particular prices came from', () => {
   assert.equal(sandbox.pxSourceLine('NOT-A-CARD'), '', 'a card with no known source claims nothing');
   sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([['2026-09-24', 2], ['2026-10-07', 3]]) : []);
   assert.match(sandbox.fullPriceChartHtml('EBP01-002'), /class="pxsrc"/);
+});
+
+test('a converted Palworld or TCGplayer figure still says it came from US dollars', () => {
+  sandbox.PRICESRC['EBP01-004'] = 'palworld';
+  sandbox.PRICESRC_SOLD['EBP01-004'] = 'openwebninja';
+  sandbox.isConverted = (id, mode) => mode === 'live';
+  assert.equal(sandbox.pxSourceLine('EBP01-004'),
+    'Live listings from Palworld Prices. Last sold from eBay. Some figures are converted from US dollars, rates by Exchange Rate API.');
+  sandbox.isConverted = () => false;
+});
+
+test('a cross-market live copy names that marketplace, and credits a rate only when the currency changed', () => {
+  // France and Germany are both euro, so this copy is not an exchange-rate conversion.
+  sandbox.ebayReg = () => 'fr';
+  sandbox.PRICESRC['EBP01-005'] = 'fallback-fx:de';
+  sandbox.PRICESRC_SOLD['EBP01-005'] = 'openwebninja';
+  sandbox.isConverted = (id, mode) => mode === 'live';
+  const same = sandbox.pxSourceLine('EBP01-005');
+  assert.equal(same, 'Last sold from eBay. Some figures are an estimate from eBay.de.');
+  assert.equal(same.includes('US dollars'), false);
+  assert.equal(same.includes('Exchange Rate API'), false);
+  assert.equal(/[-–—]/.test(same), false, same);
+
+  // Sterling against a euro listing did go through Exchange Rate API.
+  sandbox.ebayReg = () => 'co.uk';
+  const cross = sandbox.pxSourceLine('EBP01-005');
+  assert.equal(cross, 'Last sold from eBay. Some figures are an estimate from eBay.de, rates by Exchange Rate API.');
+  assert.equal(cross.includes('US dollars'), false);
+
+  sandbox.ebayReg = () => 'de';
+  sandbox.PRICESRC['EBP01-006'] = 'fallback-fx:com';
+  sandbox.PRICESRC_SOLD['EBP01-006'] = '';
+  assert.equal(sandbox.pxSourceLine('EBP01-006'),
+    'Some figures are an estimate from eBay.com, rates by Exchange Rate API.');
+  // Australia filled from Australia is the same dollar, so the rate provider stays off the line.
+  sandbox.ebayReg = () => 'com.au';
+  sandbox.PRICESRC['EBP01-007'] = 'fallback-fx:com.au';
+  sandbox.PRICESRC_SOLD['EBP01-007'] = 'fallback-fx:com.au';
+  assert.equal(sandbox.pxSourceLine('EBP01-007'),
+    'Some figures are an estimate from eBay.com.au.');
+  sandbox.ebayReg = () => 'de';
+  sandbox.PRICESRC['EBP01-008'] = 'fallback-fx:co.uk';
+  sandbox.PRICESRC_SOLD['EBP01-008'] = 'fallback-fx:fr';
+  assert.equal(sandbox.pxSourceLine('EBP01-008'),
+    'Some figures are an estimate from eBay.co.uk and eBay.fr, rates by Exchange Rate API.');
+  sandbox.ebayReg = () => 'com';
+  for (const [reg, host] of [['ca', 'eBay.ca'], ['it', 'eBay.it'], ['es', 'eBay.es']]) {
+    sandbox.PRICESRC['EBP01-009'] = 'fallback-fx:' + reg;
+    sandbox.PRICESRC_SOLD['EBP01-009'] = '';
+    assert.equal(sandbox.pxSourceLine('EBP01-009'),
+      'Some figures are an estimate from ' + host + ', rates by Exchange Rate API.');
+  }
+  sandbox.PRICESRC['EBP01-010'] = 'fallback-fx:zz';
+  sandbox.PRICESRC_SOLD['EBP01-010'] = '';
+  const unknown = sandbox.pxSourceLine('EBP01-010');
+  assert.equal(unknown, 'Some figures are an estimate from another eBay market.');
+  assert.equal(unknown.includes('US dollars'), false);
+  assert.equal(unknown.includes('Exchange Rate API'), false);
+  sandbox.isConverted = () => false;
+  sandbox.ebayReg = () => 'de';
+});
+
+test('source kinds name a live estimate explicitly and do not call an unknown source sold', () => {
+  assert.equal(sandbox.srcKind('ebay-active'), 'list');
+  assert.equal(sandbox.srcKind('tcgplayer'), 'tcgplayer');
+  assert.equal(sandbox.srcKind('palworld'), 'palworld');
+  assert.equal(sandbox.srcKind('ebay'), 'sold');
+  assert.equal(sandbox.srcKind('openwebninja'), 'sold');
+  assert.equal(sandbox.srcKind(''), '');
+  assert.equal(sandbox.srcKind('fallback-fx:de'), 'estimate');
+  assert.equal(sandbox.srcKind('fallback-fx:co.uk'), 'estimate');
+  assert.equal(sandbox.srcKind('future-feed'), '', 'an unknown source is not sold');
+});
+
+test('Your cards counts a cross-market copy as estimated live, and leaves today unchanged without one', () => {
+  const sb = vm.createContext({
+    ebayReg: () => 'de',
+    priceMode: () => 'live',
+    CUR: { code: 'EUR' },
+    SETTINGS: { fallbackUS: false },
+    document: { querySelector: () => ({ textContent: 'Germany (ebay.de)' }) },
+    esc: (v) => String(v == null ? '' : v),
+    CARDS: [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }, { id: 'E' }],
+    own: { A: { qty: 1 }, B: { qty: 1 }, C: { qty: 1 }, D: { qty: 1 }, E: { qty: 0 } },
+    PRICEBOOK: { A: 2, B: 3, C: 4, D: 5, E: 6 },
+    PRICESRC: { A: 'ebay-active', B: 'openwebninja', C: 'ebay-active', D: 'future-feed', E: 'fallback-fx:de' },
+    PRICEBOOK_SOLD: {},
+    PRICESRC_SOLD: {},
+  });
+  vm.runInContext(['isFallbackSrc', 'srcKind', 'unitOfEntry', 'priceSourcesHtml'].map(appFunction).join('\n'), sb);
+  const before = sb.priceSourcesHtml();
+  const yours = /Your cards: ([^<]+)/.exec(before);
+  assert.ok(yours, before);
+  assert.equal(yours[1], '1 eBay sold · 2 eBay listings.');
+  assert.equal(yours[1].includes('estimated'), false, 'no fallback row, so the line is unchanged');
+
+  sb.PRICESRC.C = 'fallback-fx:fr';
+  const after = /Your cards: ([^<]+)/.exec(sb.priceSourcesHtml());
+  assert.equal(after[1], '1 eBay sold · 1 eBay listings · 1 estimated live.');
+  assert.equal(/[-–—]/.test(after[1]), false, after[1]);
+  assert.equal(after[1].includes('future'), false);
+});
+
+test('the live refresh line adds N estimated the way last sold does', () => {
+  const el = { textContent: '' };
+  const sb = vm.createContext({
+    $: (id) => (id === 'lastRefreshLbl' ? el : null),
+    priceMode: () => 'live',
+    relTime: () => '3h ago',
+    LIVE_ASOF: 1,
+    SOLD_ASOF: 0,
+    PRICEASOF: 0,
+    LIVE_COV: null,
+    SOLD_COV: null,
+    PRICESRC: {},
+  });
+  vm.runInContext(['isFallbackSrc', 'srcKind', 'liveEstimateCount', 'updateRefreshLabel'].map(appFunction).join('\n'), sb);
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago');
+
+  sb.LIVE_COV = { stale: 2 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago · 2 cards older than 2 days');
+
+  sb.LIVE_COV = { stale: 2, filled: 4 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago · 2 cards older than 2 days · 4 estimated');
+
+  sb.LIVE_COV = { stale: 1, filled: 1 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago · 1 card older than 2 days · 1 estimated');
+  assert.equal(/[-–—]/.test(el.textContent), false);
+
+  // An older reply has no filled field. The fallback rows in the book are the same count.
+  sb.LIVE_COV = { stale: 0 };
+  sb.PRICESRC = { a: 'ebay-active', b: 'fallback-fx:de', c: 'fallback-fx:com', d: 'palworld' };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago · 2 estimated');
+
+  // A server that says zero wins, so a filled field of 0 does not invent a count.
+  sb.LIVE_COV = { stale: 0, filled: 0 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Live listings updated 3h ago');
+
+  // No live timestamp yet: the generic line stays as it is, even when a count exists.
+  sb.LIVE_ASOF = 0;
+  sb.PRICEASOF = 1;
+  sb.LIVE_COV = { stale: 2, filled: 4 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Prices updated 3h ago · 2 cards older than 2 days');
+
+  sb.priceMode = () => 'sold';
+  sb.SOLD_ASOF = 1;
+  sb.SOLD_COV = { real: 10, filled: 3, stale: 0 };
+  sb.LIVE_COV = { filled: 9 };
+  sb.updateRefreshLabel();
+  assert.equal(el.textContent, 'Last sold updated 3h ago · 3 estimated');
 });
 
 // ---- where the credits live -----------------------------------------------------------------------------
