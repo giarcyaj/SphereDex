@@ -239,6 +239,7 @@ function pureSandbox(extra) {
   vm.runInContext(['plainObj', 'hasOwn', 'has', 'alertAt', 'alertEntOk', 'canonEnt', 'alertWins', 'mergeAlertMap', 'mergeAlerts',
     'canonAlerts', 'sameAlerts', 'alertGC', 'alertStamp', 'paKey', 'stockOnList', 'priceOnList', 'normPriceAlert',
     'rawCount', 'rawEditionKey', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'copyNoteClean', 'mergeRawCounts', 'cloneSlab',
+    'tradeQty', 'tradeMap', 'tradeDraftNorm', 'tradeLinesNorm', 'tradeRecordNorm', 'tradeNewer', 'normTrades', 'mergeTradeLists',
     'slabSig', 'mergeEntry', 'mergeCol', 'normTop', 'localOk', 'colHasCards', 'colHolds', 'mergeStates'].map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -348,6 +349,28 @@ test('mergeStates on a first join drops an empty placeholder and keeps the accou
   assert.deepEqual(Array.from(sb.mergeStates(guest, acct, { firstJoin: true }).cols, (c) => c.id).sort(), ['cA', 'cH']);
   assert.deepEqual(Array.from(sb.mergeStates(guest, acct).cols, (c) => c.id), ['cG', 'cH', 'cA']);
   assert.equal(sb.mergeStates(guest, acct).active, 'cG');
+});
+
+test('trades union by id and a draft on this device wins', () => {
+  const sb = pureSandbox();
+  const local = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1',
+    trades: [{ id: 't1', at: 10, give: [{ id: 'EBP01-001', qty: 1, unit: 2 }], get: [{ id: 'EBP01-002', qty: 1, unit: 3 }] }],
+    tradeDraft: { give: { 'EBP01-001': 1 }, get: {}, note: 'mine', ownedOnly: true } };
+  const remote = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1',
+    trades: [
+      { id: 't1', at: 10, give: [{ id: 'EBP01-009', qty: 4, unit: 9 }], get: [] },
+      { id: 't2', at: 20, give: [], get: [{ id: 'EBP01-003', qty: 1, unit: null }] }
+    ],
+    tradeDraft: { give: {}, get: { 'EBP01-003': 2 }, note: 'theirs', ownedOnly: false } };
+  const m = sb.mergeStates(local, remote);
+  assert.deepEqual(Array.from(m.trades, (t) => t.id), ['t2', 't1']);
+  assert.equal(Array.from(m.trades).filter((t) => t.id === 't1')[0].give[0].id, 'EBP01-001');
+  assert.equal(m.tradeDraft.note, 'mine');
+  const guest = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1', tradeDraft: { give: {}, get: {}, note: '', ownedOnly: true } };
+  const cloud = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1', tradeDraft: { give: { 'EBP01-001': 2 }, get: {}, note: 'desk', ownedOnly: true } };
+  assert.equal(sb.mergeStates(guest, cloud).tradeDraft.note, 'desk');
+  const fresh = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1' };
+  assert.equal(sb.mergeStates(fresh, { cols: fresh.cols, active: 'c1' }).trades, undefined);
 });
 
 function acctSandbox(settings, base, owner) {
@@ -481,6 +504,7 @@ class FakeServer {
 }
 
 const REAL = ['plainObj', 'hasOwn', 'has', 'lsGet', 'lsSet', 'activeCol', 'cleanCols', 'normTop', 'isEmptyOwn', 'stateReplacer', 'stateJSON',
+  'tradeQty', 'tradeMap', 'tradeDraftNorm', 'tradeLinesNorm', 'tradeRecordNorm', 'tradeNewer', 'normTrades', 'mergeTradeLists',
   'save', 'entCount', 'baseCol', 'addBaseline', 'stampAdds', 'rawCount', 'rawEditionKey', 'rawCounts', 'rawKnownTotal', 'setRawCounts',
   'copyNoteClean', 'mergeRawCounts', 'cloneSlab', 'cardMap', 'sealedMap', 'saveSettings', 'nativePushIface', 'syncPushPrefs',
   'stockAlertOn', 'toggleStockAlert', 'stockAlertBtn', 'alertAt', 'alertEntOk', 'canonEnt', 'alertWins', 'mergeAlertMap', 'mergeAlerts',
