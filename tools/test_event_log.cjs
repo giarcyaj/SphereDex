@@ -343,5 +343,5 @@ test('decks, the match tracker, backup and sync call the log', () => {
   assert.doesNotMatch(appFunction('doExportCsv'), /eventList|STATE\.events/);
   const privacy = fs.readFileSync(path.join(root, 'docs', 'privacy.html'), 'utf8');
   assert.match(privacy, /event results \(event name, date, deck, round results, opponent decks, placing and prizes\)/);
-  assert.match(privacy, /Collections, wishlists, decks, event results, notes, and account data are private by default/);
+  assert.match(privacy, /Collections, wishlists, decks, saved trades, event results, notes, and account data are private by default/);
 });
