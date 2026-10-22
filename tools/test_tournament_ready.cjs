@@ -81,15 +81,16 @@ test('SET_META dates used by the check are the ones already on the set tiles', (
   assert.equal(sandbox.SET_META.ETD01.release, 'Jul 30, 2026');
   assert.equal(sandbox.SET_META.ETD02.release, 'Jul 30, 2026');
   assert.equal(sandbox.SET_META.ESS01.release, 'Oct 16, 2026');
+  assert.equal(sandbox.SET_META.EBP02.release, 'Oct 30, 2026');
   assert.equal(sandbox.SET_META.PR2026.release, '2026');
 });
 
 test('an exact English release day is kept, and a year or a vague month is not invented', () => {
   assert.equal(sandbox.cardEnglishRelease(card({ set: 'EBP01' })), '2026-07-30');
   assert.equal(sandbox.cardEnglishRelease(card({ set: 'ESS01', id: 'ESS01-001' })), '2026-10-16');
+  assert.equal(sandbox.cardEnglishRelease(card({ set: 'EBP02' })), '2026-10-30');
   assert.equal(sandbox.cardEnglishRelease(card({ set: 'PR2026', id: 'EPR-012' })), '');
   assert.equal(sandbox.cardEnglishRelease(card({ set: 'LATE' })), '');
-  assert.equal(sandbox.cardEnglishRelease(card({ set: 'EBP02' })), '');
   assert.equal(sandbox.cardEnglishRelease(null), '');
   assert.equal(sandbox.releaseYmd('late Oct 2026'), null);
   assert.equal(sandbox.releaseYmd('Nov 2026 to Mar 2027'), null);
