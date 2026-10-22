@@ -1412,6 +1412,7 @@ label.acctsetrow { align-items:center; }
 .srcchain { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:8px 0; }
 .srcchip { background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:5px 11px; color:var(--ink); font-weight:600; font-size:.84rem; }
 .srcchip small { font-weight:500; color:var(--ink-soft); }
+.srcchip a, .srcnote a { color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; }
 .srcarrow { color:var(--ink-soft); font-size:.95rem; }
 .srcnote { font-size:.82rem; }
   @media (max-width:560px){ .setrow { flex-direction:column; align-items:stretch; gap:12px; } .setrow > .setinfo { width:100%; } .setrow > select, .setrow > input, .setrow > .sortsel { width:100%; }
@@ -2160,6 +2161,7 @@ label.acctsetrow { align-items:center; }
      the verdict. --ink-faint is the real quiet text token. */
   .sdstock small{ font-weight:500; color:var(--ink-faint); }
   .pxsrc{ margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+  .pxsrc a { color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
   .askscrim[hidden]{ display:none; }
@@ -4324,7 +4326,7 @@ label.acctsetrow { align-items:center; }
     if(!(+e.pAt>0)) return false;
     return saneSold(id, Math.max(+e.sold||0, +e.mkt||0, +e.list||0), null)==null; }
   // Server source name -> the kind of figure it is. "" when the book predates source tracking.
-  function srcKind(s){ return s==="tcgplayer"||s==="palworld" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
+  function srcKind(s){ return s==="tcgplayer"||s==="palworld"||s==="cardtrader" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
   function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
@@ -7202,8 +7204,12 @@ label.acctsetrow { align-items:center; }
     var opt=document.querySelector('#setEbayRegion option[value="'+reg+'"]');
     var market=opt ? opt.textContent.replace(/\s*\(.*\)\s*$/,"") : reg;
     var usd=us ? "" : ' <small>(converted from USD)</small>';
-    var chain=sold ? [site+" sold listings", "TCGplayer"+usd, "Palworld Prices"+usd]
-                   : [site+" current listings", "Palworld Prices"+usd];
+    // Palworld Prices' terms ask for a visible credit and a link back on the pages their data is used.
+    var pw='<a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a>'+usd;
+    var ct='<a href="https://www.cardtrader.com" target="_blank" rel="noopener">CardTrader</a> (EU asking prices)';
+    var euAsk=reg==="de"||reg==="fr"||reg==="it";
+    var chain=sold ? [site+" sold listings", "TCGplayer"+usd, pw]
+                   : [site+" current listings"].concat(euAsk ? [ct] : []).concat([pw]);
     var h='<div class="srcnote">'+esc(market)+' · '+esc(CUR.code)+' · '+(sold?'Last sold':'Live listings')+'</div>'+
       '<div class="srcchain">'+chain.map(function(s){ return '<span class="srcchip">'+s+'</span>'; }).join('<span class="srcarrow" aria-label="then">→</span>')+'</div>'+
       '<div class="srcnote">Each card uses the first source that has a price for it.';
@@ -7213,9 +7219,10 @@ label.acctsetrow { align-items:center; }
       var why={}; if(!unitOfEntry(c.id, null, e, why) || !why.k) return;
       n[why.k]=(n[why.k]||0)+1; total++; });
     if(total){
-      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", palworld:"Palworld Prices", yours:"your own values" };
-      h+='<br>Your cards: '+["sold","list","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
-        .map(function(k){ return n[k]+' '+SRC_LABEL[k]; }).join(' · ')+'.';
+      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices", yours:"your own values" };
+      var SRC_HTML={ palworld:'<a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a>', cardtrader:ct };
+      h+='<br>Your cards: '+["sold","list","cardtrader","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
+        .map(function(k){ return n[k]+' '+(SRC_HTML[k]||SRC_LABEL[k]); }).join(' · ')+'.';
     }
     return h+'</div>';
   }
@@ -8633,7 +8640,14 @@ label.acctsetrow { align-items:center; }
   // figure names them here rather than only in a list a tap away.
   // Provider names only. The series are already named by the key above, so repeating "live listings from
   // eBay live listings" would just read badly.
-  var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", palworld:"Palworld Prices" };
+  var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices" };
+  // Plain names stay in pxSourceLine (the tests and the sentence read them as text). The link is added
+  // when the line is drawn, because Palworld Prices' terms ask for a link on the page their data is shown.
+  function linkPriceSources(html){
+    return String(html)
+      .replace("Palworld Prices", '<a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a>')
+      .replace("CardTrader (EU asking prices)", '<a href="https://www.cardtrader.com" target="_blank" rel="noopener">CardTrader</a> (EU asking prices)');
+  }
   function pxSourceLine(id){
     var live=PX_SRC_NAME[srcKind(PRICESRC[id])]||"", sold=PX_SRC_NAME[srcKind(PRICESRC_SOLD[id])]||"";
     var text="";
@@ -8704,7 +8718,7 @@ label.acctsetrow { align-items:center; }
     var src=pxSourceLine(id);
     return '<svg class="pxchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Price history for this card" style="width:100%;height:auto">'
       + grid + labels + series + xlab + '</svg>' + key + stats
-      + (src ? '<p class="pxsrc">'+esc(src)+'</p>' : '');
+      + (src ? '<p class="pxsrc">'+linkPriceSources(esc(src))+'</p>' : '');
   }
   // The chart is a full overlay with its own history entry (openOverlay). Done, X, the scrim, Escape and Back
   // all close it through dismissOverlay, so that entry is consumed and no extra Back step is left behind.
