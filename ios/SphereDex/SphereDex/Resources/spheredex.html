@@ -1680,6 +1680,22 @@ label.acctsetrow { align-items:center; }
   .decklegality .dlstate { color:var(--el-Grass); } .decklegality.bad .dlstate { color:var(--el-Fire); }
   .decklegality ul { margin:7px 0 0; padding-left:18px; color:var(--ink-soft); }
   .decklegality .dlsum { margin-top:4px; color:var(--ink-soft); }
+  .decktournament { max-width:640px; margin:0 0 16px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); font-size:.8rem; }
+  .decktournament[hidden] { display:none; }
+  .decktournament.ok { border-color:color-mix(in srgb,var(--el-Grass) 55%,var(--line)); }
+  .decktournament.warn { border-color:color-mix(in srgb,var(--gold) 55%,var(--line)); }
+  .decktournament .dlhead { display:flex; justify-content:space-between; gap:10px; font-weight:750; }
+  .decktournament .dlstate { color:var(--ink-soft); }
+  .decktournament.ok .dlstate { color:var(--el-Grass); }
+  .decktournament.warn .dlstate { color:var(--gold); }
+  .decktournament.bad .dlstate { color:var(--el-Fire); }
+  .decktournament ul { margin:7px 0 0; padding-left:18px; color:var(--ink-soft); }
+  .decktournament .dlsum { margin:6px 0 0; color:var(--ink-soft); line-height:1.4; }
+  .decktournament .dtevent { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-weight:700; }
+  .decktournament .dtevent input[type="date"] { border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; padding:4px 8px; }
+  .decktournament .dtchecks { margin-top:10px; padding-top:8px; border-top:1px solid var(--line); }
+  .decktournament .dtchecks label { display:block; margin-top:6px; color:var(--ink-soft); font-weight:600; }
+  .decktournament .dtchecks input { margin:0 8px 0 0; }
   .decklab { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   .decklab[hidden] { display:none; }
   .deckpanel { border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); padding:12px 13px; }
@@ -2458,6 +2474,8 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .ownchip{gap:0}.no-flexgap .ownchip>*+*{margin-left:6px}
   .no-flexgap .ownseal{gap:0}.no-flexgap .ownseal>*+*{margin-left:12px}
   .no-flexgap .deckctrls{gap:0}.no-flexgap .deckctrls>*+*{margin-left:8px}.no-flexgap .deckctrls>.deckneedline{margin-left:0;margin-top:6px;margin-bottom:6px}
+  .no-flexgap .decktournament .dlhead{gap:0}.no-flexgap .decktournament .dlhead>*+*{margin-left:10px}
+  .no-flexgap .decktournament .dtevent{gap:0}.no-flexgap .decktournament .dtevent>*+*{margin-left:8px}
   .no-flexgap .decksug button{gap:0}.no-flexgap .decksug button>*+*{margin-left:10px}
   .no-flexgap .deckrow{gap:0}.no-flexgap .deckrow>*+*{margin-left:12px}
   .no-flexgap .npitem{gap:0}.no-flexgap .npitem>*+*{margin-left:8px}
@@ -2849,6 +2867,7 @@ label.acctsetrow { align-items:center; }
     </div>
     <p class="qsub">Build a deck from the whole card pool. SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
     <div class="deckstats" id="deckStats"></div>
+    <div class="decktournament" id="deckTournament" hidden></div>
     <div class="decklegality" id="deckLegality" hidden></div>
     <div class="decklab" id="deckLab" hidden></div>
     <div class="deckcomplete" id="deckCompletion" hidden></div>
@@ -8931,6 +8950,128 @@ label.acctsetrow { align-items:center; }
     return any ? n : -1; }
   function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
+  // Tournament check for official events outside Japan. Masters League (Bushiroad): only English
+  // edition cards in the main deck; Soul cards may be any language; a card is legal from its
+  // English release date. Japanese and Chinese are the printings stored apart from English.
+  // 1st, 2nd and Not specified stay in the English count: Not specified is an unlabelled copy,
+  // which is how older collections recorded every English card. Graded slabs stay out, same as
+  // Ready to build. Release days come from SET_META when that string is an exact day. A year
+  // ("2026") or a season window ("Nov 2026 to Mar 2027") is not a day, so those cards are listed
+  // as having no release date on file rather than guessed legal or illegal.
+  var DECK_TOURNAMENT_RULE = "Only English printings count in the main deck. Copies marked Japanese or Chinese are left out. Not specified counts as English. Soul cards may be any language. A card can be used from its English release date.";
+  var DECK_EVENT_CHECKS = [
+    ["sleeves", "Separate sleeves for the main deck and the Soul deck"],
+    ["markers", "Markers"],
+    ["navi", "Phone with Bushi Navi"]
+  ];
+  function deckEventDay(iso){
+    var s=String(iso||"").trim(), m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if(m){ var y=+m[1], mo=+m[2], d=+m[3], dt=new Date(y, mo-1, d);
+      if(dt.getFullYear()===y && dt.getMonth()===mo-1 && dt.getDate()===d) return s; }
+    var n=new Date(), pad=function(x){ return (x<10?"0":"")+x; };
+    return n.getFullYear()+"-"+pad(n.getMonth()+1)+"-"+pad(n.getDate());
+  }
+  function deckDayLabel(iso){
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));
+    if(!m) return "";
+    var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return (+m[3])+" "+months[+m[2]-1]+" "+m[1];
+  }
+  // English release day as YYYY-MM-DD, or "" when the catalogue has no exact day for this set.
+  function cardEnglishRelease(card){
+    if(!card || typeof SET_META==="undefined" || !SET_META) return "";
+    var meta=SET_META[card.set]; if(!meta) return "";
+    var ymd=(typeof releaseYmd==="function") ? releaseYmd(meta.release) : null;
+    if(!ymd) return "";
+    var pad=function(n){ return (n<10?"0":"")+n; };
+    return ymd[0]+"-"+pad(ymd[1])+"-"+pad(ymd[2]);
+  }
+  function deckTournamentRelease(card, releaseOf){
+    if(typeof releaseOf==="function"){ var v=releaseOf(card); return v ? String(v) : ""; }
+    return cardEnglishRelease(card);
+  }
+  function deckOwnEntry(ownMap, id, card){
+    if(!ownMap) return null;
+    if(ownMap[id]) return ownMap[id];
+    var up=String(id||"").toUpperCase();
+    if(up && ownMap[up]) return ownMap[up];
+    if(card && card.id && ownMap[card.id]) return ownMap[card.id];
+    return null;
+  }
+  // Playable copies for an event. Soul cards keep every language. Main deck drops Japanese and Chinese.
+  function deckTournamentQty(card, entry){
+    var total=rawCount(entry && entry.qty);
+    if(card && card.kind==="Soul") return total;
+    if(!entry) return 0;
+    var counts=rawCounts(entry);
+    return Math.max(0, total-rawCount(counts.jp)-rawCount(counts.cn));
+  }
+  function deckTournamentReport(qtyMap, byId, ownMap, eventDay, releaseOf){
+    qtyMap=qtyMap||{}; ownMap=ownMap||{};
+    var day=deckEventDay(eventDay), listed=0, shortMain=0, shortSoul=0, leftOut=0, late=[], undated=[];
+    Object.keys(qtyMap).forEach(function(id){
+      var q=+qtyMap[id]||0; if(!(q>0)) return;
+      var c=deckCardOf(id, byId); if(!c) return;
+      listed++;
+      var entry=deckOwnEntry(ownMap, id, c), have=deckTournamentQty(c, entry), gap=Math.max(0, q-have);
+      var rel=deckTournamentRelease(c, releaseOf), isLate=!!(rel && rel>day), soul=c.kind==="Soul";
+      if(gap){ if(soul) shortSoul+=gap; else shortMain+=gap; }
+      if(!soul && entry){ var counts=rawCounts(entry); leftOut+=rawCount(counts.jp)+rawCount(counts.cn); }
+      var row={id:c.id, name:c.nameEn||c.name, release:rel, qty:q, have:have, gap:gap, soul:soul};
+      if(isLate) late.push(row);
+      else if(!rel) undated.push(row);
+    });
+    late.sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); });
+    undated.sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); });
+    var blocked=shortMain>0 || shortSoul>0 || late.length>0;
+    var state=!listed ? "empty" : (blocked ? "bad" : (undated.length ? "warn" : "ok"));
+    return {day:day, listed:listed, shortMain:shortMain, shortSoul:shortSoul, leftOut:leftOut, late:late, undated:undated, state:state, ready:state==="ok"};
+  }
+  function deckTournamentNameLines(rows, phrase, more){
+    var lines=[], shown=(rows||[]).slice(0,8), i;
+    for(i=0;i<shown.length;i++) lines.push((shown[i].name||shown[i].id)+" ("+shown[i].id+") "+phrase(shown[i]));
+    if((rows||[]).length>8) lines.push(more(rows.length-8));
+    return lines;
+  }
+  function deckTournamentSummary(report){
+    report=report||{};
+    if(!report.listed) return {state:"empty", title:"Tournament", lines:["Add cards to check this deck for an event."]};
+    var lines=[];
+    if(report.state==="ok") lines.push("English copies cover the main deck. Soul cards are covered in any language. Every card released on or before "+deckDayLabel(report.day)+".");
+    else {
+      if(report.shortMain) lines.push("Need "+report.shortMain+" English "+(report.shortMain===1?"card":"cards")+" for the main deck."+(report.leftOut?" Japanese and Chinese copies are not counted.":""));
+      if(report.shortSoul) lines.push("Need "+report.shortSoul+" Soul "+(report.shortSoul===1?"card":"cards")+". Any language counts for the Soul deck.");
+      lines=lines.concat(deckTournamentNameLines(report.late, function(row){ return "releases "+deckDayLabel(row.release)+"."; }, function(n){ return "And "+n+" more "+(n===1?"card that releases":"cards that release")+" after this event."; }));
+      lines=lines.concat(deckTournamentNameLines(report.undated, function(){ return "has no English release date on file."; }, function(n){ return "And "+n+" more "+(n===1?"card":"cards")+" with no English release date on file."; }));
+    }
+    var title=report.state==="ok" ? "Tournament ready" : (report.state==="warn" ? "Check release dates" : "Not for this event");
+    return {state:report.state, title:title, lines:lines, day:report.day};
+  }
+  function deckTournamentLabel(report){
+    if(!report || !report.listed) return "";
+    if(report.state==="ok") return "Tournament ready";
+    if(report.state==="warn") return "Check release dates";
+    return "Not for this event";
+  }
+  function deckEventStored(){ return deckEventDay(typeof lsGet==="function" ? lsGet("palvault-deckevent") : ""); }
+  function deckStatusLabel(d){
+    if(!d) return "";
+    var need=deckNeedLabel(d);
+    var tour=deckTournamentLabel(deckTournamentReport(d.cards, typeof byNumberIdx!=="undefined"?byNumberIdx:{}, activeCol().own, deckEventStored()));
+    return [need, tour].filter(Boolean).join(" · ");
+  }
+  function deckTournamentRowNotes(card, need, entry, eventDay, releaseOf){
+    var notes=[]; if(!card) return notes;
+    var q=+need||0, have=deckTournamentQty(card, entry);
+    if(card.kind!=="Soul" && have<q) notes.push("English "+have+"/"+q);
+    var rel=deckTournamentRelease(card, releaseOf), day=deckEventDay(eventDay);
+    if(rel && rel>day) notes.push("Not legal yet");
+    return notes;
+  }
+  function deckEventChecks(){
+    var p={}; try{ p=JSON.parse((typeof lsGet==="function" ? lsGet("palvault-deckchecks") : "")||"{}")||{}; }catch(e){ p={}; }
+    return (p && typeof p==="object") ? p : {};
+  }
   // Which of your decks list a card. A deck counts once however many copies it runs, and the line only
   // exists with Player tools on, since that is the only time Decks exist as a page.
   // Copies the open deck already runs of a card (ids matched without case), for the add suggestions.
@@ -8953,12 +9094,12 @@ label.acctsetrow { align-items:center; }
     return n+(n===1?" card":" cards"); }
   // The open deck's need line under the picker: the same words as its picker option, hidden with no deck.
   function renderDeckNeedLine(d){ var el=$("deckNeedLine"); if(!el) return;
-    var t=d ? deckNeedLabel(d) : ""; el.textContent=t; el.hidden=!t; }
+    var t=d ? deckStatusLabel(d) : ""; el.textContent=t; el.hidden=!t; }
   function buildDeckSel(){
     var sel=$("deckSel"); if(!sel) return; sel.innerHTML=""; var ds=decks();
     if(!ds.length){ var op=document.createElement("option"); op.textContent="No decks yet"; op.disabled=true; sel.appendChild(op); return; }
     var ad=activeDeck();
-    ds.forEach(function(d){ var o=document.createElement("option"), need=deckNeedLabel(d); o.value=d.id; o.textContent=d.name+" · "+deckSizeLabel(d)+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
+    ds.forEach(function(d){ var o=document.createElement("option"), need=deckStatusLabel(d); o.value=d.id; o.textContent=d.name+" · "+deckSizeLabel(d)+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
     sel.onchange=function(){ STATE.activeDeck=sel.value; save(); renderDecks(); };
   }
   function renderDeckCompletion(d){
@@ -9238,6 +9379,34 @@ label.acctsetrow { align-items:center; }
     var colors=(rep.colors&&rep.colors.length)?rep.colors.join(" + "):"no colours selected";
     return rep.main+" / 50 main · "+rep.souls+" / 10 Souls · Lucky Pals "+rep.lucky+"/"+rep.luckyCap+" · "+colors;
   }
+  function renderDeckTournament(d){
+    var host=$("deckTournament"); if(!host) return;
+    if(!d){ host.hidden=true; host.innerHTML=""; return; }
+    var rep=deckTournamentReport(d.cards||{}, byNumberIdx, activeCol().own, deckEventStored());
+    var sum=deckTournamentSummary(rep), checks=deckEventChecks();
+    host.hidden=false;
+    host.className="decktournament"+(sum.state&&sum.state!=="empty"?" "+sum.state:"");
+    var items=sum.lines.map(esc);
+    host.innerHTML='<div class="dlhead"><span>Tournament</span>'+(sum.state==="empty"?"":'<span class="dlstate">'+esc(sum.title)+'</span>')+'</div>'+
+      '<div class="dtevent"><label for="deckEventDay">Event date</label><input type="date" id="deckEventDay" value="'+esc(rep.day)+'" aria-label="Event date"><button type="button" class="chip" id="deckEventToday">Today</button></div>'+
+      '<p class="dlsum">'+esc(DECK_TOURNAMENT_RULE)+'</p>'+
+      (items.length?'<ul><li>'+items.join("</li><li>")+'</li></ul>':'')+
+      '<div class="dtchecks"><div class="dlhead"><span>Event day</span></div>'+
+      DECK_EVENT_CHECKS.map(function(row){ var on=!!checks[row[0]];
+        return '<label><input type="checkbox" data-k="'+esc(row[0])+'"'+(on?' checked':'')+'>'+esc(row[1])+'</label>';
+      }).join("")+'</div>';
+    var input=$("deckEventDay");
+    if(input) input.onchange=function(){
+      var v=input.value;
+      lsSet("palvault-deckevent", /^\d{4}-\d{2}-\d{2}$/.test(v)?v:"");
+      renderDecks();
+    };
+    var today=$("deckEventToday");
+    if(today) today.onclick=function(){ lsSet("palvault-deckevent",""); renderDecks(); };
+    Array.prototype.forEach.call(host.querySelectorAll(".dtchecks input"), function(box){
+      box.onchange=function(){ var flags=deckEventChecks(); flags[box.getAttribute("data-k")]=!!box.checked; lsSet("palvault-deckchecks", JSON.stringify(flags)); };
+    });
+  }
   function renderDeckLegality(d){
     var host=$("deckLegality"); if(!host) return;
     if(!d){ host.hidden=true; host.innerHTML=""; return; }
@@ -9342,7 +9511,7 @@ label.acctsetrow { align-items:center; }
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
     ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
-    if(!d){ $("deckStats").innerHTML=""; renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
+    if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -9377,6 +9546,7 @@ label.acctsetrow { align-items:center; }
       '<div class="hs"><span class="n">'+pct+'%</span><span class="l">You own</span></div>'+
       '<div class="deckbreak"><div class="deckcurve" aria-label="Main deck cost curve">'+bars+'</div><div class="deckkinds">'+kindChips+'</div><div class="deckcolors">'+colChips+'</div></div>'+
       focusNote;
+    renderDeckTournament(d);
     renderDeckLegality(d);
     renderDeckLab(d);
     renderDeckCompletion(d);
@@ -9404,12 +9574,14 @@ label.acctsetrow { align-items:center; }
     shown.forEach(function(id){
       var c=byNumberIdx[id.toUpperCase()]; if(!c) return; var q=d.cards[id];
       var own=(activeCol().own[id]&&activeCol().own[id].qty)||0, enough=own>=q;
+      var notes=deckTournamentRowNotes(c, q, deckOwnEntry(activeCol().own, id, c), deckEventStored());
+      var noteHtml=notes.map(function(t){ return '<span class="own need">'+esc(t)+'</span>'; }).join("");
       var row=document.createElement("div"); row.className="deckrow";
       row.innerHTML='<img src="'+imgSrc(c)+'" alt="">'+
         '<div><div class="dn">'+esc(c.name)+'</div><div class="dnum2">'+c.id+'</div></div>'+
         '<span class="stepper" style="margin-left:auto"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+q+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
         (!enough?'<button class="missingwish deckwish '+(isWished(c.id)?'on':'')+'" type="button">'+(isWished(c.id)?'Wishlisted':'Wishlist')+'</button>':'')+
-        '<span class="own '+(enough?"have":"need")+'">own '+own+'/'+q+'</span>';
+        '<span class="own '+(enough?"have":"need")+'">own '+own+'/'+q+'</span>'+noteHtml;
       row.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ d.cards[id]=Math.max(0,(d.cards[id]||0)+parseInt(b.getAttribute("data-d"),10)); if(d.cards[id]<=0) delete d.cards[id]; save(); renderDecks(); }; });
       var wish=row.querySelector(".deckwish"); if(wish) wish.onclick=function(){ toggleWish(c.id); save(); renderDecks(); renderHome(); if($("page-missing")&&!$("page-missing").hidden)renderMissing(); toast(isWished(c.id)?"Added to wishlist":"Removed from wishlist"); };
       wrap.appendChild(row);
