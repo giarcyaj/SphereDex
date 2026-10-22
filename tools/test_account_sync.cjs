@@ -240,7 +240,7 @@ function pureSandbox(extra) {
     'canonAlerts', 'sameAlerts', 'alertGC', 'alertStamp', 'paKey', 'stockOnList', 'priceOnList', 'normPriceAlert',
     'rawCount', 'rawEditionKey', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'copyNoteClean', 'mergeRawCounts', 'cloneSlab',
     'tradeQty', 'tradeMap', 'tradeDraftNorm', 'tradeLinesNorm', 'tradeRecordNorm', 'tradeNewer', 'normTrades', 'mergeTradeLists',
-    'slabSig', 'mergeEntry', 'mergeCol', 'normTop', 'localOk', 'colHasCards', 'colHolds', 'mergeStates'].map(appFunction).join('\n'), sb);
+    'slabSig', 'mergeEntry', 'mergeCol', 'normTop', 'localOk', 'colHasCards', 'colHolds', 'eventIdOk', 'mergeEvents', 'mergeStates'].map(appFunction).join('\n'), sb);
   return sb;
 }
 const J = (x) => JSON.stringify(x);
@@ -321,6 +321,23 @@ test('unknown kinds, markets and fields survive byte for byte', () => {
   assert.equal(m.cols[0].binderColour, 'red');
   assert.equal(m._acct, undefined, 'never the server _acct');
   assert.equal(m._local.email, 'a@x.com', 'and never the server owner tag');
+});
+
+test('event results union by id and this device wins a clash', () => {
+  const sb = pureSandbox();
+  const local = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1',
+    events: [{ id: 'e1', name: 'Locals', rounds: [{ result: 'W' }], shop: 'mine' }] };
+  const remote = { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1',
+    events: [{ id: 'e1', name: 'Old', rounds: [{ result: 'L' }] }, { id: 'e2', name: 'Regionals', rounds: [] }] };
+  const m = sb.mergeStates(local, remote);
+  assert.equal(J(m.events.map((e) => e.id)), J(['e1', 'e2']));
+  assert.equal(m.events[0].name, 'Locals');
+  assert.equal(m.events[0].shop, 'mine');
+  assert.equal(m.events[1].name, 'Regionals');
+  const plain = sb.mergeStates(
+    { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1' },
+    { cols: [{ id: 'c1', name: 'Mine', own: {} }], active: 'c1' });
+  assert.equal(plain.events, undefined);
 });
 
 test('alertGC keeps every follow and only the newest 200 off markers', () => {
@@ -512,7 +529,7 @@ const REAL = ['plainObj', 'hasOwn', 'has', 'lsGet', 'lsSet', 'activeCol', 'clean
   'priceAlertByKey', 'notifPairs', 'paintNotifSwitches', 'alertsChanged', 'migrateDeviceAlerts', 'normPriceAlert', 'priceWatch',
   'addPriceAlert', 'removePriceAlertKey', 'removePriceAlertAt', 'renderPriceAlertList', 'accountSettingsBlob', 'acctBase', 'setAcctBase',
   'mergeAcct', 'sameAcct', 'clearFetchedPrices', 'applyAccountSettings', 'saveAuth', 'apiBase', 'api', 'colHasCards', 'localHasCards',
-  'localHasData', 'colHolds', 'slabSig', 'mergeEntry', 'mergeCol', 'mergeStates', 'adoptRemote', 'repaintAll', 'pullState', 'pushCloud',
+  'localHasData', 'colHolds', 'slabSig', 'mergeEntry', 'mergeCol', 'eventIdOk', 'mergeEvents', 'mergeStates', 'adoptRemote', 'repaintAll', 'pullState', 'pushCloud',
   'sessionStarted', 'doAuth', 'signOut', 'whenSynced', 'finishSignOut', 'handleSessionExpired', 'localOk', 'deriveLocal', 'loc',
   'writeStateRaw', 'freshState', 'readStash', 'writeStash', 'stashKeys', 'trimStashes', 'personPart', 'applyPerson', 'maskEmail',
   'switchOwner', 'beginSession', 'bootAccounts', 'joinLegacyIfOurs', 'joinLegacy', 'deleteAccountDone',
