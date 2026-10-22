@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-19T08:30:00Z",
+  "updated_at": "2026-10-21T21:28:00Z",
   "entries": [
     {
       "pal": "Jetragon",
@@ -277,7 +277,7 @@
       "set_code": "EBP02",
       "release_date": "2026-10-30",
       "card_name": "Bristla – Regal Gaze",
-      "card_number": "EBP02-011",
+      "card_number": "EBP02-051",
       "source_url": "https://x.com/PalworldOCG_EN/status/2105477803244228934",
       "revealed_at": "2026-10-01T02:00:00Z"
     },
@@ -427,7 +427,7 @@
       "set_code": "EBP02",
       "release_date": "2026-10-30",
       "card_name": "Nox – One-Way Ticket",
-      "card_number": null,
+      "card_number": "EBP02-079",
       "source_url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
       "revealed_at": "2026-10-19T02:00:00Z"
     },
@@ -470,6 +470,16 @@
       "card_number": "EBP02-050",
       "source_url": "https://x.com/PalworldOCG_EN/status/2110679809831645670",
       "revealed_at": "2026-10-15T10:30:55Z"
+    },
+    {
+      "pal": "Katress Ignis",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Katress Ignis – Scathing Counter",
+      "card_number": "EBP02-002",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112363170366955716",
+      "revealed_at": "2026-10-20T02:00:00Z"
     }
   ]
 }
