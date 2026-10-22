@@ -1674,6 +1674,60 @@ label.acctsetrow { align-items:center; }
   .deckwanted .mwfig { flex:none; margin-left:10px; font-family:var(--font-mono); font-size:.74rem; color:var(--ink-soft); white-space:nowrap; }
   .deckwanted .mwfig.need { color:var(--ink); font-weight:700; }
   .deckwanted #mwAll { margin-top:8px; }
+  /* Event results: margins, not flex gap, so old WebViews keep the rows apart. */
+  .deckevents { max-width:640px; margin:0 0 16px; padding:13px 14px 10px; border:1.5px solid var(--line-strong); border-radius:14px; background:var(--surface); }
+  .deckevents[hidden] { display:none; }
+  .deckevents .evhead { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  .deckevents .evhead .dc-copy { min-width:0; margin:0 12px 8px 0; }
+  .deckevents .dc-title { font-weight:750; font-size:.9rem; }
+  .deckevents .dc-detail { margin-top:2px; color:var(--ink-soft); font-size:.8rem; overflow-wrap:anywhere; }
+  .deckevents .evbtns { display:flex; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .deckevents .evbtns .tbtn, .deckevents .evbtns .chip { margin:0 8px 8px 0; }
+  .deckevents .evrow { padding:8px 0; border-top:1px solid var(--line); }
+  .deckevents .evmain { display:block; width:100%; text-align:left; border:0; background:transparent; color:inherit; font:inherit; padding:0; cursor:pointer; }
+  .deckevents .evname { display:block; font-weight:750; font-size:.9rem; }
+  .deckevents .evmeta, .deckevents .evrounds { display:block; margin-top:2px; color:var(--ink-soft); font-size:.78rem; overflow-wrap:anywhere; }
+  .deckevents .evrec { font-family:var(--font-mono); font-weight:800; color:var(--ink); }
+  .deckevents .evprize { display:flex; align-items:center; margin-top:6px; }
+  .deckevents .evprize img { width:22px; height:30px; object-fit:cover; border-radius:4px; margin-right:8px; background:var(--surface-2); flex:none; }
+  .deckevents .evprize .evpn { flex:1; min-width:0; font-size:.8rem; overflow-wrap:anywhere; }
+  .deckevents .evprize .evown { margin-left:8px; font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); white-space:nowrap; }
+  .deckevents .evprize .chip { margin-left:8px; flex:none; }
+  .deckevents .evmore { margin-top:8px; }
+  #eventScrim { padding-bottom:calc(20px + var(--kb, 0px)); }
+  .askbox.eventbox { max-height:calc(100vh - 40px - var(--kb, 0px)); overflow-y:auto; overscroll-behavior:contain; }
+  .eventbox .evfield { margin:0 0 12px; }
+  .eventbox .evlab { display:block; font-size:.68rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; margin:0 0 5px; }
+  .eventbox .evfield input, .eventbox .evfield select { margin-bottom:0; }
+  .eventbox select { width:100%; box-sizing:border-box; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:11px 13px; color:var(--ink); font-family:inherit; font-size:1rem; }
+  .eventbox .evres { display:flex; }
+  .eventbox .evpick { flex:1; margin-right:6px; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink-soft); font:700 .85rem var(--font-display); border-radius:12px; min-height:44px; padding:8px 6px; cursor:pointer; }
+  .eventbox .evres .evpick:last-child { margin-right:0; }
+  .eventbox .evpick.on { color:var(--ink); border-color:var(--accent); }
+  .eventbox .evpick.win.on { border-color:var(--el-Grass); }
+  .eventbox .evpick.loss.on { border-color:var(--el-Fire); }
+  .eventbox .evround { display:flex; align-items:center; margin-bottom:8px; }
+  .eventbox .evround .evres { flex:none; }
+  .eventbox .evround .evpick { flex:none; min-width:52px; margin-right:4px; }
+  .eventbox .evround input { flex:1; min-width:0; width:auto; margin:0 8px; }
+  .eventbox .evnote { margin:0 0 12px; color:var(--ink-soft); font-size:.8rem; line-height:1.4; }
+  .eventbox .evsug { margin-top:6px; border:1.5px solid var(--line-strong); border-radius:12px; background:var(--surface); overflow:hidden; }
+  .eventbox .evsug[hidden] { display:none; }
+  .eventbox .evsug button { display:block; width:100%; text-align:left; border:0; border-top:1px solid var(--line); background:transparent; color:var(--ink); padding:8px 12px; font:inherit; cursor:pointer; }
+  .eventbox .evsug button:first-child { border-top:0; }
+  .eventbox .evchip { display:flex; align-items:center; margin-top:6px; }
+  .eventbox .evchip span { flex:1; min-width:0; font-size:.85rem; overflow-wrap:anywhere; }
+  .eventbox #eventDelete { margin-right:auto; color:var(--el-Fire); }
+  .eventbox .evadd { margin-top:4px; }
+  .matchlog { margin-top:8px; }
+  .matchlog .tbtn { min-height:44px; }
+  .matchlog .matchnote { margin-top:6px; }
+  @media (max-width:420px){
+    .eventbox .evround { flex-wrap:wrap; }
+    .eventbox .evround .evres { width:100%; margin-bottom:6px; }
+    .eventbox .evround .evres .evpick { flex:1; }
+    .eventbox .evround input { margin-left:0; }
+  }
   .decklegality { max-width:640px; margin:-6px 0 16px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); font-size:.8rem; }
   .decklegality.ok { border-color:color-mix(in srgb,var(--el-Grass) 55%,var(--line)); }
   .decklegality .dlhead { display:flex; justify-content:space-between; gap:10px; font-weight:750; }
@@ -2867,6 +2921,7 @@ label.acctsetrow { align-items:center; }
     </div>
     <p class="qsub">Build a deck from the whole card pool. SphereDex shows how many of each you already own in <b id="deckColName">your collection</b>.</p>
     <div class="deckstats" id="deckStats"></div>
+    <div class="deckevents" id="deckEvents"></div>
     <div class="decktournament" id="deckTournament" hidden></div>
     <div class="decklegality" id="deckLegality" hidden></div>
     <div class="decklab" id="deckLab" hidden></div>
@@ -2880,7 +2935,7 @@ label.acctsetrow { align-items:center; }
 
   <section class="page" id="page-match">
     <h2 class="sech">Match</h2>
-    <p class="qsub">For a game at the table. Life starts at 10. Material and Ingredient start at 0 and cannot go below 0. Night is shared. Everything stays on this device, so it works with no connection.</p>
+    <p class="qsub">For a game at the table. Life starts at 10. Material and Ingredient start at 0 and cannot go below 0. Night is shared. The live table stays on this device, so it works with no connection.</p>
     <div class="matchboard" id="matchBoard"></div>
   </section>
 
@@ -3026,7 +3081,7 @@ label.acctsetrow { align-items:center; }
 
       <div class="setcat">Decks</div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Deck tools</div><div class="sdesc">Decks, legality, deck stats and the match tracker. On when you choose Play. Off for everyone else until you turn it on here.</div></div>
+        <div class="setinfo"><div class="stitle">Deck tools</div><div class="sdesc">Decks, legality, deck stats, event results and the match tracker. On when you choose Play. Off for everyone else until you turn it on here.</div></div>
         <label class="switch"><input type="checkbox" id="setPlayerTools"><span class="track"></span></label>
       </div>
 
@@ -3164,7 +3219,7 @@ label.acctsetrow { align-items:center; }
 
       <div class="setcat">Backup &amp; restore</div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection as a spreadsheet (CSV) or a backup (JSON), and import either one as a new collection.</div><div class="sdesc" id="backupStatus" style="margin-top:5px" aria-live="polite"></div></div>
+        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection as a spreadsheet (CSV) or a backup (JSON), and import either one as a new collection. The JSON backup also includes event results.</div><div class="sdesc" id="backupStatus" style="margin-top:5px" aria-live="polite"></div></div>
         <div style="display:flex;gap:9px;flex:0 0 auto;flex-wrap:wrap"><button class="btn sec" id="setExport" data-icon="upload">Export</button><button class="btn sec" id="setImport" data-icon="download">Import</button></div>
       </div>
 
@@ -3292,6 +3347,14 @@ label.acctsetrow { align-items:center; }
     <p id="deckIOHint"></p>
     <textarea id="deckIOText" spellcheck="false" autocomplete="off"></textarea>
     <div class="askbtns"><button type="button" id="deckIOCancel">Cancel</button><button type="button" id="deckIOAlt"></button><button type="button" class="ok" id="deckIOAction"></button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="eventScrim" hidden>
+  <div class="askbox wide eventbox" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
+    <h3 id="eventTitle">Log event</h3>
+    <div id="eventBody"></div>
+    <div class="askbtns"><button type="button" id="eventDelete" hidden>Delete</button><button type="button" id="eventCancel">Cancel</button><button type="button" class="ok" id="eventSave">Save</button></div>
   </div>
 </div>
 
@@ -6244,7 +6307,7 @@ label.acctsetrow { align-items:center; }
   }
   function doExport(onDone){
     var col=activeCol(), nm=col.name;
-    var text=JSON.stringify({app:"SphereDex",name:col.name,own:col.own,sealed:col.sealed||{}},null,2);
+    var text=JSON.stringify(collectionBackup(col, eventList()),null,2);
     saveTextFile(fileSlug(col.name,"collection")+".json", "application/json", text, function(){ markBackupExport(); toast("Exported “"+nm+"”"); if(onDone) onDone(); });
   }
   function doExportCsv(){
@@ -6288,13 +6351,26 @@ label.acctsetrow { align-items:center; }
   }
   function doImport(){
     pickTextFile("application/json,.json,text/plain", function(text){
-      var d, map;
-      try{ d=JSON.parse(String(text).replace(/^\uFEFF/,"")); map=cardMap((d&&d.own)?d.own:d); }catch(e){ map=null; }
-      if(!map || !Object.keys(map).length){ toast("That file couldn't be read"); return; }
-      var nm=(d&&typeof d.name==="string"&&d.name)?d.name+" (imported)":"Imported collection";
-      var id="c"+Date.now(), nc={id:id,name:nm,own:map,sealed:sealedMap(d&&d.sealed)}; STATE.cols.push(nc);
-      if(Object.keys(map).some(function(k){ return map[k].addAt; })) baseCol(nc);   // a backup with add times keeps them
-      switchCol(id); toast("Imported “"+nm+"”");
+      var d=null, map=null;
+      try{ d=JSON.parse(String(text).replace(/^\uFEFF/,"")); map=cardMap((d&&d.own)?d.own:d); }catch(e){ d=null; map=null; }
+      // A raw card map has no events array. An older backup has no events key, and must not wipe a log.
+      var fileEvents=(d && Array.isArray(d.events))?d.events:null;
+      var evN=fileEvents?normEvents(fileEvents).length:0;
+      var hasCards=!!(map && Object.keys(map).length);
+      if(!hasCards && !evN){ toast("That file couldn't be read"); return; }
+      if(evN) STATE.events=importBackupEvents(eventList(), fileEvents);
+      if(hasCards){
+        var nm=(d&&typeof d.name==="string"&&d.name)?d.name+" (imported)":"Imported collection";
+        var id="c"+Date.now(), nc={id:id,name:nm,own:map,sealed:sealedMap(d&&d.sealed)}; STATE.cols.push(nc);
+        if(Object.keys(map).some(function(k){ return map[k].addAt; })) baseCol(nc);   // a backup with add times keeps them
+        switchCol(id);
+        if(_curPage==="decks") renderDecks();
+        toast(evN?("Imported “"+nm+"” with "+evN+" event"+(evN===1?"":"s")):("Imported “"+nm+"”"));
+        return;
+      }
+      save();
+      if(_curPage==="decks") renderDecks();
+      toast("Imported "+evN+" event"+(evN===1?"":"s"));
     });
   }
   // Settings chooser: pick CSV or JSON for export / import. Each option closes the modal and starts the
@@ -9510,6 +9586,7 @@ label.acctsetrow { align-items:center; }
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
+    renderEventLog(d);
     ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
@@ -9544,6 +9621,7 @@ label.acctsetrow { align-items:center; }
       '<div class="hs"><span class="n">'+totalCards+'</span><span class="l">Cards</span></div>'+
       '<div class="hs"><span class="n">'+ids.length+'</span><span class="l">Unique</span></div>'+
       '<div class="hs"><span class="n">'+pct+'%</span><span class="l">You own</span></div>'+
+      eventRecordStatHtml(d)+
       '<div class="deckbreak"><div class="deckcurve" aria-label="Main deck cost curve">'+bars+'</div><div class="deckkinds">'+kindChips+'</div><div class="deckcolors">'+colChips+'</div></div>'+
       focusNote;
     renderDeckTournament(d);
@@ -9588,6 +9666,707 @@ label.acctsetrow { align-items:center; }
     });
   }
   function newDeck(){ var id="d"+Date.now(); decks().push({id:id,name:"Deck "+(decks().length+1),cards:{}}); STATE.activeDeck=id; return id; }
+
+  /* EVENT LOG BEGIN */
+  // Manual event results. They live on STATE beside decks, so save(), cloud sync and the JSON backup
+  // carry them. The live match table stays on its own key and is only copied in when a game is logged.
+  var EVENT_NAME_MAX=80, EVENT_PLACE_MAX=40, EVENT_OPP_MAX=60, EVENT_ROUNDS_MAX=48, EVENT_PRIZES_MAX=30, EVENT_LOG_MAX=500;
+  var eventDraft=null, eventLogAll=false, eventLogDeck="", eventShowAll=false, eventLogBound=false;
+  function eventClip(v, max){
+    var s=String(v==null?"":v).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"");
+    if(s.length>max) s=s.slice(0, max).replace(/\s+$/g,"");
+    return s;
+  }
+  function eventDateOk(v){
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v==null?"":v));
+    if(!m) return "";
+    var y=+m[1], mo=+m[2], d=+m[3];
+    if(y<2000 || y>2100 || mo<1 || mo>12 || d<1 || d>31) return "";
+    return m[1]+"-"+m[2]+"-"+m[3];
+  }
+  function eventResultCode(v){
+    v=String(v==null?"":v).replace(/\s+/g,"").toUpperCase();
+    if(v==="W" || v==="WIN") return "W";
+    if(v==="L" || v==="LOSS") return "L";
+    if(v==="D" || v==="DRAW") return "D";
+    return "";
+  }
+  function eventIdOk(id){
+    if(typeof id!=="string") return false;
+    if(id==="__proto__" || id==="constructor" || id==="prototype") return false;
+    return /^[A-Za-z0-9_-]{1,40}$/.test(id);
+  }
+  function normEventRound(r){
+    if(!r || typeof r!=="object") return null;
+    var code=eventResultCode(r.result);
+    if(!code) return null;
+    var out={result:code}, opp=eventClip(r.opp, EVENT_OPP_MAX);
+    if(opp) out.opp=opp;
+    return out;
+  }
+  function normEventPrize(v){
+    var s=String(v==null?"":v).replace(/^\s+|\s+$/g,"").toUpperCase();
+    if(s==="__PROTO__" || s==="CONSTRUCTOR" || s==="PROTOTYPE") return "";
+    if(!/^[A-Z0-9-]{2,24}$/.test(s)) return "";
+    return s;
+  }
+  function normEvent(e){
+    if(!e || typeof e!=="object" || !eventIdOk(e.id)) return null;
+    var name=eventClip(e.name, EVENT_NAME_MAX);
+    if(!name) return null;
+    var out={id:e.id, name:name, rounds:[], prizes:[]}, date=eventDateOk(e.date), deck=e.deckId, place=eventClip(e.placing, EVENT_PLACE_MAX);
+    if(date) out.date=date;
+    if(eventIdOk(deck)) out.deckId=deck;
+    if(place) out.placing=place;
+    var rounds=Array.isArray(e.rounds)?e.rounds:[], prizes=Array.isArray(e.prizes)?e.prizes:[], i, r, p, seen={};
+    for(i=0;i<rounds.length && out.rounds.length<EVENT_ROUNDS_MAX;i++){
+      r=normEventRound(rounds[i]);
+      if(r) out.rounds.push(r);
+    }
+    for(i=0;i<prizes.length && out.prizes.length<EVENT_PRIZES_MAX;i++){
+      p=normEventPrize(prizes[i]);
+      if(!p || Object.prototype.hasOwnProperty.call(seen, p)) continue;
+      seen[p]=1; out.prizes.push(p);
+    }
+    return out;
+  }
+  function normEvents(list){
+    if(!Array.isArray(list)) return [];
+    var out=[], seen={}, i, n;
+    for(i=0;i<list.length;i++){
+      n=normEvent(list[i]);
+      if(!n || Object.prototype.hasOwnProperty.call(seen, n.id)) continue;
+      seen[n.id]=1; out.push(n);
+    }
+    return out;
+  }
+  function eventRecord(rounds){
+    var w=0, l=0, d=0, i, r;
+    rounds=rounds||[];
+    for(i=0;i<rounds.length;i++){
+      r=rounds[i]; if(!r) continue;
+      if(r.result==="W") w++;
+      else if(r.result==="L") l++;
+      else if(r.result==="D") d++;
+    }
+    return {w:w, l:l, d:d};
+  }
+  function deckEventRecord(events, deckId){
+    var w=0, l=0, d=0, n=0, i, e, rec;
+    events=events||[];
+    for(i=0;i<events.length;i++){
+      e=events[i];
+      if(!e || e.deckId!==deckId) continue;
+      n++; rec=eventRecord(e.rounds); w+=rec.w; l+=rec.l; d+=rec.d;
+    }
+    return {w:w, l:l, d:d, events:n};
+  }
+  function allEventRecord(events){
+    var w=0, l=0, d=0, i, rec;
+    events=events||[];
+    for(i=0;i<events.length;i++){
+      if(!events[i]) continue;
+      rec=eventRecord(events[i].rounds); w+=rec.w; l+=rec.l; d+=rec.d;
+    }
+    return {w:w, l:l, d:d, events:events.length};
+  }
+  function eventRecordText(rec){ return rec.w+"-"+rec.l+"-"+rec.d; }
+  function eventRecordWords(rec){
+    function bit(n, one, many){ return n+" "+(n===1?one:many); }
+    return bit(rec.w,"win","wins")+", "+bit(rec.l,"loss","losses")+", "+bit(rec.d,"draw","draws");
+  }
+  function eventDateLabel(iso){
+    var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));
+    if(!m) return "";
+    var mo=+m[2];
+    if(mo<1 || mo>12) return "";
+    return months[mo-1]+" "+(+m[3])+", "+m[1];
+  }
+  function eventRoundsText(rounds){
+    var parts=[], i, r, bit;
+    rounds=rounds||[];
+    for(i=0;i<rounds.length;i++){
+      r=rounds[i]; if(!r) continue;
+      bit=r.result==="W"?"Win":(r.result==="L"?"Loss":(r.result==="D"?"Draw":""));
+      if(!bit) continue;
+      if(r.opp) bit+=" vs "+r.opp;
+      parts.push(bit);
+    }
+    return parts.join(", ");
+  }
+  function eventDeckName(deckId, deckList){
+    if(!deckId) return "";
+    var i, list=deckList||[];
+    for(i=0;i<list.length;i++) if(list[i] && list[i].id===deckId) return list[i].name||"Deck";
+    return "Deck removed";
+  }
+  function eventMetaText(e, deckList){
+    var bits=[], lab, deck;
+    e=e||{};
+    lab=eventDateLabel(e.date); if(lab) bits.push(lab);
+    deck=eventDeckName(e.deckId, deckList); if(deck) bits.push(deck);
+    if(e.placing) bits.push(e.placing);
+    return bits.join(" · ");
+  }
+  function eventsForView(list, deckId, all){
+    list=list||[];
+    if(all || !deckId) return list.slice();
+    var out=[], i;
+    for(i=0;i<list.length;i++) if(list[i] && list[i].deckId===deckId) out.push(list[i]);
+    return out;
+  }
+  function eventDisplayOrder(list){
+    var rows=[], i, out=[];
+    list=list||[];
+    for(i=0;i<list.length;i++) rows.push({e:list[i], i:i});
+    rows.sort(function(a, b){
+      var da=(a.e&&a.e.date)||"", db=(b.e&&b.e.date)||"";
+      if(da!==db){
+        if(!da) return 1;
+        if(!db) return -1;
+        if(da<db) return 1;
+        if(da>db) return -1;
+      }
+      return b.i-a.i;
+    });
+    for(i=0;i<rows.length;i++) out.push(rows[i].e);
+    return out;
+  }
+  function eventCounts(list, deckId){
+    var mine=0, other=0, i, e;
+    list=list||[];
+    for(i=0;i<list.length;i++){
+      e=list[i]; if(!e) continue;
+      if(deckId && e.deckId===deckId) mine++; else other++;
+    }
+    return {mine:mine, other:other, all:list.length};
+  }
+  function eventSummaryText(list, deckId, all){
+    var rec, n;
+    if(!all && deckId){
+      rec=deckEventRecord(list, deckId);
+      if(!rec.events) return "";
+      return "This deck: "+eventRecordWords(rec);
+    }
+    rec=allEventRecord(list);
+    n=rec.events;
+    if(!n) return "";
+    return eventRecordWords(rec)+" across "+n+" event"+(n===1?"":"s")+".";
+  }
+  function preferredEventId(list, today){
+    var i, id="";
+    list=list||[];
+    for(i=0;i<list.length;i++){
+      if(list[i] && list[i].date===today && eventIdOk(list[i].id)) id=list[i].id;
+    }
+    return id;
+  }
+  function mergeEvents(local, remote){
+    var dm={}, order=[], both=(Array.isArray(remote)?remote:[]).concat(Array.isArray(local)?local:[]), i, e, id, out=[];
+    for(i=0;i<both.length;i++){
+      e=both[i];
+      if(!e || typeof e!=="object" || !eventIdOk(e.id)) continue;
+      id=e.id;
+      if(!Object.prototype.hasOwnProperty.call(dm, id)) order.push(id);
+      dm[id]=e;
+    }
+    for(i=0;i<order.length;i++) out.push(dm[order[i]]);
+    return out;
+  }
+  function eventApplyNorm(prev, n){
+    var out={}, k;
+    if(prev && typeof prev==="object"){
+      for(k in prev) if(Object.prototype.hasOwnProperty.call(prev, k)) out[k]=prev[k];
+    }
+    out.id=n.id; out.name=n.name; out.rounds=n.rounds; out.prizes=n.prizes;
+    if(n.date) out.date=n.date; else delete out.date;
+    if(n.deckId) out.deckId=n.deckId; else delete out.deckId;
+    if(n.placing) out.placing=n.placing; else delete out.placing;
+    return out;
+  }
+  function eventList(){
+    if(typeof STATE!=="object" || !STATE || !Array.isArray(STATE.events)) return [];
+    return STATE.events;
+  }
+  function commitEventDraft(list, draft){
+    list=Array.isArray(list)?list:[];
+    draft=draft||{};
+    if(!eventClip(draft.name, EVENT_NAME_MAX)) return {ok:false, error:"name"};
+    if(!eventIdOk(draft.id)) return {ok:false, error:"name"};
+    var n=normEvent(draft);
+    if(!n) return {ok:false, error:"name"};
+    var i, idx=-1;
+    for(i=0;i<list.length;i++) if(list[i] && list[i].id===n.id) idx=i;
+    if(idx<0 && list.length>=EVENT_LOG_MAX) return {ok:false, error:"full"};
+    var applied=eventApplyNorm(idx>=0?list[idx]:null, n), out=list.slice();
+    if(idx>=0) out[idx]=applied; else out.push(applied);
+    return {ok:true, events:out};
+  }
+  function commitMatchRound(list, draft){
+    list=Array.isArray(list)?list:[];
+    draft=draft||{};
+    var code=eventResultCode(draft.result), round=code?normEventRound({result:code, opp:draft.opp}):null;
+    if(!round) return {ok:false, error:"result"};
+    var i, prev=null;
+    if(eventIdOk(draft.eventPick)){
+      for(i=0;i<list.length;i++) if(list[i] && list[i].id===draft.eventPick) prev=list[i];
+    }
+    if(prev){
+      var prevRounds=Array.isArray(prev.rounds)?prev.rounds:[];
+      if(prevRounds.length>=EVENT_ROUNDS_MAX) return {ok:false, error:"rounds"};
+      var rounds=prevRounds.slice(), next={}, k, out=list.slice();
+      rounds.push(round);
+      for(k in prev) if(Object.prototype.hasOwnProperty.call(prev, k)) next[k]=prev[k];
+      next.rounds=rounds;
+      for(i=0;i<out.length;i++) if(out[i] && out[i].id===prev.id) out[i]=next;
+      return {ok:true, events:out, name:prev.name||""};
+    }
+    var created={id:draft.id, name:draft.name, date:draft.date, deckId:draft.deckId, placing:draft.placing, rounds:[round], prizes:[]};
+    var res=commitEventDraft(list, created);
+    if(res.ok) res.name=eventClip(draft.name, EVENT_NAME_MAX);
+    return res;
+  }
+  function collectionBackup(col, ev){
+    col=col||{};
+    var out={app:"SphereDex", name:col.name, own:col.own, sealed:col.sealed||{}};
+    var events=normEvents(ev);
+    if(events.length) out.events=events;
+    return out;
+  }
+  function importBackupEvents(existing, fileEvents){
+    var incoming=normEvents(fileEvents), base=Array.isArray(existing)?existing.slice():[];
+    if(!incoming.length) return base;
+    return mergeEvents(incoming, base);
+  }
+  function prizeSuggestions(query, cards, limit){
+    var q=String(query==null?"":query).replace(/^\s+|\s+$/g,"").toLowerCase();
+    if(q.length<2) return [];
+    limit=limit||8;
+    cards=cards||[];
+    var hits=[], i, c, blob;
+    for(i=0;i<cards.length;i++){
+      c=cards[i]; if(!c) continue;
+      blob=(String(c.name||"")+" "+String(c.nameEn||"")+" "+String(c.id||"")).toLowerCase();
+      if(blob.indexOf(q)<0) continue;
+      hits.push(c);
+    }
+    hits.sort(function(a, b){
+      var ap=(a.set==="PR2026" || a.rare==="PR")?0:1, bp=(b.set==="PR2026" || b.rare==="PR")?0:1;
+      if(ap!==bp) return ap-bp;
+      var ai=String(a.id||""), bi=String(b.id||"");
+      if(ai<bi) return -1;
+      if(ai>bi) return 1;
+      return 0;
+    });
+    return hits.slice(0, limit);
+  }
+  function eventOwnQty(id){
+    if(!id || typeof own!=="object" || !own) return 0;
+    var e=own[id];
+    return e ? (+e.qty||0) : 0;
+  }
+  function eventPrizeCard(id){
+    if(!id || typeof byNumberIdx!=="object" || !byNumberIdx) return null;
+    return byNumberIdx[String(id).toUpperCase()]||null;
+  }
+  function eventPrizeSrc(c){
+    if(!c) return "";
+    var mapped=(typeof window!=="undefined" && window.CARD_IMG && c.id) ? window.CARD_IMG[c.id] : "";
+    if(mapped) return mapped;
+    if(!c.pic || typeof imgURL!=="function") return "";
+    return imgURL(c.pic);
+  }
+  function eventOpt(value, label, on){
+    return '<option value="'+esc(value)+'"'+(on?" selected":"")+'>'+esc(label)+'</option>';
+  }
+  function eventDeckSelect(selected, deckList){
+    selected=selected||"";
+    deckList=deckList||[];
+    var html='<select id="eventDeck">'+eventOpt("", "No deck", selected===""), i, id, found=false;
+    for(i=0;i<deckList.length;i++){
+      if(!deckList[i] || !deckList[i].id) continue;
+      id=deckList[i].id;
+      if(id===selected) found=true;
+      html+=eventOpt(id, deckList[i].name||"Deck", id===selected);
+    }
+    if(selected && !found) html+=eventOpt(selected, "Deck removed", true);
+    return html+"</select>";
+  }
+  function eventOptionLabel(e){
+    var lab=eventDateLabel(e&&e.date), name=(e&&e.name)?e.name:"Event";
+    return lab ? (name+" · "+lab) : name;
+  }
+  function eventPickSelect(selected, events){
+    events=events||[];
+    var html='<select id="eventPick">'+eventOpt("", "New event", !selected), i, e;
+    for(i=events.length-1;i>=0;i--){
+      e=events[i];
+      if(!e || !eventIdOk(e.id)) continue;
+      html+=eventOpt(e.id, eventOptionLabel(e), e.id===selected);
+    }
+    return html+"</select>";
+  }
+  function eventResultButtons(result, idx){
+    function one(code, label, cls){
+      var on=result===code, attr=(idx==null || idx==="")?"":(' data-idx="'+idx+'"');
+      return '<button type="button" class="evpick '+cls+(on?" on":"")+'" data-evact="result" data-code="'+code+'"'+attr+' aria-pressed="'+(on?"true":"false")+'">'+label+'</button>';
+    }
+    return '<div class="evres">'+one("W","Win","win")+one("L","Loss","loss")+one("D","Draw","draw")+'</div>';
+  }
+  function eventFieldHtml(label, inner){
+    return '<div class="evfield"><span class="evlab">'+label+'</span>'+inner+'</div>';
+  }
+  function eventNameFields(draft, deckList){
+    var date=eventDateOk(draft.date)?draft.date:"";
+    return eventFieldHtml("Event", '<input id="eventName" type="text" maxlength="'+EVENT_NAME_MAX+'" placeholder="Shop challenge" autocomplete="off" value="'+esc(draft.name||"")+'">')+
+      eventFieldHtml("Date", '<input id="eventDate" type="date" value="'+esc(date)+'">')+
+      eventFieldHtml("Deck", eventDeckSelect(draft.deckId||"", deckList));
+  }
+  function eventPrizeChips(ids, cardOf){
+    cardOf=cardOf||function(){ return null; };
+    var html="", i, id, c, name;
+    ids=ids||[];
+    for(i=0;i<ids.length;i++){
+      id=ids[i]; c=cardOf(id); name=(c&&c.name)?c.name:id;
+      html+='<div class="evchip"><span>'+esc(name)+'</span><button type="button" class="tbtn ghost" data-evact="rmprize" data-idx="'+i+'" aria-label="'+esc("Remove "+name)+'">Remove</button></div>';
+    }
+    return html;
+  }
+  function eventSheetHtml(draft, opts){
+    draft=draft||{}; opts=opts||{};
+    var deckList=opts.decks||[], events=opts.events||[], cardOf=opts.cardOf||function(){ return null; }, html="", rows="", i, r, rounds;
+    if(draft.mode==="round"){
+      if(draft.foe) html+='<p class="evnote">Against '+esc(draft.foe)+'.</p>';
+      html+=eventFieldHtml("Result", eventResultButtons(draft.result, ""));
+      html+=eventFieldHtml("Opponent deck", '<input id="eventOpp" type="text" maxlength="'+EVENT_OPP_MAX+'" placeholder="Opponent deck" autocomplete="off" value="'+esc(draft.opp||"")+'">');
+      html+=eventFieldHtml("Event", eventPickSelect(draft.eventPick||"", events));
+      if(!draft.eventPick) html+=eventNameFields(draft, deckList);
+      html+='<p class="evnote">The table goes back to 10 life for the next game. Names stay.</p>';
+      return html;
+    }
+    html+=eventNameFields(draft, deckList);
+    html+=eventFieldHtml("Placing", '<input id="eventPlace" type="text" maxlength="'+EVENT_PLACE_MAX+'" placeholder="1st, Top 8" autocomplete="off" value="'+esc(draft.placing||"")+'">');
+    rounds=draft.rounds||[];
+    for(i=0;i<rounds.length;i++){
+      r=rounds[i]||{};
+      rows+='<div class="evround">'+eventResultButtons(r.result, String(i))+
+        '<input type="text" maxlength="'+EVENT_OPP_MAX+'" placeholder="Opponent deck" aria-label="Opponent deck" autocomplete="off" value="'+esc(r.opp||"")+'">'+
+        '<button type="button" class="tbtn ghost" data-evact="rmround" data-idx="'+i+'" aria-label="Remove round">Remove</button></div>';
+    }
+    html+=eventFieldHtml("Rounds", '<div id="eventRounds">'+rows+'</div><button type="button" class="tbtn ghost evadd" data-evact="addround">Add round</button>');
+    html+=eventFieldHtml("Prizes", eventPrizeChips(draft.prizes||[], cardOf)+
+      '<input id="eventPrizeQ" type="search" placeholder="Search a card by name or number" autocomplete="off" value="">'+
+      '<div class="evsug" id="eventPrizeSug" hidden></div>');
+    html+='<p class="evnote">Prize cards can be added to your collection from the event list.</p>';
+    return html;
+  }
+  function eventPanelHtml(opts){
+    opts=opts||{};
+    var list=opts.events||[], deckId=opts.deckId||"", all=!!opts.all || !deckId, showAll=!!opts.showAll;
+    var deckList=opts.decks||[], ownOf=opts.ownOf||function(){ return 0; }, cardOf=opts.cardOf||function(){ return null; }, srcOf=opts.srcOf||function(){ return ""; };
+    var shown=eventDisplayOrder(eventsForView(list, deckId, all)), counts=eventCounts(list, deckId), detail, html, cap, i, e, rec, meta, roundText, p, prize, c, src, ownN;
+    if(!list.length) detail="No events yet. Log a locals, a shop challenge, or the game you just finished.";
+    else if(!all && !shown.length) detail="No events for this deck yet.";
+    else detail=eventSummaryText(list, deckId, all);
+    html='<div class="evhead"><div class="dc-copy"><div class="dc-title">Events</div><div class="dc-detail">'+esc(detail)+'</div></div><div class="evbtns">';
+    html+='<button type="button" class="tbtn" data-ev="new">Log event</button>';
+    if(deckId && counts.other) html+='<button type="button" class="chip" data-ev="scope">'+(all?"This deck":"All events")+'</button>';
+    html+='</div></div>';
+    cap=showAll?shown.length:4;
+    for(i=0;i<shown.length && i<cap;i++){
+      e=shown[i]; rec=eventRecord(e.rounds); meta=eventMetaText(e, deckList); roundText=eventRoundsText(e.rounds);
+      html+='<div class="evrow"><button type="button" class="evmain" data-ev="edit" data-id="'+esc(e.id)+'">';
+      html+='<span class="evname">'+esc(e.name)+'</span>';
+      if(meta) html+='<span class="evmeta">'+esc(meta)+'</span>';
+      html+='<span class="evrounds">';
+      if(roundText) html+='<span class="evrec">'+esc(eventRecordText(rec))+'</span> '+esc(roundText);
+      else html+='No rounds yet';
+      html+='</span></button>';
+      for(p=0;p<(e.prizes||[]).length;p++){
+        prize=e.prizes[p]; c=cardOf(prize); src=c?srcOf(c):""; ownN=ownOf(c&&c.id?c.id:prize);
+        html+='<div class="evprize">';
+        if(src) html+='<img src="'+esc(src)+'" alt="">';
+        html+='<span class="evpn">'+esc((c&&c.name)?c.name:prize)+'</span>';
+        html+='<span class="evown">own '+ownN+'</span>';
+        html+='<button type="button" class="chip" data-ev="prize" data-id="'+esc(prize)+'" aria-label="'+esc("Add "+((c&&c.name)?c.name:prize)+" to your collection")+'">Add</button>';
+        html+='</div>';
+      }
+      html+='</div>';
+    }
+    if(shown.length>4 && !showAll) html+='<button type="button" class="chip evmore" data-ev="more">Show all '+shown.length+'</button>';
+    return html;
+  }
+  function eventRecordStatHtml(d){
+    if(!d || !d.id) return "";
+    var rec=deckEventRecord(eventList(), d.id);
+    if(!rec.w && !rec.l && !rec.d) return "";
+    return '<div class="hs" title="'+esc(eventRecordWords(rec))+'"><span class="n">'+esc(eventRecordText(rec))+'</span><span class="l">Record</span></div>';
+  }
+  function chosenDeckId(){
+    var ds=(typeof STATE==="object" && STATE && Array.isArray(STATE.decks))?STATE.decks:[], i, id;
+    if(!ds.length) return "";
+    id=STATE.activeDeck;
+    for(i=0;i<ds.length;i++) if(ds[i] && ds[i].id===id) return id;
+    return ds[0] && ds[0].id ? ds[0].id : "";
+  }
+  function renderEventLog(d){
+    var host=$("deckEvents"); if(!host) return;
+    var deckId=d&&d.id?String(d.id):"";
+    if(deckId!==eventLogDeck){ eventLogDeck=deckId; eventShowAll=false; eventLogAll=false; }
+    host.innerHTML=eventPanelHtml({
+      events:eventList(), deckId:deckId, all:!deckId || eventLogAll, showAll:eventShowAll,
+      decks:(typeof STATE==="object" && STATE && Array.isArray(STATE.decks))?STATE.decks:[],
+      ownOf:eventOwnQty, cardOf:eventPrizeCard, srcOf:eventPrizeSrc
+    });
+    if(!eventLogBound){
+      eventLogBound=true;
+      host.addEventListener("click", function(ev){
+        var t=ev.target && ev.target.closest ? ev.target.closest("[data-ev]") : null;
+        if(!t || !host.contains(t)) return;
+        var act=t.getAttribute("data-ev");
+        if(act==="new") openEventEditor(null);
+        else if(act==="more"){ eventShowAll=true; renderEventLog(activeDeck()); }
+        else if(act==="scope"){ eventLogAll=!eventLogAll; eventShowAll=false; renderEventLog(activeDeck()); }
+        else if(act==="edit") openEventEditor(t.getAttribute("data-id"));
+        else if(act==="prize") addEventPrize(t.getAttribute("data-id"));
+      });
+    }
+  }
+  function newEventId(){
+    var base=Date.now(), n=0, id, list, i, used;
+    while(n<50){
+      id="e"+(base+n);
+      list=eventList(); used=false;
+      for(i=0;i<list.length;i++) if(list[i] && list[i].id===id) used=true;
+      if(typeof eventDraft!=="undefined" && eventDraft && eventDraft.id===id) used=true;
+      if(!used && eventIdOk(id)) return id;
+      n++;
+    }
+    return "e"+base+"x"+n;
+  }
+  function copyEventRounds(rounds){
+    var out=[], i, r;
+    rounds=Array.isArray(rounds)?rounds:[];
+    for(i=0;i<rounds.length;i++){ r=rounds[i]||{}; out.push({result:r.result||"", opp:r.opp||""}); }
+    return out;
+  }
+  function copyEventPrizes(prizes){
+    var out=[], i, p;
+    prizes=Array.isArray(prizes)?prizes:[];
+    for(i=0;i<prizes.length;i++){ p=normEventPrize(prizes[i]); if(p && out.indexOf(p)<0) out.push(p); }
+    return out;
+  }
+  function readEventFields(){
+    var d=eventDraft; if(!d) return;
+    var el=$("eventName"); if(el) d.name=el.value;
+    el=$("eventDate"); if(el) d.date=el.value;
+    el=$("eventDeck"); if(el) d.deckId=el.value;
+    el=$("eventPlace"); if(el) d.placing=el.value;
+    el=$("eventOpp"); if(el) d.opp=el.value;
+    el=$("eventPick"); if(el) d.eventPick=el.value;
+    var box=$("eventRounds");
+    if(box && d.rounds){
+      var rows=box.querySelectorAll(".evround"), i, inp;
+      for(i=0;i<rows.length && i<d.rounds.length;i++){
+        inp=rows[i].querySelector("input");
+        if(inp) d.rounds[i].opp=inp.value;
+      }
+    }
+  }
+  function paintPrizeSug(q){
+    var box=$("eventPrizeSug"); if(!box) return;
+    var hits=prizeSuggestions(q, (typeof CARDS!=="undefined" && CARDS)?CARDS:[], 8), html="", i, c;
+    if(!hits.length){ box.hidden=true; box.innerHTML=""; return; }
+    for(i=0;i<hits.length;i++){
+      c=hits[i];
+      html+='<button type="button" data-evact="sug" data-id="'+esc(c.id)+'">'+esc((c.name||c.id)+" · "+c.id)+'</button>';
+    }
+    box.innerHTML=html; box.hidden=false;
+  }
+  function paintEventSheet(){
+    var d=eventDraft; if(!d) return;
+    var title=$("eventTitle"), body=$("eventBody"), del=$("eventDelete"), saveBtn=$("eventSave"), sc=$("eventScrim");
+    if(!sc || !body) return;
+    if(title) title.textContent=d.mode==="round"?"Log this game":(d.isNew?"Log event":"Edit event");
+    if(saveBtn) saveBtn.textContent=d.mode==="round"?"Log result":"Save";
+    if(del){ del.hidden=d.mode==="round" || !!d.isNew; del.textContent=d.confirmDelete?"Confirm delete":"Delete"; }
+    body.innerHTML=eventSheetHtml(d, {
+      decks:(typeof STATE==="object" && STATE && Array.isArray(STATE.decks))?STATE.decks:[],
+      events:eventList(), cardOf:eventPrizeCard
+    });
+    sc.hidden=false;
+  }
+  function openEventEditor(id){
+    var list=eventList(), i, src=null;
+    if(id){ for(i=0;i<list.length;i++) if(list[i] && list[i].id===id) src=list[i]; }
+    if(src){
+      eventDraft={mode:"edit", isNew:false, confirmDelete:false, id:src.id, name:src.name||"", date:src.date||"", deckId:src.deckId||"", placing:src.placing||"", rounds:copyEventRounds(src.rounds), prizes:copyEventPrizes(src.prizes), eventPick:"", result:"", opp:"", foe:""};
+    } else {
+      eventDraft={mode:"edit", isNew:true, confirmDelete:false, id:newEventId(), name:"", date:todayKey(), deckId:chosenDeckId(), placing:"", rounds:[], prizes:[], eventPick:"", result:"", opp:"", foe:""};
+    }
+    paintEventSheet();
+    setTimeout(function(){ var el=$("eventName"); if(el){ try{ el.focus(); }catch(err){} } }, 30);
+  }
+  function openMatchLogger(){
+    var m=(typeof loadMatch==="function")?loadMatch():null, foe="", today=todayKey(), pick=preferredEventId(eventList(), today);
+    if(m && m.p2 && m.p2.name && m.p2.name!=="Opponent") foe=String(m.p2.name).slice(0,24);
+    if(!pick && eventList().length>=EVENT_LOG_MAX){ toast("The event log is full"); return; }
+    eventDraft={mode:"round", isNew:!pick, confirmDelete:false, id:"", name:"", date:today, deckId:chosenDeckId(), placing:"", rounds:[], prizes:[], eventPick:pick||"", result:"", opp:"", foe:foe};
+    paintEventSheet();
+    setTimeout(function(){ var b=document.querySelector("#eventBody .evpick"); if(b){ try{ b.focus(); }catch(err){} } }, 30);
+  }
+  function closeEventSheet(){
+    eventDraft=null;
+    var sc=$("eventScrim"); if(sc) sc.hidden=true;
+  }
+  function saveEventSheet(){
+    if(!eventDraft) return;
+    readEventFields();
+    var d=eventDraft, res, word, nm, wasNew=!!d.isNew, logging=d.mode==="round";
+    if(logging){
+      if(!d.eventPick && !d.id) d.id=newEventId();
+      res=commitMatchRound(eventList(), d);
+    } else {
+      if(!d.id) d.id=newEventId();
+      res=commitEventDraft(eventList(), d);
+    }
+    if(!res || !res.ok){
+      var err=res && res.error;
+      if(err==="result") toast("Pick a result");
+      else if(err==="rounds") toast("This event already has "+EVENT_ROUNDS_MAX+" rounds");
+      else if(err==="full") toast("The event log is full");
+      else if(err==="prizes") toast("This event already has "+EVENT_PRIZES_MAX+" prizes");
+      else toast("Give the event a name");
+      return;
+    }
+    if(res.events && res.events.length) STATE.events=res.events; else delete STATE.events;
+    save();
+    if(logging){
+      word=d.result==="W"?"win":(d.result==="L"?"loss":"draw");
+      nm=res.name||d.name||"";
+      var m=loadMatch(), fresh=defaultMatch();
+      if(m && m.p1 && m.p1.name) fresh.p1.name=m.p1.name;
+      if(m && m.p2 && m.p2.name) fresh.p2.name=m.p2.name;
+      saveMatch(fresh);
+      closeEventSheet();
+      toast("Logged a "+word+(nm?" at "+nm:""));
+      if(_curPage==="match") renderMatch();
+      if(_curPage==="decks") renderDecks();
+      return;
+    }
+    closeEventSheet();
+    toast(wasNew?"Event logged":"Event saved");
+    if(_curPage==="decks") renderDecks();
+  }
+  function deleteEventSheet(){
+    if(!eventDraft || eventDraft.mode==="round" || eventDraft.isNew) return;
+    if(!eventDraft.confirmDelete){
+      eventDraft.confirmDelete=true;
+      var del=$("eventDelete"); if(del) del.textContent="Confirm delete";
+      return;
+    }
+    var id=eventDraft.id, list=eventList(), out=[], i;
+    for(i=0;i<list.length;i++) if(!list[i] || list[i].id!==id) out.push(list[i]);
+    if(out.length) STATE.events=out; else delete STATE.events;
+    save();
+    closeEventSheet();
+    toast("Event deleted");
+    if(_curPage==="decks") renderDecks();
+  }
+  function addEventPrize(id){
+    var c=eventPrizeCard(id);
+    if(!c){ toast("That card is not in SphereDex"); return; }
+    changeRaw(o(c.id), 1, defaultEditionFor(c)||"unknown");
+    save();
+    var col=activeCol();
+    toast("Added "+(c.name||c.id)+" to "+((col&&col.name)?col.name:"your collection"));
+    try{ renderHome(); }catch(e){}
+    if(_curPage==="decks") renderDecks();
+    if($("page-collection") && !$("page-collection").hidden){ try{ render(); }catch(e2){} }
+  }
+  function onEventBodyClick(e){
+    var t=e.target && e.target.closest ? e.target.closest("[data-evact]") : null;
+    if(!t || !eventDraft) return;
+    readEventFields();
+    var act=t.getAttribute("data-evact"), code, idx;
+    if(act==="result"){
+      code=t.getAttribute("data-code"); idx=t.getAttribute("data-idx");
+      if(idx==null) eventDraft.result=code;
+      else if(eventDraft.rounds && eventDraft.rounds[+idx]) eventDraft.rounds[+idx].result=code;
+      paintEventSheet();
+      return;
+    }
+    if(act==="addround"){
+      if(!eventDraft.rounds) eventDraft.rounds=[];
+      if(eventDraft.rounds.length>=EVENT_ROUNDS_MAX){ toast("This event already has "+EVENT_ROUNDS_MAX+" rounds"); return; }
+      eventDraft.rounds.push({result:"", opp:""});
+      paintEventSheet();
+      return;
+    }
+    if(act==="rmround"){
+      idx=+t.getAttribute("data-idx");
+      if(eventDraft.rounds && idx>=0 && idx<eventDraft.rounds.length) eventDraft.rounds.splice(idx, 1);
+      paintEventSheet();
+      return;
+    }
+    if(act==="rmprize"){
+      idx=+t.getAttribute("data-idx");
+      if(eventDraft.prizes && idx>=0 && idx<eventDraft.prizes.length) eventDraft.prizes.splice(idx, 1);
+      paintEventSheet();
+      return;
+    }
+    if(act==="sug"){
+      if(!eventDraft.prizes) eventDraft.prizes=[];
+      if(eventDraft.prizes.length>=EVENT_PRIZES_MAX){ toast("This event already has "+EVENT_PRIZES_MAX+" prizes"); return; }
+      code=normEventPrize(t.getAttribute("data-id"));
+      if(!code || eventDraft.prizes.indexOf(code)>=0) return;
+      eventDraft.prizes.push(code);
+      paintEventSheet();
+    }
+  }
+  function onEventBodyInput(e){
+    var t=e.target; if(!t || !eventDraft) return;
+    if(t.id==="eventPrizeQ"){ paintPrizeSug(t.value); return; }
+    readEventFields();
+    if(eventDraft.confirmDelete){
+      eventDraft.confirmDelete=false;
+      var del=$("eventDelete"); if(del) del.textContent="Delete";
+    }
+  }
+  function onEventBodyChange(e){
+    var t=e.target; if(!t || !eventDraft) return;
+    readEventFields();
+    if(t.id!=="eventPick") return;
+    if(!eventDraft.eventPick){
+      eventDraft.id="";
+      if(!eventDraft.date) eventDraft.date=todayKey();
+      if(!eventDraft.deckId) eventDraft.deckId=chosenDeckId();
+    }
+    paintEventSheet();
+  }
+  (function(){
+    var sc=$("eventScrim"); if(!sc || sc._evbound) return;
+    sc._evbound=1;
+    var cancel=$("eventCancel"), saveBtn=$("eventSave"), del=$("eventDelete"), body=$("eventBody");
+    if(cancel) cancel.onclick=function(){ closeEventSheet(); };
+    if(saveBtn) saveBtn.onclick=function(){ saveEventSheet(); };
+    if(del) del.onclick=function(){ deleteEventSheet(); };
+    sc.onclick=function(e){ if(e.target===sc) closeEventSheet(); };
+    sc.addEventListener("keydown", function(e){
+      if(e.key!=="Enter") return;
+      var t=e.target;
+      if(!t || t.id==="eventPrizeQ" || t.tagName==="BUTTON" || t.tagName==="TEXTAREA" || t.tagName!=="INPUT") return;
+      e.preventDefault();
+      saveEventSheet();
+    });
+    if(body){
+      body.addEventListener("click", onEventBodyClick);
+      body.addEventListener("input", onEventBodyInput);
+      body.addEventListener("change", onEventBodyChange);
+    }
+  })();
+  /* EVENT LOG END */
 
   // ---- Missing cards: goal-led collection view ------------------------------------------------------
   // This reads the same collection, wishlist, set and deck data used everywhere else; it stores no
@@ -10134,6 +10913,7 @@ label.acctsetrow { align-items:center; }
           '<button type="button" class="tbtn ghost" data-act="reset">Reset</button></div>'+
         '<div class="matchrow"><button type="button" class="tbtn'+(m.clockOn?"":" ghost")+'" data-act="clock-toggle" aria-pressed="'+(m.clockOn?"true":"false")+'">30-minute clock</button>'+clock+'</div>'+
         '<p class="matchnote">Life starts at 10. Material and Ingredient start at 0 and stay at 0 or above. Day and night are shared. The clock is an optional 30-minute timer.</p>'+
+        '<div class="matchlog"><button type="button" class="tbtn" data-act="log">Log this game</button><p class="matchnote">Saves the result with your events, then sets the table back to the start.</p></div>'+
       '</div>'+
       matchHalf(m,"p1","");
     board.onclick=function(ev){
@@ -10161,6 +10941,7 @@ label.acctsetrow { align-items:center; }
         saveMatch(cur); renderMatch(); return;
       }
       if(act==="clock-reset"){ cur.clockRunning=false; cur.clockEnd=0; cur.clockLeft=MATCH_CLOCK_MS; saveMatch(cur); renderMatch(); return; }
+      if(act==="log"){ openMatchLogger(); return; }
       if(act==="reset"){
         openAsk({title:"Reset this match?", message:"Life goes back to 10, Material and Ingredient to 0, the round to 1 and the clock to 30:00. Names stay as they are.", confirmOnly:true, okText:"Reset", onOk:function(){
           var fresh=defaultMatch(); fresh.p1.name=cur.p1.name; fresh.p2.name=cur.p2.name; saveMatch(fresh); renderMatch();
@@ -10271,6 +11052,7 @@ label.acctsetrow { align-items:center; }
   function closeTopOverlay(){
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
+    if(!closed){ var es=$("eventScrim"); if(es && !es.hidden){ closeEventSheet(); closed=true; } }
     if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
@@ -13876,6 +14658,10 @@ label.acctsetrow { align-items:center; }
       out.decks=dorder.map(function(id){ return dm[id]; });
       if(!dm[out.activeDeck]) out.activeDeck=out.decks[0].id;
     }
+    // Event results sit beside decks. Union by id, this device winning a clash, because a sync
+    // would otherwise drop whichever copy was saved second. Skip the key when neither side has one,
+    // so a player who never logs an event does not grow an empty list on the next save.
+    if(Array.isArray(local.events) || Array.isArray(remote.events)) out.events=mergeEvents(local.events, remote.events);
     // Follows merge entry by entry (mergeAlerts). out._local is this device's, from the copy above.
     var al=mergeAlerts(local.alerts, remote.alerts); if(al) out.alerts=al; else delete out.alerts;
     // Anything a newer app keeps at the top of the state survives this one. The server's _acct is handled by
