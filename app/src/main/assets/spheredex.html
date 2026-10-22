@@ -1770,6 +1770,63 @@ label.acctsetrow { align-items:center; }
   .dlabacts .btn { min-height:44px; }
   .dlabacts .btn:disabled { opacity:.45; cursor:default; }
   .dflip { margin-top:8px; font-size:.8rem; color:var(--ink); }
+  /* trades */
+  .tradesides { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; }
+  .tradeside { flex:1 1 280px; min-width:0; background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:12px; }
+  .tradeside h3 { margin:0 0 8px; font-family:var(--font-display); font-size:1.15rem; font-weight:800; }
+  .tradeside .search { width:100%; flex:none; margin:8px 0; }
+  #tradeGiveOwned { margin:0 0 2px; }
+  .tradestats { display:flex; flex-wrap:wrap; gap:12px; margin:12px 0 4px; }
+  .tradestats .hs { flex:1 1 140px; display:flex; flex-direction:column; gap:2px; }
+  .tradestats .n { font-family:var(--font-display); font-size:1.5rem; font-weight:850; }
+  .tradestats .l { font-size:.64rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
+  .tradecopies { font-size:.78rem; color:var(--ink-soft); }
+  .tradediff { font-family:var(--font-display); font-weight:800; font-size:1.35rem; margin:4px 0 8px; }
+  .tradediff.empty, .tradediff.even, .tradediff.noprice { color:var(--ink-soft); font-size:1.02rem; font-weight:700; }
+  .tradediff.receive, .thdiff.receive { color:var(--up); }
+  .tradediff.give, .thdiff.give { color:var(--down); }
+  .tradebasis { color:var(--ink-faint); font-size:.75rem; margin:0 0 6px; }
+  .tradenote { color:var(--ink-soft); font-size:.82rem; margin:0 0 8px; }
+  .tradeempty, .tradesugempty { color:var(--ink-soft); font-size:.84rem; margin:8px 0; }
+  .tradesugempty { padding:8px 12px; }
+  .traderow { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+  .traderow.short { background:color-mix(in srgb, var(--down) 10%, transparent); margin:0 -6px; padding-left:6px; padding-right:6px; border-radius:8px; }
+  .traderow img, .tradenopic { width:36px; height:50px; object-fit:cover; border-radius:5px; background:var(--surface-2); flex:none; }
+  .tmeta { flex:1 1 auto; min-width:0; }
+  .tn { font-weight:700; font-size:.9rem; overflow-wrap:anywhere; }
+  .tid, .trown { font-family:var(--font-mono); font-size:.7rem; color:var(--ink-faint); }
+  .trown.short { color:var(--down); font-weight:700; }
+  .tprice { flex:none; text-align:right; }
+  .teach, .tline { display:block; font-size:.75rem; }
+  .tline, .tqty { font-weight:750; color:var(--ink); }
+  .tqty { font-family:var(--font-mono); }
+  .tremove { border:none; background:transparent; color:var(--ink-faint); padding:6px; cursor:pointer; }
+  .tradenotein { margin-top:14px; max-width:520px; }
+  .tradewarn { color:var(--down); font-size:.84rem; font-weight:650; margin:8px 0 0; }
+  .tradeacts { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 18px; }
+  .tradeacts .btn.primary { flex:0 0 auto; }
+  .tradeacts .btn:disabled { opacity:.45; cursor:default; }
+  .tradehistitem { margin:0 0 8px; }
+  .tradehisthead { width:100%; text-align:left; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; color:var(--ink); cursor:pointer; }
+  .tradehistitem.open .tradehisthead { border-color:var(--accent); }
+  .thtitle { display:block; font-weight:750; }
+  .thmeta { display:block; margin-top:2px; font-size:.78rem; color:var(--ink-faint); }
+  .thdiff { display:block; margin-top:4px; font-weight:750; }
+  .tradedetail { padding:4px 2px 8px; }
+  .tradedetail .btn { margin-top:8px; }
+  .tradeside .decksug { max-width:none; width:100%; margin-bottom:8px; }
+  .traderow .stepper { flex:none; }
+  .traderow .tprice { min-width:4.5rem; }
+  #tradeHist .empty { padding:22px 12px; }
+  #tradeHist .empty b { display:block; color:var(--ink); margin-bottom:4px; }
+  @media (max-width:640px){
+    .tradeside { flex-basis:100%; }
+    .no-flexgap .tradesides>*+*{margin-left:0}
+  }
+  @media (max-width:420px){
+    .tradestats .hs { flex-basis:100%; }
+    .no-flexgap .tradestats>*+*{margin-left:0}
+  }
   .modeexport { margin:-6px 0 12px; display:flex; gap:8px; flex-wrap:wrap; }
   .modeexport[hidden] { display:none; }
   .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
@@ -2626,6 +2683,12 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .modeexport{gap:0}.no-flexgap .modeexport>*+*{margin-left:8px}.no-flexgap .modeexport>*{margin-bottom:8px}
   .no-flexgap .missingfoot{gap:0}.no-flexgap .missingfoot>*+*{margin-left:10px}.no-flexgap .missingfoot>*{margin-bottom:10px}
   .no-flexgap .missingactions{gap:0}.no-flexgap .missingactions>*+*{margin-left:8px}.no-flexgap .missingactions>*{margin-bottom:8px}
+  .no-flexgap .tradesides{gap:0}.no-flexgap .tradesides>*+*{margin-left:14px}.no-flexgap .tradesides>*{margin-bottom:14px}
+  .no-flexgap .tradestats{gap:0}.no-flexgap .tradestats>*+*{margin-left:12px}.no-flexgap .tradestats>*{margin-bottom:12px}
+  .no-flexgap .tradestats .hs{gap:0}.no-flexgap .tradestats .hs>*+*{margin-top:2px}
+  .no-flexgap .traderow{gap:0}.no-flexgap .traderow>*+*{margin-left:10px}
+  .no-flexgap .tradeacts{gap:0}.no-flexgap .tradeacts>*+*{margin-left:8px}.no-flexgap .tradeacts>*{margin-bottom:8px}
+  .no-flexgap .tradeside .search{gap:0}.no-flexgap .tradeside .search>*+*{margin-left:9px}
 </style>
 
 <div class="wrap">
@@ -2704,6 +2767,7 @@ label.acctsetrow { align-items:center; }
     <button class="tab menuonly" data-page="key" data-icon="key" title="Key"><span class="tablabel">Key</span></button>
     <button class="tab menuonly" data-page="rewards" data-icon="sphere" title="Rewards"><span class="tablabel">Rewards</span></button>
     <button class="tab menuonly" data-page="portfolio" data-icon="chart" title="Market"><span class="tablabel">Market</span></button>
+    <button class="tab menuonly" data-page="trades" data-icon="swap" title="Trades"><span class="tablabel">Trades</span></button>
     <button class="tab menuonly" data-page="settings" data-icon="gear" title="Settings"><span class="tablabel">Settings</span></button>
     <button class="tab menuonly" data-page="account" data-icon="user" title="Account"><span class="tablabel">Account</span></button>
     <button class="tab menuonly" data-page="contact" data-icon="mail" title="Contact"><span class="tablabel">Contact</span></button>
@@ -2939,6 +3003,48 @@ label.acctsetrow { align-items:center; }
     <h2 class="sech">Match</h2>
     <p class="qsub">For a game at the table. Life starts at 10. Material and Ingredient start at 0 and cannot go below 0. Night is shared. The live table stays on this device, so it works with no connection.</p>
     <div class="matchboard" id="matchBoard"></div>
+  </section>
+
+  <section class="page" id="page-trades">
+    <h2 class="sech">Trades</h2>
+    <p class="qsub">Build an I give list and an I get list. Totals use the same market prices as the rest of SphereDex. A card with no price is counted, and left out of the money. Saving moves raw copies in the collection you have open. Graded slabs stay where they are.</p>
+    <div class="tradestats" id="tradeStats" aria-live="polite"></div>
+    <p class="tradediff empty" id="tradeDiff" aria-live="polite">Add cards to compare</p>
+    <p class="tradenote priceui" id="tradeUnpriced" hidden></p>
+    <p class="tradebasis priceui" id="tradeBasis"></p>
+    <p class="tradebasis" id="tradeColLine"></p>
+    <div class="tradesides">
+      <section class="tradeside" aria-labelledby="tradeGiveHead">
+        <h3 id="tradeGiveHead">I give</h3>
+        <button class="chip solid" type="button" id="tradeGiveOwned" data-act="owned" aria-pressed="true">From my collection</button>
+        <label class="search tradeadd">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="tradeGiveSearch" type="search" placeholder="Search cards you own" autocomplete="off" aria-label="Search cards to give" />
+        </label>
+        <div class="decksug" id="tradeGiveSug" hidden></div>
+        <div class="tradelist" id="tradeGiveList"></div>
+      </section>
+      <section class="tradeside" aria-labelledby="tradeGetHead">
+        <h3 id="tradeGetHead">I get</h3>
+        <label class="search tradeadd">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="tradeGetSearch" type="search" placeholder="Search every card" autocomplete="off" aria-label="Search cards to get" />
+        </label>
+        <div class="decksug" id="tradeGetSug" hidden></div>
+        <div class="tradelist" id="tradeGetList"></div>
+      </section>
+    </div>
+    <div class="field tradenotein">
+      <label for="tradeNoteInput">Note</label>
+      <input id="tradeNoteInput" type="text" maxlength="80" placeholder="Optional name or event" autocomplete="off" aria-label="Note for this trade" />
+    </div>
+    <p class="tradewarn" id="tradeWarn" hidden></p>
+    <div class="tradeacts">
+      <button class="btn primary" type="button" id="tradeSave" data-act="save" disabled>Save trade</button>
+      <button class="btn sec" type="button" id="tradeClear" data-act="clear">Clear</button>
+    </div>
+    <h2 class="sech">Past trades</h2>
+    <div id="tradeHist"></div>
   </section>
 
   <section class="page" id="page-sealed">
@@ -3221,7 +3327,7 @@ label.acctsetrow { align-items:center; }
 
       <div class="setcat">Backup &amp; restore</div>
       <div class="setrow">
-        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection as a spreadsheet (CSV) or a backup (JSON), and import either one as a new collection. The JSON backup also includes event results.</div><div class="sdesc" id="backupStatus" style="margin-top:5px" aria-live="polite"></div></div>
+        <div class="setinfo"><div class="stitle">Backup &amp; restore</div><div class="sdesc">Export the active collection as a spreadsheet (CSV) or a backup (JSON), and import either one as a new collection. The JSON backup also keeps your trade history. It also includes event results.</div><div class="sdesc" id="backupStatus" style="margin-top:5px" aria-live="polite"></div></div>
         <div style="display:flex;gap:9px;flex:0 0 auto;flex-wrap:wrap"><button class="btn sec" id="setExport" data-icon="upload">Export</button><button class="btn sec" id="setImport" data-icon="download">Import</button></div>
       </div>
 
@@ -3335,7 +3441,7 @@ label.acctsetrow { align-items:center; }
   <div class="askbox wide globalsearchbox" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
     <h3 id="globalSearchTitle">Search all of SphereDex</h3>
     <input class="globalsearchinput" id="globalSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Cards, sets, decks, news…" aria-label="Search all of SphereDex" />
-    <div class="globalsearchhint">Search cards, sets, sealed products, decks, collections, news and releases. Small typos are okay.</div>
+    <div class="globalsearchhint">Search cards, sets, sealed products, decks, trades, collections, news and releases. Small typos are okay.</div>
     <div class="globalsearchresults" id="globalSearchResults" aria-live="polite"></div>
     <div class="askbtns"><button type="button" id="globalSearchClose">Close</button></div>
   </div>
@@ -3994,6 +4100,7 @@ label.acctsetrow { align-items:center; }
     // here: this runs at startup before the price alert helpers exist, so entries are left to their readers.
     if(st.alerts!==undefined && !plainObj(st.alerts)) delete st.alerts;
     if(st._local!==undefined && !localOk(st._local)) delete st._local;
+    normTrades(st);
     return st;
   }
   normTop(STATE);
@@ -4108,7 +4215,7 @@ label.acctsetrow { align-items:center; }
   function stampSoldMark(dayKey){ var c=activeCol(); if(!c.hist) c.hist={}; var d=dayKey||todayKey();
     var vSold=Math.round((cardsValueMode("sold")+sealedValueMode("sold"))*100)/100;
     if(vSold>0){ var pt=c.hist[d]||{}; pt.vSold=vSold; c.hist[d]=pt; save(); } }
-  function switchCol(id){ clearModes(); STATE.active=id; own=activeCol().own; save(); buildColSel(); if(typeof applyColMode==="function") applyColMode(); render(); }
+  function switchCol(id){ clearModes(); STATE.active=id; own=activeCol().own; save(); buildColSel(); if(typeof applyColMode==="function") applyColMode(); render(); if(typeof renderTrades==="function" && typeof _curPage!=="undefined" && _curPage==="trades") renderTrades(); }
   function o(id){ var s=own[id]; if(!s || typeof s!=="object"){ s=own[id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
     if(s.mkt==null) s.mkt=0; if(s.last==null) s.last=0; if(s.avg==null) s.avg=0; if(!s.graded) s.graded=[]; return s; }
   function has(s){ return s.qty>0 || (s.graded && s.graded.length>0); }
@@ -6309,7 +6416,7 @@ label.acctsetrow { align-items:center; }
   }
   function doExport(onDone){
     var col=activeCol(), nm=col.name;
-    var text=JSON.stringify(collectionBackup(col, eventList()),null,2);
+    var text=JSON.stringify(tradeBackupPayload(collectionBackup(col, eventList()), STATE.trades, STATE.tradeDraft),null,2);
     saveTextFile(fileSlug(col.name,"collection")+".json", "application/json", text, function(){ markBackupExport(); toast("Exported “"+nm+"”"); if(onDone) onDone(); });
   }
   function doExportCsv(){
@@ -6361,18 +6468,26 @@ label.acctsetrow { align-items:center; }
       var hasCards=!!(map && Object.keys(map).length);
       if(!hasCards && !evN){ toast("That file couldn't be read"); return; }
       if(evN) STATE.events=importBackupEvents(eventList(), fileEvents);
+      var tradeBits="";
+      if(d && typeof d==="object" && !Array.isArray(d)){
+        var before={};
+        (STATE.trades||[]).forEach(function(t){ if(t&&t.id) before[t.id]=1; });
+        tradeImportMerge(STATE, d);
+        var added=0; (STATE.trades||[]).forEach(function(t){ if(t&&t.id&&!before[t.id]) added++; });
+        if(added) tradeBits=" Trade history updated.";
+      }
       if(hasCards){
         var nm=(d&&typeof d.name==="string"&&d.name)?d.name+" (imported)":"Imported collection";
         var id="c"+Date.now(), nc={id:id,name:nm,own:map,sealed:sealedMap(d&&d.sealed)}; STATE.cols.push(nc);
         if(Object.keys(map).some(function(k){ return map[k].addAt; })) baseCol(nc);   // a backup with add times keeps them
         switchCol(id);
         if(_curPage==="decks") renderDecks();
-        toast(evN?("Imported “"+nm+"” with "+evN+" event"+(evN===1?"":"s")):("Imported “"+nm+"”"));
+        toast((evN?("Imported “"+nm+"” with "+evN+" event"+(evN===1?"":"s")):("Imported “"+nm+"”"))+tradeBits);
         return;
       }
       save();
       if(_curPage==="decks") renderDecks();
-      toast("Imported "+evN+" event"+(evN===1?"":"s"));
+      toast("Imported "+evN+" event"+(evN===1?"":"s")+tradeBits);
     });
   }
   // Settings chooser: pick CSV or JSON for export / import. Each option closes the modal and starts the
@@ -6386,11 +6501,11 @@ label.acctsetrow { align-items:center; }
       $("fileIOTitle").textContent="Export “"+(activeCol().name||"Collection")+"”";
       hint.textContent=""; hint.hidden=true;
       setOpt(b1, 1, "Spreadsheet (CSV)", "Opens in Numbers, Excel and Google Sheets", doExportCsv);
-      setOpt(b2, 2, "Backup (JSON)", "Restore it into SphereDex on any device", doExport);
+      setOpt(b2, 2, "Backup (JSON)", "Restore it into SphereDex, with trade history", doExport);
     } else {
       $("fileIOTitle").textContent="Import a collection";
       hint.textContent="It is added as a new collection"; hint.hidden=false;
-      setOpt(b1, 1, "Backup (JSON)", "A file exported from SphereDex", doImport);
+      setOpt(b1, 1, "Backup (JSON)", "A SphereDex file. Trade history is merged.", doImport);
       setOpt(b2, 2, "Spreadsheet (CSV)", "From palworldtcg.gg, Palify, Pal Collector or SphereDex", doImportCsv);
     }
     cancel.onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
@@ -7140,6 +7255,7 @@ label.acctsetrow { align-items:center; }
     gear:'<path d="M5 7h9M18 7h1M5 12h1M10 12h9M5 17h6M15 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="17" r="2"/>',
     user:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
     layers:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+    swap:'<path d="M7 7h12"/><path d="M15 3l4 4-4 4"/><path d="M17 17H5"/><path d="M9 13l-4 4 4 4"/>',
     chev:'<path d="M6 9l6 6 6-6"/>',
     menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
     dots:'<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
@@ -10972,6 +11088,742 @@ label.acctsetrow { align-items:center; }
     if(m.clockOn && m.clockRunning) startMatchTimer(); else stopMatchTimer();
   }
 
+  // ---- Trade checker ----
+  // I give and I get, priced with the same market figures as the rest of the app. Saving moves raw copies
+  // in the open collection and keeps the trade in STATE, so it syncs with the account and rides in the JSON
+  // backup. A saved line freezes the unit price from that moment (null when there was no price). Graded
+  // slabs are never moved.
+  var TRADE_WIRED=false, TRADE_OPEN=null, TRADE_SEQ=0;
+  function tradeQty(v){
+    v=Number(v);
+    if(!isFinite(v) || v<=0) return 0;
+    v=Math.floor(v);
+    return v>99?99:v;
+  }
+  function tradeMap(src){
+    var out={};
+    if(!src || typeof src!=="object" || Array.isArray(src)) return out;
+    Object.keys(src).forEach(function(k){
+      var id=String(k).trim().slice(0,40);
+      if(!id || id.charAt(0)==="_") return;
+      var v=src[k], q=(v && typeof v==="object") ? tradeQty(v.qty) : tradeQty(v);
+      if(!q) return;
+      out[id]=Math.min(99, (out[id]||0)+q);
+    });
+    return out;
+  }
+  function tradeDraftNorm(d){
+    var give={}, get={}, note="", ownedOnly=true;
+    if(d && typeof d==="object" && !Array.isArray(d)){
+      give=tradeMap(d.give);
+      get=tradeMap(d.get);
+      note=String(d.note==null?"":d.note).replace(/\s+/g," ").trim().slice(0,80);
+      ownedOnly=d.ownedOnly===false ? false : true;
+    }
+    return {give:give, get:get, note:note, ownedOnly:ownedOnly};
+  }
+  function tradeLinesNorm(arr){
+    var order=[], by={};
+    if(!Array.isArray(arr)) return [];
+    arr.forEach(function(line){
+      if(!line || typeof line!=="object") return;
+      var id=String(line.id==null?"":line.id).trim().slice(0,40);
+      if(!id || id.charAt(0)==="_") return;
+      var q=tradeQty(line.qty);
+      if(!q) return;
+      var unit=null, hasUnit=false;
+      if(line.unit!==undefined && line.unit!==null && line.unit!==""){
+        var u=+line.unit;
+        if(isFinite(u) && u>0){ unit=Math.round(u*100)/100; hasUnit=true; }
+      }
+      if(!by[id]){
+        by[id]={id:id, qty:q, unit:hasUnit?unit:null, conv:(hasUnit && line.conv)?1:0};
+        order.push(id);
+      } else {
+        by[id].qty=Math.min(99, by[id].qty+q);
+        if(by[id].unit==null && hasUnit){ by[id].unit=unit; if(line.conv) by[id].conv=1; }
+      }
+    });
+    return order.map(function(id){
+      var line=by[id], out={id:line.id, qty:line.qty, unit:line.unit};
+      if(line.unit!=null && line.conv) out.conv=1;
+      return out;
+    });
+  }
+  function tradeRecordNorm(t){
+    if(!t || typeof t!=="object" || Array.isArray(t)) return null;
+    var id=String(t.id==null?"":t.id).trim().slice(0,40);
+    if(!id || id.charAt(0)==="_") return null;
+    var give=tradeLinesNorm(t.give), get=tradeLinesNorm(t.get);
+    if(!give.length && !get.length) return null;
+    var at=+t.at; if(!(at>0)) at=0;
+    var note=String(t.note==null?"":t.note).replace(/\s+/g," ").trim().slice(0,80);
+    var colName=String(t.colName==null?"":t.colName).replace(/\s+/g," ").trim().slice(0,80);
+    var colId=String(t.colId==null?"":t.colId).trim().slice(0,40);
+    var cur=String(t.cur==null?"":t.cur).trim().slice(0,8);
+    var mode=(t.mode==="sold")?"sold":"live";
+    return {id:id, at:at, note:note, colId:colId, colName:colName, cur:cur, mode:mode, give:give, get:get};
+  }
+  function tradeNewer(a, b){
+    if((a.at||0)!==(b.at||0)) return (b.at||0)-(a.at||0);
+    return a.id<b.id ? 1 : (a.id>b.id ? -1 : 0);
+  }
+  function normTrades(st){
+    if(!st || typeof st!=="object") return;
+    var list=[], seen={};
+    if(Array.isArray(st.trades)){
+      st.trades.forEach(function(t){
+        var rec=tradeRecordNorm(t);
+        if(!rec || seen[rec.id]) return;
+        seen[rec.id]=1;
+        list.push(rec);
+      });
+    }
+    list.sort(tradeNewer);
+    if(list.length>100) list=list.slice(0,100);
+    if(list.length || st.trades!==undefined) st.trades=list;
+    var hadDraft=st.tradeDraft!==undefined;
+    var draft=tradeDraftNorm(st.tradeDraft);
+    var draftLive=Object.keys(draft.give).length || Object.keys(draft.get).length || draft.note;
+    if(hadDraft || draftLive) st.tradeDraft=draft;
+  }
+  function tradeNet(give, get){
+    var g=tradeMap(give), h=tradeMap(get), ids={}, outG={}, outH={};
+    Object.keys(g).forEach(function(id){ ids[id]=1; });
+    Object.keys(h).forEach(function(id){ ids[id]=1; });
+    Object.keys(ids).forEach(function(id){
+      var n=(h[id]||0)-(g[id]||0);
+      if(n>0) outH[id]=n;
+      else if(n<0) outG[id]=-n;
+    });
+    return {give:outG, get:outH};
+  }
+  function tradeOwnedQty(ownMap, id){
+    var e=ownMap && typeof ownMap==="object" ? ownMap[id] : null;
+    if(!e || typeof e!=="object") return 0;
+    return rawCount(e.qty);
+  }
+  function tradeGiveBlocked(giveMap, ownMap){
+    var bad=[], g=tradeMap(giveMap);
+    Object.keys(g).forEach(function(id){
+      var need=g[id], have=tradeOwnedQty(ownMap, id);
+      if(need>have){
+        var e=ownMap && ownMap[id];
+        bad.push({id:id, need:need, have:have, graded:!!(e && e.graded && e.graded.length && have<=0)});
+      }
+    });
+    return bad;
+  }
+  function tradeHasLines(d){
+    d=tradeDraftNorm(d);
+    return !!(Object.keys(d.give).length || Object.keys(d.get).length);
+  }
+  function tradeSideCopies(map){
+    var m=tradeMap(map), n=0;
+    Object.keys(m).forEach(function(id){ n+=m[id]; });
+    return n;
+  }
+  function tradePriceOf(id, unitOfFn){
+    if(typeof unitOfFn!=="function") return null;
+    var n;
+    try{ n=+unitOfFn(id); }catch(e){ return null; }
+    if(!isFinite(n) || n<=0) return null;
+    return Math.round(n*100)/100;
+  }
+  function tradeValue(lines, unitOfFn){
+    var total=0, unpriced=0, copies=0, cards=0;
+    (lines||[]).forEach(function(line){
+      if(!line) return;
+      var q=tradeQty(line.qty);
+      if(!q) return;
+      cards++; copies+=q;
+      var unit;
+      if(line.unit!==undefined) unit=(line.unit!=null && isFinite(+line.unit) && +line.unit>0) ? Math.round(+line.unit*100)/100 : null;
+      else unit=tradePriceOf(line.id, unitOfFn);
+      if(unit==null) unpriced+=q;
+      else total+=unit*q;
+    });
+    return {total:Math.round(total*100)/100, unpriced:unpriced, copies:copies, cards:cards};
+  }
+  function tradeBalance(giveLines, getLines, unitOfFn){
+    var give=tradeValue(giveLines, unitOfFn), get=tradeValue(getLines, unitOfFn);
+    return {give:give, get:get, diff:Math.round((get.total-give.total)*100)/100, unpriced:give.unpriced+get.unpriced};
+  }
+  function tradeDiffKind(bal){
+    var g=bal&&bal.give, h=bal&&bal.get;
+    var copies=(g?g.copies:0)+(h?h.copies:0);
+    if(!copies) return "empty";
+    if((!g || !(g.total>0)) && (!h || !(h.total>0)) && bal.unpriced>0) return "noprice";
+    if(bal.diff>0) return "receive";
+    if(bal.diff<0) return "give";
+    return "even";
+  }
+  function tradeMoney(n, code){ return (typeof moneyIn==="function") ? moneyIn(n, code) : String(n); }
+  function tradeDiffText(bal, code, conv){
+    var kind=tradeDiffKind(bal);
+    if(kind==="empty") return "Add cards to compare";
+    if(kind==="noprice") return "No market price on these cards";
+    if(kind==="even") return "Even on priced cards";
+    var prefix=conv ? "\u2248 " : "";
+    var money=prefix+tradeMoney(Math.abs(bal.diff), code);
+    return kind==="receive" ? "You receive "+money+" more" : "You give "+money+" more";
+  }
+  function tradeUnpricedWords(n){
+    n=Math.floor(+n)||0;
+    if(n<=0) return "";
+    if(n===1) return "1 copy has no market price and is left out of the totals.";
+    return n+" copies have no market price and are left out of the totals.";
+  }
+  function tradeCopiesText(n){
+    n=Math.floor(+n);
+    if(!isFinite(n) || n<0) n=0;
+    return n===1 ? "1 copy" : n+" copies";
+  }
+  function tradeTotalText(v, code, conv){
+    if(!v || !v.copies) return tradeMoney(0, code);
+    if(!(v.total>0)) return "No price";
+    var m=tradeMoney(v.total, code);
+    return conv ? "\u2248 "+m : m;
+  }
+  function tradeEachText(unit, code, conv){
+    if(unit==null || !(+unit>0)) return "No price";
+    return (conv ? "\u2248 " : "")+tradeMoney(unit, code)+" each";
+  }
+  function tradeBasisText(mode){ return mode==="sold" ? "Prices are last sold." : "Prices are live listings."; }
+  function tradeSavedBasis(rec){ return (rec && rec.mode==="sold") ? "Priced from last sold when this trade was saved." : "Priced from live listings when this trade was saved."; }
+  function tradeEmptyHist(){ return "A saved trade updates your collection and stays here."; }
+  function tradeClearText(){ return "Nothing is saved and your collection stays as it is."; }
+  function tradeDeleteText(){ return "Your collection stays as it is."; }
+  function tradeColLine(name){ return "Saves into "+(name||"this collection")+"."; }
+  function tradeListEmpty(side, ownedOnly){
+    if(side==="give" && ownedOnly!==false) return "Search your collection to add a card you give.";
+    if(side==="give") return "Search the catalogue to add a card you give.";
+    return "Search the catalogue to add a card you get.";
+  }
+  function tradeNameOf(id){
+    var c=typeof cardById==="function" ? cardById(id) : null;
+    return (c && c.name) ? c.name : String(id||"This card");
+  }
+  function tradeBlockText(bad, nameOf){
+    if(!bad || !bad.length) return "";
+    nameOf=nameOf||tradeNameOf;
+    if(bad.length===1){
+      var b=bad[0], name=nameOf(b.id);
+      if(b.have<=0 && b.graded) return "Graded slabs stay in the collection, so "+name+" cannot be given.";
+      if(b.have<=0) return name+" is not in this collection, so it cannot be given.";
+      return "You own "+b.have+" of "+name+", and this trade gives "+b.need+".";
+    }
+    return bad.length+" cards are short of the copies this trade gives.";
+  }
+  function tradeMoveWord(n){ n=+n||0; return n+" "+(n===1?"copy":"copies"); }
+  function tradeCommitText(draft, net, colName){
+    var g=tradeSideCopies(net&&net.give), h=tradeSideCopies(net&&net.get);
+    if(!g && !h) return "Both sides cancel out, so your collection would not change.";
+    var visG=tradeSideCopies(draft&&draft.give), visH=tradeSideCopies(draft&&draft.get);
+    var msg="This will remove "+tradeMoveWord(g)+" and add "+tradeMoveWord(h)+" in "+(colName||"this collection")+". You can open it again under Past trades.";
+    if(visG!==g || visH!==h) msg+=" Cards on both sides count as the difference.";
+    return msg;
+  }
+  function tradeWarnText(draft, ownMap, nameOf){
+    var d=tradeDraftNorm(draft);
+    if(!tradeHasLines(d)) return "";
+    var net=tradeNet(d.give, d.get);
+    if(!tradeSideCopies(net.give) && !tradeSideCopies(net.get)) return "Both sides cancel out, so your collection would not change.";
+    return tradeBlockText(tradeGiveBlocked(net.give, ownMap), nameOf);
+  }
+  function tradeHistCopies(rec){
+    var g=0, h=0;
+    ((rec&&rec.give)||[]).forEach(function(l){ g+=tradeQty(l&&l.qty); });
+    ((rec&&rec.get)||[]).forEach(function(l){ h+=tradeQty(l&&l.qty); });
+    return "Gave "+g+" \u00b7 Got "+h;
+  }
+  function tradeLinesConv(lines){
+    var yes=false;
+    (lines||[]).forEach(function(l){ if(l && l.conv && l.unit!=null && +l.unit>0) yes=true; });
+    return yes;
+  }
+  function tradeSearchRank(c, q){
+    if(!c) return 0;
+    var query=fold(String(q||"").trim());
+    if(!query) return 0;
+    var id=fold(c.id||""), name=fold(c.name||"");
+    if(id===query) return 100;
+    if(name===query) return 90;
+    if(id.indexOf(query)===0) return 80;
+    if(name.indexOf(query)===0) return 70;
+    if(typeof cardMatchesQuery==="function" && cardMatchesQuery(c, q)) return 50;
+    return 0;
+  }
+  function tradePick(q, ownedOnly, ownMap){
+    var query=String(q==null?"":q).trim();
+    if(query.length<2) return [];
+    var list=(typeof CARDS!=="undefined" && CARDS) ? CARDS : [], hits=[];
+    list.forEach(function(c){
+      if(!c || !c.id) return;
+      if(ownedOnly && tradeOwnedQty(ownMap, c.id)<=0) return;
+      if(typeof cardMatchesQuery==="function" && !cardMatchesQuery(c, query)) return;
+      hits.push({c:c, s:tradeSearchRank(c, query)});
+    });
+    hits.sort(function(a,b){ return b.s-a.s || String(a.c.id).localeCompare(String(b.c.id)); });
+    return hits.slice(0,8).map(function(x){ return x.c; });
+  }
+  function tradeSortLines(lines){
+    function setIdx(id){
+      var c=typeof cardById==="function" ? cardById(id) : null, set=c&&c.set;
+      if(typeof SET_ORDER!=="undefined" && SET_ORDER && set){
+        var i=SET_ORDER.indexOf(set);
+        if(i>=0) return i;
+      }
+      return 9999;
+    }
+    function seqOf(id){
+      var c=typeof cardById==="function" ? cardById(id) : null;
+      var n=c && c.seq!=null ? +c.seq : NaN;
+      if(isFinite(n)) return n;
+      var m=/(\d+)\s*$/.exec(String(id||""));
+      return m ? +m[1] : 999999;
+    }
+    return (lines||[]).slice().sort(function(a,b){
+      var ds=setIdx(a.id)-setIdx(b.id);
+      if(ds) return ds;
+      var dq=seqOf(a.id)-seqOf(b.id);
+      if(dq) return dq;
+      return String(a.id)<String(b.id) ? -1 : (String(a.id)>String(b.id) ? 1 : 0);
+    });
+  }
+  function tradeLinesOf(map){
+    var m=tradeMap(map);
+    return tradeSortLines(Object.keys(m).map(function(id){ return {id:id, qty:m[id]}; }));
+  }
+  function tradeDraftLines(d){
+    d=tradeDraftNorm(d);
+    return {give:tradeLinesOf(d.give), get:tradeLinesOf(d.get)};
+  }
+  function tradeSideConv(map, unitOfFn){
+    var yes=false;
+    if(typeof isConverted!=="function") return false;
+    Object.keys(tradeMap(map)).forEach(function(id){
+      if(!yes && isConverted(id) && tradePriceOf(id, unitOfFn)!=null) yes=true;
+    });
+    return yes;
+  }
+  function tradeSnapshotLines(map, unitOfFn){
+    var m=tradeMap(map);
+    return tradeSortLines(Object.keys(m).map(function(id){
+      var unit=tradePriceOf(id, unitOfFn);
+      var line={id:id, qty:m[id], unit:unit};
+      if(unit!=null && typeof isConverted==="function" && isConverted(id)) line.conv=1;
+      return line;
+    }));
+  }
+  function tradeNewId(){ TRADE_SEQ=(TRADE_SEQ+1)%1000; return "t"+Date.now()+TRADE_SEQ; }
+  function tradeSnapshot(draft, meta, unitOfFn){
+    var d=tradeDraftNorm(draft);
+    meta=meta||{};
+    var code=meta.cur;
+    if(code==null) code=(typeof CUR!=="undefined" && CUR && CUR.code) ? CUR.code : "";
+    return tradeRecordNorm({
+      id:meta.id||tradeNewId(),
+      at:meta.at||Date.now(),
+      note:d.note,
+      colId:meta.colId||"",
+      colName:meta.colName||"",
+      cur:code,
+      mode:meta.mode||(typeof priceMode==="function" ? priceMode() : "live"),
+      give:tradeSnapshotLines(d.give, unitOfFn),
+      get:tradeSnapshotLines(d.get, unitOfFn)
+    });
+  }
+  function tradeTakeCopies(e, n){
+    var left=tradeQty(n), order=["unknown","1","2","jp","cn"], i, got;
+    if(!e || !left) return 0;
+    for(i=0;i<order.length && left>0;i++){
+      got=changeRaw(e, -left, order[i]);
+      if(got<0) left+=got;
+    }
+    return tradeQty(n)-left;
+  }
+  function tradeApplyToOwn(ownMap, net){
+    net=net||{give:{}, get:{}};
+    var give=tradeMap(net.give), get=tradeMap(net.get);
+    var blocked=tradeGiveBlocked(give, ownMap);
+    if(blocked.length) return {ok:false, blocked:blocked};
+    if(!ownMap || typeof ownMap!=="object") return {ok:false, blocked:[]};
+    Object.keys(give).forEach(function(id){
+      tradeTakeCopies(ownMap[id], give[id]);
+      if(typeof setCopyNotes==="function" && typeof copyNotesList==="function") setCopyNotes(ownMap[id], copyNotesList(ownMap[id]));
+    });
+    Object.keys(get).forEach(function(id){
+      var e=ownMap[id];
+      if(!e || typeof e!=="object"){
+        e={qty:0, wish:false, cond:"Near Mint", notes:"", mkt:0, last:0, avg:0, graded:[]};
+        ownMap[id]=e;
+      }
+      var card=typeof cardById==="function" ? cardById(id) : null;
+      var ed=(typeof defaultEditionFor==="function" ? defaultEditionFor(card) : null) || "unknown";
+      changeRaw(e, get[id], ed);
+    });
+    return {ok:true, blocked:[]};
+  }
+  function mergeTradeLists(local, remote){
+    var order=[], by={};
+    function take(arr, win){
+      (Array.isArray(arr)?arr:[]).forEach(function(t){
+        var rec=tradeRecordNorm(t);
+        if(!rec) return;
+        if(!by[rec.id]) order.push(rec.id);
+        if(win || !by[rec.id]) by[rec.id]=rec;
+      });
+    }
+    take(remote, false);
+    take(local, true);
+    var list=order.map(function(id){ return by[id]; });
+    list.sort(tradeNewer);
+    if(list.length>100) list=list.slice(0,100);
+    return list;
+  }
+  function tradeBackupPayload(base, trades, draft){
+    var out={}, src=base&&typeof base==="object"?base:{};
+    out.app=src.app; out.name=src.name; out.own=src.own; out.sealed=src.sealed||{};
+    if(Array.isArray(src.events) && src.events.length) out.events=src.events;
+    var list=mergeTradeLists(trades, []);
+    if(list.length) out.trades=list;
+    var d=tradeDraftNorm(draft);
+    if(Object.keys(d.give).length || Object.keys(d.get).length || d.note) out.tradeDraft=d;
+    return out;
+  }
+  function tradeImportMerge(state, file){
+    var changed=false, draftTaken=false;
+    if(!state || typeof state!=="object") return {trades:false, draft:false};
+    if(file && Array.isArray(file.trades)){ state.trades=mergeTradeLists(state.trades, file.trades); changed=true; }
+    if(file && file.tradeDraft && typeof file.tradeDraft==="object"){
+      var local=tradeDraftNorm(state.tradeDraft);
+      var localEmpty=!Object.keys(local.give).length && !Object.keys(local.get).length && !local.note;
+      var incoming=tradeDraftNorm(file.tradeDraft);
+      var incomingLive=Object.keys(incoming.give).length || Object.keys(incoming.get).length || incoming.note;
+      if(localEmpty && incomingLive){ state.tradeDraft=incoming; draftTaken=true; changed=true; }
+    }
+    if(changed) normTrades(state);
+    return {trades:!!(file && Array.isArray(file.trades)), draft:draftTaken};
+  }
+  function tradeRead(){ return tradeDraftNorm(typeof STATE==="undefined" ? null : STATE.tradeDraft); }
+  function tradeDraft(){
+    var d=tradeDraftNorm(STATE.tradeDraft);
+    STATE.tradeDraft=d;
+    return d;
+  }
+  function tradeCur(){ return (typeof CUR!=="undefined" && CUR && CUR.code) ? CUR.code : ""; }
+  function activeOwn(){ try{ return (activeCol().own)||{}; }catch(e){ return {}; } }
+  function tradeColName(){ try{ var c=activeCol(); return (c && c.name) ? c.name : "this collection"; }catch(e){ return "this collection"; } }
+  function tradeStatHtml(label, value, conv, code){
+    return '<div class="hs"><span class="l">'+esc(label)+'</span><span class="n priceui">'+esc(tradeTotalText(value, code, conv))+'</span><span class="tradecopies">'+esc(tradeCopiesText(value&&value.copies))+'</span></div>';
+  }
+  function tradeCardBits(id){
+    var c=typeof cardById==="function" ? cardById(id) : null;
+    var name=(c && c.name) ? c.name : String(id||"");
+    var ja=!!(c && typeof cardLang==="function" && cardLang()==="ja" && c.nameJa);
+    var src="";
+    try{ if(c && typeof imgSrc==="function") src=imgSrc(c)||""; }catch(e){ src=""; }
+    var img=src ? '<img src="'+esc(src)+'" alt="">' : '<span class="tradenopic" aria-hidden="true"></span>';
+    return {name:name, ja:ja, img:img};
+  }
+  function tradeRowHtml(line, opts){
+    opts=opts||{};
+    var bits=tradeCardBits(line.id);
+    var unit, conv=false;
+    if(line.unit!==undefined){
+      unit=(line.unit!=null && isFinite(+line.unit) && +line.unit>0) ? Math.round(+line.unit*100)/100 : null;
+      conv=!!(unit!=null && line.conv);
+    } else {
+      unit=tradePriceOf(line.id, typeof mktOf==="function" ? mktOf : null);
+      conv=!!(unit!=null && typeof isConverted==="function" && isConverted(line.id));
+    }
+    var code=opts.code!=null ? opts.code : tradeCur();
+    var each=tradeEachText(unit, code, conv);
+    var lineText="No price";
+    if(unit!=null){
+      var sum=Math.round(unit*tradeQty(line.qty)*100)/100;
+      lineText=(conv ? "\u2248 " : "")+tradeMoney(sum, code);
+    }
+    var own="";
+    if(opts.editable) own='<div class="trown'+(opts.short?" short":"")+'">You own '+(+opts.owned||0)+'</div>';
+    var qty;
+    if(opts.editable){
+      qty='<span class="stepper"><button type="button" data-act="dec" data-side="'+esc(opts.side)+'" data-id="'+esc(line.id)+'" aria-label="Remove one">\u2212</button><span class="qv">'+tradeQty(line.qty)+'</span><button type="button" data-act="inc" data-side="'+esc(opts.side)+'" data-id="'+esc(line.id)+'" aria-label="Add one">+</button></span>';
+    } else qty='<span class="tqty">\u00d7'+tradeQty(line.qty)+'</span>';
+    var del=opts.editable ? '<button type="button" class="tremove" data-act="del" data-side="'+esc(opts.side)+'" data-id="'+esc(line.id)+'" aria-label="Remove '+esc(bits.name)+'">'+icon("trash")+'</button>' : "";
+    return '<div class="traderow'+(opts.short?" short":"")+'">'+bits.img+'<div class="tmeta"><div class="tn"'+(bits.ja?' lang="ja"':'')+'>'+esc(bits.name)+'</div><div class="tid">'+esc(line.id)+'</div>'+own+'</div><div class="tprice priceui"><span class="teach">'+esc(each)+'</span><span class="tline">'+esc(lineText)+'</span></div>'+qty+del+'</div>';
+  }
+  function renderTradeStats(d){
+    d=d||tradeRead();
+    var lines=tradeDraftLines(d);
+    var price=typeof mktOf==="function" ? mktOf : null;
+    var bal=tradeBalance(lines.give, lines.get, price);
+    var host=$("tradeStats");
+    var gc=tradeSideConv(d.give, price), hc=tradeSideConv(d.get, price);
+    if(host) host.innerHTML=tradeStatHtml("I give", bal.give, gc, tradeCur())+tradeStatHtml("I get", bal.get, hc, tradeCur());
+    var diff=$("tradeDiff");
+    if(diff){
+      var kind=tradeDiffKind(bal);
+      var showConv=(gc||hc) && (kind==="receive" || kind==="give");
+      diff.textContent=tradeDiffText(bal, tradeCur(), showConv);
+      diff.className="tradediff "+kind+(kind==="empty" ? "" : " priceui");
+    }
+    var up=$("tradeUnpriced");
+    if(up){ var words=tradeUnpricedWords(bal.unpriced); up.textContent=words; up.hidden=!words; }
+    var basis=$("tradeBasis");
+    if(basis) basis.textContent=tradeBasisText(typeof priceMode==="function" ? priceMode() : "live");
+    var col=$("tradeColLine");
+    if(col) col.textContent=tradeColLine(tradeColName());
+    var saveBtn=$("tradeSave");
+    if(saveBtn) saveBtn.disabled=!(tradeHasLines(d) && !tradeWarnText(d, activeOwn(), tradeNameOf));
+  }
+  function renderTradeSide(side, host, d){
+    if(!host) return;
+    var lines=tradeDraftLines(d)[side];
+    if(!lines.length){ host.innerHTML='<p class="tradeempty">'+esc(tradeListEmpty(side, d.ownedOnly))+'</p>'; return; }
+    var ownMap=activeOwn();
+    host.innerHTML=lines.map(function(line){
+      var owned=tradeOwnedQty(ownMap, line.id);
+      return tradeRowHtml(line, {side:side, editable:true, owned:owned, short:side==="give" && line.qty>owned});
+    }).join("");
+  }
+  function renderTradeLists(d){
+    renderTradeSide("give", $("tradeGiveList"), d);
+    renderTradeSide("get", $("tradeGetList"), d);
+  }
+  function renderTradeWarn(d){
+    var el=$("tradeWarn"); if(!el) return;
+    var text=tradeWarnText(d, activeOwn(), tradeNameOf);
+    el.textContent=text; el.hidden=!text;
+  }
+  function tradeSyncNote(d){
+    var inp=$("tradeNoteInput"); if(!inp) return;
+    if(typeof document!=="undefined" && document.activeElement===inp) return;
+    if(inp.value!==d.note) inp.value=d.note;
+  }
+  function tradeDetailHtml(rec){
+    var bal=tradeBalance(rec.give, rec.get, null);
+    var convG=tradeLinesConv(rec.give), convH=tradeLinesConv(rec.get);
+    var kind=tradeDiffKind(bal);
+    var showConv=(convG||convH) && (kind==="receive" || kind==="give");
+    var words=tradeUnpricedWords(bal.unpriced);
+    function rows(lines){
+      if(!lines || !lines.length) return '<p class="tradeempty">No cards on this side.</p>';
+      return lines.map(function(line){ return tradeRowHtml(line, {editable:false, code:rec.cur}); }).join("");
+    }
+    return '<div class="tradedetail">'+
+      '<div class="tradestats">'+tradeStatHtml("I give", bal.give, convG, rec.cur)+tradeStatHtml("I get", bal.get, convH, rec.cur)+'</div>'+
+      '<p class="tradediff priceui '+kind+'">'+esc(tradeDiffText(bal, rec.cur, showConv))+'</p>'+
+      (words ? '<p class="tradenote priceui">'+esc(words)+'</p>' : "")+
+      '<p class="tradebasis priceui">'+esc(tradeSavedBasis(rec))+'</p>'+
+      '<p class="tradebasis">Saved in '+esc(rec.colName||"a collection")+'.</p>'+
+      '<div class="tradesides"><section class="tradeside"><h3>I give</h3>'+rows(rec.give)+'</section><section class="tradeside"><h3>I get</h3>'+rows(rec.get)+'</section></div>'+
+      '<button type="button" class="btn sec" data-act="drop" data-tid="'+esc(rec.id)+'">Remove from history</button></div>';
+  }
+  function renderTradeHist(){
+    var host=$("tradeHist"); if(!host) return;
+    var list=Array.isArray(STATE.trades) ? STATE.trades : [];
+    if(!list.length){
+      host.innerHTML='<div class="empty"><b>No trades saved yet</b><div>'+esc(tradeEmptyHist())+'</div></div>';
+      return;
+    }
+    host.innerHTML=list.map(function(rec){
+      var open=TRADE_OPEN===rec.id;
+      var bal=tradeBalance(rec.give, rec.get, null);
+      var kind=tradeDiffKind(bal);
+      var conv=tradeLinesConv(rec.give)||tradeLinesConv(rec.get);
+      var showConv=conv && (kind==="receive" || kind==="give");
+      var when=(rec.at && typeof relTime==="function") ? relTime(rec.at) : "";
+      var meta=when;
+      if(rec.colName) meta=meta ? (meta+" \u00b7 "+rec.colName) : rec.colName;
+      return '<div class="tradehistitem'+(open?" open":"")+'"><button type="button" class="tradehisthead" data-act="open" data-tid="'+esc(rec.id)+'" aria-expanded="'+(open?"true":"false")+'">'+
+        '<span class="thtitle">'+esc(rec.note||"Trade")+'</span>'+
+        (meta ? '<span class="thmeta">'+esc(meta)+'</span>' : "")+
+        '<span class="thmeta">'+esc(tradeHistCopies(rec))+'</span>'+
+        '<span class="thdiff priceui '+kind+'">'+esc(tradeDiffText(bal, rec.cur, showConv))+'</span></button>'+
+        (open ? tradeDetailHtml(rec) : "")+'</div>';
+    }).join("");
+  }
+  function tradePaintSug(side){
+    var inp=side==="get" ? $("tradeGetSearch") : $("tradeGiveSearch");
+    var sug=side==="get" ? $("tradeGetSug") : $("tradeGiveSug");
+    if(!inp || !sug) return;
+    var q=String(inp.value||"").trim();
+    if(q.length<2){ sug.hidden=true; sug.innerHTML=""; return; }
+    var d=tradeRead();
+    var ownedOnly=side==="give" && d.ownedOnly;
+    var hits=tradePick(q, ownedOnly, activeOwn());
+    if(!hits.length){
+      var msg=ownedOnly ? "No owned cards match. Turn off From my collection to search every card." : "No cards match.";
+      sug.innerHTML='<div class="tradesugempty">'+esc(msg)+'</div>';
+      sug.hidden=false;
+      return;
+    }
+    var ownMap=activeOwn();
+    sug.innerHTML=hits.map(function(c){
+      var ownN=tradeOwnedQty(ownMap, c.id);
+      var unit=tradePriceOf(c.id, typeof mktOf==="function" ? mktOf : null);
+      var conv=!!(unit!=null && typeof isConverted==="function" && isConverted(c.id));
+      var price=unit==null ? "No price" : ((conv ? "\u2248 " : "")+tradeMoney(unit, tradeCur()));
+      var ja=typeof cardLang==="function" && cardLang()==="ja" && c.nameJa;
+      var src="";
+      try{ if(typeof imgSrc==="function") src=imgSrc(c)||""; }catch(e){ src=""; }
+      var img=src ? '<img src="'+esc(src)+'" alt="">' : "";
+      var ownHtml=ownN ? '<span class="dsown have">You own '+ownN+'</span>' : '<span class="dsown"></span>';
+      return '<button type="button" data-act="add" data-side="'+side+'" data-id="'+esc(c.id)+'">'+img+'<span'+(ja?' lang="ja"':'')+'>'+esc(c.name||c.id)+'</span>'+ownHtml+'<span class="dnum priceui">'+esc(price)+'</span></button>';
+    }).join("");
+    sug.hidden=false;
+  }
+  function tradeSetQty(side, id, qty){
+    if(!id) return;
+    var d=tradeDraft();
+    var map=side==="get" ? d.get : d.give;
+    qty=tradeQty(qty);
+    if(qty) map[id]=qty; else delete map[id];
+    save();
+    renderTrades();
+  }
+  function tradeAdd(side, id){
+    var d=tradeDraft();
+    var map=side==="get" ? d.get : d.give;
+    map[id]=Math.min(99, (map[id]||0)+1);
+    var inp=side==="get" ? $("tradeGetSearch") : $("tradeGiveSearch");
+    var sug=side==="get" ? $("tradeGetSug") : $("tradeGiveSug");
+    if(inp) inp.value="";
+    if(sug){ sug.hidden=true; sug.innerHTML=""; }
+    save();
+    renderTrades();
+  }
+  function tradeToggleOwned(){
+    var d=tradeDraft();
+    d.ownedOnly=!d.ownedOnly;
+    save();
+    renderTrades();
+    tradePaintSug("give");
+  }
+  function tradeCommit(){
+    var d=tradeDraft();
+    if(!tradeHasLines(d)){ toast("Add a card to one side first"); return; }
+    var warn=tradeWarnText(d, activeOwn(), tradeNameOf);
+    if(warn){ toast(warn); return; }
+    var net=tradeNet(d.give, d.get);
+    openAsk({title:"Save this trade?", message:tradeCommitText(d, net, tradeColName()), confirmOnly:true, okText:"Save trade", onOk:function(){
+      var d2=tradeDraft();
+      var warn2=tradeWarnText(d2, activeOwn(), tradeNameOf);
+      if(!tradeHasLines(d2) || warn2){ toast(warn2||"That trade could not be saved"); renderTrades(); return; }
+      var net2=tradeNet(d2.give, d2.get);
+      var col=activeCol();
+      var rec=tradeSnapshot(d2, {colId:col.id, colName:col.name||"", cur:tradeCur(), mode:(typeof priceMode==="function"?priceMode():"live")}, typeof mktOf==="function"?mktOf:null);
+      if(!rec){ toast("That trade could not be saved"); return; }
+      var applied=tradeApplyToOwn(col.own, net2);
+      if(!applied.ok){ toast(tradeBlockText(applied.blocked, tradeNameOf)||"That trade could not be saved"); renderTrades(); return; }
+      if(!Array.isArray(STATE.trades)) STATE.trades=[];
+      STATE.trades.unshift(rec);
+      normTrades(STATE);
+      STATE.tradeDraft={give:{}, get:{}, note:"", ownedOnly:d2.ownedOnly};
+      var gs=$("tradeGiveSearch"), gt=$("tradeGetSearch"), nt=$("tradeNoteInput");
+      if(gs) gs.value=""; if(gt) gt.value=""; if(nt) nt.value="";
+      save();
+      try{ render(); }catch(e){}
+      try{ if(typeof renderHome==="function") renderHome(); }catch(e2){}
+      renderTrades();
+      toast("Trade saved");
+    }});
+  }
+  function tradeWipeDraft(keepOwned){
+    STATE.tradeDraft={give:{}, get:{}, note:"", ownedOnly:keepOwned!==false};
+    var gs=$("tradeGiveSearch"), gt=$("tradeGetSearch"), nt=$("tradeNoteInput");
+    var a=$("tradeGiveSug"), b=$("tradeGetSug");
+    if(gs) gs.value=""; if(gt) gt.value=""; if(nt) nt.value="";
+    if(a){ a.hidden=true; a.innerHTML=""; }
+    if(b){ b.hidden=true; b.innerHTML=""; }
+    save();
+    renderTrades();
+  }
+  function tradeClear(){
+    var d=tradeRead();
+    if(!tradeHasLines(d) && !d.note){
+      if(typeof STATE!=="undefined" && STATE.tradeDraft!==undefined) tradeWipeDraft(d.ownedOnly);
+      return;
+    }
+    openAsk({title:"Clear this trade?", message:tradeClearText(), confirmOnly:true, okText:"Clear", onOk:function(){ tradeWipeDraft(tradeRead().ownedOnly); }});
+  }
+  function tradeDrop(id){
+    openAsk({title:"Remove this trade?", message:tradeDeleteText(), confirmOnly:true, danger:true, okText:"Remove", onOk:function(){
+      STATE.trades=(Array.isArray(STATE.trades)?STATE.trades:[]).filter(function(t){ return t && t.id!==id; });
+      if(TRADE_OPEN===id) TRADE_OPEN=null;
+      save();
+      renderTradeHist();
+    }});
+  }
+  function tradeOnSearch(side){
+    var inp=side==="get" ? $("tradeGetSearch") : $("tradeGiveSearch");
+    if(!inp || inp._tradeWired) return;
+    inp._tradeWired=1;
+    inp.addEventListener("input", function(){ tradePaintSug(side); });
+    inp.addEventListener("keydown", function(e){
+      if(e.key!=="Enter") return;
+      e.preventDefault();
+      var d=tradeRead();
+      var hits=tradePick(inp.value, side==="give" && d.ownedOnly, activeOwn());
+      if(hits[0]) tradeAdd(side, hits[0].id);
+    });
+  }
+  function wireTrades(){
+    if(TRADE_WIRED) return;
+    var page=$("page-trades"); if(!page) return;
+    TRADE_WIRED=true;
+    page.addEventListener("click", function(ev){
+      var t=ev.target && ev.target.closest ? ev.target.closest("[data-act]") : null;
+      if(!t || !page.contains(t)) return;
+      var act=t.getAttribute("data-act"), side=t.getAttribute("data-side"), id=t.getAttribute("data-id");
+      if(act==="add" && id){ tradeAdd(side||"give", id); return; }
+      if(act==="inc" && id){ var up=tradeRead(); tradeSetQty(side, id, ((side==="get"?up.get:up.give)[id]||0)+1); return; }
+      if(act==="dec" && id){ var down=tradeRead(); tradeSetQty(side, id, ((side==="get"?down.get:down.give)[id]||0)-1); return; }
+      if(act==="del" && id){ tradeSetQty(side, id, 0); return; }
+      if(act==="owned"){ tradeToggleOwned(); return; }
+      if(act==="save"){ tradeCommit(); return; }
+      if(act==="clear"){ tradeClear(); return; }
+      if(act==="open"){ var tid=t.getAttribute("data-tid"); TRADE_OPEN=TRADE_OPEN===tid?null:tid; renderTradeHist(); return; }
+      if(act==="drop"){ tradeDrop(t.getAttribute("data-tid")); return; }
+    });
+    tradeOnSearch("give");
+    tradeOnSearch("get");
+    var note=$("tradeNoteInput");
+    if(note){
+      note.addEventListener("input", function(){
+        if(!STATE.tradeDraft || typeof STATE.tradeDraft!=="object" || Array.isArray(STATE.tradeDraft)) STATE.tradeDraft={give:{}, get:{}, note:"", ownedOnly:true};
+        STATE.tradeDraft.note=String(note.value||"").slice(0,80);
+        save();
+      });
+      note.addEventListener("blur", function(){ var d=tradeDraft(); note.value=d.note; save(); });
+    }
+    document.addEventListener("click", function(e){
+      if(e.target && e.target.closest && (e.target.closest(".tradeadd") || e.target.closest("#tradeGiveSug") || e.target.closest("#tradeGetSug"))) return;
+      var a=$("tradeGiveSug"), b=$("tradeGetSug");
+      if(a) a.hidden=true;
+      if(b) b.hidden=true;
+    });
+  }
+  function renderTrades(){
+    wireTrades();
+    if(typeof normTrades==="function" && typeof STATE!=="undefined") normTrades(STATE);
+    var d=tradeRead();
+    var chip=$("tradeGiveOwned");
+    if(chip) chip.setAttribute("aria-pressed", d.ownedOnly?"true":"false");
+    var gs=$("tradeGiveSearch");
+    if(gs) gs.placeholder=d.ownedOnly ? "Search cards you own" : "Search every card";
+    tradeSyncNote(d);
+    renderTradeStats(d);
+    renderTradeLists(d);
+    renderTradeWarn(d);
+    renderTradeHist();
+    var giveSug=$("tradeGiveSug"), getSug=$("tradeGetSug");
+    if(giveSug && !giveSug.hidden) tradePaintSug("give");
+    if(getSug && !getSug.hidden) tradePaintSug("get");
+  }
+
   // ---- Navigation ----
   function applyColMode(){
     var head=$("colModeHead"), dash=$("colDash"), m=colMode();
@@ -11028,6 +11880,7 @@ label.acctsetrow { align-items:center; }
     if (p==="decks") renderDecks();
     if (p==="match") renderMatch();
     else if(typeof stopMatchTimer==="function") stopMatchTimer();
+    if (p==="trades") renderTrades();
     if (p==="account") renderAccount();
     if (p==="settings") renderPriceSources();
     if (p==="news") { renderNews(); renderTcgNews(); }
@@ -11216,13 +12069,15 @@ label.acctsetrow { align-items:center; }
     SEALED.forEach(function(p){ var s=globalTextScore(q,p.name+" "+p.sub+" "+p.set); if(s) add("Sealed",p.name,p.sub||p.set||"Sealed product","box",s,function(){openSealedDetail(p);}); });
     if(playerToolsOn()) decks().forEach(function(d){ var s=globalTextScore(q,d.name); if(s) add("Deck",d.name,"Your deck","layers",s,function(){STATE.activeDeck=d.id;save();showPage("decks");}); });
     (STATE.cols||[]).forEach(function(c){ var s=globalTextScore(q,c.name); if(s) add("Collection",c.name,"This device","grid",s,function(){switchCol(c.id);showPage("collection");}); });
+    var tradeScore=globalTextScore(q, "trades trade checker");
+    if(tradeScore) add("Page","Trades","Compare what you give and what you get","swap", tradeScore+4, function(){ showPage("trades"); });
     (typeof _newsList!=="undefined"?_newsList:[]).forEach(function(n){ var title=decodeEntities(n.title||""), s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,(n.date&&dayLabel(n.date))||n.source||"Palworld TCG news","news",s,function(){showPage("news");}); });
     (_tcgNewsList||[]).forEach(function(n){ var title=n.title||"", s=globalTextScore(q,title+" "+(n.summary||"")); if(s) add("News",title,tcgNewsDateLabel(n.published_at)||"Palworld TCG","news",s,function(){showPage("news");}); });
     rows.sort(function(a,b){return b.score-a.score||a.type.localeCompare(b.type)||a.title.localeCompare(b.title);}); return rows.slice(0,18);
   }
   function renderGlobalSearch(q){
     var out=$("globalSearchResults"); if(!out) return; var text=String(q||"").trim();
-    if(text.length<2){ out.innerHTML='<div class="gsempty">Start typing to search cards, sets, products, decks, collections, news and releases.</div>'; return; }
+    if(text.length<2){ out.innerHTML='<div class="gsempty">Start typing to search cards, sets, sealed products, decks, trades, collections, news and releases.</div>'; return; }
     var rows=globalSearchRows(text); if(!rows.length){ out.innerHTML='<div class="gsempty">No matches yet. Try a shorter name or card number.</div>'; return; }
     out.innerHTML=""; rows.forEach(function(r){ var b=document.createElement("button"); b.type="button"; b.className="gsrow";
       b.innerHTML=(r.img?'<img src="'+esc(r.img)+'" alt="">':'<span class="gsicon">'+icon(r.icon)+'</span>')+'<span class="gsinfo"><span class="gslabel">'+esc(r.title)+'</span><span class="gsmeta">'+esc(r.meta)+'</span></span><span class="gstype">'+esc(r.type)+'</span>';
@@ -14549,13 +15404,17 @@ label.acctsetrow { align-items:center; }
   function localHasCards(){
     try{ return (STATE.cols||[]).some(function(col){ return colHasCards(col); }); }catch(e){ return false; }
   }
-  // Cards, sealed, a wishlist, favourites or a deck with cards in it. A guest with only a wishlist used to lose
-  // it at sign in. Follows are left out on purpose: every adopt merges them anyway, and counting them sent a
-  // follow only guest down the merge path for nothing.
+  // Cards, sealed, a wishlist, favourites, a saved trade or a deck with cards in it. A guest with only a
+  // wishlist used to lose it at sign in. Follows are left out on purpose: every adopt merges them anyway,
+  // and counting them sent a follow only guest down the merge path for nothing.
   function localHasData(){
     try{
       if(localHasCards()) return true;
       if(Object.keys(STATE.wishlist||{}).length || Object.keys(STATE.fav||{}).length) return true;
+      if((STATE.trades||[]).length) return true;
+      if((STATE.events||[]).length) return true;
+      var td=STATE.tradeDraft;
+      if(td && typeof td==="object" && !Array.isArray(td) && (Object.keys(td.give||{}).length || Object.keys(td.get||{}).length)) return true;
       return (STATE.decks||[]).some(function(d){ return !!(d && d.cards && typeof d.cards==="object" && Object.keys(d.cards).length); });
     }catch(e){ return false; }
   }
@@ -14661,6 +15520,16 @@ label.acctsetrow { align-items:center; }
     out.wishlist=Object.assign({}, remote.wishlist||{}, local.wishlist||{});
     out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
     out.wishlistAt=Object.assign({}, remote.wishlistAt||{}, local.wishlistAt||{});   // this device's date wins a clash
+    // Trades sit beside decks. Union them by id, this device winning a clash, or the other device's
+    // history is dropped the next time this one syncs. A draft with cards or a note stays here; an empty
+    // draft takes the other device's trade in progress.
+    if(hasOwn(local,"trades") || hasOwn(remote,"trades")) out.trades=mergeTradeLists(local.trades, remote.trades);
+    if(hasOwn(local,"tradeDraft") || hasOwn(remote,"tradeDraft")){
+      var tdL=tradeDraftNorm(hasOwn(local,"tradeDraft")?local.tradeDraft:null);
+      var tdR=tradeDraftNorm(hasOwn(remote,"tradeDraft")?remote.tradeDraft:null);
+      var tdLEmpty=!hasOwn(local,"tradeDraft") || (!Object.keys(tdL.give).length && !Object.keys(tdL.get).length && !tdL.note);
+      out.tradeDraft=(tdLEmpty && hasOwn(remote,"tradeDraft")) ? tdR : tdL;
+    }
     normTop(out);
     var dm={}, dorder=[];
     (remote.decks||[]).concat(local.decks||[]).forEach(function(d){
@@ -14721,6 +15590,7 @@ label.acctsetrow { align-items:center; }
     try{ if(typeof renderSealed==="function") renderSealed(); }catch(e){}
     try{ if(typeof renderReleases==="function") renderReleases(); }catch(e){}
     try{ if(typeof renderDecks==="function") renderDecks(); }catch(e){}
+    try{ if(typeof renderTrades==="function") renderTrades(); }catch(e){}
     try{ if(typeof renderAccount==="function") renderAccount(); }catch(e){}
   }
   function pullState(){
