@@ -1,6 +1,17 @@
 {
-  "updated_at": "2026-10-19T08:30:00Z",
+  "updated_at": "2026-10-26T09:00:00Z",
   "items": [
+    {
+      "id": "en-palworld-official-cardgame-com-cardlist-ebp02",
+      "title": "Full Legends Awaken card list now on the official English site",
+      "url": "https://en.palworld-official-cardgame.com/cardlist/searchresults?title=EBP02",
+      "source": "news",
+      "source_name": "Palworld Official Card Game",
+      "published_at": "2026-10-26",
+      "category": "official",
+      "summary": "The official English card database now lists all 164 Legends Awaken cards, four days before the 30 October release.",
+      "unconfirmed": false
+    },
     {
       "id": "x-com-palworldocg-en-status-2112000783244009490",
       "title": "Card reveal: Tombat – Resonance of Shadows and Nox – One-Way Ticket (Legends Awaken)",
