@@ -49,7 +49,8 @@ const FUNCS = [
   'deckOwnEntry', 'deckTournamentQty', 'deckTournamentReport', 'deckTournamentNameLines',
   'deckTournamentSummary', 'deckTournamentLabel', 'deckEventStored', 'deckTournamentRowNotes',
   'deckNeedCount', 'deckNeedLabel', 'deckStatusLabel',
-  'releaseYmd', 'monDateTime'
+  'releaseYmd', 'monDateTime',
+  'deckLegalityReport', 'textAllowsAnyNumber'
 ];
 
 const RealDate = Date;
@@ -65,7 +66,7 @@ const sandbox = { Date: FixedDate, byNumberIdx: {}, activeCol: function() { retu
 vm.createContext(sandbox);
 vm.runInContext(
   FUNCS.map(appFunction).join('\n') + '\n' +
-    ['RAW_KNOWN', 'DECK_TOURNAMENT_RULE', 'DECK_EVENT_CHECKS'].map(appConstant).join('\n'),
+    ['RAW_KNOWN', 'DECK_TOURNAMENT_RULE', 'DECK_EVENT_CHECKS', 'LUCKY_CAP'].map(appConstant).join('\n'),
   sandbox
 );
 sandbox.SET_META = setMetaReleases(source);
@@ -75,6 +76,41 @@ function card(partial) {
   return Object.assign({ id: 'X1', name: 'Sample', kind: 'Pal', set: 'EBP01' }, partial);
 }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
+
+test('a deck that breaks a build rule never reads as tournament ready', () => {
+  // The verdict used to look only at language and release dates, so a deck over the Lucky Pal cap,
+  // past the copies of a name limit or using three colours got a green "Tournament ready" headline
+  // directly above the red panel listing those very issues. Someone fails a deck check on that.
+  const byId = {};
+  const qty = {};
+  var i, id;
+  for (i = 0; i < 50; i++) {
+    id = 'EBP01-' + String(100 + i);
+    byId[id] = card({ id: id, kind: 'Pal', sub: 'Lucky Pal', color: 'Red', name: 'Pal ' + i, set: 'EBP01' });
+    qty[id] = 1;
+  }
+  for (i = 0; i < 10; i++) {
+    id = 'ESOUL-' + String(100 + i);
+    byId[id] = card({ id: id, kind: 'Soul', name: 'Soul ' + i, set: 'ETD01' });
+    qty[id] = 1;
+  }
+  const own = {};
+  Object.keys(qty).forEach(function (k) { own[k] = { qty: 1, rawEditions: { '1': 1 } }; });
+
+  const legal = sandbox.deckLegalityReport(qty, byId);
+  assert.ok(legal.issues.length > 0, 'the deck really does break a build rule');
+
+  const report = sandbox.deckTournamentReport(qty, byId, own, '2026-12-01');
+  assert.equal(report.shortMain, 0, 'every card is owned in English');
+  assert.ok(report.legalIssues > 0, 'the tournament report now sees the build rule issues');
+  assert.equal(report.ready, false, 'so it is not ready');
+  assert.notEqual(report.state, 'ok');
+  assert.equal(sandbox.deckTournamentLabel(report), 'Check deck legality');
+  const sum = sandbox.deckTournamentSummary(report);
+  assert.equal(sum.title, 'Check deck legality');
+  assert.equal(sum.state, 'warn', 'amber, not green');
+  sum.lines.forEach(function (l) { assert.equal(DASHES.test(l), false, l); });
+});
 
 test('SET_META dates used by the check are the ones already on the set tiles', () => {
   assert.equal(sandbox.SET_META.EBP01.release, 'Jul 30, 2026');
@@ -155,19 +191,19 @@ test('a main deck of Japanese copies is not tournament ready, and the same copie
   const souls = sandbox.deckTournamentReport(
     { 'ESOUL-001': 2 }, { 'ESOUL-001': soul }, own, '2026-10-22'
   );
-  assert.equal(souls.state, 'ok');
+  assert.equal(souls.dateState, 'ok', 'languages and dates are fine');
   assert.equal(souls.shortSoul, 0);
-  assert.equal(sandbox.deckTournamentLabel(souls), 'Tournament ready');
+  assert.equal(sandbox.deckTournamentLabel({ dateState: souls.dateState, state: souls.dateState, listed: true }), 'Tournament ready');
 });
 
 test('a card is legal on its English release day and not the day before', () => {
   const sleeve = card({ id: 'ESS01-001', name: 'Quivern', set: 'ESS01' });
   const own = { 'ESS01-001': { qty: 1, rawEditions: { '1': 1 } } };
   const onDay = sandbox.deckTournamentReport({ 'ESS01-001': 1 }, { 'ESS01-001': sleeve }, own, '2026-10-16');
-  assert.equal(onDay.state, 'ok');
+  assert.equal(onDay.dateState, 'ok', 'legal on the release day itself');
   assert.equal(onDay.late.length, 0);
   const before = sandbox.deckTournamentReport({ 'ESS01-001': 1 }, { 'ESS01-001': sleeve }, own, '2026-10-15');
-  assert.equal(before.state, 'bad');
+  assert.equal(before.dateState, 'bad', 'not legal the day before');
   assert.equal(before.late.length, 1);
   assert.equal(before.late[0].release, '2026-10-16');
   const lateSum = sandbox.deckTournamentSummary(before);
@@ -180,7 +216,7 @@ test('a promo with no exact release day is called out and does not pretend to be
   const promo = card({ id: 'EPR-012', name: 'Foxparks', set: 'PR2026' });
   const own = { 'EPR-012': { qty: 1 } };
   const report = sandbox.deckTournamentReport({ 'EPR-012': 1 }, { 'EPR-012': promo }, own, '2026-10-22');
-  assert.equal(report.state, 'warn');
+  assert.equal(report.dateState, 'warn');
   assert.equal(report.ready, false);
   assert.equal(report.undated.length, 1);
   assert.equal(sandbox.deckTournamentLabel(report), 'Check release dates');
@@ -196,7 +232,7 @@ test('English shortfall is badged on the row and a lowercase deck id still finds
   assert.deepEqual(plain(notes), ['English 1/4']);
   const report = sandbox.deckTournamentReport({ 'ebp01-010': 4 }, { 'EBP01-010': pal }, own, '2026-10-22');
   assert.equal(report.shortMain, 3);
-  assert.equal(report.state, 'bad');
+  assert.equal(report.dateState, 'bad');
 });
 
 test('an empty deck has no tournament verdict, and nine undated cards keep a short tail', () => {
@@ -227,7 +263,9 @@ test('the status line keeps Ready to build and adds the tournament verdict besid
   const text = sandbox.deckStatusLabel({ cards: cards });
   assert.match(text, /^Ready to build · Not for this event$/);
   sandbox.activeCol = function() { return { own: { 'EBP01-001': { qty: 2 } }, name: 'My Collection' }; };
-  assert.equal(sandbox.deckStatusLabel({ cards: cards }), 'Ready to build · Tournament ready');
+  // Owning the cards is "Ready to build". It is not "Tournament ready": this fixture is a two
+  // card deck, so it breaks the 50 main and 10 Soul rules and the picker must not claim otherwise.
+  assert.equal(sandbox.deckStatusLabel({ cards: cards }), 'Ready to build · Check deck legality');
 });
 
 test('tournament copy has no dashes', () => {

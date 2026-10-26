@@ -1911,7 +1911,16 @@ label.acctsetrow { align-items:center; }
   .decksug .dsown { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); white-space:nowrap; flex:none; }
   .decksug .dsown.have { color:var(--el-Grass); }
   .decklist { display:flex; flex-direction:column; gap:8px; max-width:640px; }
-  .deckrow { display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:8px 12px; }
+  /* Wraps rather than overflowing. The tournament check added a "Not legal yet" chip, and on a 375px
+     phone a row carrying it pushed the document to 407px: the page either panned sideways or shrank
+     to fit, making every target smaller. Margins, not gap, because a WebView that collapses flex gap
+     collapses row-gap too and the wrapped lines would touch. Same pattern as .nmeta and .nwish. */
+  .deckrow { display:flex; align-items:center; flex-wrap:wrap; gap:0; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:8px 12px 0; }
+  .deckrow > * { margin:0 12px 8px 0; }
+  .deckrow > *:last-child { margin-right:0; }
+  .deckrow > div { min-width:0; flex:1 1 90px; }
+  .deckrow .stepper, .deckrow .own, .deckrow .deckwish { flex:none; }
+  .deckrow .own, .deckrow .deckwish { white-space:nowrap; }
   .deckrow img { width:32px; height:44px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
   .deckrow .dn { font-weight:650; font-size:.9rem; } .deckrow .dnum2 { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); }
   .deckrow .own { font-family:var(--font-mono); font-size:.76rem; padding:2px 8px; border-radius:20px; }
@@ -2590,7 +2599,6 @@ label.acctsetrow { align-items:center; }
   .no-flexgap .decktournament .dlhead{gap:0}.no-flexgap .decktournament .dlhead>*+*{margin-left:10px}
   .no-flexgap .decktournament .dtevent{gap:0}.no-flexgap .decktournament .dtevent>*+*{margin-left:8px}
   .no-flexgap .decksug button{gap:0}.no-flexgap .decksug button>*+*{margin-left:10px}
-  .no-flexgap .deckrow{gap:0}.no-flexgap .deckrow>*+*{margin-left:12px}
   .no-flexgap .npitem{gap:0}.no-flexgap .npitem>*+*{margin-left:8px}
   .no-flexgap #foot a.bmc{gap:0}.no-flexgap #foot a.bmc>*+*{margin-left:5px}
   .no-flexgap .keychip{gap:0}.no-flexgap .keychip>*+*{margin-left:7px}
@@ -6581,7 +6589,11 @@ label.acctsetrow { align-items:center; }
       var fileEvents=(d && Array.isArray(d.events))?d.events:null;
       var evN=fileEvents?normEvents(fileEvents).length:0;
       var hasCards=!!(map && Object.keys(map).length);
-      if(!hasCards && !evN){ toast("That file couldn't be read"); return; }
+      // Trades count as content too. A backup exported while the open collection was empty carries
+      // the whole trade history and nothing else, and this guard used to call the app's own file
+      // unreadable and import none of it. Same shape as the events line above.
+      var trN=(d && Array.isArray(d.trades))?d.trades.length:0;
+      if(!hasCards && !evN && !trN){ toast("That file couldn't be read"); return; }
       if(evN) STATE.events=importBackupEvents(eventList(), fileEvents);
       var tradeBits="";
       if(d && typeof d==="object" && !Array.isArray(d)){
@@ -6602,7 +6614,9 @@ label.acctsetrow { align-items:center; }
       }
       save();
       if(_curPage==="decks") renderDecks();
-      toast("Imported "+evN+" event"+(evN===1?"":"s")+tradeBits);
+      // A trades only file reaches here with evN 0, and "Imported 0 events" reads as a failure.
+      toast(evN ? ("Imported "+evN+" event"+(evN===1?"":"s")+tradeBits)
+                : (tradeBits ? "Trade history updated." : "Nothing new in that file"));
     });
   }
   // Settings chooser: pick CSV or JSON for export / import. Each option closes the modal and starts the
@@ -9345,8 +9359,20 @@ label.acctsetrow { align-items:center; }
     late.sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); });
     undated.sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); });
     var blocked=shortMain>0 || shortSoul>0 || late.length>0;
-    var state=!listed ? "empty" : (blocked ? "bad" : (undated.length ? "warn" : "ok"));
-    return {day:day, listed:listed, shortMain:shortMain, shortSoul:shortSoul, leftOut:leftOut, late:late, undated:undated, state:state, ready:state==="ok"};
+    // The build rules are a separate report, and this used to ignore them: a deck breaking the
+    // colour limit, the copies of a name limit or the eight Lucky Pal cap still got a green
+    // "Tournament ready", directly above a red panel listing those very issues. Language and dates
+    // still outrank them, so a date problem keeps "bad"; a build problem only downgrades a pass.
+    var legalIssues=0;
+    try{ legalIssues=(deckLegalityReport(qtyMap, byId).issues||[]).length; }catch(e){ legalIssues=0; }
+    // Two verdicts, because they answer different questions. dateState is "can these cards be played
+    // on that day, in those languages", which is what this check was built for. state folds in the
+    // deck build rules as well, and is what the headline and the picker show, so neither can say
+    // ready while the other is unhappy.
+    var dateState=!listed ? "empty" : (blocked ? "bad" : (undated.length ? "warn" : "ok"));
+    var state=dateState==="ok" && legalIssues ? "warn" : dateState;
+    return {day:day, listed:listed, shortMain:shortMain, shortSoul:shortSoul, leftOut:leftOut, late:late, undated:undated,
+      legalIssues:legalIssues, dateState:dateState, state:state, ready:state==="ok"};
   }
   function deckTournamentNameLines(rows, phrase, more){
     var lines=[], shown=(rows||[]).slice(0,8), i;
@@ -9365,13 +9391,16 @@ label.acctsetrow { align-items:center; }
       lines=lines.concat(deckTournamentNameLines(report.late, function(row){ return "releases "+deckDayLabel(row.release)+"."; }, function(n){ return "And "+n+" more "+(n===1?"card that releases":"cards that release")+" after this event."; }));
       lines=lines.concat(deckTournamentNameLines(report.undated, function(){ return "has no English release date on file."; }, function(n){ return "And "+n+" more "+(n===1?"card":"cards")+" with no English release date on file."; }));
     }
-    var title=report.state==="ok" ? "Tournament ready" : (report.state==="warn" ? "Check release dates" : "Not for this event");
+    if(report.legalIssues && report.dateState==="ok") lines.push("Deck legality lists "+report.legalIssues+" issue"+(report.legalIssues===1?"":"s")+" to fix below. Language and release dates are fine.");
+    var title=report.state==="ok" ? "Tournament ready"
+      : (report.state==="warn" ? ((report.undated && report.undated.length) ? "Check release dates" : "Check deck legality")
+      : "Not for this event");
     return {state:report.state, title:title, lines:lines, day:report.day};
   }
   function deckTournamentLabel(report){
     if(!report || !report.listed) return "";
     if(report.state==="ok") return "Tournament ready";
-    if(report.state==="warn") return "Check release dates";
+    if(report.state==="warn") return (report.undated && report.undated.length) ? "Check release dates" : "Check deck legality";
     return "Not for this event";
   }
   function deckEventStored(){ return deckEventDay(typeof lsGet==="function" ? lsGet("palvault-deckevent") : ""); }
@@ -9916,6 +9945,10 @@ label.acctsetrow { align-items:center; }
   // Manual event results. They live on STATE beside decks, so save(), cloud sync and the JSON backup
   // carry them. The live match table stays on its own key and is only copied in when a game is logged.
   var EVENT_NAME_MAX=80, EVENT_PLACE_MAX=40, EVENT_OPP_MAX=60, EVENT_ROUNDS_MAX=48, EVENT_PRIZES_MAX=30, EVENT_LOG_MAX=500;
+  // Matches EVENT_LOG_MAX rather than the 100 this shipped with: a trade is a dozen taps to
+  // enter, so the ceiling only exists to stop storage growing without bound, and 100 was low
+  // enough to reach by hand. Enforced in tradeCommit, never by trimming a merged list.
+  var TRADE_LOG_MAX=500;
   var eventDraft=null, eventLogAll=false, eventLogDeck="", eventShowAll=false, eventLogBound=false;
   function eventClip(v, max){
     var s=String(v==null?"":v).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"");
@@ -11295,7 +11328,8 @@ label.acctsetrow { align-items:center; }
       });
     }
     list.sort(tradeNewer);
-    if(list.length>100) list=list.slice(0,100);
+    // No trim here. normTrades runs on every load and every render, so trimming would undo the
+    // merge a moment after it ran and quietly destroy whichever records fell past the end.
     if(list.length || st.trades!==undefined) st.trades=list;
     var hadDraft=st.tradeDraft!==undefined;
     var draft=tradeDraftNorm(st.tradeDraft);
@@ -11318,14 +11352,33 @@ label.acctsetrow { align-items:center; }
     if(!e || typeof e!=="object") return 0;
     return rawCount(e.qty);
   }
+  // A holding spread over more than one printing, which is the case a trade must not guess at.
+  // tradeTakeCopies walks a fixed order, so giving 1 of a card you own as 1st edition AND Japanese
+  // silently took the 1st edition: the expensive copy left, the card was relabelled, and nothing
+  // recorded which printing went. The main deck count is total minus jp minus cn, so the tournament
+  // check then called a finished deck short. Rather than guess the other way, refuse the line and
+  // say so; the card sheet already has a per printing editor to even the holding up first. A give
+  // side printing picker belongs in a later release, because a saved line cannot yet carry an
+  // edition (tradeLinesNorm whitelists id, qty, unit and conv on both the snapshot and merge paths).
+  // Counts the NAMED printings only. Unlabelled copies are not ambiguity: taking those first is the
+  // conservative choice because it destroys no label, and it is what the order already does. Two
+  // named printings, say a 1st edition and a Japanese copy, is the case nobody can guess at.
+  function tradeMixedPrintings(e){
+    if(!e || typeof e!=="object" || typeof rawCounts!=="function") return 0;
+    var c=rawCounts(e), n=0;
+    ["1","2","jp","cn"].forEach(function(k){ if(rawCount(c[k])>0) n++; });
+    return n;
+  }
   function tradeGiveBlocked(giveMap, ownMap){
     var bad=[], g=tradeMap(giveMap);
     Object.keys(g).forEach(function(id){
       var need=g[id], have=tradeOwnedQty(ownMap, id);
+      var e=ownMap && ownMap[id];
       if(need>have){
-        var e=ownMap && ownMap[id];
         bad.push({id:id, need:need, have:have, graded:!!(e && e.graded && e.graded.length && have<=0)});
+        return;
       }
+      if(tradeMixedPrintings(e)>1) bad.push({id:id, need:need, have:have, graded:false, mixed:true});
     });
     return bad;
   }
@@ -11424,10 +11477,12 @@ label.acctsetrow { align-items:center; }
     nameOf=nameOf||tradeNameOf;
     if(bad.length===1){
       var b=bad[0], name=nameOf(b.id);
+      if(b.mixed) return "You hold "+name+" under more than one printing, so open the card and even the printings up before you trade it.";
       if(b.have<=0 && b.graded) return "Graded slabs stay in the collection, so "+name+" cannot be given.";
       if(b.have<=0) return name+" is not in this collection, so it cannot be given.";
       return "You own "+b.have+" of "+name+", and this trade gives "+b.need+".";
     }
+    if(bad.length && bad.every(function(x){ return x.mixed; })) return bad.length+" of these cards are held under more than one printing, so even the printings up before you trade them.";
     return bad.length+" cards are short of the copies this trade gives.";
   }
   function tradeMoveWord(n){ n=+n||0; return n+" "+(n===1?"copy":"copies"); }
@@ -11594,7 +11649,11 @@ label.acctsetrow { align-items:center; }
     take(local, true);
     var list=order.map(function(id){ return by[id]; });
     list.sort(tradeNewer);
-    if(list.length>100) list=list.slice(0,100);
+    // A merge never deletes. Two devices each holding trades the other has not seen must come out
+    // of a sync with both sets, the way mergeEvents already does: a phone with a full log and a
+    // tablet that had been offline used to lose the overflow permanently, with no copy of it left
+    // anywhere, not even in a backup taken beforehand. The ceiling is enforced where a person adds
+    // one, below, so the only way to reach it is by hand and you are told.
     return list;
   }
   function tradeBackupPayload(base, trades, draft){
@@ -11831,6 +11890,9 @@ label.acctsetrow { align-items:center; }
       var col=activeCol();
       var rec=tradeSnapshot(d2, {colId:col.id, colName:col.name||"", cur:tradeCur(), mode:(typeof priceMode==="function"?priceMode():"live")}, typeof mktOf==="function"?mktOf:null);
       if(!rec){ toast("That trade could not be saved"); return; }
+      // Refuse before any card moves, the way the event log does. The merge no longer trims, so a
+      // sync can legitimately carry a list past the ceiling; this is the only place it is enforced.
+      if(Array.isArray(STATE.trades) && STATE.trades.length>=TRADE_LOG_MAX){ toast("Your trade history is full"); return; }
       var applied=tradeApplyToOwn(col.own, net2);
       if(!applied.ok){ toast(tradeBlockText(applied.blocked, tradeNameOf)||"That trade could not be saved"); renderTrades(); return; }
       if(!Array.isArray(STATE.trades)) STATE.trades=[];

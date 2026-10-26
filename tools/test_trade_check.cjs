@@ -52,7 +52,7 @@ const DATA = ['tradeQty', 'tradeMap', 'tradeDraftNorm', 'tradeLinesNorm', 'trade
   'tradeLinesConv', 'mergeTradeLists', 'tradeBackupPayload', 'tradeImportMerge', 'tradeSnapshotLines', 'tradeNewId', 'tradeSnapshot',
   'tradeLinesOf', 'tradeDraftLines', 'tradeSortLines'];
 const APPLY = ['rawCount', 'rawEditionKey', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
-  'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'tradeQty', 'tradeMap', 'tradeOwnedQty', 'tradeGiveBlocked',
+  'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'tradeQty', 'tradeMap', 'tradeOwnedQty', 'tradeMixedPrintings', 'tradeGiveBlocked',
   'tradeNet', 'tradeTakeCopies', 'tradeApplyToOwn'];
 
 function prose(sb) {
@@ -169,6 +169,36 @@ test('giving takes unspecified copies first and receiving uses the default print
   assert.equal(own['X-1'].qty, 1);
 });
 
+test('a holding split across two named printings is refused rather than guessed', () => {
+  const sb = sandbox(APPLY.concat(['tradeBlockText', 'tradeNameOf']), {
+    cardById: (id) => ({ id, name: 'Chillet', set: 'EBP01' }),
+    defaultEditionFor: () => '1',
+    byNumberIdx: {},
+  });
+  // Two NAMED printings: a 1st edition and a Japanese copy. tradeTakeCopies walks a fixed order, so
+  // this used to silently take the 1st edition, relabel the card and record no edition. The main
+  // deck count is total minus jp minus cn, so the tournament check then called a finished deck
+  // short. There is nowhere yet to say which copy is going, so the trade is refused instead.
+  const own = { A: { qty: 2, rawEditions: { '1': 1, jp: 1 }, graded: [] } };
+  const bad = sb.tradeGiveBlocked({ A: 1 }, own);
+  assert.equal(bad.length, 1, 'a mixed printing give is blocked');
+  assert.equal(bad[0].mixed, true);
+  const applied = sb.tradeApplyToOwn(own, { give: { A: 1 }, get: {} });
+  assert.equal(applied.ok, false, 'and nothing moves');
+  assert.equal(own.A.qty, 2, 'the collection is untouched');
+  assert.equal(own.A.rawEditions['1'], 1, 'the 1st edition is still there');
+  const msg = sb.tradeBlockText(bad, () => 'Chillet');
+  assert.match(msg, /more than one printing/, 'and the message says why');
+  assert.doesNotMatch(msg, DASH, 'no dashes in the new copy');
+
+  // Unlabelled copies are NOT ambiguity: taking those first destroys no label, so it still works.
+  const plain = { A: { qty: 3, rawEditions: { unknown: 2, '1': 1 }, graded: [] } };
+  assert.equal(sb.tradeGiveBlocked({ A: 1 }, plain).length, 0, 'unspecified plus one named is fine');
+  assert.equal(sb.tradeApplyToOwn(plain, { give: { A: 1 }, get: {} }).ok, true);
+  assert.equal(plain.A.rawEditions.unknown, 1, 'and it took the unspecified copy');
+  assert.equal(plain.A.rawEditions['1'], 1, 'leaving the named one alone');
+});
+
 test('a saved trade freezes the price, including no price', () => {
   const sb = sandbox(DATA, { isConverted: (id) => id === 'B' });
   const rec = sb.tradeSnapshot(
@@ -207,9 +237,11 @@ test('history is cleaned without inventing keys, and the same id keeps the first
   const many = { trades: [] };
   for (let i = 0; i < 105; i++) many.trades.push({ id: 't' + i, at: i + 1, give: [{ id: 'A', qty: 1, unit: 1 }], get: [] });
   sb.normTrades(many);
-  assert.equal(many.trades.length, 100);
+  // normTrades runs on every load and every render, so a trim here would undo a sync merge a frame
+  // after it ran. The ceiling lives at the save site instead, where the person is told about it.
+  assert.equal(many.trades.length, 105, 'normalising never deletes a trade');
   assert.equal(many.trades[0].id, 't104');
-  assert.equal(many.trades[99].id, 't5');
+  assert.equal(many.trades[104].id, 't0', 'the oldest trade survives');
   const draft = { tradeDraft: { give: { ' EBP01-001 ': 2, 'EBP01-001': 3 }, get: {}, note: '  hi  ', ownedOnly: false } };
   sb.normTrades(draft);
   assert.equal(draft.trades, undefined);
