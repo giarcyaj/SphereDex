@@ -687,16 +687,26 @@ test('every version spot agrees, and this build has release highlights', () => {
   assert.equal((project.match(new RegExp('CURRENT_PROJECT_VERSION = ' + sb[1] + ';', 'g')) || []).length, 2,
     `pbxproj CURRENT_PROJECT_VERSION should be ${sb[1]} in both configs`);
 
-  // The release needs its three "What's new" lines, or the update headliner shows an empty slide.
+  // A feature release needs its three "What's new" lines. A store train bump can ship with
+  // nothing new to announce: the headliner keeps the newest earlier release until the server
+  // has caught up, and an empty slide is omitted rather than shown.
   const highlights = source.match(/var RELEASE_HIGHLIGHTS = \{[\s\S]*?\n  \};/);
   assert.ok(highlights, 'RELEASE_HIGHLIGHTS is in the source');
   const box = {};
   vm.createContext(box);
   vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase'].map(appFunction).join('\n'), box);
-  assert.ok(box.RELEASE_HIGHLIGHTS[version], `RELEASE_HIGHLIGHTS has no entry for ${version}`);
-  assert.equal(box.RELEASE_HIGHLIGHTS[version].length, 3, `${version} needs exactly three highlight lines`);
-  for (const line of box.RELEASE_HIGHLIGHTS[version]) {
+  const described = box.RELEASE_HIGHLIGHTS[version]
+    ? version
+    : Object.keys(box.RELEASE_HIGHLIGHTS)
+        .filter((v) => box.verNum(v) < box.verNum(version))
+        .sort((a, b) => box.verNum(b) - box.verNum(a))[0];
+  assert.ok(described, `no release highlights at or before ${version}`);
+  assert.equal(box.RELEASE_HIGHLIGHTS[described].length, 3, `${described} needs exactly three highlight lines`);
+  for (const line of box.RELEASE_HIGHLIGHTS[described]) {
     assert.equal(/[-\u2013\u2014]/.test(line), false, `no dashes in user facing copy: ${line}`);
+  }
+  if (!box.RELEASE_HIGHLIGHTS[version]) {
+    assert.match(source, /if\(!notes\.length\) return;/);
   }
 
   // An older store record must never read as an update to install.
