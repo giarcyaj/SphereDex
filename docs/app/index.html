@@ -8209,6 +8209,10 @@ label.acctsetrow { align-items:center; }
         return STOCK;
       }).catch(function(){ return null; });
   }
+  // How often the backend's sealed stock cron runs, as the reader is told it. It must match the "*/30"
+  // sealed stock entry in spheredex-backend's wrangler.jsonc: the two live in different repositories, so
+  // nothing but this note keeps them honest, and they were four days out of step once already.
+  var STOCK_EVERY="30 minutes";
   // A reading older than this is not trusted. The checker runs every 30 minutes, so two hours means it has
   // missed four runs and something is wrong; saying "out of stock" off that would be a guess.
   var STOCK_STALE_MS=2*60*60*1000;
@@ -8356,14 +8360,24 @@ label.acctsetrow { align-items:center; }
     // the product, whereas the rows are rebuilt every run. So the rows win and the headline steps back to
     // unconfirmed. This is what a shop going quiet looks like for a product only that shop carried.
     if(g.cls==="in" && rows.length){
-      var anyIn=false;
-      for(i=0;i<rows.length;i++){ if(rows[i].status==="in"){ anyIn=true; break; } }
-      if(!anyIn) g={ cls:"unk", text:"Stock unconfirmed", note:"no shop confirmed it this check" };
+      var anyIn=false, allQuiet=true;
+      for(i=0;i<rows.length;i++){
+        if(rows[i].status==="in") anyIn=true;
+        if(rows[i].status!=="check") allQuiet=false;
+      }
+      // Two very different things used to wear the same wording. Every shop answering "we do not have it"
+      // is a fact about the product; every shop failing to answer is a fact about us, and only the second
+      // one means the reader should go and look themselves. The rows already know which it is, because a
+      // shop that went quiet is carried forward as "check" while a shop that answered says "out".
+      if(!anyIn) g={ cls:"unk", text:"Stock unconfirmed", fromRows:true,
+        note: allQuiet ? "we could not reach the shops" : "no shop confirmed it this check" };
     }
     // A reading too old to trust cannot be trusted shop by shop either. Saying "Stock unconfirmed" above a
     // list of shops marked as having it would contradict itself, so every row drops to go and look and the
     // names stay, which is still the useful part: these are the shops to try.
-    if(g.cls==="unk" && rows.length){
+    // Not when the rows themselves are what withdrew the headline: those were read this run, so a shop that
+    // answered "out" is known to be out, and sending someone to go and look there would waste the trip.
+    if(g.cls==="unk" && rows.length && !g.fromRows){
       var stale=[];
       for(i=0;i<rows.length;i++) stale.push({ shop:rows[i].shop, status:"check", url:rows[i].url, price:"" });
       rows=stale;
@@ -8396,7 +8410,10 @@ label.acctsetrow { align-items:center; }
     // would read as though we had looked and found none, when in truth we never look for it here.
     var known=!!(STOCK.state && STOCK.state[id]);
     var ago=(!known && !rows.length) ? "" : stockAgo(stockSeen(id));
-    if(ago) out+='<p class="sdwhen">Last checked '+esc(ago)+(rows.length?' \u00b7 rechecked every 30 minutes':'')+'</p>';
+    // STOCK_EVERY must match the sealed stock cron in the backend's wrangler.jsonc. It said thirty for the
+    // four days the cron actually ran every ten, because the two live in different repositories and nothing
+    // ties them together. Keep them in step by hand, and keep the name greppable so the next change finds it.
+    if(ago) out+='<p class="sdwhen">Last checked '+esc(ago)+(rows.length?' \u00b7 rechecked every '+STOCK_EVERY:'')+'</p>';
     if(pre && !rows.length) out+=stockOfficialHtml();
     return out;
   }

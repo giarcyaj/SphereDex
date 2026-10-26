@@ -25,11 +25,17 @@ function appFunction(name) {
   throw new Error('Could not extract ' + name);
 }
 
+// Taken from the app, never retyped here: the point of the interval test is that the string the reader
+// sees matches the backend cron, and a copy in this file would only ever agree with itself.
+const STOCK_EVERY = (/var STOCK_EVERY="([^"]+)"/.exec(source) || [])[1];
+assert.ok(STOCK_EVERY, 'App constant exists: STOCK_EVERY');
+
 const HOUR = 3600000;
 function sandbox(asOf, state, shops) {
   const sb = {
     STOCK: { region: 'co.uk', asOf, state, shops: shops || null, at: Date.now() },
     STOCK_STALE_MS: 2 * HOUR,
+    STOCK_EVERY,
     SEAL_OFFICIAL_URL: 'https://en.palworld-official-cardgame.com/products',
     esc: (s) => String(s),
     ebayReg: () => 'co.uk',
@@ -158,6 +164,7 @@ function liveSandbox() {
     STOCK: { region: '', asOf: null, state: null, shops: null, at: 0 },
     _stockReq: 0,
     STOCK_STALE_MS: 2 * HOUR,
+    STOCK_EVERY,
     region: 'co.uk',
     esc: (s) => String(s),
     apiBase: () => 'https://api.invalid',
@@ -272,6 +279,7 @@ function shopSandbox(asOf, state, shops, region) {
   const sb = {
     STOCK: { region: region || 'co.uk', asOf, state, shops, at: Date.now() },
     STOCK_STALE_MS: 2 * HOUR,
+    STOCK_EVERY,
     ebayReg: () => 'co.uk',
     REGION_CUR: { 'co.uk': 'GBP', com: 'USD' },
     moneyIn: (n, code) => (code === 'GBP' ? '\u00a3' : '$') + Number(n).toFixed(2),
@@ -422,6 +430,7 @@ function seenSandbox(seen, asOf, state, shops) {
   const sb = {
     STOCK: { region: 'co.uk', asOf, seen, state, shops, at: Date.now() },
     STOCK_STALE_MS: 2 * HOUR,
+    STOCK_EVERY,
     ebayReg: () => 'co.uk',
     REGION_CUR: { 'co.uk': 'GBP' },
     moneyIn: (n) => '£' + Number(n).toFixed(2),
@@ -460,6 +469,40 @@ test('in stock is withdrawn when not one shop confirms it', () => {
   assert.match(html, /no shop confirmed it this check/);
   assert.doesNotMatch(html, /In stock/, 'and never claims in stock over an unconfirmed list');
   assert.doesNotMatch(html, /at all 2 shops we check/, 'the out of stock wording is gone too');
+});
+
+test('every shop going quiet says so, instead of blaming the product', () => {
+  // The live failure this was written for: on 26 Oct 2026 Shopify started answering 429 to the checker and
+  // 75 of 79 shops went silent at once. Every row carried forward as "check", so the page said "no shop
+  // confirmed it this check", which reads as though the shops had answered and none had it. They had not
+  // answered at all, and that is the reader's cue to go and look rather than give up.
+  const shops = { a: [
+    { shop: 'Collectors Edge', status: 'check', url: 'https://ce.example/p', price: '' },
+    { shop: 'Total Cards', status: 'check', url: 'https://tc.example/p', price: '' },
+  ] };
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, shops).stockGlanceHtml('a', false);
+  assert.match(html, /Stock unconfirmed/, 'the headline still steps back');
+  assert.match(html, /we could not reach the shops/, 'and says whose fault it is');
+  assert.doesNotMatch(html, /no shop confirmed it this check/, 'never the wording that blames the product');
+});
+
+test('a shop that answered out is not dressed up as one to go and look at', () => {
+  // Once the rows withdraw the headline the rows are fresh, so an "out" read this run stays out. Turning it
+  // into "go and look" would send someone to a shop that had just said it has none.
+  const shops = { a: [
+    { shop: 'Collectors Edge', status: 'out', url: 'https://ce.example/p', price: '9.99' },
+    { shop: 'Total Cards', status: 'check', url: 'https://tc.example/p', price: '' },
+  ] };
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, shops).stockGlanceHtml('a', false);
+  assert.match(html, /no shop confirmed it this check/, 'mixed rows keep the old wording');
+  assert.doesNotMatch(html, /we could not reach the shops/, 'because one shop did reach us');
+});
+
+test('the stated recheck interval matches the backend cron', () => {
+  // These live in two repositories. If the sealed stock cron in wrangler.jsonc moves, this string moves too.
+  const shops = { a: [{ shop: 'Collectors Edge', status: 'in', url: 'https://ce.example/p', price: '1.00' }] };
+  const html = seenSandbox({ a: stamp(60000) }, stamp(60000), { a: 'in' }, shops).stockGlanceHtml('a', false);
+  assert.match(html, /rechecked every 30 minutes/);
 });
 
 test('in stock stands when a shop does confirm it', () => {
