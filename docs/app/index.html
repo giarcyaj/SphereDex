@@ -3311,6 +3311,10 @@ label.acctsetrow { align-items:center; }
           <label class="switch"><input type="checkbox" id="setNotifNewSets"><span class="track"></span></label>
         </div>
         <div class="setrow">
+          <div class="setinfo"><div class="stitle">App updates</div><div class="sdesc">Get notified when a new version of SphereDex is out, once it has reached both the App Store and Google Play.</div></div>
+          <label class="switch"><input type="checkbox" id="setNotifAppUpdate"><span class="track"></span></label>
+        </div>
+        <div class="setrow">
           <div class="setinfo"><div class="stitle">Stock alerts</div><div class="sdesc">Get notified when a sealed product you follow comes back in stock at a shop in your eBay region. Covers shops in the UK, US, Canada, Australia, Germany, France, Italy and Spain. Turn alerts on for a product from its page. The products you follow are saved to your account when you are signed in. This switch turns stock alerts on or off for this device only.</div></div>
           <label class="switch"><input type="checkbox" id="setNotifStock"><span class="track"></span></label>
         </div>
@@ -4715,7 +4719,7 @@ label.acctsetrow { align-items:center; }
   // the Worker ever moved, every existing install would keep calling a dead address and no build could
   // correct it. One name for it, used everywhere, so a move is a single edit here.
   var SERVER_URL_DEFAULT = "https://spheredex-backend.craigjayedit.workers.dev";
-  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",cardLang:"en",displayName:"",serverUrl:SERVER_URL_DEFAULT,defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,onboardIntents:[],onboardFirstAction:"",email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],mainNav:["collection","missing","wishlist"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
+  var SETTINGS = (function(){ var s={theme:"dark",defaultView:"auto",showColorCompletion:false,priceSource:"soldcomps",priceMode:"live",cardLang:"en",displayName:"",serverUrl:SERVER_URL_DEFAULT,defaultAddCol:"ask",noFade:false,hideOverlays:false,ebayRegion:detectRegion(),fallbackUS:false,mode:"trader",onboarded:false,onboardIntents:[],onboardFirstAction:"",email:"",defaultGrader:"PSA",dateFmt:"rel",sphere:-1,textScale:1,quickMenu:["sealed","releases","news","settings"],mainNav:["collection","missing","wishlist"],scanMode:"full",scanToggle:true,scanLoop:true,notif:{releases:true,news:true,newSets:true,appUpdate:true,stock:false,stockWatch:[],price:false,priceWatch:[]},newsDismissed:[]};
     try{ var d=JSON.parse(localStorage.getItem("palvault-settings")); if(d) Object.assign(s,d); }catch(e){}
     // Only an address someone deliberately set outlives the build's own, and an EMPTY one never counts as
     // deliberate: that would pin the app on "Prices are unavailable right now" with no way back.
@@ -4906,7 +4910,7 @@ label.acctsetrow { align-items:center; }
   // What this device sends: the newest PRICE_ALERT_MAX (the backend's per device limit) for cards it knows.
   function sentPriceAlerts(){ return priceOnList(STATE.alerts).filter(function(x){ return !!cardById(x.a.id); }).slice(-PRICE_ALERT_MAX).map(function(x){ return x.a; }); }
   function priceAlertByKey(k){ var r=STATE.alerts, e=(plainObj(r) && plainObj(r.price) && hasOwn(r.price, k)) ? r.price[k] : null; return (alertEntOk(e, true) && e.on) ? normPriceAlert(e.a) : null; }
-  function notifPairs(){ return [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifStock","stock"],["setNotifPrice","price"],["setNotifWeekly","weeklyDigest"],["setNotifMilestones","milestones"],["setNotifAvailability","availability"]]; }
+  function notifPairs(){ return [["setNotifReleases","releases"],["setNotifNews","news"],["setNotifNewSets","newSets"],["setNotifAppUpdate","appUpdate"],["setNotifStock","stock"],["setNotifPrice","price"],["setNotifWeekly","weeklyDigest"],["setNotifMilestones","milestones"],["setNotifAvailability","availability"]]; }
   function paintNotifSwitches(){ notifPairs().forEach(function(p){ var el=$(p[0]); if(el) el.checked=(SETTINGS.notif||{})[p[1]]!==false; }); }
   // After every adopt, account switch and legacy join. Follows that arrive from another phone switch this
   // device's alerts on, unless someone switched them off here by hand (stockOff / priceOff). The switches are
