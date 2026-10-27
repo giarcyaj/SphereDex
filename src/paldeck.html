@@ -6812,7 +6812,8 @@ label.acctsetrow { align-items:center; }
   // "Number", "Code" or "ID" may be a row counter, so any card number header wins over it whatever the column order.
   var IMPORT_COLS={
     number:["card number", "cardnumber", "card no", "card num", "card #", "card code", "collector number", "card id", "number", "code", "id", "no", "#"],
-    quantity:["quantity", "qty", "count", "owned", "amount", "copies", "quantity owned", "owned quantity", "owned count", "number owned"],
+    quantity:["quantity", "qty", "count", "owned", "amount", "copies", "quantity owned", "owned quantity", "owned count", "number owned",
+      "have", "have qty", "have quantity", "qty have"],
     language:["language", "lang", "card language", "languages"],
     parallel:["parallel", "variant", "variation", "finish", "foil", "treatment"],
     rarity:["rarity", "rarity code"],
@@ -6933,6 +6934,9 @@ label.acctsetrow { align-items:center; }
       return { own:{}, sealed:{}, added:0, skipped:0, cards:0, slabs:0, sealedItems:0, unmatched:[], zero:0, wantList:true };
     }
     var role=(hi>=0) ? importRoles(colIx) : {};
+    // A "Have" column (a checklist or a want list: how many you hold) is empty for a card you do not own, so a blank
+    // there is none. Every other quantity column leaves a blank as one copy, as an owned checkbox always did.
+    var blankIsNone=(hi>=0 && role.quantity!=null) && /^(have|have qty|have quantity|qty have)$/.test(importHeaderKey(rows[hi][role.quantity]));
     if(hi>=0 && role.number!=null){
       var at=function(r, ix, keepSpace){ if(ix==null) return ""; var v=csvUnguard(r[ix]); return keepSpace ? v : v.trim(); };
       var cell=function(r, k, keepSpace){ return at(r, colIx[k], keepSpace); };
@@ -6956,7 +6960,7 @@ label.acctsetrow { align-items:center; }
         var setCode=at(row, role.set);
         if(/^\d{1,3}[A-Za-z]{0,3}$/.test(num) && /^[A-Za-z]{1,5}\d{0,3}$/.test(setCode)) num=setCode+"-"+num;
         // Blank means 1; "2", "x2" or "2x" as the tolerant reader; 0 (or anything else) on a Card / Sealed row adds nothing.
-        var qs=at(row, role.quantity), q=importQty(qs);
+        var qs=at(row, role.quantity), q=(blankIsNone && qs==="") ? 0 : importQty(qs);
         // A quantity 0 Card row that carries a serial, a print run or a misprint is a numbered copy, not a
         // checklist line. It adds no copies. Anything else at 0 is only counted, and an unreadable quantity is reported.
         if(type==="card" && q===0 && (cell(row,"serial") || cell(row,"run") || cell(row,"misprint"))){
@@ -7072,7 +7076,10 @@ label.acctsetrow { align-items:center; }
     pickTextFile(".csv,.txt,text/csv,text/plain", function(text, f){ try{
       var res=parseCsvCollection(text);
       if(res.wantList){ toast("That is a want list, not a collection. Import a file with Number and Quantity columns."); return; }
-      if(!res.added && !(res.unmatched&&res.unmatched.length)){ toast("No card numbers found. Use a column of numbers like EBP01-001."); return; }
+      if(!res.added && !(res.unmatched&&res.unmatched.length)){
+        toast(res.zero ? "Every row has a quantity of 0 or blank, so there is nothing to import. Fill in how many you own." : "No card numbers found. Use a column of numbers like EBP01-001.");
+        return;
+      }
       var nm=importName(f&&f.name);
       openCsvPreview(res, nm, function(){ try{
         var id="c"+Date.now(); STATE.cols.push({ id:id, name:nm, own:res.own, sealed:res.sealed||{} }); switchCol(id);

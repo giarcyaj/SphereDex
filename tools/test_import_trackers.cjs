@@ -267,6 +267,27 @@ test('header synonyms, delimiters, a BOM and quoted fields', () => {
   assert.equal(check.own['EBP01-004'].qty, 2);
   assert.equal(check.zero, 2);
   assert.deepEqual(plain(check.unmatched), []);
+  // A "Have" column is how many you hold: a blank is none, not one, so a checklist never imports cards you lack.
+  const have = A.parseCsvCollection('Bought,Number,Name,Have\n,BP01-001,Jormuntide,\n,BP01-002,x,2\n,BP01-003,y,\n,BP01-004,z,0\n');
+  assert.deepEqual(Object.keys(have.own), ['EBP01-002']);
+  assert.equal(have.own['EBP01-002'].qty, 2);
+  assert.equal(have.zero, 3);
+  assert.deepEqual(plain(have.unmatched), []);
+  ['Have Qty', 'have_quantity', 'Qty Have'].forEach(h => {
+    const r = A.parseCsvCollection('Number,' + h + '\nBP01-001,3\nBP01-002,\n');
+    assert.deepEqual(Object.keys(r.own), ['EBP01-001'], h);
+    assert.equal(r.own['EBP01-001'].qty, 3, h);
+  });
+  // A file with nothing in Have adds nothing and says so through zero, which the import toast reads.
+  const noneHave = A.parseCsvCollection('Number,Have\nBP01-001,\nBP01-002,\n');
+  assert.equal(noneHave.added, 0);
+  assert.equal(noneHave.zero, 2);
+  // A real Quantity column still wins over Have, and its blank is still one copy.
+  const both = A.parseCsvCollection('Number,Have,Quantity\nBP01-001,,\nBP01-002,5,\n');
+  assert.equal(both.own['EBP01-001'].qty, 1);
+  assert.equal(both.own['EBP01-002'].qty, 1);
+  // An Owned checkbox column keeps blank as one copy.
+  assert.equal(A.parseCsvCollection('Number,Owned\nBP01-001,\n').own['EBP01-001'].qty, 1);
   // A header the reader does not know still falls back to the tolerant line reader.
   const loose = A.parseCsvCollection('BP01-045 2\nbp01-045,x3\nBP02-199 1\nhello\n');
   assert.equal(loose.own['EBP01-045'].qty, 5);
