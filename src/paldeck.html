@@ -6768,7 +6768,7 @@ label.acctsetrow { align-items:center; }
     // No markBackupExport() here: a want list is not a backup of your collection, and stamping one would leave
     // Settings claiming a backup that was never taken.
     saveTextFile(fileSlug(slug,"want-list")+"-"+todayKey()+".csv", "text/csv", text, function(){
-      toast("Exported "+n+" card"+(n===1?"":"s"));
+      toast("Exported "+n+" card"+(n===1?"":"s")+" you still need");
     });
   }
   // ---- CSV import ----
@@ -7072,12 +7072,18 @@ label.acctsetrow { align-items:center; }
     sc.hidden=false;
     setTimeout(function(){ try{ (res.added?ok:cancel).focus(); }catch(e){} }, 30);
   }
+  function importNotice(title, message){ openAsk({ title:title, message:message, confirmOnly:true, okText:"OK", noCancel:true }); }
   function doImportCsv(){
     pickTextFile(".csv,.txt,text/csv,text/plain", function(text, f){ try{
       var res=parseCsvCollection(text);
-      if(res.wantList){ toast("That is a want list, not a collection. Import a file with Number and Quantity columns."); return; }
+      // These say what to do next, so they are a notice that stays until it is read, not a two second toast.
+      if(res.wantList){ importNotice("This is a list of cards you still need",
+        "It is the shopping list from the Missing or Wishlist screen, so it has no owned cards to import. To move a SphereDex collection, export it from Settings, Backup and restore, Export, Spreadsheet, and import that file. From another app or a spreadsheet, use a file with a Number column and a Quantity column."); return; }
       if(!res.added && !(res.unmatched&&res.unmatched.length)){
-        toast(res.zero ? "Every row has a quantity of 0 or blank, so there is nothing to import. Fill in how many you own." : "No card numbers found. Use a column of numbers like EBP01-001.");
+        if(res.zero) importNotice("Nothing owned in this file",
+          "Every row has a quantity of 0 or a blank, so there is nothing to add. Fill in how many of each card you own, in a Quantity or Have column, and import it again.");
+        else importNotice("No card numbers found",
+          "SphereDex needs a column of card numbers like EBP01-001 or BP01-001, and optionally a Quantity column. A CSV exported from palworldtcg.gg, Palify, Pal Collector or SphereDex works as it is.");
         return;
       }
       var nm=importName(f&&f.name);
@@ -7430,6 +7436,7 @@ label.acctsetrow { align-items:center; }
     var inp=$("askInput"); inp.hidden=!isPrompt; if(isPrompt){ inp.value=opts.value||""; }
     var ok=$("askOk"), extra=$("askExtra"); ok.textContent=opts.okText||"OK"; ok.className="ok"+(opts.danger?" danger":"");
     extra.hidden=!opts.extraText; extra.textContent=opts.extraText||"";
+    $("askCancel").hidden=!!opts.noCancel;   // a notice has one button; reset on every open
     sc.hidden=false;
     if(isPrompt){ setTimeout(function(){ inp.focus(); inp.select(); }, 30); }
     function close(){ sc.hidden=true; ok.onclick=null; extra.onclick=null; $("askCancel").onclick=null; inp.onkeydown=null; }
@@ -15418,7 +15425,7 @@ label.acctsetrow { align-items:center; }
     var Q_INFO={
       scan:"Point the camera at a card, or at the grading label on a slab. SphereDex recognises it right on your device (images are never uploaded) and shows a quick check before you add it. Keep scanning (on by default, in Settings) brings the camera back for the next card, so you can add a whole stack.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
-      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. Exports from palworldtcg.gg, Palify and Pal Collector are accepted too, with Japanese and Chinese cards read from a Language column. You see a preview before anything is added, and it lands as a new collection named after the file."
+      csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. Exports from palworldtcg.gg, Palify and Pal Collector are accepted too, with Japanese and Chinese cards read from a Language column. A Missing or Wishlist export is a shopping list, not a collection, so it cannot be imported. You see a preview before anything is added, and it lands as a new collection named after the file."
     };
     var cur=null, panel=$("qInfoPanel");
     Array.prototype.forEach.call(document.querySelectorAll(".qinfobtn"), function(b){

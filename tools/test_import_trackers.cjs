@@ -286,6 +286,10 @@ test('header synonyms, delimiters, a BOM and quoted fields', () => {
   const both = A.parseCsvCollection('Number,Have,Quantity\nBP01-001,,\nBP01-002,5,\n');
   assert.equal(both.own['EBP01-001'].qty, 1);
   assert.equal(both.own['EBP01-002'].qty, 1);
+  // SphereDex's own want list (Bought, Number, Need, Have) is still refused as a want list, never read as owned cards.
+  const wantFile = A.parseCsvCollection('Bought,Number,Need,Have,Name\n,EBP01-001,1,0,Jormuntide\n,EBP01-002,2,1,x\n');
+  assert.equal(wantFile.wantList, true);
+  assert.equal(wantFile.added, 0);
   // An Owned checkbox column keeps blank as one copy.
   assert.equal(A.parseCsvCollection('Number,Owned\nBP01-001,\n').own['EBP01-001'].qty, 1);
   // A header the reader does not know still falls back to the tolerant line reader.

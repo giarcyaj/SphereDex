@@ -1162,14 +1162,17 @@ test('want list copy has no dashes', () => {
   // Read the real strings out of the app, never a copy typed in here: a literal in a test drifts away from
   // the app silently and then proves nothing.
   const said = (fn) => (appFunction(fn).match(/toast\("[^"]*"/g) || []).map((m) => m.slice(7, -1));
-  const refusal = (appFunction('doImportCsv').match(/toast\("That is a want list[^"]*"/g) || []).map((m) => m.slice(7, -1));
+  // The import refusal is a notice that stays up (title, then message), not a toast that is gone in two seconds.
+  const refusal = [].concat.apply([], (appFunction('doImportCsv').match(/importNotice\("This is a list of cards you still need",\s*"[^"]*"/g) || [])
+    .map((m) => m.match(/"[^"]*"/g).map((q) => q.slice(1, -1))));
   const toasts = said('exportWantList').concat(refusal);
   assert.ok(toasts.indexOf('Nothing to export yet') >= 0, JSON.stringify(toasts));
-  assert.ok(toasts.some((t) => /want list, not a collection/.test(t)), JSON.stringify(toasts));
+  assert.ok(toasts.some((t) => /no owned cards to import/.test(t)), JSON.stringify(toasts));
+  assert.doesNotMatch(appFunction('doImportCsv'), /toast\("That is a want list/, 'the refusal is not a two second toast');
   assert.ok(toasts.length >= 3, JSON.stringify(toasts));
   toasts.forEach((t) => assert.doesNotMatch(t, /[-–—]/, t));
   // The one toast built from pieces, so it cannot be read whole above.
-  assert.match(appFunction('exportWantList'), /"Exported "\+n\+" card"\+\(n===1\?"":"s"\)/);
+  assert.match(appFunction('exportWantList'), /"Exported "\+n\+" card"\+\(n===1\?"":"s"\)\+" you still need"/);
   assert.equal((source.match(/>Spreadsheet \(CSV\)<\/button>/g) || []).length, 2, 'both buttons use the app house wording');
 });
 
