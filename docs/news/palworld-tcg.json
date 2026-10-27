@@ -1,6 +1,28 @@
 {
-  "updated_at": "2026-10-26T09:00:00Z",
+  "updated_at": "2026-10-27T07:00:00Z",
   "items": [
+    {
+      "id": "x-com-palworldocg-en-status-2114960285241168175",
+      "title": "Recommended decks for Legends Awaken",
+      "url": "https://x.com/PalworldOCG_EN/status/2114960285241168175",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-27",
+      "category": "official",
+      "summary": "Official English account shares recommended decks for Legends Awaken, which goes on sale on 30 October.",
+      "unconfirmed": false
+    },
+    {
+      "id": "www-reddit-com-r-palworldtcg-comments-1xg1bhp-local-game-store-owner",
+      "title": "r/PalworldTCG discusses video of an Ohio store owner admitting to rigging tournament prizes",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1xg1bhp/local_game_store_owner_admitting_to_scamming/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-10-26",
+      "category": "community",
+      "summary": "Community thread about a video in which a store owner appears to admit to rigging tournament prizes. This rests on allegations in the video and is unconfirmed.",
+      "unconfirmed": true
+    },
     {
       "id": "en-palworld-official-cardgame-com-cardlist-ebp02",
       "title": "Full Legends Awaken card list now on the official English site",
