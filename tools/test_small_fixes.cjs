@@ -257,3 +257,13 @@ test('a version check that never lands gives its hour back instead of going quie
   assert.match(request, /\.catch\(function\(\)\{[\s\S]*?verAt=0;[\s\S]*?\}\);/, 'a failed request resets verAt so the next wake retries');
   assert.match(body.slice(end), /\.catch\(function\(\)\{\}\)/, 'the worker nudge is still allowed to fail quietly');
 });
+
+test('the Home collection weave can never climb over the card count above it', () => {
+  // It was absolute against a 55px band, so a bigger catalogue (Legends Awaken going to 164 cards) drew it
+  // over the title and the percentage. It now sits in the band's flow, and the band may not shrink below it.
+  const rule = (sel) => { const at = source.indexOf('  ' + sel + ' {'); assert.ok(at > 0, sel); return source.slice(at, source.indexOf('}', at)); };
+  assert.doesNotMatch(rule('.sdx-weave'), /position:absolute/);
+  assert.match(rule('.sdx-wband'), /justify-content:flex-end/);
+  assert.match(rule('.sdx-wband'), /flex-shrink:0/);
+  assert.match(appFunction('homeWeave'), /class="sdx-band sdx-wband"/);
+});

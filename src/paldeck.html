@@ -690,7 +690,11 @@
   /* One square per card, 41 to a row, one block per set in the app's own order. A card you own is lit
      in its colour; one you do not keeps a dim trace of it, so the weave reads as the catalogue even
      where it is empty. Grid gap only, which .homegrid already relies on. */
-  .sdx-weave { position:absolute; left:0; right:0; bottom:0; }
+  /* The weave sits in the band's flow, pushed to the bottom, so the band is always at least as tall as the weave.
+     It used to be absolute against a 55px band; Legends Awaken going from 56 cards to 164 made it taller than that,
+     and it climbed up over the card count and the percentage above it. */
+  .sdx-wband { display:flex; flex-direction:column; justify-content:flex-end; flex-shrink:0; }   /* never shorter than the weave */
+  .sdx-weave { position:relative; }
   .sdx-wset { display:grid; grid-template-columns:repeat(41,minmax(0,1fr)); gap:1px; }
   .sdx-wset + .sdx-wset { margin-top:3px; }
   .sdx-wset i { display:block; height:5px; border-radius:1px; background:var(--surface-2); }
@@ -14002,7 +14006,7 @@ label.acctsetrow { align-items:center; }
     if(!blocks.length) return "";
     var html="";
     for(i=0;i<blocks.length;i++) html+='<div class="sdx-wset">'+blocks[i].join("")+'</div>';
-    return '<div class="sdx-band"><div class="sdx-weave" aria-hidden="true">'+html+'</div></div>';
+    return '<div class="sdx-band sdx-wband"><div class="sdx-weave" aria-hidden="true">'+html+'</div></div>';
   }
   // The value line: up to a fortnight of the daily history, in the mode the figure above it is in.
   // One reading is not a line, so there is simply no chart until there are two days to join, which is
