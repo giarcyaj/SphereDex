@@ -64,6 +64,7 @@ node tools/test_sealed_images.cjs
 node tools/test_tournament_decks.cjs
 node tools/test_native_scan_numbers.cjs
 node tools/test_chase_check.cjs
+node tools/test_copy_photos.cjs
 node tools/test_market_index.cjs
 node tools/test_trade_check.cjs
 

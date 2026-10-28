@@ -1964,6 +1964,14 @@ label.acctsetrow { align-items:center; }
   .copynotes .cnrow select{width:100%;min-width:0}.copynotes .cnnote{grid-column:1/-1}
   .copynotes .cnact{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center}.copynotes .cnact>*{margin:0 8px 0 0}
   .copynotes .cnadd{grid-column:1/-1;justify-self:start}
+  .cnphotos{grid-column:1/-1}.gphotos{flex-basis:100%}
+  .phstrip{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .phcell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2)}
+  .phcell img{width:100%;height:100%;object-fit:cover}
+  .phcell .phmiss{font-size:.62rem;line-height:1.2;text-align:center;color:var(--ink-faint);padding:4px}
+  .phcell .phrm{position:absolute;top:2px;right:2px;width:22px;height:22px;border:none;border-radius:11px;background:rgba(0,0,0,.6);color:#fff;font-size:.7rem;cursor:pointer;padding:0}
+  .phadd{cursor:pointer}
+  .no-flexgap .phstrip>*{margin:0 8px 8px 0}
   /* notification bell + What's-new popup */
   .bellbtn { position:relative; padding:9px 11px; }
   .bellbtn svg { display:block; }
@@ -4412,6 +4420,99 @@ label.acctsetrow { align-items:center; }
     if(delta<0) n=-Math.min(b[key]||0,n);
     b[key]=(b[key]||0)+n; setRawCounts(e,b); return n;
   }
+  // OWN PHOTOS: optional photos on a numbered raw copy or a slab. The pictures stay on this device, in IndexedDB,
+  // and are never uploaded or synced. The collection only stores a short list of ids (ph on a numbered copy,
+  // photos on a slab), so localStorage and account sync stay small. An id with no picture on this device is
+  // shown as "On another device" and can be unlinked. Older app versions ignore the field.
+  var PHOTO_MAX=3, PHOTO_EDGE=1280, PHOTO_DB_NAME="spheredex-photos", PHOTO_STORE="photos";
+  function photoIdsClean(list){
+    var out=[]; if(!Array.isArray(list)) return out;
+    list.forEach(function(id){ if(typeof id==="string" && /^p[a-z0-9]{6,24}$/.test(id) && out.indexOf(id)<0 && out.length<PHOTO_MAX) out.push(id); });
+    return out;
+  }
+  function photoNewId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+  // Fit inside PHOTO_EDGE on the long side, never enlarging.
+  function photoFitSize(w, h){
+    w=+w||0; h=+h||0; if(w<=0||h<=0) return {w:0,h:0};
+    var k=Math.min(1, PHOTO_EDGE/Math.max(w,h));
+    return {w:Math.max(1,Math.round(w*k)), h:Math.max(1,Math.round(h*k))};
+  }
+  var PHOTO_DB=null;
+  function photoDb(){
+    if(PHOTO_DB) return PHOTO_DB;
+    PHOTO_DB=new Promise(function(res, rej){
+      try{
+        if(typeof indexedDB==="undefined" || !indexedDB) return rej(new Error("no idb"));
+        var rq=indexedDB.open(PHOTO_DB_NAME,1);
+        rq.onupgradeneeded=function(){ try{ rq.result.createObjectStore(PHOTO_STORE); }catch(_){} };
+        rq.onsuccess=function(){ res(rq.result); };
+        rq.onerror=function(){ rej(rq.error||new Error("idb")); };
+      }catch(e){ rej(e); }
+    });
+    PHOTO_DB.catch(function(){ PHOTO_DB=null; });
+    return PHOTO_DB;
+  }
+  function photoTx(mode, fn){
+    return photoDb().then(function(db){ return new Promise(function(res, rej){
+      var tx=db.transaction(PHOTO_STORE, mode), st=tx.objectStore(PHOTO_STORE), out=fn(st);
+      tx.oncomplete=function(){ res(out && out.result!==undefined ? out.result : undefined); };
+      tx.onerror=tx.onabort=function(){ rej(tx.error||new Error("idb")); };
+    }); });
+  }
+  function photoPut(id, blob){ return photoTx("readwrite", function(st){ return st.put(blob, id); }); }
+  function photoGet(id){ return photoTx("readonly", function(st){ return st.get(id); }); }
+  function photoDelete(ids){ photoIdsClean(ids).forEach(function(id){ photoTx("readwrite", function(st){ return st.delete(id); }).catch(function(){}); }); }
+  // Shrink a picked file to a JPEG so a phone photo costs a few hundred KB, not several MB.
+  function photoShrink(file){
+    return new Promise(function(res, rej){
+      try{
+        var url=URL.createObjectURL(file), img=new Image();
+        img.onload=function(){
+          try{
+            var z=photoFitSize(img.naturalWidth||img.width, img.naturalHeight||img.height);
+            if(!z.w) { URL.revokeObjectURL(url); return rej(new Error("empty")); }
+            var cv=document.createElement("canvas"); cv.width=z.w; cv.height=z.h;
+            cv.getContext("2d").drawImage(img,0,0,z.w,z.h);
+            URL.revokeObjectURL(url);
+            if(cv.toBlob) cv.toBlob(function(b){ b?res(b):rej(new Error("encode")); },"image/jpeg",0.8); else rej(new Error("encode"));
+          }catch(e){ rej(e); }
+        };
+        img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error("decode")); };
+        img.src=url;
+      }catch(e){ rej(e); }
+    });
+  }
+  // Pick, shrink and store one photo, then hand back its new id. Rejects when it cannot be kept.
+  function photoAdd(file){
+    return photoShrink(file).then(function(b){ var id=photoNewId(); return photoPut(id,b).then(function(){ return id; }); });
+  }
+  // A thumbnail strip for a list of ids. onChange(newList) runs after an add or an unlink.
+  function photoStrip(host, ids, onChange){
+    var list=photoIdsClean(ids), urls=[];
+    host.innerHTML="";
+    host.className="phstrip";
+    list.forEach(function(id){
+      var cell=document.createElement("span"); cell.className="phcell";
+      var rm=document.createElement("button"); rm.type="button"; rm.className="phrm"; rm.setAttribute("aria-label","Remove photo"); rm.textContent="✕";
+      rm.onclick=function(){ photoDelete([id]); onChange(list.filter(function(x){ return x!==id; })); };
+      photoGet(id).then(function(b){
+        if(b){ var u=URL.createObjectURL(b); urls.push(u); var im=document.createElement("img"); im.alt="Photo of this copy"; im.src=u; cell.insertBefore(im, rm); }
+        else { var m=document.createElement("span"); m.className="phmiss"; m.textContent="On another device"; cell.insertBefore(m, rm); }
+      }).catch(function(){ var m=document.createElement("span"); m.className="phmiss"; m.textContent="Not available"; cell.insertBefore(m, rm); });
+      cell.appendChild(rm); host.appendChild(cell);
+    });
+    if(list.length<PHOTO_MAX){
+      var lab=document.createElement("label"); lab.className="btn phadd";
+      lab.appendChild(document.createTextNode(list.length?"Add another photo":"Add photo"));
+      var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.hidden=true; inp.setAttribute("aria-label","Add a photo of this copy");
+      inp.onchange=function(){
+        var f=inp.files && inp.files[0]; inp.value=""; if(!f) return;
+        photoAdd(f).then(function(id){ onChange(photoIdsClean(list.concat([id]))); })
+          .catch(function(){ try{ toast("Could not keep that photo on this device"); }catch(_){} });
+      };
+      lab.appendChild(inp); host.appendChild(lab);
+    }
+  }
   // Numbered copies: raw copies stay counts, and some of them can carry a serial out of the print run (372 of 750)
   // or a misprint tag with a short note. They live in copyNotes on the holding, never outnumber the raw copies,
   // and never change qty, the printing counts or any value. Older app versions simply ignore the array.
@@ -4420,7 +4521,10 @@ label.acctsetrow { align-items:center; }
     var dig=function(v){ return String(v==null?"":v).replace(/\D+/g,"").slice(0,7); };
     var out={}, sr=dig(n.serial), rn=dig(n.run), nt=String(n.note==null?"":n.note).replace(/\s+/g," ").trim().slice(0,80), ed=rawEditionKey(n.ed==null?"unknown":n.ed);
     if(sr) out.serial=sr; if(rn) out.run=rn; if(n.mis) out.mis=1; if(nt) out.note=nt; if(ed!=="unknown") out.ed=ed;
-    return (sr||rn||out.mis||nt) ? out : null;
+    // Self contained on purpose: the guard suites load this function on its own. Same rule as photoIdsClean.
+    var ph=[]; if(Array.isArray(n.ph)) n.ph.forEach(function(id){ if(typeof id==="string" && /^p[a-z0-9]{6,24}$/.test(id) && ph.indexOf(id)<0 && ph.length<3) ph.push(id); });
+    if(ph.length) out.ph=ph;
+    return (sr||rn||out.mis||nt||ph.length) ? out : null;
   }
   function copyNotesList(e){
     var q=rawCount(e&&e.qty), out=[];
@@ -4444,6 +4548,7 @@ label.acctsetrow { align-items:center; }
     if(n.mis) bits.push("Misprint");
     if(n.note) bits.push(n.note);
     if(n.ed && n.ed!=="unknown") bits.push(rawEditionLabel(n.ed));
+    var np=Array.isArray(n.ph)?n.ph.length:0; if(np) bits.push(np===1?"1 photo":np+" photos");
     return bits.join(" · ");
   }
   // The CSV Misprint cell: "Misprint", "Misprint: note", or just the note for an untagged copy.
@@ -6061,6 +6166,7 @@ label.acctsetrow { align-items:center; }
             '<div class="field"><label for="cnRun'+i+'">Of</label><input id="cnRun'+i+'" data-cnf="run" type="text" inputmode="numeric" autocomplete="off" placeholder="750" value="'+esc(n.run||"")+'"></div>'+
             '<div class="field"><label for="cnEd'+i+'">Printing</label><select id="cnEd'+i+'" data-cnf="ed">'+printingKeys(c).map(function(k){ return '<option value="'+k+'"'+(k===ed?' selected':'')+'>'+rawEditionLabel(k)+'</option>'; }).join("")+'</select></div>'+
             '<div class="field cnnote"><label for="cnNote'+i+'">Note</label><input id="cnNote'+i+'" data-cnf="note" type="text" maxlength="80" autocomplete="off" placeholder="Optional" value="'+esc(n.note||"")+'"></div>'+
+            '<div class="cnphotos" data-cnph="'+i+'"></div>'+
             '<div class="cnact"><button class="chip solid" data-cnf="mis" type="button" aria-pressed="'+(n.mis?'true':'false')+'">Misprint</button><button class="btn" data-cnrm="'+i+'" type="button">Remove</button></div>'+
           '</div>';
         });
@@ -6069,13 +6175,15 @@ label.acctsetrow { align-items:center; }
         var cnStore=function(){ setCopyNotes(s,cnWork); persist(); paintOwnPills(); };
         Array.prototype.forEach.call(host.querySelectorAll(".cnrow"), function(row){
           var i=parseInt(row.getAttribute("data-cn"),10);
+          var phHost=row.querySelector("[data-cnph]");
+          if(phHost){ var phPaint=function(){ photoStrip(phHost, cnWork[i].ph, function(list){ if(list.length) cnWork[i].ph=list; else delete cnWork[i].ph; cnStore(); phPaint(); }); }; phPaint(); }
           Array.prototype.forEach.call(row.querySelectorAll("[data-cnf]"), function(el){
             var f=el.getAttribute("data-cnf");
             if(f==="mis") el.onclick=function(){ cnWork[i].mis=cnWork[i].mis?0:1; el.setAttribute("aria-pressed",cnWork[i].mis?"true":"false"); cnStore(); };
             else el.onchange=function(){ var v=el.value; if(f==="serial"||f==="run"){ v=String(v||"").replace(/\D+/g,"").slice(0,7); el.value=v; } cnWork[i][f]=v; cnStore(); };
           });
         });
-        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
+        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ var gone=cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1)[0]; if(gone) photoDelete(gone.ph); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
         var cnAdd=$("cnAdd"); if(cnAdd) cnAdd.onclick=function(){ if(cnWork.length<q){ cnWork.push({serial:"",run:"",ed:"unknown",note:""}); paintOwn(); var f=$("cnSerial"+(cnWork.length-1)); if(f) try{ f.focus(); }catch(e){} } };
       }
       if(trackPaidOn()){
@@ -6096,7 +6204,7 @@ label.acctsetrow { align-items:center; }
       Array.prototype.forEach.call(host.querySelectorAll(".ownx"), function(b){
         b.onclick=function(){
           if(b.getAttribute("data-t")==="raw"){ changeRaw(s,-1,b.getAttribute("data-edition")); $("fQty").value=s.qty; }
-          else { gwork.splice(parseInt(b.getAttribute("data-i"),10),1); renderGrades(); }
+          else { var gx=gwork.splice(parseInt(b.getAttribute("data-i"),10),1)[0]; if(gx) photoDelete(gx.photos); renderGrades(); }
           updateSum(); persist(); paintBubbles(); paintOwn();
         };
       });
@@ -6168,13 +6276,16 @@ label.acctsetrow { align-items:center; }
           ('<select class="gEdition" aria-label="Slab printing">'+printingKeys(c).map(function(ed){return '<option value="'+ed+'"'+(rawEditionKey(g.edition)===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>';}).join('')+'</select>')+
           '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="Value '+esc(CUR.sym)+'" value="'+(g.value||0)+'">'+
           '<input class="gv gPaid paidui" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Paid" aria-label="Amount paid" value="'+(g.paid!=null && g.paid!=="" ? g.paid : "")+'">'+
-          '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>';
+          '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>'+
+          '<div class="gphotos"></div>';
         row.querySelector(".gGrader").onchange=function(){ g.grader=this.value; };
         row.querySelector(".gGrade").onchange=function(){ g.grade=this.value; };
         var ge=row.querySelector(".gEdition"); if(ge) ge.onchange=function(){ if(this.value==="unknown") delete g.edition; else g.edition=this.value; paintOwn(); };
         row.querySelector(".gVal").oninput=function(){ g.value=parseFloat(this.value)||0; updateSum(); };
         var gPaid=row.querySelector(".gPaid"); if(gPaid) gPaid.oninput=function(){ var n=paidNumber(this.value); if(n==null) delete g.paid; else g.paid=n; };
-        row.querySelector(".grm").onclick=function(){ gwork.splice(i,1); renderGrades(); updateSum(); };
+        row.querySelector(".grm").onclick=function(){ photoDelete(g.photos); gwork.splice(i,1); renderGrades(); updateSum(); };
+        var gph=row.querySelector(".gphotos");
+        if(gph){ var gPaint=function(){ photoStrip(gph, g.photos, function(list){ if(list.length) g.photos=list; else delete g.photos; persist(); gPaint(); }); }; gPaint(); }
         gl.appendChild(row);
       });
     }
