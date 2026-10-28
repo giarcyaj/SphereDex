@@ -3516,6 +3516,8 @@ label.acctsetrow { align-items:center; }
     <div class="fiopts">
       <button type="button" class="fiopt" id="fileIOOpt1"><b id="fileIOOpt1L"></b><span id="fileIOOpt1S"></span></button>
       <button type="button" class="fiopt" id="fileIOOpt2"><b id="fileIOOpt2L"></b><span id="fileIOOpt2S"></span></button>
+      <button type="button" class="fiopt" id="fileIOOpt3" hidden><b id="fileIOOpt3L"></b><span id="fileIOOpt3S"></span></button>
+      <button type="button" class="fiopt" id="fileIOOpt4" hidden><b id="fileIOOpt4L"></b><span id="fileIOOpt4S"></span></button>
     </div>
     <div class="askbtns"><button type="button" id="fileIOCancel">Cancel</button></div>
   </div>
@@ -6658,14 +6660,17 @@ label.acctsetrow { align-items:center; }
   // save or file picker in the same click, because share sheets and file pickers need that user gesture.
   function openFileIO(mode){
     var sc=$("fileIOScrim"); if(!sc) return;
-    var b1=$("fileIOOpt1"), b2=$("fileIOOpt2"), cancel=$("fileIOCancel"), hint=$("fileIOHint");
-    var close=function(){ sc.hidden=true; b1.onclick=b2.onclick=cancel.onclick=sc.onclick=null; };
+    var b1=$("fileIOOpt1"), b2=$("fileIOOpt2"), b3=$("fileIOOpt3"), b4=$("fileIOOpt4"), cancel=$("fileIOCancel"), hint=$("fileIOHint");
+    var close=function(){ sc.hidden=true; b1.onclick=b2.onclick=b3.onclick=b4.onclick=cancel.onclick=sc.onclick=null; b3.hidden=b4.hidden=true; };
     var setOpt=function(btn, n, label, sub, run){ $("fileIOOpt"+n+"L").textContent=label; $("fileIOOpt"+n+"S").textContent=sub; btn.onclick=function(){ close(); run(); }; };
     if(mode==="export"){
       $("fileIOTitle").textContent="Export “"+(activeCol().name||"Collection")+"”";
       hint.textContent=""; hint.hidden=true;
       setOpt(b1, 1, "Spreadsheet (CSV)", "Opens in Numbers, Excel and Google Sheets", doExportCsv);
       setOpt(b2, 2, "Backup (JSON)", "Restore it into SphereDex, with trade history", doExport);
+      b3.hidden=b4.hidden=false;
+      setOpt(b3, 3, "Printable report", "A page to print or save as PDF, with values", function(){ doExportReport(true); });
+      setOpt(b4, 4, "Printable report without prices", "The same page with no values or total", function(){ doExportReport(false); });
     } else {
       $("fileIOTitle").textContent="Import a collection";
       hint.textContent="It is added as a new collection"; hint.hidden=false;
@@ -6750,6 +6755,70 @@ label.acctsetrow { align-items:center; }
     if(withNotes) rows.forEach(function(r){ while(r.length<rows[0].length) r.push(""); });
     return csvText(rows, CSV_NUMCOL);
   }
+  // ---- Collection inventory report: a clean printable page (save as PDF from the print dialog) ----
+  // A pure read of one collection, like collectionCsv: nothing is created or changed by building it.
+  // Lines are grouped per set (graded slabs with their card, sealed product in its own section).
+  // withValue false leaves every price and the total out, for handing a list over without prices.
+  function inventoryReportData(col, withValue){
+    col=col||activeCol();
+    var map=(col&&col.own)||{}, seal=(col&&col.sealed)||{}, mode=priceMode();
+    var prevOwn=own, swapped=(map!==own), inCat={}, groups=[], byKey={}, total=0, count=0;
+    var group=function(key, title){ var g=byKey[key]; if(!g){ g={key:key,title:title,lines:[],qty:0,total:0}; byKey[key]=g; groups.push(g); } return g; };
+    var add=function(g, ln){ ln.total=withValue?(+ln.total||0):0; g.lines.push(ln); g.qty+=ln.qty; g.total+=ln.total; total+=ln.total; count+=ln.qty; };
+    var cardLines=function(id, c){
+      var e=map[id]; if(!e || typeof e!=="object") return;
+      var g=group(c?c.set:"?", (c && SETS[c.set])?SETS[c.set].name:"Other cards");
+      var nm=c?(c.name||""):id, rare=c?(RARE_NAME[c.rare]||c.rare||""):"";
+      var q=Math.floor(+e.qty||0);
+      if(q>0){ var u=withValue?(+unitOf(id, mode)||0):0, counts=rawCounts(e);
+        ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return;
+          var notes=copyNotesList(e).filter(function(cn){ return String(cn.ed==null?"":cn.ed)===ed && cn.serial; }).map(function(cn){ return cn.serial; });
+          add(g, {num:id, name:nm, kind:"Card", printing:[csvEdition(ed), rare].filter(Boolean).join(", "), cond:e.cond||"", serial:notes.join(", "), qty:n, unit:u, total:n*u}); }); }
+      (Array.isArray(e.graded)?e.graded:[]).forEach(function(gr){ if(!gr || typeof gr!=="object") return; var v=withValue?(+gr.value||0):0;
+        add(g, {num:id, name:nm, kind:"Graded", printing:[csvEdition(gr.edition), rare].filter(Boolean).join(", "), cond:[gr.grader, gr.grade==null?"":gr.grade].filter(function(x){ return x!==""&&x!=null; }).join(" "), serial:gr.cert==null?"":String(gr.cert), qty:1, unit:v, total:v}); });
+    };
+    if(swapped) own=map;
+    try{
+      CARDS.forEach(function(c){ inCat[c.id]=1; cardLines(c.id, c); });
+      Object.keys(map).forEach(function(id){ if(!inCat[id]) cardLines(id, null); });
+    } finally { if(swapped) own=prevOwn; }
+    SEALED.forEach(function(p){
+      var s=seal[p.id]; if(!s || typeof s!=="object") return;
+      var q=Math.floor(+s.qty||0); if(!(q>0)) return;
+      var u=0; if(withValue){ try{ u=+sealUnit(JSON.parse(JSON.stringify(s)), mode)||0; }catch(e){ u=0; } }
+      var title=p.set||p.name||"", typ=(p.set&&p.name)?p.name:"";
+      var g=group("sealed","Sealed product");
+      add(g, {num:p.id, name:title+(typ?" "+typ:""), kind:p.pre?"Preorder":"Sealed", printing:"", cond:"", serial:"", qty:q, unit:u, total:p.pre?0:q*u});
+    });
+    var sealedAt=-1; groups.forEach(function(g,i){ if(g.key==="sealed") sealedAt=i; });
+    if(sealedAt>=0){ var sg=groups.splice(sealedAt,1)[0]; groups.push(sg); }
+    return {name:(col&&col.name)||"Collection", groups:groups, count:count, total:total, withValue:!!withValue};
+  }
+  function inventoryReportHtml(col, withValue, dateLabel){
+    var d=inventoryReportData(col, withValue), code=(CUR&&CUR.code)||"";
+    var cur=function(n){ return n? money(n) : ""; };
+    var head='<tr><th>Number</th><th>Name</th><th>Type</th><th>Printing</th><th>Condition</th><th>Serial</th><th class="n">Qty</th>'+(d.withValue?'<th class="n">Value</th><th class="n">Total</th>':'')+'</tr>';
+    var body=d.groups.map(function(g){
+      var rows=g.lines.map(function(l){
+        return '<tr><td>'+esc(l.num)+'</td><td>'+esc(l.name)+'</td><td>'+esc(l.kind)+'</td><td>'+esc(l.printing)+'</td><td>'+esc(l.cond)+'</td><td>'+esc(l.serial)+'</td><td class="n">'+l.qty+'</td>'+(d.withValue?'<td class="n">'+esc(cur(l.unit))+'</td><td class="n">'+esc(cur(l.total))+'</td>':'')+'</tr>';
+      }).join("");
+      return '<section><h2>'+esc(g.title)+' <small>'+g.qty+(g.qty===1?' item':' items')+(d.withValue&&g.total?', '+esc(money(g.total)):'')+'</small></h2><table>'+head+rows+'</table></section>';
+    }).join("");
+    if(!body) body='<p>Nothing in this collection yet.</p>';
+    var css='body{font:13px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:24px;max-width:1000px}h1{font-size:22px;margin:0 0 4px}.meta{color:#444;margin:0 0 18px}h2{font-size:15px;margin:22px 0 6px}h2 small{font-weight:400;color:#555;font-size:12px}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}th{background:#f2f2f2;font-size:12px}.n{text-align:right}tr{break-inside:avoid}section{break-inside:auto}.tot{margin-top:18px;font-weight:700;font-size:15px}.fine{margin-top:22px;color:#666;font-size:11px}@media print{body{margin:0}}';
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.name)+' inventory</title><style>'+css+'</style></head><body>'
+      +'<h1>'+esc(d.name)+' inventory</h1><p class="meta">'+esc(dateLabel||"")+'. '+d.count+(d.count===1?' item':' items')+(d.withValue&&code?'. Values in '+esc(code):'')+'.</p>'
+      +body
+      +(d.withValue?'<p class="tot">Total value: '+esc(money(d.total))+'</p>':'')
+      +'<p class="fine">Made with SphereDex, a fan made collection tracker. Palworld and the Palworld Trading Card Game belong to Pocketpair and Bushiroad. Values are estimates from market prices, not an appraisal. To save as PDF, open this file and choose Print.</p>'
+      +'</body></html>';
+  }
+  function doExportReport(withValue){
+    var col=activeCol(), nm=col.name, text, label;
+    try{ label=new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}); text=inventoryReportHtml(col, withValue, label); }catch(e){ toast("Couldn't build the report"); return; }
+    saveTextFile(fileSlug(col.name,"collection")+"-report-"+todayKey()+".html", "text/html", text, function(){ toast("Report saved for “"+nm+"”. Open it and choose Print to make a PDF."); });
+  }
+  // ---- end collection inventory report ----
   // ---- Want list (CSV): the cards you still want, from your wishlist or any Missing goal ----
   // Its own columns, not the collection export's. Bought and Notes are yours to fill in while you shop, Need
   // and Have say how many to buy and how many you already hold, Card type and Subtype are what the TCGplayer

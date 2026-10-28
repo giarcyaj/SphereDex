@@ -152,6 +152,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Collection inventory report
+        run: node tools/test_inventory_report.cjs
+
       - name: Add to calendar on Releases (.ics)
         run: node tools/test_release_calendar.cjs
 
