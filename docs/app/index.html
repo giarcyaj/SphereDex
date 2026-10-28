@@ -424,6 +424,13 @@
   .deckprint li b { display:inline-block; min-width:2em; }
   .deckprint .dpnum { font-family:ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
   .deckprint .dpfoot { margin-top:20px; color:#555; font-size:.78rem; }
+  .deckprint .dpopt { display:flex; align-items:center; margin:4px 8px 4px 0; color:#111; font-size:.9rem; font-weight:650; }
+  .deckprint .dpopt input { margin:0 6px 0 0; }
+  .deckprint .dpbox { display:inline-block; width:.95em; height:.95em; border:1.5px solid #111; border-radius:2px; margin-right:8px; vertical-align:-.12em; }
+  .deckprint .dpqty { margin-left:6px; color:#333; }
+  .deckprint .dpkind { color:#555; font-size:.82rem; margin-left:6px; }
+  .deckprint .dpprice { float:right; font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .deckprint .dpset { break-inside:avoid; page-break-inside:avoid; }
   @media print {
     html.deckprinting body > *:not(#deckPrintSheet) { display:none !important; }
     html.deckprinting #deckPrintSheet { position:static; overflow:visible; }
@@ -10994,12 +11001,13 @@ label.acctsetrow { align-items:center; }
     var eligibility=missingGoal==="sphere"?'Each official main-set printing counts once. Trial decks and promos do not count.':missingGoal==="master"?'Each catalogued printing counts once; raw or graded copies both qualify, while duplicates do not.':(missingGoal==="set"||missingGoal==="rarity"||missingGoal==="pal")?'Each unique printing counts once, whether raw or graded.':'';
     var wantRows=missingWantItems(missingGoal, data), tcgRows=wantRows.map(tcgRowOf);
     hero.innerHTML='<div class="missingherohead"><div><div class="missingeyebrow">'+esc(copy.eyebrow)+'</div><div class="missingname">'+esc(copy.name)+'</div></div><div class="missingcount"><b>'+copy.count+'</b>'+esc(copy.detail)+'</div></div>'+
-      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(wantRows.length?'<button class="btn sec" id="missingCsvAction" type="button">Spreadsheet (CSV)</button>':'')+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
+      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(wantRows.length?'<button class="btn sec" id="missingCsvAction" type="button">Spreadsheet (CSV)</button>':'')+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(wantRows.length?'<button class="btn sec" id="missingPrintAction" type="button">Print checklist</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
     var choice=$("missingChoice"); if(choice) choice.onchange=function(){ missingChoice[missingGoal]=choice.value; renderMissing(); };
     var bulk=$("missingBulkAction"); if(bulk) bulk.onclick=function(){ addMissingToWishlist(items); };
     // Read the list when the button is TAPPED, not when this hero was drawn: collecting a card from the list
     // below patches this page in place rather than re-rendering it, so a snapshot would still carry cards you
     // have since collected. Both buttons recompute, so the pair can never disagree.
+    var missingPrint=$("missingPrintAction"); if(missingPrint) missingPrint.onclick=function(){ startMissingChecklist(missingWantItems(missingGoal, activeMissingGoal()), "Missing cards: "+(missingGoal==="master"?"all sets":copy.name)); };
     var missingTcg=$("missingTcgAction"); if(missingTcg) missingTcg.onclick=function(){ copyTcgplayerRows(missingTcgRows(missingGoal, activeMissingGoal())); };
     var missingCsv=$("missingCsvAction"); if(missingCsv) missingCsv.onclick=function(){
       exportWantList(missingWantItems(missingGoal, activeMissingGoal()), "missing "+(missingGoal==="master"?"cards":copy.name)); };
@@ -11120,6 +11128,61 @@ label.acctsetrow { align-items:center; }
     $("dpCopy").onclick=function(){ copyPlainText(deckPrintText(d), "Copied", "Copy list", "Clipboard access is not available here. Select this list and copy it."); };
     var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
     if(deckPrintCanPrint()) setTimeout(function(){ try{ window.print(); }catch(e){} }, 60);
+  }
+  // ---- Printable missing cards checklist: what is still needed, per set, for a card show or a shop visit ----
+  // Plain text, no card images. Reuses the deck print sheet. Prices are optional and always off by default.
+  function missingChecklistGroups(items, priceOf){
+    var groups=[], byKey={};
+    (items||[]).forEach(function(item){
+      var c=item&&item.card; if(!c) return;
+      var need=Math.floor(+item.need||0); if(!(need>0)) return;
+      var key=String(c.set||"");
+      var g=byKey[key];
+      if(!g){ g={title:(SETS[key]&&SETS[key].name)||key||"Other", rows:[], total:0}; byKey[key]=g; groups.push(g); }
+      g.rows.push({id:c.id, name:c.name||"", printing:RARE_NAME[c.rare]||c.rare||"", need:need, price:priceOf?(priceOf(c)||""):""});
+      g.total+=1;
+    });
+    return groups;
+  }
+  function missingChecklistPriceOf(c){
+    if(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector") return "";
+    var u=0; try{ u=+unitOf(c.id, priceMode())||0; }catch(e){ u=0; }
+    return u>0 ? money(u) : "";
+  }
+  function missingChecklistText(title, groups){
+    var lines=[title||"Missing cards", "Personal copy."];
+    groups.forEach(function(g){
+      lines.push("", g.title+" ("+deckPrintCountLabel(g.total)+")");
+      g.rows.forEach(function(r){ lines.push("[ ] "+r.id+" "+r.name+(r.printing?" ("+r.printing+")":"")+(r.need>1?" x"+r.need:"")+(r.price?" "+r.price:"")); });
+    });
+    lines.push("", "SphereDex personal copy");
+    return lines.join("\n")+"\n";
+  }
+  function startMissingChecklist(items, title){
+    var el=$("deckPrintSheet"); if(!el || !items || !items.length){ toast("Nothing missing to print"); return; }
+    var showPrices=false, canPrint=deckPrintCanPrint();
+    var money_ok=!(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector");
+    function draw(){
+      var groups=missingChecklistGroups(items, showPrices?missingChecklistPriceOf:null);
+      var total=0; groups.forEach(function(g){ total+=g.total; });
+      el.innerHTML='<div class="dpbar"><button type="button" id="dpClose">Close</button>'+(canPrint?'<button type="button" id="dpPrint">Print</button>':'')+'<button type="button" id="dpCopy">Copy list</button>'+
+        (money_ok?'<label class="dpopt"><input type="checkbox" id="dpPrices"'+(showPrices?' checked':'')+'>Include prices</label>':'')+
+        (canPrint?'':'<p>Print is not available here. Copy the list, or take a screenshot.</p>')+'</div>'+
+        '<div class="dppage"><h1>'+esc(title||"Missing cards")+'</h1><p class="dpsub">'+deckPrintCountLabel(total)+' still needed. Personal copy.</p>'+
+        groups.map(function(g){ return '<div class="dpset"><h2>'+esc(g.title)+'</h2><p class="dpcount">'+deckPrintCountLabel(g.total)+'</p><ol>'+
+          g.rows.map(function(r){ return '<li><span class="dpbox"></span><span class="dpnum">'+esc(r.id)+'</span>'+esc(r.name)+
+            (r.printing?'<span class="dpkind">'+esc(r.printing)+'</span>':'')+(r.need>1?'<span class="dpqty">x'+r.need+'</span>':'')+
+            (r.price?'<span class="dpprice">'+esc(r.price)+'</span>':'')+'</li>'; }).join("")+'</ol></div>'; }).join("")+
+        '<p class="dpfoot">SphereDex personal copy</p></div>';
+      $("dpClose").onclick=function(){ dismissOverlay(); };
+      $("dpCopy").onclick=function(){ copyPlainText(missingChecklistText(title, groups), "Copied", "Copy list", "Clipboard access is not available here. Select this list and copy it."); };
+      var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
+      var cb=$("dpPrices"); if(cb) cb.onchange=function(){ showPrices=cb.checked; var top=el.scrollTop; draw(); el.scrollTop=top; };
+    }
+    draw();
+    el.hidden=false; el.scrollTop=0;
+    document.documentElement.classList.add("deckprinting");
+    openOverlay(closeDeckPrint);
   }
   function deckToText(d){
     var ids=Object.keys(d.cards||{}).filter(function(k){ return d.cards[k]>0; });
