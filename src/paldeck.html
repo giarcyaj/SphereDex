@@ -6140,6 +6140,7 @@ label.acctsetrow { align-items:center; }
       Array.prototype.forEach.call(box.querySelectorAll("[data-awaydel]"), function(x){ x.onclick=function(){ var l=awayList(s); l.splice(parseInt(x.getAttribute("data-awaydel"),10),1); setAway(s,l); awayRet=-1; persist(); paintOwn(); }; });
       if((b=$("awayRetNo"))) b.onclick=function(){ awayRet=-1; paintAway(); };
       if((b=$("awayRetOk"))) b.onclick=function(){
+        s.graded=gwork.filter(function(g){ return g; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=+g.value||0; return x; });   // pending slab edits first, so the return builds on them
         var i=awayRet, slab=returnFromGrader(s, i, $("awayGrade").value, parseFloat(($("awayVal")||{}).value)||((s.gradeGuide&&s.gradeGuide[$("awayGrade").value])||0), trackPaidOn());
         if(!slab){ toast("That copy is no longer in your collection"); awayRet=-1; paintAway(); return; }
         awayRet=-1; $("fQty").value=s.qty;

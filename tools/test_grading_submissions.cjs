@@ -97,3 +97,14 @@ test('merging two devices keeps rows only one wrote', () => {
   assert.equal(A.mergeEntry(b, a).away.length, 1);
   assert.equal(A.mergeEntry(a, a).away.length, 1);
 });
+
+test('a return builds on pending slab edits, never on the older saved list', () => {
+  // The card sheet edits a working copy of the slabs (gwork). The Returned handler must write that copy into
+  // the holding before it appends the new slab, or unsaved edits and removals come back.
+  const at = source.indexOf('id="awayRetOk"') >= 0 ? source.indexOf('b=$("awayRetOk"))) b.onclick') : -1;
+  assert.ok(at > 0, 'Returned handler exists');
+  const body = source.slice(at, at + 1400);
+  const sync = body.indexOf('s.graded=gwork.');
+  const ret = body.indexOf('returnFromGrader(');
+  assert.ok(sync > 0 && ret > sync, 'slabs are synced from gwork before returnFromGrader runs');
+});
