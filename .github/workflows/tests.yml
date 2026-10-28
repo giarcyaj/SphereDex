@@ -165,6 +165,9 @@ jobs:
       - name: Trade checker
         run: node tools/test_trade_check.cjs
 
+      - name: Printable missing cards checklist
+        run: node tools/test_missing_checklist.cjs
+
       - name: Share a deck as a link
         run: node tools/test_deck_share.cjs
 
