@@ -2235,6 +2235,10 @@ label.acctsetrow { align-items:center; }
   .askscrim{ position:fixed; inset:0; z-index:210; display:flex; align-items:center; justify-content:center; padding:20px;
     background:rgba(6,8,13,.72); backdrop-filter:blur(4px); }
   .askscrim[hidden]{ display:none; }
+  .wherebtn{ margin:0 0 10px; padding:6px 12px; font-size:.85rem; }
+  .wheregrp{ margin:10px 0 0; } .wheregrp h4{ margin:0 0 4px; font-size:.95rem; } .wheregrp ul{ margin:0; padding:0; list-style:none; }
+  .wheregrp li{ padding:4px 0; font-size:.88rem; border-bottom:1px solid var(--line); } .wheregrp li b{ font-weight:650; }
+  .wherelist{ max-height:60vh; overflow-y:auto; overscroll-behavior:contain; }
   .askbox{ width:100%; max-width:380px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:18px; padding:20px; box-shadow:var(--shadow); }
   .askbox h3{ font-family:var(--font-display); font-weight:750; font-size:1.15rem; margin:0 0 4px; }
   .askbox p{ color:var(--ink-soft); font-size:.9rem; margin:0 0 14px; }
@@ -2985,6 +2989,7 @@ label.acctsetrow { align-items:center; }
   </div>
 
   <p class="countline" id="countLine"></p>
+  <button type="button" class="btn sec wherebtn" id="whereBtn" hidden>Find my cards</button>
   <div class="promoscope" id="promoScope" hidden></div>
   <div class="valueguess" id="valueGuess" hidden></div>
   <div class="grid" id="grid"></div>
@@ -3509,6 +3514,13 @@ label.acctsetrow { align-items:center; }
   </div>
 </div>
 
+<div class="askscrim" id="whereScrim" hidden>
+  <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="whereTitle">
+    <h3 id="whereTitle">Find my cards</h3>
+    <div class="wherelist" id="whereList"></div>
+    <div class="askbtns"><button type="button" id="whereClose">Close</button></div>
+  </div>
+</div>
 <div class="askscrim" id="fileIOScrim" hidden>
   <div class="askbox" role="dialog" aria-modal="true" aria-labelledby="fileIOTitle">
     <h3 id="fileIOTitle"></h3>
@@ -5374,6 +5386,28 @@ label.acctsetrow { align-items:center; }
     var nm=c.name||"", en=c.nameEn||"", rl=c.rules||"", ren=c.rulesEn||"";
     return nm+" "+(en&&en!==nm?en+" ":"")+(c.id||"")+" "+rl+" "+(ren&&ren!==rl?ren+" ":"")+((c.keywords||[]).join(" "));
   }
+  // Optional "Where it is" label on an owned card (Binder 2 page 5, Shoebox A). Free text, trimmed.
+  function whereClean(v){ return String(v==null?"":v).replace(/\s+/g," ").trim().slice(0,60); }
+  function whereMatches(e, q){
+    q=fold(String(q==null?"":q).trim());
+    if(!q || !e || typeof e!=="object") return false;
+    var w=whereClean(e.where); return !!w && fold(w).indexOf(q)!==-1;
+  }
+  // Owned cards grouped by their label, labels A to Z, cards in the order given. Unlabelled cards are left out.
+  function whereGroups(map, cards){
+    var by={}, order=[];
+    (cards||[]).forEach(function(c){
+      var e=map && map[c.id]; if(!e || typeof e!=="object") return;
+      var w=whereClean(e.where); if(!w) return;
+      var n=(Math.floor(+e.qty||0)>0?Math.floor(+e.qty):0)+(Array.isArray(e.graded)?e.graded.length:0);
+      if(n<1) return;
+      var k=w.toLowerCase();
+      if(!by[k]){ by[k]={where:w, cards:[]}; order.push(k); }
+      by[k].cards.push({id:c.id, name:c.name||c.id, copies:n});
+    });
+    order.sort();
+    return order.map(function(k){ return by[k]; });
+  }
   function cardMatchesQuery(c, q){
     q=fold(String(q==null?"":q).trim());
     if(!q) return true;
@@ -5423,7 +5457,7 @@ label.acctsetrow { align-items:center; }
       if (favMode && !isFav(c.id)) return false;
       if (gradedMode){ var g=o(c.id); if(!(g.graded && g.graded.length)) return false; }
       if (collectedMode){ var cm=o(c.id); if(!has(cm)) return false; if(!ownShowGraded && (+cm.qty||0)===0 && cm.graded && cm.graded.length) return false; }
-      if (q && !cardMatchesQuery(c, filters.q)) return false;
+      if (q && !cardMatchesQuery(c, filters.q) && !(typeof whereMatches==="function" && whereMatches(o(c.id), filters.q))) return false;
       var kws=keysOn(filters.keywords||{});
       if (kws.length && !kws.some(function(k){ return (c.keywords||[]).indexOf(k)!==-1; })) return false;
       if (sets.length && sets.indexOf(c.set)===-1) return false;
@@ -5542,6 +5576,7 @@ label.acctsetrow { align-items:center; }
   }
   function renderCountAndStats(cards){
     var m=colMode();
+    var wb=$("whereBtn"); if(wb){ wb.hidden=!(m==="col" || m==="collected") || !whereGroups(activeCol().own||{}, CARDS).length; wb.onclick=openWhere; }
     if(m==="wish") $("countLine").textContent = wishCountText(cards.length, CARDS.filter(function(c){ return isWished(c.id); }).length, money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0)));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
@@ -6012,6 +6047,8 @@ label.acctsetrow { align-items:center; }
       // The Sphere box is a fact about the card, so it belongs with the other facts rather than wedged
       // between the notes field and the total, which is what made this whole region read as unsorted.
       sphereDetail+
+      '<h3 class="dsec">Where it is</h3>'+
+      '<input type="text" id="fWhere" class="ctmsg" maxlength="60" autocomplete="off" placeholder="Binder 2, page 5 or Shoebox A" value="'+esc(whereClean(s.where))+'">'+
       '<h3 class="dsec">Notes</h3>'+
       '<textarea id="fNotes" class="ctmsg" style="min-height:80px" placeholder="Trade, alt art pull, cert number…">'+esc(s.notes||"")+'</textarea>'+
       // Save closes the sheet on its own now that the value has moved up to the prices.
@@ -6108,6 +6145,7 @@ label.acctsetrow { align-items:center; }
       s.mkt=parseFloat($("fMkt").value)||0;
       s.sales=salesWork.filter(function(x){ return (+x.p>0)||x.url; }).map(function(x){ return {p:+x.p||0, url:x.url||"", date:x.date||""}; });
       s.avg=avgLast5(salesWork); s.notes=$("fNotes").value;
+      var wv=whereClean($("fWhere").value); if(wv) s.where=wv; else delete s.where;
       s.graded=gwork.filter(function(g){ return g; }).map(function(g){ var x=cloneSlab(g); x.grader=g.grader; x.grade=g.grade; x.value=+g.value||0; return x; });   // keeps cert / edition
       save(); render(); buildColSel();
       var sol=$("setOwnLine"); if(sol) sol.textContent=setOwnText(c);   // the first or last copy moves the set count
@@ -6656,6 +6694,17 @@ label.acctsetrow { align-items:center; }
   }
   // Settings chooser: pick CSV or JSON for export / import. Each option closes the modal and starts the
   // save or file picker in the same click, because share sheets and file pickers need that user gesture.
+  function openWhere(){
+    var sc=$("whereScrim"); if(!sc) return;
+    var list=$("whereList"), close=function(){ sc.hidden=true; sc.onclick=null; $("whereClose").onclick=null; };
+    var groups=whereGroups(activeCol().own||{}, CARDS);
+    list.innerHTML=groups.length ? groups.map(function(g){
+      return '<div class="wheregrp"><h4>'+esc(g.where)+'</h4><ul>'+g.cards.map(function(x){
+        return '<li><b>'+esc(x.name)+'</b>'+(x.copies>1?' x'+x.copies:'')+'</li>'; }).join("")+'</ul></div>';
+    }).join("") : '<p>No cards have a location yet. Open a card you own and fill in Where it is.</p>';
+    $("whereClose").onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    sc.hidden=false;
+  }
   function openFileIO(mode){
     var sc=$("fileIOScrim"); if(!sc) return;
     var b1=$("fileIOOpt1"), b2=$("fileIOOpt2"), cancel=$("fileIOCancel"), hint=$("fileIOHint");
@@ -12271,7 +12320,7 @@ label.acctsetrow { align-items:center; }
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
     if(!closed){ var es=$("eventScrim"); if(es && !es.hidden){ closeEventSheet(); closed=true; } }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","whereScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -15797,6 +15846,7 @@ label.acctsetrow { align-items:center; }
     order.forEach(function(sk){ var n=Math.max(ta[sk]||0, tb[sk]||0); for(var i=0;i<n;i++) slabs.push(cloneSlab(first[sk])); });
     out.graded=slabs;
     if((b.notes||"").length > (a.notes||"").length) out.notes=b.notes;
+    if(!String(a.where||"").trim()){ if(String(b.where||"").trim()) out.where=String(b.where).trim(); else delete out.where; }
     // Numbered copy notes get the same rule as slabs: a note only one device wrote is kept, and a note both
     // wrote counts once per copy it was written for (the higher side), so identical notes are not doubled.
     // Nothing is capped here: copyNotesList still shows no more notes than there are raw copies.
