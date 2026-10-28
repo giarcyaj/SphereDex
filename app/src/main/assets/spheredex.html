@@ -4507,7 +4507,12 @@ label.acctsetrow { align-items:center; }
       var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.hidden=true; inp.setAttribute("aria-label","Add a photo of this copy");
       inp.onchange=function(){
         var f=inp.files && inp.files[0]; inp.value=""; if(!f) return;
-        photoAdd(f).then(function(id){ onChange(photoIdsClean(list.concat([id]))); })
+        photoAdd(f).then(function(id){
+          // The sheet moved on to another card while the picture was being saved: keep nothing, so the old
+          // editor's callback never writes into a card that is no longer on screen.
+          if(!host.isConnected){ photoDelete([id]); return; }
+          onChange(photoIdsClean(list.concat([id])));
+        })
           .catch(function(){ try{ toast("Could not keep that photo on this device"); }catch(_){} });
       };
       lab.appendChild(inp); host.appendChild(lab);
@@ -15905,7 +15910,11 @@ label.acctsetrow { align-items:center; }
     function slabTally(arr){ var t={}; (arr||[]).forEach(function(g){ if(g){ var sk=slabSig(g); t[sk]=(t[sk]||0)+1; } }); return t; }
     var ta=slabTally(a.graded), tb=slabTally(b.graded), first={}, order=[], slabs=[];
     ((a.graded)||[]).concat((b.graded)||[]).forEach(function(g){ if(!g) return; var sk=slabSig(g); if(!first[sk]){ first[sk]=g; order.push(sk); } });
-    order.forEach(function(sk){ var n=Math.max(ta[sk]||0, tb[sk]||0); for(var i=0;i<n;i++) slabs.push(cloneSlab(first[sk])); });
+    // Photos belong to a particular slab, so identical slabs keep their own pictures: collect each distinct photo
+    // list from both sides and hand them out one per copy instead of cloning the first slab's list onto all.
+    var slabPh={};
+    ((a.graded)||[]).concat((b.graded)||[]).forEach(function(g){ if(!g || !Array.isArray(g.photos) || !g.photos.length) return; var sk=slabSig(g), key=g.photos.join(","); var l=slabPh[sk]||(slabPh[sk]=[]); if(!l.some(function(x){ return x.join(",")===key; })) l.push(g.photos.slice()); });
+    order.forEach(function(sk){ var n=Math.max(ta[sk]||0, tb[sk]||0); for(var i=0;i<n;i++){ var cs=cloneSlab(first[sk]); if(slabPh[sk] && slabPh[sk][i]) cs.photos=slabPh[sk][i].slice(); else delete cs.photos; slabs.push(cs); } });
     out.graded=slabs;
     if((b.notes||"").length > (a.notes||"").length) out.notes=b.notes;
     // Numbered copy notes get the same rule as slabs: a note only one device wrote is kept, and a note both
@@ -15917,7 +15926,11 @@ label.acctsetrow { align-items:center; }
       var ca=cnTally(a.copyNotes), cb=cnTally(b.copyNotes), cnFirst={}, cnOrder=[], notesOut=[];
       (Array.isArray(a.copyNotes)?a.copyNotes:[]).concat(Array.isArray(b.copyNotes)?b.copyNotes:[]).forEach(function(n){
         var x=copyNoteClean(n); if(!x) return; var sk=cnSig(x); if(!cnFirst[sk]){ cnFirst[sk]=x; cnOrder.push(sk); } });
-      cnOrder.forEach(function(sk){ var n=Math.max(ca[sk]||0, cb[sk]||0); for(var i=0;i<n;i++) notesOut.push(Object.assign({}, cnFirst[sk])); });
+      // Same for photos on numbered copies: each copy keeps its own list rather than the first one's.
+      var cnPh={};
+      (Array.isArray(a.copyNotes)?a.copyNotes:[]).concat(Array.isArray(b.copyNotes)?b.copyNotes:[]).forEach(function(n){
+        var x=copyNoteClean(n); if(!x || !x.ph) return; var sk=cnSig(x), key=x.ph.join(","); var l=cnPh[sk]||(cnPh[sk]=[]); if(!l.some(function(y){ return y.join(",")===key; })) l.push(x.ph.slice()); });
+      cnOrder.forEach(function(sk){ var n=Math.max(ca[sk]||0, cb[sk]||0); for(var i=0;i<n;i++){ var cx=Object.assign({}, cnFirst[sk]); if(cnPh[sk] && cnPh[sk][i]) cx.ph=cnPh[sk][i].slice(); else delete cx.ph; notesOut.push(cx); } });
       if(notesOut.length) out.copyNotes=notesOut; else delete out.copyNotes;
     }
     return out;

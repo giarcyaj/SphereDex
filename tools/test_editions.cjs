@@ -307,3 +307,25 @@ test('numbered copies: a serial out of the run, capped at the raw count, round t
   const lone = a.parseCsvCollection('Number,Quantity,Type,Serial,Run,Misprint\nEBP01-001,0,Card,5,50,');
   assert.equal(lone.own[card.id], undefined, 'a numbered copy row with no copies adds nothing');
 });
+
+
+test('identical slabs and numbered copies keep their own photos through a cloud merge', () => {
+  const a = app();
+  const slab = (photos) => ({ grader: 'PSA', grade: '10', value: 50, ...(photos ? { photos } : {}) });
+  const side = { qty: 0, graded: [slab(['paaa1111']), slab(['pbbb2222'])], copyNotes: [{ mis: 1, ph: ['pccc3333'] }, { mis: 1, ph: ['pddd4444'] }] };
+  const merged = plain(a.mergeEntry(plain(side), plain(side)));
+  assert.equal(merged.graded.length, 2);
+  assert.deepEqual(merged.graded.map(g => g.photos), [['paaa1111'], ['pbbb2222']]);
+  assert.deepEqual(merged.copyNotes.map(n => n.ph), [['pccc3333'], ['pddd4444']]);
+});
+
+test('a photo added on one device does not duplicate the slab or copy on merge', () => {
+  const a = app();
+  const withPhoto = { qty: 0, graded: [{ grader: 'PSA', grade: '9', value: 20, photos: ['paaa1111'] }], copyNotes: [{ serial: '5', ph: ['pccc3333'] }] };
+  const without = { qty: 0, graded: [{ grader: 'PSA', grade: '9', value: 20 }], copyNotes: [{ serial: '5' }] };
+  const merged = plain(a.mergeEntry(plain(without), plain(withPhoto)));
+  assert.equal(merged.graded.length, 1);
+  assert.deepEqual(merged.graded[0].photos, ['paaa1111']);
+  assert.equal(merged.copyNotes.length, 1);
+  assert.deepEqual(merged.copyNotes[0].ph, ['pccc3333']);
+});

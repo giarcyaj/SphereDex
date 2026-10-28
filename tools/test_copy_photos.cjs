@@ -76,3 +76,7 @@ test('copyNoteClean cleans photo ids the same way photoIdsClean does', () => {
   const ids = ['pabc123', 'pabc123', 'bad id', 'pdef4567', 'pghi89012', 'pjkl01234'];
   assert.deepEqual(plain(sb.copyNoteClean({ ph: ids }).ph), plain(sb.photoIdsClean(ids)));
 });
+
+test('a photo finishing after the sheet moved on is discarded, not handed to the old editor', () => {
+  assert.match(source, /if\(!host\.isConnected\)\{ photoDelete\(\[id\]\); return; \}/);
+});
