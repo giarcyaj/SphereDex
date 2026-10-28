@@ -3006,6 +3006,7 @@ label.acctsetrow { align-items:center; }
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
+        <button class="tbtn ghost" id="deckShare" data-icon="upload" title="Share this deck as a link anyone can open">Share</button>
         <button class="tbtn ghost" id="deckPrint" data-icon="news" title="A printable list of this deck">Print</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
         <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
@@ -9929,7 +9930,7 @@ label.acctsetrow { align-items:center; }
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
     renderEventLog(d);
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckShare","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
@@ -11154,6 +11155,59 @@ label.acctsetrow { align-items:center; }
     toast("Imported deck “"+d.name+"” ("+res.added+" line"+(res.added>1?"s":"")+(res.skipped?(", "+res.skipped+" skipped"):"")+")");
     return true;
   }
+  // ---- Share a deck as a link ----
+  // The whole deck rides inside the link (name, card numbers and copies), so there is no server and no account:
+  // https://spheredex.app/app/#deck=<name>~<CARD>:<copies>,<CARD>:<copies>. The part after # never leaves the
+  // device that opens it. Only card numbers the app knows are read back, so a hand edited link cannot add anything else.
+  var DECK_SHARE_BASE="https://spheredex.app/app/#deck=";
+  function deckShareCode(d){
+    var ids=Object.keys((d&&d.cards)||{}).filter(function(k){ return d.cards[k]>0; });
+    ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
+    var parts=ids.filter(function(id){ return byNumberIdx[id.toUpperCase()]; }).map(function(id){ return id.toUpperCase()+":"+Math.min(DECK_LINE_MAX, d.cards[id]); });
+    return encodeURIComponent(String((d&&d.name)||"Deck").slice(0,40))+"~"+parts.join(",");
+  }
+  function deckShareUrl(d){ return DECK_SHARE_BASE+deckShareCode(d); }
+  // Accepts a whole link, "#deck=..." or the bare code. Returns {name, cards, added, skipped} or null when there is no code.
+  function parseDeckShare(text){
+    var t=String(text||"").trim(), m=/deck=([^\s&]+)/.exec(t);
+    var code=m?m[1]:t.replace(/^#/,"");
+    var i=code.lastIndexOf("~"); if(i<0 || /\s/.test(code)) return null;
+    var name="Shared deck";
+    try{ name=decodeURIComponent(code.slice(0,i)).replace(/[\r\n]+/g," ").trim().slice(0,40)||name; }catch(e){}
+    var cards={}, added=0, skipped=0;
+    code.slice(i+1).split(",").forEach(function(part){
+      if(!part) return;
+      var kv=part.split(":"), id=String(kv[0]||"").toUpperCase(), q=parseInt(kv[1],10);
+      if(byNumberIdx[id] && q>0){ cards[id]=Math.min(DECK_LINE_MAX,(cards[id]||0)+q); added++; } else skipped++;
+    });
+    return { name:name, cards:cards, added:added, skipped:skipped };
+  }
+  function deckShareCopies(res){ var n=0; Object.keys(res.cards).forEach(function(k){ n+=res.cards[k]; }); return n; }
+  function importSharedDeck(res){
+    if(!res || !res.added){ toast("That deck link has no cards the app knows"); return false; }
+    if(!playerToolsOn()){ SETTINGS.playerTools=true; saveSettings(); if(typeof applyFeatureFlags==="function") applyFeatureFlags(); }
+    createDeckFromParse(res.name, res);
+    showPage("decks");
+    return true;
+  }
+  function askImportSharedDeck(res){
+    var n=deckShareCopies(res);
+    openAsk({title:"Import shared deck?", message:"“"+res.name+"” has "+n+" card"+(n===1?"":"s")+(res.skipped?(" ("+res.skipped+" couldn't be read)"):"")+". It is added as a new deck and your other decks are not touched.", confirmOnly:true, okText:"Import", onOk:function(){ importSharedDeck(res); }});
+  }
+  function checkSharedDeckLink(){
+    var h=""; try{ h=String(window.location.hash||""); }catch(e){}
+    if(!/^#deck=/.test(h)) return;
+    var res=parseDeckShare(h);
+    try{ history.replaceState(null,"",window.location.pathname+window.location.search); }catch(e){}
+    if(res) askImportSharedDeck(res); else toast("That deck link couldn't be read");
+  }
+  function shareDeck(d){
+    if(!d) return;
+    if(!deckShareCode(d).split("~")[1]){ toast("Add some cards before sharing"); return; }
+    var url=deckShareUrl(d);
+    if(navigator.share && !window.IS_NATIVE){ navigator.share({title:d.name+" (SphereDex deck)", url:url}).catch(function(){}); return; }
+    copyPlainText(url, "Deck link copied", "Share deck link", "Clipboard access is not available here. Select this link and copy it, then send it to anyone. They can open it or paste it into Import.");
+  }
   function downloadDeckText(d, text){
     var nm=d.name;
     saveTextFile(fileSlug(d.name,"deck")+".txt", "text/plain", text||deckToText(d), function(){ toast("Exported “"+nm+"”"); });
@@ -11227,9 +11281,13 @@ label.acctsetrow { align-items:center; }
       alt.hidden=false; alt.textContent="Download .txt"; alt.onclick=function(){ downloadDeckText(d, text); };
     } else {
       $("deckIOTitle").textContent="Import decklist";
-      $("deckIOHint").textContent="Paste a decklist below, one card per line (quantity then card number, like 4 EBP01-001). Or upload a file.";
+      $("deckIOHint").textContent="Paste a decklist below, one card per line (quantity then card number, like 4 EBP01-001), or paste a SphereDex deck link. Or upload a file.";
       ta.value=""; ta.readOnly=false;
-      act.textContent="Import"; act.onclick=function(){ if(createDeckFromParse("Imported deck", parseDeckList(ta.value))) close(); };
+      act.textContent="Import"; act.onclick=function(){
+        var sh=/deck=/.test(ta.value) ? parseDeckShare(ta.value) : null;
+        if(sh){ if(importSharedDeck(sh)) close(); return; }
+        if(createDeckFromParse("Imported deck", parseDeckList(ta.value))) close();
+      };
       alt.hidden=false; alt.textContent="Upload file"; alt.onclick=function(){ close(); doDeckImport(); };
     }
     sc.hidden=false;
@@ -11261,6 +11319,9 @@ label.acctsetrow { align-items:center; }
       }});
     }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
+    var dsh=$("deckShare"); if(dsh) dsh.onclick=function(){ shareDeck(activeDeck()); };
+    window.addEventListener("hashchange", checkSharedDeckLink);
+    setTimeout(checkSharedDeckLink, 1500);
     var dpr=$("deckPrint"); if(dpr) dpr.onclick=function(){ var d=activeDeck(); if(d) startDeckPrint(d); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
