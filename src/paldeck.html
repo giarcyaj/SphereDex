@@ -14988,6 +14988,14 @@ label.acctsetrow { align-items:center; }
     if(res.unknown.length) h+='<p class="plnone">Not recognised: '+esc(res.unknown.join(", "))+'</p>';
     return h+'</div>';
   }
+  function priceListDiffText(ta, tb){
+    if(!ta.cards || !tb.cards) return "";
+    if(!(ta.total>0) && !(tb.total>0)) return "";
+    var d=Math.round((tb.total-ta.total)*100)/100;
+    var tail=(ta.unpriced||tb.unpriced) ? ", counting priced cards only" : "";
+    if(d===0) return "Both lists are worth the same"+tail;
+    return (d>0 ? "List B is worth "+moneyIn(d)+" more" : "List A is worth "+moneyIn(-d)+" more")+tail;
+  }
   function priceListRun(){
     var a=$("plTextA"), b=$("plTextB"), out=$("plOut"); if(!a||!out) return;
     var ownMap=activeOwn();
@@ -14997,10 +15005,8 @@ label.acctsetrow { align-items:center; }
     if(b && b.value.trim()){
       var rb=priceListParse(b.value, byNumberIdx), tb=priceListTotals(rb.lines, mktOf, ownedFn);
       html+=priceListSideHtml("List B", rb, tb);
-      if(ta.cards && tb.cards){
-        var d=Math.round((tb.total-ta.total)*100)/100;
-        html='<div class="pldiff">'+esc(d===0?"Both lists are worth the same":(d>0?"List B is worth "+moneyIn(d)+" more":"List A is worth "+moneyIn(-d)+" more"))+'</div>'+html;
-      }
+      var dt=priceListDiffText(ta, tb);
+      if(dt) html='<div class="pldiff">'+esc(dt)+'</div>'+html;
     }
     out.innerHTML=html;
   }

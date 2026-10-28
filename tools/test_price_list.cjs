@@ -19,9 +19,9 @@ function appFunction(name) {
   }
   throw new Error('Could not extract ' + name);
 }
-const sb = { Math, isFinite, PRICE_LIST_QTY_MAX: 999 };
+const sb = { Math, isFinite, moneyIn: (n) => '$' + n, PRICE_LIST_QTY_MAX: 999 };
 vm.createContext(sb);
-vm.runInContext(['priceListParse', 'priceListTotals'].map(appFunction).join('\n'), sb);
+vm.runInContext(['priceListParse', 'priceListTotals', 'priceListDiffText'].map(appFunction).join('\n'), sb);
 const IDX = { 'EBP01-001': {}, 'EBP01-002': {}, 'EBP01-003': {} };
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -60,4 +60,12 @@ test('wired into Quick Add with no dashes in new copy', () => {
   assert.match(source, /pb=\$\("qPriceBtn"\);[^\n]*openPriceList/);
   const modal = source.slice(source.indexOf('id="plScrim"'), source.indexOf('id="eventScrim"'));
   assert.doesNotMatch(modal.replace(/<[^>]+>/g, ' '), /[-–—−]/);
+});
+
+test('trade comparison is withheld or qualified when prices are missing', () => {
+  const none = { cards: 1, total: 0, unpriced: 2 };
+  assert.equal(sb.priceListDiffText(none, none), '');
+  assert.equal(sb.priceListDiffText({ cards: 0, total: 0, unpriced: 0 }, { cards: 1, total: 5, unpriced: 0 }), '');
+  assert.equal(sb.priceListDiffText({ cards: 1, total: 2, unpriced: 0 }, { cards: 1, total: 5, unpriced: 0 }), 'List B is worth $3 more');
+  assert.match(sb.priceListDiffText({ cards: 1, total: 2, unpriced: 1 }, { cards: 1, total: 5, unpriced: 0 }), /priced cards only/);
 });
