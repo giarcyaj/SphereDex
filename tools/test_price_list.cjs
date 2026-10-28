@@ -69,3 +69,10 @@ test('trade comparison is withheld or qualified when prices are missing', () => 
   assert.equal(sb.priceListDiffText({ cards: 1, total: 2, unpriced: 0 }, { cards: 1, total: 5, unpriced: 0 }), 'List B is worth $3 more');
   assert.match(sb.priceListDiffText({ cards: 1, total: 2, unpriced: 1 }, { cards: 1, total: 5, unpriced: 0 }), /priced cards only/);
 });
+
+test('every money surface is hidden in collector mode', () => {
+  const fn = appFunction('priceListRowHtml') + appFunction('priceListRun');
+  assert.match(fn, /class="plmoney priceui"/);
+  assert.match(fn, /class="pldiff priceui"/);
+  assert.match(appFunction('priceListSideHtml'), /class="pltotal priceui"/);
+});

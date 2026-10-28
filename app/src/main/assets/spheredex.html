@@ -14977,7 +14977,7 @@ label.acctsetrow { align-items:center; }
     var price=r.sum==null ? "No price" : moneyIn(r.sum);
     var each=r.unit==null ? "" : moneyIn(r.unit)+" each";
     var tag=r.isNew ? "New" : "You own "+r.owned;
-    return '<div class="plrow"><div class="plmeta"><div class="pln">'+esc(nm)+'</div><div class="plid">'+esc(r.id)+' · '+esc(tag)+'</div></div><div class="plmoney"><span>'+esc(price)+'</span><span class="plea">'+esc((r.qty>1?"×"+r.qty+" · ":"")+each)+'</span></div></div>';
+    return '<div class="plrow"><div class="plmeta"><div class="pln">'+esc(nm)+'</div><div class="plid">'+esc(r.id)+' · '+esc(tag)+'</div></div><div class="plmoney priceui"><span>'+esc(price)+'</span><span class="plea">'+esc((r.qty>1?"×"+r.qty+" · ":"")+each)+'</span></div></div>';
   }
   function priceListSideHtml(title, res, tot){
     var h='<div class="plside"><h4>'+esc(title)+'</h4>';
@@ -15006,7 +15006,7 @@ label.acctsetrow { align-items:center; }
       var rb=priceListParse(b.value, byNumberIdx), tb=priceListTotals(rb.lines, mktOf, ownedFn);
       html+=priceListSideHtml("List B", rb, tb);
       var dt=priceListDiffText(ta, tb);
-      if(dt) html='<div class="pldiff">'+esc(dt)+'</div>'+html;
+      if(dt) html='<div class="pldiff priceui">'+esc(dt)+'</div>'+html;
     }
     out.innerHTML=html;
   }
