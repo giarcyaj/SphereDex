@@ -2244,6 +2244,15 @@ label.acctsetrow { align-items:center; }
   .askbox textarea:focus{ outline:none; border-color:var(--accent); }
   .askbox.wide{ max-width:560px; }
   .askbox.wide .askbtns{ flex-wrap:wrap; }
+  .askbox.deckownbox{ max-height:calc(100vh - 40px); overflow-y:auto; overscroll-behavior:contain; }
+  .deckownlabel{ font-weight:700; font-size:.86rem; margin:0 0 8px; }
+  .deckownpick{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin:0 0 16px; }
+  .deckownpick button{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); border-radius:10px; padding:5px 5px 6px; font:600 .68rem var(--font-body); line-height:1.25; text-align:center; cursor:pointer; min-height:44px; }
+  .deckownpick button img{ width:100%; aspect-ratio:63/88; object-fit:cover; border-radius:6px; margin-bottom:4px; background:var(--surface); }
+  .deckownpick button .dorare{ font-weight:800; color:var(--accent-ink); }
+  .deckownpick button.skip{ justify-content:center; }
+  .deckownpick button[aria-checked="true"]{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+  .deckownpick button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .askbtns{ display:flex; gap:9px; justify-content:flex-end; }
   .askbtns button{ border:1.5px solid var(--line-strong); background:var(--surface-2); color:var(--ink); font-family:inherit; font-weight:650; font-size:.9rem; padding:9px 16px; border-radius:10px; cursor:pointer; min-width:40px; min-height:40px; }
   @media(max-width:440px){ .askbtns{ flex-wrap:wrap; } }
@@ -3450,6 +3459,16 @@ label.acctsetrow { align-items:center; }
     <p id="askMsg" hidden></p>
     <input id="askInput" type="text" autocomplete="off" spellcheck="false" aria-label="Enter value" />
     <div class="askbtns"><button type="button" id="askCancel">Cancel</button><button type="button" id="askExtra" hidden></button><button type="button" class="ok" id="askOk">OK</button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="deckOwnScrim" hidden>
+  <div class="askbox wide deckownbox" role="dialog" aria-modal="true" aria-labelledby="deckOwnTitle">
+    <h3 id="deckOwnTitle"></h3>
+    <p id="deckOwnMsg"></p>
+    <div class="deckownlabel" id="deckOwnPickLabel">Which special card was in your box?</div>
+    <div class="deckownpick" id="deckOwnPick" role="radiogroup" aria-labelledby="deckOwnPickLabel"></div>
+    <div class="askbtns"><button type="button" id="deckOwnCancel">Cancel</button><button type="button" class="ok" id="deckOwnOk">Add deck</button></div>
   </div>
 </div>
 
@@ -7618,8 +7637,8 @@ label.acctsetrow { align-items:center; }
     // set = bold headline (the set name); name = product type shown under it; sub = fine detail.
     { id:"box-ebp01", set:"Dawn of Palpagos", name:"Booster Box", sub:"12 packs", box:"BOX_EBP01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Booster Box" },
     { id:"pack-ebp01", set:"Dawn of Palpagos", name:"Booster Pack", sub:"7 cards", box:"PACK_EBP01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Booster Pack" },
-    { id:"td-rb", set:"Dawn of Palpagos", name:"Trial Deck, Red · Blue", sub:"Starter deck · 40 cards", box:"BOX_ETD01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
-    { id:"td-gp", set:"Dawn of Palpagos", name:"Trial Deck, Green · Purple", sub:"Starter deck · 40 cards", box:"BOX_ETD02", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
+    { id:"td-rb", set:"Dawn of Palpagos", name:"Trial Deck, Red · Blue", sub:"Starter deck · 60 cards", box:"BOX_ETD01", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Red Blue" },
+    { id:"td-gp", set:"Dawn of Palpagos", name:"Trial Deck, Green · Purple", sub:"Starter deck · 60 cards", box:"BOX_ETD02", date:"Jul 30, 2026", q:"Palworld Dawn of Palpagos Trial Deck Green Purple" },
     // Sealed promo products, tracked alongside the individual promo cards (PR2026). Both carry baked art
     // (PACK_PRV1, DECK_DEMO). name carries "Pack" / "Deck" so the price query gets the right
     // kind (see pkind in pullSealed): the pack filter keeps single-card promo packs, the deck filter the demo deck.
@@ -8523,6 +8542,7 @@ label.acctsetrow { align-items:center; }
             (apiBase()?'<button class="btn sec sealpull priceui" id="sdPull" type="button" style="flex:1 1 auto">'+icon('refresh')+' Refresh prices</button>':'')+
             stockAlertBtn(p)+
           '</div>'+stockAlertNote(p)+
+          (trialDeckSetOfSealed(p.id)?'<div class="sdbtnrow" style="display:flex;margin-top:9px"><button class="btn sec" id="sdDeckOwn" type="button" style="flex:1 1 auto">I own this deck, add its cards</button></div>':'')+
           '<p class="qsub priceui" style="margin:8px 0 0;font-size:.76rem">Last 5 sold and live listings are pulled from the market, the same as cards. Your value uses your chosen price mode ('+(priceMode()==="sold"?"last sold":"live listings")+', change it in Settings).</p>'+
         '</div>'+
       '</div>';
@@ -8538,6 +8558,7 @@ label.acctsetrow { align-items:center; }
     paintSealPanels(p,s,pr);
     var sp=$("sdPull"); if(sp) sp.onclick=function(){ pullSealed(p, s, sp); };
     var saB=$("sdStockAlert"); if(saB) saB.onclick=function(){ var on=toggleStockAlert(p.id); openSealedDetail(p); toast(stockAlertToast(on, false)); };
+    var sdDeck=$("sdDeckOwn"); if(sdDeck) sdDeck.onclick=function(){ openTrialDeck(trialDeckSetOfSealed(p.id)); };
     if(apiBase() && (!pr.pAt || (Date.now()-pr.pAt)>18*3600*1000)) pullSealed(p, s, null);   // auto-load fresh prices on open (fills the spinner slots)
     var _wasOpen=scrim.classList.contains("open"); scrim.classList.add("open"); sheetTop("s:"+p.id, _wasOpen); if(!_wasOpen) openOverlay(closeModal);
     // The sheet renders at once with whatever stock reading is already in hand, then fills the line in when
@@ -10842,6 +10863,70 @@ label.acctsetrow { align-items:center; }
     openAsk({title:"Review Sphere wishlist",message:"Add "+pending.length+" card"+(pending.length===1?"":"s")+" to your wishlist?\n\n"+names+more,okText:"Add "+pending.length+" to wishlist",confirmOnly:true,onOk:function(){
       pending.forEach(function(item){ toggleWish(item.card.id); }); save(); buildColSel(); renderMissing(); renderHome(); toast(pending.length+" card"+(pending.length===1?"":"s")+" added to wishlist");
     }});
+  }
+  // ---- I own this deck (Trial Decks) ----
+  // Every box of a Trial Deck holds the same cards: the deck's 24 cards and its Soul card, plus ONE special
+  // printing (a TSR or a TSP) in place of a normal copy. Bushiroad's card list names those cards but not how
+  // many copies of each the box holds, so a deck adds one of every card and never a guessed count. The deck
+  // cards are the set's TD printings in the catalogue, the Soul card is named here because the catalogue files
+  // it under ETD01 only, and tools/test_trial_deck.cjs pins both decks to the official card list.
+  var TRIAL_DECKS={ ETD01:{soul:"ESOUL-001", sealed:"td-rb"}, ETD02:{soul:"ESOUL-001", sealed:"td-gp"} };
+  function trialDeckSetOfSealed(pid){ var k; for(k in TRIAL_DECKS) if(TRIAL_DECKS[k].sealed===pid) return k; return ""; }
+  function trialDeckCards(k){
+    var d=TRIAL_DECKS[k]; if(!d) return [];
+    return CARDS.filter(function(c){ return c.set===k && c.rare==="TD" && c.id!==d.soul; })
+      .concat(CARDS.filter(function(c){ return c.id===d.soul; }));
+  }
+  function trialDeckSpecials(k){ return TRIAL_DECKS[k] ? CARDS.filter(function(c){ return c.set===k && (c.rare==="TSR" || c.rare==="TSP"); }) : []; }
+  function trialDeckOwns(c){ var e=own[c.id]; return !!(e && typeof e==="object" && has(e)); }
+  // Fills in what is missing: a card already in the collection, raw or graded, is left as it is, so marking the
+  // same deck twice adds nothing. The special card, when one is picked, is added the same way. Returns the
+  // cards it added.
+  function addTrialDeck(k, specialId){
+    var list=trialDeckCards(k), added=[];
+    if(specialId) list=list.concat(trialDeckSpecials(k).filter(function(c){ return c.id===specialId; }));
+    list.forEach(function(c){ if(trialDeckOwns(c)) return; changeRaw(o(c.id), 1, defaultEditionFor(c)||"unknown"); added.push(c); });
+    return added;
+  }
+  function trialDeckMessage(k, colName){
+    var cards=trialDeckCards(k), missing=cards.filter(function(c){ return !trialDeckOwns(c); }).length, deck=cards.length-1;
+    var head=missing ? "Adds the "+deck+" cards in this deck and its Soul card to "+colName+", one of each."+(missing<cards.length ? " You already have "+(cards.length-missing)+" of them, so "+missing+" will be added." : "")
+      : "You already have all "+deck+" cards in this deck and its Soul card. Pick the special card to add it too.";
+    return head+" Bushiroad does not say how many copies of each card a deck holds, so change a card's count if you track copies.";
+  }
+  function openTrialDeck(k){
+    var sc=$("deckOwnScrim"); if(!sc || !TRIAL_DECKS[k] || !trialDeckCards(k).length) return;
+    var col=activeCol(), colName=(col&&col.name) ? col.name : "your collection", picked="";
+    $("deckOwnTitle").textContent="I own the "+((SETS[k]&&SETS[k].name)||k);
+    $("deckOwnMsg").textContent=trialDeckMessage(k, colName);
+    var pick=$("deckOwnPick");
+    pick.innerHTML='<button type="button" class="skip" role="radio" aria-checked="true" data-id="">Not sure, skip it</button>'+
+      trialDeckSpecials(k).map(function(c){
+        return '<button type="button" role="radio" aria-checked="false" data-id="'+esc(c.id)+'" aria-label="'+esc(c.name+", "+(RARE_NAME[c.rare]||c.rare)+(trialDeckOwns(c)?", already owned":""))+'">'+
+          '<img src="'+imgSrc(c)+'" alt="" loading="lazy"><span>'+esc(String(c.name).split(" – ")[0])+'</span><span class="dorare">'+esc(c.rare)+'</span></button>';
+      }).join("");
+    Array.prototype.forEach.call(pick.querySelectorAll("button"), function(b){
+      b.onclick=function(){ picked=b.getAttribute("data-id")||"";
+        Array.prototype.forEach.call(pick.querySelectorAll("button"), function(x){ x.setAttribute("aria-checked", x===b ? "true" : "false"); }); };
+    });
+    // Escape is heard on the document, so it still closes the dialog after focus has left it.
+    function onKey(e){ if(e.key==="Escape") close(); }
+    function close(){ sc.hidden=true; $("deckOwnOk").onclick=null; $("deckOwnCancel").onclick=null; sc.onclick=null; document.removeEventListener("keydown", onKey); }
+    $("deckOwnCancel").onclick=close;
+    sc.onclick=function(e){ if(e.target===sc) close(); };
+    document.addEventListener("keydown", onKey);
+    $("deckOwnOk").onclick=function(){
+      close();
+      var added=addTrialDeck(k, picked);
+      if(!added.length){ toast("You already have every card from this deck"); return; }
+      save(); buildColSel();
+      try{ render(); }catch(_){}
+      try{ renderHome(); }catch(_){}
+      try{ if(_curPage==="releases") renderReleases(); }catch(_){}
+      toast("Added "+added.length+" card"+(added.length===1?"":"s")+" from the "+((SETS[k]&&SETS[k].name)||k));
+    };
+    sc.hidden=false;
+    setTimeout(function(){ var first=pick.querySelector("button"); if(first) first.focus(); }, 30);
   }
   function renderMissing(){
     if(missingGoal==="deck" && !playerToolsOn()) missingGoal="master";
@@ -14410,12 +14495,13 @@ label.acctsetrow { align-items:center; }
         '<div class="tinfo"><div class="treleasetop"><span class="tbadge '+(live?'live':'soon')+'">'+(live?'● Available':'✦ Coming soon')+'</span><span class="tdate">'+esc(m.release||"Release date TBA")+'</span></div><h3 class="tlink">'+esc(SETS[k].name)+' →</h3>'+
           (m.blurb?'<div class="tsub" style="font-size:.8rem;color:var(--ink-soft);margin-top:5px">'+esc(m.blurb)+'</div>':'')+
           '<div class="tprog">'+owned+' / '+tot+' collected · '+pct+'%</div><div class="treleasebar" aria-label="'+pct+' percent collected"><span style="width:'+pct+'%"></span></div>'+
-          '<div class="treleaseactions"><button type="button" class="primary" data-action="set">View set</button><button type="button" data-action="wish">Wishlist missing</button>'+(live?"":calButtonHtml(m.release))+'</div>'+
+          '<div class="treleaseactions"><button type="button" class="primary" data-action="set">View set</button><button type="button" data-action="wish">Wishlist missing</button>'+((live&&TRIAL_DECKS[k])?'<button type="button" data-action="deck">I own this deck</button>':'')+(live?"":calButtonHtml(m.release))+'</div>'+
         '</div>';
       wireCalButton(row, SETS[k].name+" release", m.release, "Release day for "+SETS[k].name+". Palworld TCG.");
       row.onclick=function(){ openSet(k); };
       row.querySelector('[data-action="set"]').onclick=function(e){ e.stopPropagation(); openSet(k,"missing"); };
       row.querySelector('[data-action="wish"]').onclick=function(e){ e.stopPropagation(); addMissingToWishlist(missingItems(CARDS.filter(function(c){ return c.set===k; }))); };
+      var deckBtn=row.querySelector('[data-action="deck"]'); if(deckBtn) deckBtn.onclick=function(e){ e.stopPropagation(); openTrialDeck(k); };
       tl.appendChild(row);
     });
     // Upcoming products, generated from the sealed pre-order list (sorted by date) so this timeline stays
