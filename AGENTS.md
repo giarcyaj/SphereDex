@@ -67,6 +67,7 @@ node tools/test_chase_check.cjs
 node tools/test_copy_photos.cjs
 node tools/test_market_index.cjs
 node tools/test_trade_check.cjs
+node tools/test_deck_share.cjs
 
 # Python 3.11 pipeline tests
 cd tools && python -m unittest discover -p 'test_*.py' -v
