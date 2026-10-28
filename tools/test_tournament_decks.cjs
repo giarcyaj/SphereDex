@@ -462,3 +462,77 @@ test('a bad live payload leaves the bundled copy in place', async function() {
   assert.equal(ctx._tdStats.total, before);
   assert.equal(ctx.store['palvault-tournament-decks'], undefined);
 });
+
+// ---- Closest winning decks ----
+function recipeDeck(id, rows, placement) {
+  return { placement: placement || 'Champion', player: 'P' + id, source_id: id, source_url: 'https://example.invalid/deck?id=' + id,
+    cards: rows.map(function(r) { return { number: r[0], count: r[1], zone: 'pal' }; }) };
+}
+const KNOWN_ALL = function() { return true; };
+
+test('recipes add the copies of every printing onto the base card and drop bad decks whole', function() {
+  const ctx = loadApp();
+  const feed = feedOf([[
+    recipeDeck(1, [['EBP01-026', 3], ['EBP01-026OSR', 2], ['EBP01-025', 4]]),
+    recipeDeck(2, [['EBP01-025', 4], ['EBP01-028', 0]]),
+    recipeDeck(1, [['EBP01-025', 4]])
+  ]]);
+  const recipes = ctx.tdRecipes(feed);
+  assert.equal(recipes.length, 1);
+  assert.equal(recipes[0].cards['EBP01-026'], 5);
+  assert.equal(recipes[0].cards['EBP01-025'], 4);
+  assert.equal(recipes[0].event, 'Event 0');
+});
+
+test('ranking puts Ready to build first, then fewest copies short, then the cheapest hole', function() {
+  const ctx = loadApp();
+  const recipes = ctx.tdRecipes(feedOf([[
+    recipeDeck(1, [['A-1', 4], ['A-2', 4]]),
+    recipeDeck(2, [['A-1', 4], ['A-3', 4]]),
+    recipeDeck(3, [['A-3', 2]]),
+    recipeDeck(4, [['A-4', 4]])
+  ]]));
+  const own = { 'A-1': 9, 'A-2': 1, 'A-3': 2, 'A-4': 0 };
+  const price = { 'A-1': 1, 'A-2': 1, 'A-3': 50, 'A-4': 5 };
+  const rows = ctx.tdRank(recipes, function(b) { return own[b] || 0; }, function(b) { return price[b] || 0; }, KNOWN_ALL);
+  assert.deepEqual(Array.from(rows.map(function(r) { return r.recipe.cards['A-3'] === 2 && !r.recipe.cards['A-1'] ? 'ready' : Object.keys(r.recipe.cards).join('+'); })), ['ready', 'A-1+A-3', 'A-1+A-2', 'A-4']);
+  assert.equal(rows[0].ready, true);
+  assert.equal(rows[1].need, 2);
+  assert.equal(rows[1].cost, 100);
+  assert.equal(rows[2].need, 3);
+  assert.equal(rows[2].cost, 3);
+  assert.equal(rows[2].owned, 5);
+  assert.equal(rows[3].need, 4);
+  assert.equal(rows[3].cost, 20);
+});
+
+test('owning more copies than a deck runs never makes up for another card, and unknown cards are not counted', function() {
+  const ctx = loadApp();
+  const recipes = ctx.tdRecipes(feedOf([[recipeDeck(1, [['A-1', 2], ['A-2', 4], ['ZZ-9', 4]])]]));
+  const rows = ctx.tdRank(recipes, function(b) { return b === 'A-1' ? 50 : 0; }, function() { return 2; }, function(b) { return b !== 'ZZ-9'; });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].total, 6);
+  assert.equal(rows[0].owned, 2);
+  assert.equal(rows[0].need, 4);
+  assert.equal(rows[0].unknown, 4);
+  assert.equal(rows[0].ready, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.tdRecipeCards(recipes[0], function(b) { return b !== 'ZZ-9'; }))), { 'A-1': 2, 'A-2': 4 });
+});
+
+test('the published feed ranks and every recipe card is real', function() {
+  const ctx = loadApp();
+  const recipes = ctx.tdRecipes(published());
+  assert.ok(recipes.length > 0);
+  const rows = ctx.tdRank(recipes, function() { return 0; }, function() { return 1; }, function(b) { return CARD_IDS.has(b); });
+  assert.equal(rows.length, recipes.length);
+  rows.forEach(function(r) { assert.equal(r.unknown, 0, r.recipe.key); });
+});
+
+test('the Decks page renders the closest winning decks panel with an import button', function() {
+  assert.ok(source.includes('id="deckWinners"'));
+  assert.ok(source.includes('function renderDeckWinners('));
+  assert.ok(source.includes('function importWinningDeck('));
+  const fn = appFunction('renderDeckWinners');
+  assert.ok(!DASHES.test(fn.match(/<summary>[^<]*/)[0]), 'no dashes in the panel title');
+  assert.ok(fn.includes('Ready to build'));
+});

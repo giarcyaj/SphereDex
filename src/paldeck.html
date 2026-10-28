@@ -1741,6 +1741,18 @@ label.acctsetrow { align-items:center; }
   .decklegality .dlsum { margin-top:4px; color:var(--ink-soft); }
   .decktournament { max-width:640px; margin:0 0 16px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); font-size:.8rem; }
   .decktournament[hidden] { display:none; }
+  .deckwinners { max-width:640px; margin:0 0 16px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface-2); font-size:.8rem; }
+  .deckwinners[hidden] { display:none; }
+  .deckwinners summary { cursor:pointer; font-weight:750; }
+  .deckwinners .dwsub { margin:6px 0 0; color:var(--ink-soft); line-height:1.4; }
+  .deckwinners .dwrow { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); margin-top:8px; }
+  .deckwinners .dwrow:first-of-type { margin-top:8px; }
+  .deckwinners .dwname { font-weight:700; }
+  .deckwinners .dwmeta { color:var(--ink-soft); }
+  .deckwinners .dwmeta.ready { color:var(--el-Grass); font-weight:700; }
+  .deckwinners .dwtxt { min-width:0; }
+  .deckwinners .dwmore { margin-top:8px; }
+  .no-flexgap .deckwinners .dwrow{gap:0}.no-flexgap .deckwinners .dwrow>*+*{margin-left:10px}
   .decktournament.ok { border-color:color-mix(in srgb,var(--el-Grass) 55%,var(--line)); }
   .decktournament.warn { border-color:color-mix(in srgb,var(--gold) 55%,var(--line)); }
   .decktournament .dlhead { display:flex; justify-content:space-between; gap:10px; font-weight:750; }
@@ -3019,6 +3031,7 @@ label.acctsetrow { align-items:center; }
     <div class="decklab" id="deckLab" hidden></div>
     <div class="deckcomplete" id="deckCompletion" hidden></div>
     <div class="deckwanted" id="deckWanted" hidden></div>
+    <div class="deckwinners" id="deckWinners" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
     <div class="decksug" id="deckSug" hidden></div>
     <div class="deckorderbar" id="deckOrderBar" hidden><button class="chip solid" type="button" id="deckNeedFirst" aria-pressed="false">Need first</button></div>
@@ -5307,6 +5320,7 @@ label.acctsetrow { align-items:center; }
     if(!tdAvailable()){ filters.staples={}; missingStaples=false; }
     if(typeof render==="function") render();
     if(typeof renderMissing==="function") renderMissing();
+    if(typeof renderDeckWinners==="function") renderDeckWinners();
   }
 
   function keysOn(obj){ return Object.keys(obj).filter(function(k){return obj[k];}); }
@@ -9520,6 +9534,44 @@ label.acctsetrow { align-items:center; }
     ds.forEach(function(d){ var o=document.createElement("option"), need=deckStatusLabel(d); o.value=d.id; o.textContent=d.name+" · "+deckSizeLabel(d)+(need?" · "+need:""); if(ad&&d.id===ad.id)o.selected=true; sel.appendChild(o); });
     sel.onchange=function(){ STATE.activeDeck=sel.value; save(); renderDecks(); };
   }
+  // Closest winning decks: the official recipes ranked against the active collection, each one tap to import.
+  var winnersAll=false;
+  function winnersKnown(b){ return !!byNumberIdx[b]; }
+  function winnersRows(){
+    var own=activeCol().own;
+    return tdRank(_tdRecipes, function(b){ var e=deckOwnEntry(own, b, byNumberIdx[b]); return (e&&+e.qty)||0; },
+      function(b){ var c=byNumberIdx[b]; return c ? mktOf(c.id) : 0; }, winnersKnown);
+  }
+  function importWinningDeck(recipe){
+    var cards={}, map=tdRecipeCards(recipe, winnersKnown);
+    Object.keys(map).forEach(function(b){ cards[byNumberIdx[b].id]=Math.min(DECK_LINE_MAX, map[b]); });
+    if(!Object.keys(cards).length){ toast("No cards from that deck are in SphereDex yet."); return; }
+    newDeck(); var d=activeDeck(); d.name=(recipe.event+" "+recipe.placement).slice(0,60); d.cards=cards; save(); renderDecks();
+    toast("Imported “"+d.name+"”");
+  }
+  function renderDeckWinners(){
+    var host=$("deckWinners"); if(!host) return;
+    var rows=winnersRows();
+    if(!rows.length){ host.hidden=true; host.innerHTML=""; return; }
+    var shown=winnersAll ? rows : rows.slice(0,5);
+    var html='<details'+(host.dataset.open==="1"?' open':'')+'><summary>Closest winning decks</summary>'+
+      '<p class="dwsub">Official event recipes, closest to your collection first. Importing makes a new deck, so your own decks are never changed.</p>';
+    shown.forEach(function(x, i){
+      var meta=x.ready ? '<span class="dwmeta ready">Ready to build</span>'
+        : '<span class="dwmeta">Own '+x.owned+' of '+x.total+' · need '+x.need+' '+(x.need===1?'copy':'copies')+'<span class="priceui"> · est. '+money(x.cost)+'</span></span>';
+      html+='<div class="dwrow"><div class="dwtxt"><div class="dwname">'+esc(x.recipe.placement)+'</div><div class="dwmeta">'+esc(x.recipe.event)+'</div>'+meta+'</div>'+
+        '<button class="btn sec" type="button" data-dw="'+i+'">Import</button></div>';
+    });
+    if(rows.length>5) html+='<button class="chip solid dwmore" type="button" id="dwMore">'+(winnersAll?'Show fewer':'Show all '+rows.length)+'</button>';
+    html+='</details>';
+    host.innerHTML=html; host.hidden=false;
+    var det=host.querySelector("details");
+    if(det) det.addEventListener("toggle", function(){ host.dataset.open=det.open?"1":"0"; });
+    Array.prototype.forEach.call(host.querySelectorAll("[data-dw]"), function(b){
+      b.onclick=function(){ importWinningDeck(shown[+b.getAttribute("data-dw")].recipe); };
+    });
+    var more=$("dwMore"); if(more) more.onclick=function(){ winnersAll=!winnersAll; renderDeckWinners(); };
+  }
   function renderDeckCompletion(d){
     var host=$("deckCompletion"); if(!host) return;
     var goal=deckMissingGoal();
@@ -9930,7 +9982,7 @@ label.acctsetrow { align-items:center; }
     var d=activeDeck(); renderDeckNeedLine(d);
     renderEventLog(d);
     ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
-    if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
+    if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderDeckWinners(); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -9970,6 +10022,7 @@ label.acctsetrow { align-items:center; }
     renderDeckLegality(d);
     renderDeckLab(d);
     renderDeckCompletion(d);
+    renderDeckWinners();
     renderMostWanted();
     $("deckStats").querySelectorAll(".dbar,.dchip").forEach(function(b){
       b.onclick=function(){ deckFocusOn(b.getAttribute("data-k"), b.getAttribute("data-v")); };
@@ -12848,6 +12901,7 @@ label.acctsetrow { align-items:center; }
   var TOURNAMENT_DECKS_FALLBACK = {"readme":"Winning deck recipes from official Palworld OFFICIAL CARD GAME events, transcribed from the official deck recipe pages by tools/fetch_tournament_decks.py. Every card count comes from the official recipe JSON; a deck with no card list is left out, never guessed. To add an event, run the script with the event page URL (it appends a new object to events). date is the day the event was held when date_kind is \"held\" (date_source says where that is stated), or the day the recipes were published when date_kind is \"published\". zone is the official card_type: pal, structure, gear, event, or the raw code for anything else. SphereDex counts a deck as containing a card when it lists it in any zone, and parallel printings share their base card's figure. Card names and decks belong to Pocketpair / Bushiroad.","events":[{"name":"Masters League 26/27 Kyoto","date":"2026-09-22","date_kind":"held","date_source":"https://x.com/PalworldOCG/status/2104481241642971382","published":"2026-10-05","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/ml26-27_kyoto","decks":[{"placement":"Block A Champion","player":"隼人","deck_code":"5BUN7","source_id":22,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=22","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":4,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block A Runner-up","player":"ケニウス","deck_code":"79DU3","source_id":23,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=23","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":3,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block A 3rd place","player":"れれれ","deck_code":"191J7","source_id":24,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=24","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":3,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":2,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"}]},{"placement":"Block B Champion","player":"とぅるえん","deck_code":"1JGK9","source_id":25,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=25","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block B Runner-up","player":"けーやん","deck_code":"2TR59","source_id":26,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=26","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":3,"zone":"pal"},{"number":"ETD02-014TSR","count":1,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":4,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":3,"zone":"structure"},{"number":"ETD01-008TSR","count":1,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD01-010","count":2,"zone":"gear"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-095OSR","count":1,"zone":"event"}]},{"placement":"Block B 3rd place","player":"Y","deck_code":"2WW5M","source_id":27,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=27","cards":[{"number":"EBP01-027","count":4,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":2,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Champion","player":"あぴ","deck_code":"35C6P","source_id":28,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=28","cards":[{"number":"EBP01-078","count":4,"zone":"pal"},{"number":"ETD02-012TSR","count":4,"zone":"pal"},{"number":"EBP01-026OSR","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025SSP","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028SR","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"ETD02-021TSR","count":4,"zone":"event"},{"number":"EBP01-046OSR","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C Runner-up","player":"マルタ","deck_code":"3VQQK","source_id":29,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=29","cards":[{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":3,"zone":"pal"},{"number":"ETD02-012TSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":3,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-044","count":3,"zone":"gear"},{"number":"EBP01-047","count":3,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block C 3rd place","player":"Ura","deck_code":"3YVQX","source_id":30,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=30","cards":[{"number":"EBP01-001","count":2,"zone":"pal"},{"number":"EBP01-005","count":4,"zone":"pal"},{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":2,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-045","count":2,"zone":"gear"},{"number":"ETD01-010","count":4,"zone":"gear"},{"number":"EBP01-019","count":2,"zone":"gear"},{"number":"EBP01-023","count":1,"zone":"event"},{"number":"EBP01-046","count":1,"zone":"event"},{"number":"EBP01-048","count":2,"zone":"event"}]},{"placement":"Block D Champion","player":"横入れ失礼します","deck_code":"411R9","source_id":31,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=31","cards":[{"number":"EBP01-001","count":4,"zone":"pal"},{"number":"EBP01-038","count":2,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-006","count":4,"zone":"pal"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"EBP01-019","count":4,"zone":"gear"},{"number":"EBP01-023","count":4,"zone":"event"},{"number":"EBP01-047","count":4,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Block D Runner-up","player":"kamori-k","deck_code":"4AGSB","source_id":32,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=32","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-078","count":2,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"ETD02-017","count":2,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":1,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"}]},{"placement":"Block D 3rd place","player":"にしおの手下B","deck_code":"41VA7","source_id":33,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=33","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"ETD01-014","count":2,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]}]},{"name":"Grand Challengers Cup – Bushiroad EXPO 2026 in Kuala Lumpur","date":"2026-10-04","date_kind":"held","date_source":"https://en.bushiroad.com/events/bushiroad-expo-2026-ao/","published":"2026-10-07","source_url":"https://en.palworld-official-cardgame.com/deckrecipe/grand-challengers-cup_expokl26","decks":[{"placement":"Champion","player":"Heng","deck_code":"2MVSF","source_id":34,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=34","cards":[{"number":"EBP01-027","count":3,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"EBP01-026","count":1,"zone":"pal"},{"number":"EBP01-026OSR","count":1,"zone":"pal"},{"number":"EBP01-077","count":4,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012","count":3,"zone":"pal"},{"number":"ETD02-017","count":1,"zone":"pal"},{"number":"EBP01-025","count":3,"zone":"pal"},{"number":"EBP01-025OSR","count":1,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":3,"zone":"pal"},{"number":"EBP01-028SR","count":1,"zone":"pal"},{"number":"EBP01-098","count":4,"zone":"pal"},{"number":"EBP01-044","count":2,"zone":"gear"},{"number":"EBP01-044SR","count":1,"zone":"gear"},{"number":"EBP01-047","count":1,"zone":"event"},{"number":"EBP01-047SR","count":1,"zone":"event"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":1,"zone":"event"},{"number":"EBP01-095OSR","count":3,"zone":"event"},{"number":"EBP01-048","count":4,"zone":"event"}]},{"placement":"Runner-up","player":"Siongyik","deck_code":"1JUVM","source_id":35,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=35","cards":[{"number":"EBP01-027","count":2,"zone":"pal"},{"number":"EBP01-027OSR","count":1,"zone":"pal"},{"number":"ETD02-012","count":1,"zone":"pal"},{"number":"EBP01-026","count":2,"zone":"pal"},{"number":"EBP01-077","count":1,"zone":"pal"},{"number":"EBP01-038","count":4,"zone":"pal"},{"number":"ETD01-012TSR","count":3,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-025","count":4,"zone":"pal"},{"number":"ETD01-016","count":4,"zone":"pal"},{"number":"EBP01-028","count":4,"zone":"pal"},{"number":"ETD01-014","count":3,"zone":"pal"},{"number":"EBP01-044","count":4,"zone":"gear"},{"number":"ETD01-021","count":3,"zone":"gear"},{"number":"ETD02-021","count":3,"zone":"event"},{"number":"EBP01-095","count":4,"zone":"event"},{"number":"EBP01-048","count":3,"zone":"event"}]},{"placement":"3rd place","player":"Jdub","deck_code":"3XK47","source_id":36,"source_url":"https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=36","cards":[{"number":"EBP01-074","count":2,"zone":"pal"},{"number":"EBP01-078","count":1,"zone":"pal"},{"number":"EBP01-002","count":2,"zone":"pal"},{"number":"ETD02-017","count":4,"zone":"pal"},{"number":"EBP01-084","count":4,"zone":"pal"},{"number":"ETD01-004","count":4,"zone":"pal"},{"number":"ETD02-014","count":4,"zone":"pal"},{"number":"ETD01-023","count":4,"zone":"pal"},{"number":"ETD02-023","count":4,"zone":"pal"},{"number":"EBP01-015","count":3,"zone":"structure"},{"number":"EBP01-016","count":4,"zone":"structure"},{"number":"ETD01-008","count":4,"zone":"structure"},{"number":"EBP01-020","count":4,"zone":"gear"},{"number":"ETD02-021","count":2,"zone":"event"},{"number":"EBP01-095","count":2,"zone":"event"},{"number":"EBP01-095OSR","count":2,"zone":"event"}]}]}]};
   var _tdStats = null;
   var _tdReq = 0;
+  var _tdRecipes = [];
   // A single S after the digits is the promo parallel (EPR-002S shares EPR-002's figure, as the importer
   // reads it). It is only stripped straight after a digit, so no set code or longer suffix is touched.
   function tdBase(num){ return String(num==null?"":num).trim().toUpperCase().replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,"").replace(/(\d)S$/,"$1"); }
@@ -12959,6 +13013,7 @@ label.acctsetrow { align-items:center; }
     var norm=tdNormalise(feed);
     if(!norm) return false;
     _tdStats=tdCount(norm);
+    _tdRecipes=tdRecipes(feed);
     return true;
   }
   function tdLoad(){
@@ -12974,6 +13029,59 @@ label.acctsetrow { align-items:center; }
       tdUse(feed);
       try{ if(typeof tdChanged==="function") tdChanged(); }catch(e){}
     }).catch(function(){});
+  }
+  // ---- Closest winning decks: every official recipe ranked by how close the active collection is to it ----
+  // tdRecipes keeps the counts tdNormalise throws away. Printings of one card share its base number and their
+  // copies add up, so a deck running 3 EBP01-026 and 2 EBP01-026OSR needs 5 of EBP01-026. Same drop rules as
+  // tdNormalise: a deck with a bad row is left out whole, never read in part.
+  function tdRecipes(feed){
+    if(!feed || typeof feed!=="object" || !Array.isArray(feed.events)) return [];
+    var out=[], seen=Object.create(null);
+    feed.events.forEach(function(ev){
+      if(!ev || typeof ev!=="object" || !Array.isArray(ev.decks)) return;
+      var evKey=String(ev.source_url||ev.name||"").trim();
+      ev.decks.forEach(function(d){
+        if(!d || typeof d!=="object" || !Array.isArray(d.cards)) return;
+        var cards=Object.create(null), order=[], ok=true;
+        d.cards.forEach(function(row){
+          var num=row && typeof row==="object" ? tdBase(row.number) : "", n=row && row.count;
+          if(!num || typeof n!=="number" || n<1 || Math.floor(n)!==n){ ok=false; return; }
+          if(!cards[num]){ cards[num]=0; order.push(num); }
+          cards[num]+=n;
+        });
+        if(!ok || !order.length) return;
+        var id=d.source_id!=null ? "#"+d.source_id : String(d.placement||"")+"\n"+String(d.player||"");
+        if(seen[evKey+"\n"+id]) return;
+        seen[evKey+"\n"+id]=1;
+        out.push({ key:evKey+"|"+id, event:String(ev.name||"Official event"), date:String(ev.date||""), placement:String(d.placement||"Winning deck"), url:String(d.source_url||ev.source_url||""), order:order, cards:cards });
+      });
+    });
+    return out;
+  }
+  // ownOf(base) = copies owned, priceOf(base) = unit estimate, known(base) = card is in the catalogue.
+  // Cards the catalogue does not have yet are left out of the sum and reported as unknown, so a deck that
+  // runs an unreleased card is not made to look further away than it is. Closest first: fewest copies short,
+  // then the cheapest hole, then the most copies already owned, then feed order.
+  function tdRank(recipes, ownOf, priceOf, known){
+    var rows=(recipes||[]).map(function(r, i){
+      var total=0, owned=0, need=0, cost=0, unknown=0;
+      r.order.forEach(function(b){
+        var q=r.cards[b];
+        if(known && !known(b)){ unknown+=q; return; }
+        var have=Math.max(0, +ownOf(b)||0), got=Math.min(q, have);
+        total+=q; owned+=got; need+=q-got;
+        cost+=(q-got)*(+priceOf(b)||0);
+      });
+      return { recipe:r, total:total, owned:owned, need:need, cost:cost, unknown:unknown, ready:total>0 && need===0, idx:i };
+    }).filter(function(x){ return x.total>0; });
+    rows.sort(function(a, b){ return (a.need-b.need) || (a.cost-b.cost) || (b.owned-a.owned) || (a.idx-b.idx); });
+    return rows;
+  }
+  // The importable card map: base number to copies, known cards only.
+  function tdRecipeCards(recipe, known){
+    var out={};
+    recipe.order.forEach(function(b){ if(!known || known(b)) out[b]=recipe.cards[b]; });
+    return out;
   }
   tdUse(TOURNAMENT_DECKS_FALLBACK);
   /* TOURNAMENT DECKS END */
