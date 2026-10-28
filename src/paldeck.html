@@ -7273,6 +7273,7 @@ label.acctsetrow { align-items:center; }
       else if(firstAction==="collection") showPage("collection");
       else showPage("home");
     }, 40);
+    setTimeout(function(){ if(typeof checkSharedDeckLink==="function") checkSharedDeckLink(); }, 400);   // a deck link opened before onboarding is offered now
   }
   function maybeOnboard(){
     if(SETTINGS.onboarded) return;
@@ -11185,7 +11186,7 @@ label.acctsetrow { align-items:center; }
   function deckShareCopies(res){ var n=0; Object.keys(res.cards).forEach(function(k){ n+=res.cards[k]; }); return n; }
   function importSharedDeck(res){
     if(!res || !res.added){ toast("That deck link has no cards the app knows"); return false; }
-    if(!playerToolsOn()){ SETTINGS.playerTools=true; saveSettings(); if(typeof applyFeatureFlags==="function") applyFeatureFlags(); }
+    if(!playerToolsOn()){ SETTINGS.playerTools=true; saveSettings(); applyFeatureFlags(); buildNavMenu(); buildQuickMenuSettings(); }   // rebuild the nav so Decks appears, as the Settings switch does
     createDeckFromParse(res.name, res);
     showPage("decks");
     return true;
@@ -11197,6 +11198,7 @@ label.acctsetrow { align-items:center; }
   function checkSharedDeckLink(){
     var h=""; try{ h=String(window.location.hash||""); }catch(e){}
     if(!/^#deck=/.test(h)) return;
+    if(!SETTINGS.onboarded) return;   // a first visit finishes onboarding first (it would overwrite the player tools setting); finishOnboard calls this again
     var res=parseDeckShare(h);
     try{ history.replaceState(null,"",window.location.pathname+window.location.search); }catch(e){}
     if(res) askImportSharedDeck(res); else toast("That deck link couldn't be read");

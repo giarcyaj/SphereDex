@@ -71,3 +71,11 @@ test('share UI is wired and its copy has no dashes', () => {
   const strings = block.match(/"[^"\n]*"/g).filter((s) => /[A-Za-z]{3} [A-Za-z]{2}/.test(s));
   strings.forEach((s) => assert.doesNotMatch(s, /[–—]|\w-\w/, 'user copy has no dash: ' + s));
 });
+
+test('a deck link waits for onboarding and the nav is rebuilt when player tools turn on', () => {
+  const check = appFunction('checkSharedDeckLink');
+  assert.match(check, /if\(!SETTINGS\.onboarded\) return;/);
+  assert.ok(check.indexOf('SETTINGS.onboarded') < check.indexOf('replaceState'), 'hash is kept until onboarding is done');
+  assert.match(appFunction('finishOnboard'), /checkSharedDeckLink\(\)/);
+  assert.match(appFunction('importSharedDeck'), /applyFeatureFlags\(\); buildNavMenu\(\); buildQuickMenuSettings\(\);/);
+});
