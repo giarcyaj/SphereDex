@@ -9425,14 +9425,17 @@ label.acctsetrow { align-items:center; }
     var counts=rawCounts(entry);
     return Math.max(0, total-rawCount(counts.jp)-rawCount(counts.cn));
   }
-  function deckTournamentReport(qtyMap, byId, ownMap, eventDay, releaseOf){
+  function deckTournamentReport(qtyMap, byId, ownMap, eventDay, releaseOf, heldOf){
     qtyMap=qtyMap||{}; ownMap=ownMap||{};
     var day=deckEventDay(eventDay), listed=0, shortMain=0, shortSoul=0, leftOut=0, late=[], undated=[];
     Object.keys(qtyMap).forEach(function(id){
       var q=+qtyMap[id]||0; if(!(q>0)) return;
       var c=deckCardOf(id, byId); if(!c) return;
       listed++;
-      var entry=deckOwnEntry(ownMap, id, c), have=deckTournamentQty(c, entry), gap=Math.max(0, q-have);
+      var entry=deckOwnEntry(ownMap, id, c), have=deckTournamentQty(c, entry), gap;
+      // Copies another built deck has reserved are not free for this one (heldOf is optional).
+      if(typeof heldOf==="function") have=Math.max(0, have-(+heldOf(id)||0));
+      gap=Math.max(0, q-have);
       var rel=deckTournamentRelease(c, releaseOf), isLate=!!(rel && rel>day), soul=c.kind==="Soul";
       if(gap){ if(soul) shortSoul+=gap; else shortMain+=gap; }
       if(!soul && entry){ var counts=rawCounts(entry); leftOut+=rawCount(counts.jp)+rawCount(counts.cn); }
@@ -9492,7 +9495,7 @@ label.acctsetrow { align-items:center; }
     if(!d) return "";
     var need=deckNeedLabel(d);
     if(deckBuilt(d)) need=need==="Ready to build" ? "Built" : ["Built", need].filter(Boolean).join(" · ");
-    var tour=deckTournamentLabel(deckTournamentReport(d.cards, typeof byNumberIdx!=="undefined"?byNumberIdx:{}, activeCol().own, deckEventStored()));
+    var tour=deckTournamentLabel(deckTournamentReport(d.cards, typeof byNumberIdx!=="undefined"?byNumberIdx:{}, activeCol().own, deckEventStored(), undefined, function(id){ return deckLockedQty(id, d.id); }));
     return [need, tour].filter(Boolean).join(" · ");
   }
   function deckTournamentRowNotes(card, need, entry, eventDay, releaseOf){
@@ -9564,13 +9567,17 @@ label.acctsetrow { align-items:center; }
   // Most wanted: every card some deck is still short of, across all decks, from the one active collection.
   // One owned copy serves every deck, so a card needs its biggest shortfall in any one deck (the most
   // copies any deck runs, less what you own), never the sum. Ids match without case, like the add suggestions.
-  function mostWantedOwnQty(id, own){ return (own&&own[id]&&+own[id].qty)||0; }
+  // Copies another built deck has reserved do not count as owned for this deck (the deck's own reservation never does).
+  function mostWantedOwnQty(id, own, ds, exceptId){ var have=(own&&own[id]&&+own[id].qty)||0, up=String(id).toUpperCase(), held=0;
+    (ds||[]).forEach(function(d){ if(!d || d.built!==true || (exceptId!=null && d.id===exceptId)) return; var cs=d.cards||{};
+      Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0 && k.toUpperCase()===up) held+=q; }); });
+    return Math.max(0, have-held); }
   function mostWantedRows(ds, own, byId){
     var map={}, decksWithGap=0;
     (ds||[]).forEach(function(d){ var cs=(d&&d.cards)||{}, per={}, gap=false;
       Object.keys(cs).forEach(function(k){ var q=+cs[k]||0; if(q>0){ var up=k.toUpperCase(); per[up]=(per[up]||0)+q; } });
       Object.keys(per).forEach(function(up){ var c=byId[up]; if(!c) return;
-        var short=per[up]-mostWantedOwnQty(c.id, own); if(short<=0) return;
+        var short=per[up]-mostWantedOwnQty(c.id, own, ds, d.id); if(short<=0) return;
         gap=true; var r=map[up]||(map[up]={card:c, decks:0, need:0}); r.decks++; if(short>r.need) r.need=short; });
       if(gap) decksWithGap++; });
     var rows=Object.keys(map).map(function(k){ return map[k]; });
@@ -9817,7 +9824,7 @@ label.acctsetrow { align-items:center; }
   function renderDeckTournament(d){
     var host=$("deckTournament"); if(!host) return;
     if(!d){ host.hidden=true; host.innerHTML=""; return; }
-    var rep=deckTournamentReport(d.cards||{}, byNumberIdx, activeCol().own, deckEventStored());
+    var rep=deckTournamentReport(d.cards||{}, byNumberIdx, activeCol().own, deckEventStored(), undefined, function(id){ return deckLockedQty(id, d.id); });
     var sum=deckTournamentSummary(rep), checks=deckEventChecks();
     host.hidden=false;
     host.className="decktournament"+(sum.state&&sum.state!=="empty"?" "+sum.state:"");

@@ -268,6 +268,17 @@ test('the status line keeps Ready to build and adds the tournament verdict besid
   assert.equal(sandbox.deckStatusLabel({ cards: cards }), 'Ready to build · Check deck legality');
 });
 
+test('copies held by another built deck are not available for the event check', () => {
+  const pal = card({ id: 'EBP01-001', name: 'Lamball' });
+  const byId = { 'EBP01-001': pal };
+  const own = { 'EBP01-001': { qty: 4 } };
+  const free = sandbox.deckTournamentReport({ 'EBP01-001': 4 }, byId, own, '2026-10-22');
+  assert.equal(free.shortMain, 0);
+  const held = sandbox.deckTournamentReport({ 'EBP01-001': 4 }, byId, own, '2026-10-22', undefined, function() { return 4; });
+  assert.equal(held.shortMain, 4);
+  assert.equal(held.dateState, 'bad');
+});
+
 test('tournament copy has no dashes', () => {
   assert.equal(DASHES.test(sandbox.DECK_TOURNAMENT_RULE), false);
   sandbox.DECK_EVENT_CHECKS.forEach(function(row) {

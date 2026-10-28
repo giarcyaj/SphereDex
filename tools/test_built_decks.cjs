@@ -31,7 +31,7 @@ function make(deckList, own, tools) {
     copiesOf: (s) => (+s.qty || 0) + (Array.isArray(s.graded) ? s.graded.length : 0),
   };
   vm.createContext(sb);
-  vm.runInContext(['decks', 'deckBuilt', 'deckLockedQty', 'deckFreeQty', 'extraCopies', 'deckNeedCount', 'deckNeedLabel', 'deckNeedFirstCount']
+  vm.runInContext(['decks', 'deckBuilt', 'deckLockedQty', 'deckFreeQty', 'extraCopies', 'deckNeedCount', 'deckNeedLabel', 'deckNeedFirstCount', 'mostWantedOwnQty', 'mostWantedRows']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -91,4 +91,18 @@ test('the Built button exists, a duplicate drops the flag, and copy has no dashe
   assert.match(source, /delete copy\.built;/);
   assert.match(source, /held by built/);
   assert.doesNotMatch('Mark built Built Deck built, its copies are reserved Copies released held by built deck', /[-–—]/);
+});
+
+test('Most wanted counts the gap an unbuilt deck has once a built deck holds the copies', () => {
+  const card = { id: 'CHILLET', setIdx: 0, seq: 1 };
+  const byId = { CHILLET: card };
+  const a = Object.assign(A(), { built: true });
+  const b = B();
+  const c = Object.assign(B(), { id: 'c' });
+  const sb = make([a, b, c], own);
+  const rows = sb.mostWantedRows([a, b, c], own, byId);
+  assert.equal(rows.decksWithGap, 2);
+  assert.equal(rows.rows[0].need, 4);
+  const none = sb.mostWantedRows([A(), B(), c], own, byId);
+  assert.equal(none.rows.length, 0);
 });
