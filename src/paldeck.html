@@ -6772,7 +6772,7 @@ label.acctsetrow { align-items:center; }
       var q=Math.floor(+e.qty||0);
       if(q>0){ var u=withValue?(+unitOf(id, mode)||0):0, counts=rawCounts(e);
         ["1","2","jp","cn","unknown"].forEach(function(ed){ var n=counts[ed]; if(!n) return;
-          var notes=copyNotesList(e).filter(function(cn){ return String(cn.ed==null?"":cn.ed)===ed && cn.serial; }).map(function(cn){ return cn.serial; });
+          var notes=copyNotesList(e).filter(function(cn){ return rawEditionKey(cn.ed)===ed && cn.serial; }).map(function(cn){ return cn.serial; });
           add(g, {num:id, name:nm, kind:"Card", printing:[csvEdition(ed), rare].filter(Boolean).join(", "), cond:e.cond||"", serial:notes.join(", "), qty:n, unit:u, total:n*u}); }); }
       (Array.isArray(e.graded)?e.graded:[]).forEach(function(gr){ if(!gr || typeof gr!=="object") return; var v=withValue?(+gr.value||0):0;
         add(g, {num:id, name:nm, kind:"Graded", printing:[csvEdition(gr.edition), rare].filter(Boolean).join(", "), cond:[gr.grader, gr.grade==null?"":gr.grade].filter(function(x){ return x!==""&&x!=null; }).join(" "), serial:gr.cert==null?"":String(gr.cert), qty:1, unit:v, total:v}); });

@@ -20,7 +20,8 @@ function make(col, opts = {}) {
     CARDS: [{ id: 'A-1', set: 'A', name: 'Lamball', rare: 'R' }, { id: 'B-1', set: 'B', name: 'Cattiva <b>', rare: 'R' }],
     SEALED: [{ id: 'S1', set: 'Booster', name: 'Box' }],
     unitOf: (id) => (id === 'A-1' ? 2.5 : 10),
-    rawCounts: (e) => ({ '1': e.qty }),
+    rawCounts: (e) => (e.unk ? { unknown: e.qty } : { '1': e.qty }),
+    rawEditionKey: (ed) => (ed === '1' || ed === '2' || ed === 'jp' || ed === 'cn' ? String(ed) : 'unknown'),
     copyNotesList: (e) => e.notes || [],
     csvEdition: (e) => (e === '1' ? '1st' : ''),
     sealUnit: () => 40,
@@ -80,4 +81,10 @@ test('report copy has no dashes and the export chooser wires both buttons', () =
   assert.doesNotMatch(copy, /[-–—]/);
   assert.match(source, /doExportReport\(true\)/);
   assert.match(source, /doExportReport\(false\)/);
+});
+
+test('a serial on a copy with unspecified printing is kept', () => {
+  const c = { name: 'U', sealed: {}, own: { 'A-1': { qty: 1, unk: true, notes: [{ serial: '372', run: '750' }] } } };
+  const d = make(c).inventoryReportData(c, false);
+  assert.equal(d.groups[0].lines[0].serial, '372');
 });
