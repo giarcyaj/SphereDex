@@ -193,6 +193,19 @@
   .val .pmdot.sold { background:var(--azure); }   /* last-sold price */
   .gradedbadge { position:absolute; bottom:8px; left:8px; z-index:3; font-family:var(--font-mono); font-size:.6rem; font-weight:700;
     color:#fff; background:rgba(0,0,0,.5); padding:2px 7px; border-radius:20px; backdrop-filter:blur(2px); display:inline-flex; gap:4px; align-items:center; }
+  /* grading submissions: copies out at the grader */
+  .gradedbadge.awaybadge{ background:color-mix(in srgb,var(--gold) 82%,#000); }
+  .gradedbadge.awaybadge.stacked{ bottom:34px; }
+  .awaybox{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .awaybox .awayform, .awaybox .awayret{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .awaybox .awayform .field, .awaybox .awayret .field{ min-width:0; }
+  .awaybox .awayform input, .awaybox .awayform select, .awaybox .awayret input, .awaybox .awayret select{ width:100%; min-width:0; }
+  .awaybox .awayact{ grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap; }
+  .awaybox .awaylab{ font-size:.76rem; font-weight:700; color:var(--ink-soft); }
+  .awaybox .awayrow{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .awaybox .awayrow .awaytxt{ font-size:.8rem; font-weight:650; }
+  .awaybox .awayrow .late{ color:var(--el-Fire); }
+  .no-flexgap .awaybox{gap:0}.no-flexgap .awaybox>*+*{margin-top:8px}
   /* graded editor */
   .graded { display:flex; flex-direction:column; gap:8px; }
   .glabel { display:flex; align-items:center; justify-content:space-between; font-size:.68rem; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-faint); font-weight:700; }
@@ -2545,6 +2558,7 @@ label.acctsetrow { align-items:center; }
   .collector .tab[data-page="graded"], .collector .navitem[data-page="graded"],
   .collector #ownGradedTog, .collector .gradedbadge,
   .collector #typeSeg, .collector #gradedAdd, .collector #gradeList,
+  .collector #awayBox,
   .collector #scanTypeRow, .collector #scanGradeWrap{ display:none !important; }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -4438,6 +4452,51 @@ label.acctsetrow { align-items:center; }
     l.push(x); e.copyNotes=l; return true;
   }
   function removeCopyNote(e, i){ var l=copyNotesList(e); if(i<0 || i>=l.length) return; l.splice(i,1); setCopyNotes(e,l); }
+  // ---- Grading submissions -----------------------------------------------------------------------------
+  // A raw copy sent to a grader stays in qty, so it is still counted and still valued as a raw copy. It also
+  // gets a row in e.away: {grader, svc, sent, due, fee, ed}. Returning it with a grade removes one raw copy and
+  // adds a slab, carrying what was paid plus the grading fee into that slab's paid amount. Older app versions
+  // ignore the array. It never outnumbers the raw copies of its printing.
+  function awayDate(v){ v=String(v==null?"":v).trim(); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ""; }
+  function awayClean(a){
+    if(!a || typeof a!=="object") return null;
+    var out={}, gr=String(a.grader==null?"":a.grader).trim().slice(0,20), sv=String(a.svc==null?"":a.svc).replace(/\s+/g," ").trim().slice(0,40),
+        sent=awayDate(a.sent), due=awayDate(a.due), fee=(a.fee==null||a.fee==="")?NaN:Number(a.fee), ed=rawEditionKey(a.ed==null?"unknown":a.ed);
+    out.grader=GRADERS.indexOf(gr)>=0?gr:(gr?"Other":"PSA");
+    if(sv) out.svc=sv; if(sent) out.sent=sent; if(due) out.due=due;
+    if(isFinite(fee) && fee>=0) out.fee=Math.round(fee*100)/100;
+    if(ed!=="unknown") out.ed=ed;
+    return out;
+  }
+  function awayList(e){
+    var left=rawCounts(e), out=[];
+    ((e && Array.isArray(e.away))?e.away:[]).forEach(function(a){
+      var x=awayClean(a); if(!x) return; var k=rawEditionKey(x.ed==null?"unknown":x.ed);
+      if((left[k]||0)>0){ left[k]--; out.push(x); } });
+    return out;
+  }
+  function setAway(e, list){ var l=[]; (list||[]).forEach(function(a){ var x=awayClean(a); if(x) l.push(x); }); if(l.length) e.away=l; else delete e.away; }
+  // Sends one raw copy of this printing to a grader. False when there is no copy of it left at home.
+  function sendForGrading(e, info){
+    var x=awayClean(info); if(!x) return false;
+    var k=rawEditionKey(x.ed==null?"unknown":x.ed), home=(rawCounts(e)[k]||0);
+    var away=awayList(e); away.forEach(function(a){ if(rawEditionKey(a.ed==null?"unknown":a.ed)===k) home--; });
+    if(home<1) return false;
+    away.push(x); setAway(e, away); return true;
+  }
+  // The copy came back graded: one raw copy becomes a slab. trackPaid says whether amounts paid are in use.
+  function returnFromGrader(e, i, grade, value, trackPaid){
+    var away=awayList(e), a=away[i]; if(!a) return null;
+    var k=rawEditionKey(a.ed==null?"unknown":a.ed);
+    if(!changeRaw(e,-1,k)) return null;
+    var slab={grader:a.grader, grade:String(grade), value:(+value>0?+value:0)};
+    if(k!=="unknown") slab.edition=k;
+    var base=paidNumber(e.paidRaw && e.paidRaw[k]), fee=(a.fee==null?null:+a.fee);
+    if(trackPaid && (base!=null || fee!=null)) slab.paid=Math.round(((base||0)+(fee||0))*100)/100;
+    if(!Array.isArray(e.graded)) e.graded=[];
+    e.graded.push(slab); away.splice(i,1); setAway(e, away);
+    return slab;
+  }
   function copyNoteLabel(n){
     var bits=[], num=(n.serial&&n.run) ? n.serial+" of "+n.run : (n.serial ? n.serial : (n.run ? "of "+n.run : ""));
     if(num) bits.push(num);
@@ -5668,6 +5727,8 @@ label.acctsetrow { align-items:center; }
       : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
+    var awayN = awayList(s).length;
+    if(awayN) gbadge += '<span class="gradedbadge awaybadge'+(gbadge?' stacked':'')+'" title="Sent to a grader">At the grader'+(awayN>1?' ×'+awayN:'')+'</span>';
     var wished = isWished(c.id);
     var at=addedAt(c.id), wt=wishlistAt(c.id);
     var dateTag="";
@@ -5967,6 +6028,7 @@ label.acctsetrow { align-items:center; }
           '<button class="btn primary addbtn" id="addGradedBtn" type="button">'+icon('plus')+' Add</button>'+
         '</div>'+
         '<div class="ownline" id="ownLine" hidden></div>'+
+        '<div class="awaybox" id="awayBox"></div>'+
         '<input type="hidden" id="fQty" value="'+s.qty+'"><input type="hidden" id="fMkt" value="'+(s.mkt||0)+'"><div id="gradeList" hidden></div>'+
         '<button class="addgrade priceui" id="pullGraded" type="button" hidden>'+icon('refresh')+' Fill values from sold</button>'+
       '</div>'+
@@ -6035,6 +6097,56 @@ label.acctsetrow { align-items:center; }
       var anchor=host.querySelector(".editioncounts");
       copyNotesList(s).forEach(function(n){ var sp=document.createElement("span"); sp.className="ownpill cnpill"; sp.style.paddingRight="12px"; sp.textContent=copyNoteLabel(n); if(anchor) host.insertBefore(sp,anchor); else host.appendChild(sp); });
     }
+    // Grading submissions: raw copies out at a grader. They stay counted, and turn into a slab when logged as returned.
+    var awayRet=-1, awayForm=false;
+    function awayDateLabel(d){ if(!d) return ""; var t=new Date(d+"T00:00:00"); return isNaN(t.getTime())?d:t.toLocaleDateString(); }
+    function paintAway(){
+      var box=$("awayBox"); if(!box) return;
+      var list=awayList(s), q=rawCount(s.qty), h='';
+      if(awayRet>=list.length) awayRet=-1;
+      if(list.length){
+        h+='<span class="awaylab">At the grader</span>';
+        list.forEach(function(a,i){
+          var late=a.due && a.due<todayKey();
+          h+='<div class="awayrow"><span class="ownpill"><span class="awaytxt">'+esc(a.grader)+(a.svc?' · '+esc(a.svc):'')+(a.ed?' · '+rawEditionLabel(a.ed):'')+(a.sent?' · sent '+esc(awayDateLabel(a.sent)):'')+(a.due?' · due '+esc(awayDateLabel(a.due)):'')+(a.fee!=null?' · fee '+esc(money(a.fee)):'')+'</span><button class="ownx" data-awaydel="'+i+'" type="button" aria-label="Bring this copy back without a grade">✕</button></span>'+
+            (late?'<span class="awaytxt late">Past its expected return date</span>':'')+
+            '<button class="btn" data-awayret="'+i+'" type="button">Returned</button></div>';
+          if(awayRet===i){
+            h+='<div class="awayret"><div class="field"><label for="awayGrade">Grade</label><select id="awayGrade">'+GRADES.map(function(x){return '<option'+(x==="10"?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
+              '<div class="field priceui"><label for="awayVal">Value</label><input id="awayVal" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
+              '<div class="awayact"><button class="btn primary" id="awayRetOk" type="button">Save slab</button><button class="btn" id="awayRetNo" type="button">Cancel</button></div></div>';
+          }
+        });
+      }
+      if(q>list.length){
+        if(!awayForm) h+='<button class="btn" id="awayOpen" type="button">Send a copy for grading</button>';
+        else h+='<div class="awayform"><div class="field"><label for="awayGr">Grader</label><select id="awayGr">'+GRADERS.map(function(x){return '<option'+(x===(SETTINGS.defaultGrader||"PSA")?' selected':'')+'>'+x+'</option>';}).join("")+'</select></div>'+
+          '<div class="field"><label for="awaySvc">Service level</label><input id="awaySvc" type="text" maxlength="40" autocomplete="off" placeholder="Optional"></div>'+
+          '<div class="field"><label for="awaySent">Date sent</label><input id="awaySent" type="date" value="'+todayKey()+'"></div>'+
+          '<div class="field"><label for="awayDue">Expected back</label><input id="awayDue" type="date"></div>'+
+          '<div class="field paidui"><label for="awayFee">Fee paid</label><input id="awayFee" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional"></div>'+
+          '<div class="awayact"><button class="btn primary" id="awaySend" type="button">Send</button><button class="btn" id="awaySendNo" type="button">Cancel</button></div></div>';
+      }
+      box.hidden=!h; box.innerHTML=h;
+      var b;
+      if((b=$("awayOpen"))) b.onclick=function(){ awayForm=true; paintAway(); };
+      if((b=$("awaySendNo"))) b.onclick=function(){ awayForm=false; paintAway(); };
+      if((b=$("awaySend"))) b.onclick=function(){
+        var info={grader:$("awayGr").value, svc:$("awaySvc").value, sent:$("awaySent").value, due:$("awayDue").value, fee:paidNumber(($("awayFee")||{}).value), ed:detailEdition()};
+        if(!sendForGrading(s, info)){ toast("No raw copy of that printing at home"); return; }
+        awayForm=false; persist(); paintOwn(); toast("Marked as sent for grading");
+      };
+      Array.prototype.forEach.call(box.querySelectorAll("[data-awayret]"), function(x){ x.onclick=function(){ awayRet=parseInt(x.getAttribute("data-awayret"),10); paintAway(); }; });
+      Array.prototype.forEach.call(box.querySelectorAll("[data-awaydel]"), function(x){ x.onclick=function(){ var l=awayList(s); l.splice(parseInt(x.getAttribute("data-awaydel"),10),1); setAway(s,l); awayRet=-1; persist(); paintOwn(); }; });
+      if((b=$("awayRetNo"))) b.onclick=function(){ awayRet=-1; paintAway(); };
+      if((b=$("awayRetOk"))) b.onclick=function(){
+        var i=awayRet, slab=returnFromGrader(s, i, $("awayGrade").value, parseFloat(($("awayVal")||{}).value)||((s.gradeGuide&&s.gradeGuide[$("awayGrade").value])||0), trackPaidOn());
+        if(!slab){ toast("That copy is no longer in your collection"); awayRet=-1; paintAway(); return; }
+        awayRet=-1; $("fQty").value=s.qty;
+        gwork.length=0; (s.graded||[]).forEach(function(g){ if(g && typeof g==="object") gwork.push(cloneSlab(g)); });
+        renderGrades(); updateSum(); persist(); paintBubbles(); paintOwn(); toast("Logged "+slab.grader+" "+slab.grade+" as a slab");
+      };
+    }
     // Quick-remove line: shows current holdings once a card is in the collection.
     function paintOwn(){
       var host=$("ownLine"); if(!host) return;
@@ -6048,6 +6160,7 @@ label.acctsetrow { align-items:center; }
       copyNotesList(s).forEach(function(n){ parts.push('<span class="ownpill cnpill" style="padding-right:12px">'+esc(copyNoteLabel(n))+'</span>'); });
       host.hidden=!parts.length;
       host.innerHTML=parts.length ? ('<span class="ownlab">In your collection</span>'+parts.join("")) : '';
+      paintAway();
       if(q){
         host.innerHTML+='<div class="editioncounts"><p>Edit how many raw copies you have of each printing, for example to mark copies as Japanese or Chinese. Older unlabelled copies are kept under Not specified.</p>'+printingKeys(c).map(function(ed){return '<div class="field"><label for="rawEdition'+ed+'">'+rawEditionLabel(ed)+'</label><input id="rawEdition'+ed+'" data-raw-edition="'+ed+'" type="number" min="0" step="1" value="'+(counts[ed]||0)+'"></div>';}).join('')+'</div>';
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
@@ -15808,6 +15921,15 @@ label.acctsetrow { align-items:center; }
         var x=copyNoteClean(n); if(!x) return; var sk=cnSig(x); if(!cnFirst[sk]){ cnFirst[sk]=x; cnOrder.push(sk); } });
       cnOrder.forEach(function(sk){ var n=Math.max(ca[sk]||0, cb[sk]||0); for(var i=0;i<n;i++) notesOut.push(Object.assign({}, cnFirst[sk])); });
       if(notesOut.length) out.copyNotes=notesOut; else delete out.copyNotes;
+    }
+    // Copies out at a grader: the same additions win rule, a row only one device wrote is kept.
+    if(Array.isArray(a.away) || Array.isArray(b.away)){
+      var awSig=function(x){ return JSON.stringify([x.grader||"", x.svc||"", x.sent||"", x.due||"", x.fee==null?"":x.fee, x.ed||""]); };
+      var awTally=function(arr){ var t={}; (Array.isArray(arr)?arr:[]).forEach(function(r){ var x=awayClean(r); if(x){ var sk=awSig(x); t[sk]=(t[sk]||0)+1; } }); return t; };
+      var awA=awTally(a.away), awB=awTally(b.away), awFirst={}, awOrder=[], awOut=[];
+      (Array.isArray(a.away)?a.away:[]).concat(Array.isArray(b.away)?b.away:[]).forEach(function(r){ var x=awayClean(r); if(!x) return; var sk=awSig(x); if(!awFirst[sk]){ awFirst[sk]=x; awOrder.push(sk); } });
+      awOrder.forEach(function(sk){ var n=Math.max(awA[sk]||0, awB[sk]||0); for(var i=0;i<n;i++) awOut.push(Object.assign({}, awFirst[sk])); });
+      if(awOut.length) out.away=awOut; else delete out.away;
     }
     return out;
   }
