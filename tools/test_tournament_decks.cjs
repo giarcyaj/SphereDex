@@ -536,3 +536,16 @@ test('the Decks page renders the closest winning decks panel with an import butt
   assert.ok(!DASHES.test(fn.match(/<summary>[^<]*/)[0]), 'no dashes in the panel title');
   assert.ok(fn.includes('Ready to build'));
 });
+
+test('owned parallel printings count toward the base card a recipe asks for', function() {
+  const ctx = loadApp();
+  const qty = { 'EBP01-026': 1, 'EBP01-026OSR': 3, 'EBP01-025': 0 };
+  const owned = ctx.tdOwnedByBase(['EBP01-026', 'EBP01-026OSR', 'EBP01-025'], function(id) { return qty[id]; });
+  assert.equal(owned['EBP01-026'], 4);
+  assert.equal(owned['EBP01-025'], undefined);
+  const recipes = ctx.tdRecipes(feedOf([[recipeDeck(1, [['EBP01-026', 4]])]]));
+  const rows = ctx.tdRank(recipes, function(b) { return owned[b] || 0; }, function() { return 10; }, KNOWN_ALL);
+  assert.equal(rows[0].ready, true);
+  assert.equal(rows[0].need, 0);
+  assert.equal(rows[0].cost, 0);
+});

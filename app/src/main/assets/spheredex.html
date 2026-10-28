@@ -9539,7 +9539,8 @@ label.acctsetrow { align-items:center; }
   function winnersKnown(b){ return !!byNumberIdx[b]; }
   function winnersRows(){
     var own=activeCol().own;
-    return tdRank(_tdRecipes, function(b){ var e=deckOwnEntry(own, b, byNumberIdx[b]); return (e&&+e.qty)||0; },
+    var owned=tdOwnedByBase(CARDS.map(function(c){ return c.id; }), function(id){ var e=deckOwnEntry(own, id, byNumberIdx[String(id).toUpperCase()]); return (e&&+e.qty)||0; });
+    return tdRank(_tdRecipes, function(b){ return owned[b]||0; },
       function(b){ var c=byNumberIdx[b]; return c ? mktOf(c.id) : 0; }, winnersKnown);
   }
   function importWinningDeck(recipe){
@@ -13076,6 +13077,16 @@ label.acctsetrow { align-items:center; }
     }).filter(function(x){ return x.total>0; });
     rows.sort(function(a, b){ return (a.need-b.need) || (a.cost-b.cost) || (b.owned-a.owned) || (a.idx-b.idx); });
     return rows;
+  }
+  // Copies owned per base number, adding up every printing: ids is the catalogue's card ids and qtyOf(id)
+  // the copies owned of that exact printing. Recipes are counted by base number, so this matches them.
+  function tdOwnedByBase(ids, qtyOf){
+    var out=Object.create(null);
+    (ids||[]).forEach(function(id){
+      var q=Math.max(0, +qtyOf(id)||0); if(!q) return;
+      var b=tdBase(id); out[b]=(out[b]||0)+q;
+    });
+    return out;
   }
   // The importable card map: base number to copies, known cards only.
   function tdRecipeCards(recipe, known){
