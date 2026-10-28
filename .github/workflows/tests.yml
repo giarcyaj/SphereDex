@@ -17,6 +17,7 @@ name: Tests
 #      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
 #      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
 #      tools/test_trade_check.cjs — trade checker lists, prices, collection move and history.
+#      tools/test_deck_share.cjs — deck share links: round trip, unknown cards and bad counts.
 #      tools/test_small_fixes.cjs — shop list open state, notification permission note, push registration, baked sealed art.
 #      tools/test_account_sync.cjs — accounts on one phone, follows saved to the account, the account settings
 #      merge, and the startup ordering guards (2.4.1 shipped blank from a top level read of a later var).
@@ -152,6 +153,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Per copy photos
+        run: node tools/test_copy_photos.cjs
+
       - name: Add to calendar on Releases (.ics)
         run: node tools/test_release_calendar.cjs
 
@@ -163,6 +167,9 @@ jobs:
 
       - name: Printable missing cards checklist
         run: node tools/test_missing_checklist.cjs
+
+      - name: Share a deck as a link
+        run: node tools/test_deck_share.cjs
 
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
