@@ -131,6 +131,9 @@ jobs:
       - name: Release startup sees the month table
         run: node tools/test_release_startup.cjs
 
+      - name: Service worker update rejection is handled
+        run: node tools/test_sw_update.cjs
+
       - name: CSV import from other trackers
         run: node tools/test_import_trackers.cjs
 
