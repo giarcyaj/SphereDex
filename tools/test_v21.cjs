@@ -999,7 +999,7 @@ test('the promo boxes open on their own type, and every filter reset clears it',
   const resets = (source.match(/filters\.keywords=\{\};/g) || []).length;
   const promoResets = (source.match(/filters\.keywords=\{\}; filters\.promos=\{\};/g) || []).length;
   assert.ok(resets > 0 && promoResets === resets, promoResets + ' of ' + resets + ' filter resets clear the promo type');
-  assert.match(source, /\["exps","sets","colors","els","kinds","keywords","rares","promos"\]/, 'Filters counts a promo type choice');
+  assert.match(source, /\["exps","sets","colors","els","kinds","work","keywords","rares","promos"\]/, 'Filters counts a promo type choice');
 });
 
 test('promo type copy has no dashes', () => {
