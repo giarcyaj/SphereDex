@@ -11304,7 +11304,7 @@ label.acctsetrow { align-items:center; }
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
     var si=$("deckSearch"), sug=$("deckSug"), deckWork={};
     function closeSug(){ sug.hidden=true; sug.innerHTML=""; }
-    function drawDeckWork(){ workChipRow($("deckWorkChips"), deckWork, function(w){ deckWork[w]=!deckWork[w]; drawDeckWork(); showSug(); }); }
+    function drawDeckWork(){ workChipRow($("deckWorkChips"), deckWork, function(w){ deckWork[w]=!deckWork[w]; var cb=$("deckWorkChips").querySelector('[data-work="'+w+'"]'); if(cb) cb.setAttribute("aria-pressed", deckWork[w]?"true":"false"); showSug(); }); }
     function showSug(){
       var works=keysOn(deckWork), q=fold(si.value.trim());
       if(q.length<2 && !works.length){ closeSug(); return; }

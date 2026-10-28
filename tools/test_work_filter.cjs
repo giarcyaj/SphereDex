@@ -62,3 +62,12 @@ test('the Cards page and deck builder wire the filter in', () => {
   assert.match(source, /id="paldexWorkChips"/);
   assert.match(source, /id="workChips"/);
 });
+
+test('deck builder Work chips are updated in place so the click is not detached from .deckwork', () => {
+  const m = /function drawDeckWork\(\)\{[^\n]*\n/.exec(source);
+  assert.ok(m, 'drawDeckWork exists');
+  const toggle = /workChipRow\(\$\("deckWorkChips"\), deckWork, function\(w\)\{([^\n]*)\}\); \}/.exec(m[0]);
+  assert.ok(toggle, 'deck toggle handler found');
+  assert.doesNotMatch(toggle[1], /drawDeckWork\(\)/, 'toggle must not rebuild the chips');
+  assert.match(toggle[1], /setAttribute\("aria-pressed"/);
+});
