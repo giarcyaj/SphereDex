@@ -2242,6 +2242,12 @@ label.acctsetrow { align-items:center; }
   .askbox input:focus{ outline:none; border-color:var(--accent); }
   .askbox textarea{ width:100%; min-height:190px; resize:vertical; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:11px 13px; color:var(--ink); font-family:var(--font-mono); font-size:.85rem; line-height:1.55; box-sizing:border-box; margin-bottom:16px; }
   .askbox textarea:focus{ outline:none; border-color:var(--accent); }
+  .plside{ margin:6px 0 14px; } .plside h4{ margin:0 0 4px; font-family:var(--font-display); font-size:1rem; font-weight:800; }
+  .pltotal{ font-family:var(--font-display); font-size:1.5rem; font-weight:850; } .plsum,.plnone,.plea,.plid{ color:var(--ink-soft); font-size:.78rem; }
+  .pldiff{ font-family:var(--font-display); font-weight:800; font-size:1.1rem; margin:6px 0; }
+  .plrow{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid var(--line); }
+  .plmeta{ min-width:0; } .pln{ font-weight:650; font-size:.9rem; } .plmoney{ display:flex; flex-direction:column; align-items:flex-end; flex:none; font-weight:700; }
+  #plOut{ margin-bottom:12px; } #plTextA,#plTextB{ min-height:90px; margin-bottom:10px; }
   .askbox.wide{ max-width:560px; }
   .askbox.wide .askbtns{ flex-wrap:wrap; }
   .askbox.deckownbox{ max-height:calc(100vh - 40px); overflow-y:auto; overscroll-behavior:contain; }
@@ -3146,6 +3152,9 @@ label.acctsetrow { align-items:center; }
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
         </div>
         <div class="qopt">
+          <button class="qoptbtn" type="button" id="qPriceBtn" data-icon="search"><span>Price a list</span></button>
+        </div>
+        <div class="qopt">
           <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
           <button class="qinfobtn" type="button" data-info="text" data-icon="info" aria-label="About text input"></button>
         </div>
@@ -3498,6 +3507,18 @@ label.acctsetrow { align-items:center; }
     <p id="deckIOHint"></p>
     <textarea id="deckIOText" spellcheck="false" autocomplete="off"></textarea>
     <div class="askbtns"><button type="button" id="deckIOCancel">Cancel</button><button type="button" id="deckIOAlt"></button><button type="button" class="ok" id="deckIOAction"></button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="plScrim" hidden>
+  <div class="askbox wide eventbox" role="dialog" aria-modal="true" aria-labelledby="plTitle">
+    <h3 id="plTitle">Price a list</h3>
+    <p>Paste card numbers with quantities, one card per line. Nothing is added to your collection.</p>
+    <textarea id="plTextA" spellcheck="false" autocomplete="off" aria-label="Cards to price"></textarea>
+    <p>Optional: paste the other side of a trade to compare the two.</p>
+    <textarea id="plTextB" spellcheck="false" autocomplete="off" aria-label="Other side of a trade"></textarea>
+    <div id="plOut"></div>
+    <div class="askbtns"><button type="button" id="plClose">Close</button><button type="button" class="ok" id="plGo">Price it</button></div>
   </div>
 </div>
 
@@ -12271,7 +12292,7 @@ label.acctsetrow { align-items:center; }
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
     if(!closed){ var es=$("eventScrim"); if(es && !es.hidden){ closeEventSheet(); closed=true; } }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","plScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -14910,6 +14931,88 @@ label.acctsetrow { align-items:center; }
     var h=$("qHint"); if(h){ h.className="qhint ok"; h.textContent="Added "+c.name+" ("+c.id+")."; }
     toast("Added "+c.name);
   }
+  // ---- Price a list ----
+  // Paste card numbers with optional quantities (4 EBP01-001, EBP01-001 x4) and see what the list is worth.
+  // Nothing is added to the collection. A second box prices the other side of a trade.
+  var PRICE_LIST_QTY_MAX=999;
+  function priceListParse(text, idx){
+    var order=[], qtys={}, unknown=[], seen={};
+    (text||"").split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line || line.charAt(0)==="#") return;
+      var ids=[], qty=null;
+      line.split(/[\s,;]+/).forEach(function(t){
+        t=(t||"").trim(); if(!t) return;
+        var up=t.toUpperCase().replace(/^#/,"").replace(/[^A-Z0-9-]/g,"");
+        if(up && idx[up]){ ids.push(up); return; }
+        var mq=t.match(/^(?:x\s*)?(\d+)\s*x?$/i);
+        if(mq){ if(qty==null) qty=parseInt(mq[1],10); return; }
+        if(/^[A-Z]{2,}\d*-\d+[A-Z]?$/.test(up) && !seen[up]){ seen[up]=1; unknown.push(up); }
+      });
+      var n=(qty!=null && qty>0) ? Math.min(PRICE_LIST_QTY_MAX, qty) : 1;
+      if(qty===0) return;
+      ids.forEach(function(id){
+        if(qtys[id]==null){ qtys[id]=0; order.push(id); }
+        qtys[id]=Math.min(PRICE_LIST_QTY_MAX, qtys[id]+(ids.length>1 ? 1 : n));
+      });
+    });
+    return { lines:order.map(function(id){ return {id:id, qty:qtys[id]}; }), unknown:unknown };
+  }
+  function priceListTotals(lines, unitOfFn, ownedFn){
+    var rows=[], total=0, unpriced=0, copies=0, fresh=0, have=0;
+    (lines||[]).forEach(function(l){
+      var q=l.qty|0; if(q<1) return;
+      var unit=null, n;
+      try{ n=+unitOfFn(l.id); }catch(e){ n=0; }
+      if(isFinite(n) && n>0) unit=Math.round(n*100)/100;
+      var owned=0; try{ owned=Math.max(0, (+ownedFn(l.id))|0); }catch(e2){ owned=0; }
+      var sum=unit==null ? null : Math.round(unit*q*100)/100;
+      if(sum==null) unpriced+=q; else total+=sum;
+      copies+=q; if(owned>0) have++; else fresh++;
+      rows.push({id:l.id, qty:q, unit:unit, sum:sum, owned:owned, isNew:owned<1});
+    });
+    return { rows:rows, total:Math.round(total*100)/100, unpriced:unpriced, copies:copies, cards:rows.length, newCards:fresh, ownedCards:have };
+  }
+  function priceListRowHtml(r){
+    var c=byNumberIdx[r.id]; var nm=c?c.name:r.id;
+    var price=r.sum==null ? "No price" : moneyIn(r.sum);
+    var each=r.unit==null ? "" : moneyIn(r.unit)+" each";
+    var tag=r.isNew ? "New" : "You own "+r.owned;
+    return '<div class="plrow"><div class="plmeta"><div class="pln">'+esc(nm)+'</div><div class="plid">'+esc(r.id)+' · '+esc(tag)+'</div></div><div class="plmoney"><span>'+esc(price)+'</span><span class="plea">'+esc((r.qty>1?"×"+r.qty+" · ":"")+each)+'</span></div></div>';
+  }
+  function priceListSideHtml(title, res, tot){
+    var h='<div class="plside"><h4>'+esc(title)+'</h4>';
+    if(!tot.cards){ return h+'<p class="plnone">No card numbers found.</p></div>'; }
+    h+='<div class="pltotal priceui">'+esc(moneyIn(tot.total))+'</div>';
+    h+='<div class="plsum">'+tot.copies+' card'+(tot.copies===1?"":"s")+' · '+tot.newCards+' new · '+tot.ownedCards+' already owned'+(tot.unpriced?' · '+tot.unpriced+' without a price':'')+'</div>';
+    h+=tot.rows.map(priceListRowHtml).join("");
+    if(res.unknown.length) h+='<p class="plnone">Not recognised: '+esc(res.unknown.join(", "))+'</p>';
+    return h+'</div>';
+  }
+  function priceListRun(){
+    var a=$("plTextA"), b=$("plTextB"), out=$("plOut"); if(!a||!out) return;
+    var ownMap=activeOwn();
+    var ownedFn=function(id){ return tradeOwnedQty(ownMap, id); };
+    var ra=priceListParse(a.value, byNumberIdx), ta=priceListTotals(ra.lines, mktOf, ownedFn);
+    var html=priceListSideHtml(b&&b.value.trim()?"List A":"Your list", ra, ta);
+    if(b && b.value.trim()){
+      var rb=priceListParse(b.value, byNumberIdx), tb=priceListTotals(rb.lines, mktOf, ownedFn);
+      html+=priceListSideHtml("List B", rb, tb);
+      if(ta.cards && tb.cards){
+        var d=Math.round((tb.total-ta.total)*100)/100;
+        html='<div class="pldiff">'+esc(d===0?"Both lists are worth the same":(d>0?"List B is worth "+moneyIn(d)+" more":"List A is worth "+moneyIn(-d)+" more"))+'</div>'+html;
+      }
+    }
+    out.innerHTML=html;
+  }
+  function openPriceList(){
+    var sc=$("plScrim"); if(!sc) return;
+    var a=$("plTextA"), b=$("plTextB");
+    function close(){ sc.hidden=true; $("plClose").onclick=$("plGo").onclick=sc.onclick=null; }
+    $("plClose").onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    $("plGo").onclick=priceListRun;
+    sc.hidden=false; setTimeout(function(){ if(a) a.focus(); }, 30);
+  }
+
   // Predictive search over Pal names, item names and card numbers.
   function searchCards(q){
     q=(q||"").trim().toLowerCase(); if(q.length<2) return [];
@@ -15562,6 +15665,7 @@ label.acctsetrow { align-items:center; }
     var sb=$("qScanBtn"); if(sb) sb.onclick=function(){ try{ if(native) window.AndroidScan.scan(); }catch(e){} };
     var tb=$("qTextBtn"); if(tb) tb.onclick=function(){ var qi=$("qInput"); if(qi){ qi.focus(); try{ qi.scrollIntoView({block:"center"}); }catch(e){} } };
     var cb=$("qCsvBtn"); if(cb) cb.onclick=doImportCsv;
+    var pb=$("qPriceBtn"); if(pb) pb.onclick=openPriceList;
     var Q_INFO={
       scan:"Point the camera at a card, or at the grading label on a slab. SphereDex recognises it right on your device (images are never uploaded) and shows a quick check before you add it. Keep scanning (on by default, in Settings) brings the camera back for the next card, so you can add a whole stack.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
