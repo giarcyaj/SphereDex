@@ -18,7 +18,7 @@ function slice() {
 function box() {
   const sb = { Math, JSON, Object, Array, String, Number, isFinite, btoa, atob,
     rawCount: (n) => { n = Number(n); return isFinite(n) ? Math.max(0, Math.floor(n)) : 0; },
-    SETS: { A: { name: 'Set A' } }, edCode: (x) => x, esc: (x) => String(x).replace(/</g, '&lt;'),
+    SETS: { A: { name: 'Set A' } }, esc: (x) => String(x).replace(/</g, '&lt;'),
     cardById: (id) => (id === 'E1' ? { id, name: 'Lamball <b>', set: 'A' } : null) };
   vm.createContext(sb); vm.runInContext(slice(), sb); return sb;
 }
@@ -49,6 +49,22 @@ test('prices are included only when a price function is given', () => {
   l.c = 'usd';
   const back = sb.shareListDecode(sb.shareListEncode(sb.shareListClean(Object.assign({}, l, { c: 'usd' }))));
   assert.equal(back.c, 'USD'); assert.equal(back.p.W1, 1.23);
+});
+test('the sender edition travels in the link and labels the rows, not the viewer setting', () => {
+  const sb = box();
+  const jp = sb.shareListBuild(['EBP01-001'], { 'EBP01-002': { qty: 2 } }, null, 'jp');
+  const back = sb.shareListDecode(sb.shareListEncode(jp));
+  assert.equal(back.e, 'jp');
+  const html = sb.shareListHtml(back);
+  assert.match(html, /<small>BP01-001/); assert.doesNotMatch(html, /<small>EBP01-001/);
+  const en = sb.shareListDecode(sb.shareListEncode(sb.shareListBuild(['EBP01-001'], {}, null, 'en')));
+  assert.equal(en.e, 'en'); assert.match(sb.shareListHtml(en), /<small>EBP01-001/);
+});
+test('user facing copy of the share dialog has no hyphens or dashes', () => {
+  const a = source.indexOf('id="shareViewScrim"'), b = source.indexOf('</div>\n</div>', a);
+  const copy = source.slice(a, b).replace(/<[^>]+>/g, ' ').replace(/id="[^"]*"/g, '');
+  assert.doesNotMatch(copy, /[-\u2013\u2014]/);
+  assert.doesNotMatch(source.slice(source.indexOf('function shareListStart'), source.indexOf('  // ---- Navigation ----')), /message:"[^"]*[-\u2013\u2014]/);
 });
 test('empty list cannot be shared', () => {
   assert.equal(box().shareListBuild([], { E1: { qty: 1 } }, null), null);

@@ -3475,7 +3475,7 @@ label.acctsetrow { align-items:center; }
 <div class="askscrim" id="shareViewScrim" hidden>
   <div class="askbox wide sharebox" role="dialog" aria-modal="true" aria-labelledby="shareViewTitle">
     <h3 id="shareViewTitle">Shared wants and spares</h3>
-    <p>A read-only list someone shared with you. It does not change your collection.</p>
+    <p>A read only list someone shared with you. It does not change your collection.</p>
     <div id="shareViewBody"></div>
     <div class="askbtns"><button type="button" class="ok" id="shareViewClose">Close</button></div>
   </div>
@@ -12190,7 +12190,7 @@ label.acctsetrow { align-items:center; }
   }
 
   // ---- Share wants and spares as a link ----
-  // A read-only link that carries the list itself in the URL fragment: "#list=" plus base64url JSON. The
+  // A read only link that carries the list itself in the URL fragment: "#list=" plus base64url JSON. The
   // fragment never reaches a server, so nothing is stored, no account is needed to open it, and it cannot
   // change anyone's collection. Prices are left out unless the sender turns them on.
   var SHARE_LIST_BASE="https://spheredex.app/app/#list=", SHARE_LIST_MAX=1000;
@@ -12211,10 +12211,10 @@ label.acctsetrow { align-items:center; }
     }
     if(!w.length && !s.length) return null;
     var c=String(raw.c||"").replace(/[^A-Za-z]/g,"").slice(0,3).toUpperCase();
-    return {v:1, w:w, s:s, p:p, c:p?c:""};
+    return {v:1, w:w, s:s, p:p, c:p?c:"", e:(raw.e==="jp"?"jp":"en")};
   }
   function shareListEncode(list){
-    var o={v:1, w:list.w, s:list.s}; if(list.p){ o.p=list.p; o.c=list.c||""; }
+    var o={v:1, w:list.w, s:list.s}; if(list.e==="jp") o.e="jp"; if(list.p){ o.p=list.p; o.c=list.c||""; }
     return btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   }
   function shareListDecode(str){
@@ -12226,7 +12226,7 @@ label.acctsetrow { align-items:center; }
     }catch(e){ return null; }
   }
   // Wants are the wishlist. Spares are the copies beyond the first of anything in the collection.
-  function shareListBuild(wishIds, ownMap, priceOf){
+  function shareListBuild(wishIds, ownMap, priceOf, edition){
     var w=(wishIds||[]).slice(), s=[], p=priceOf?{}:null;
     Object.keys(ownMap||{}).forEach(function(id){
       var e=ownMap[id]; if(!e || typeof e!=="object") return;
@@ -12234,7 +12234,7 @@ label.acctsetrow { align-items:center; }
       if(copies>=2) s.push([id, copies-1]);
     });
     if(p){ w.concat(s.map(function(r){ return r[0]; })).forEach(function(id){ var v=+priceOf(id); if(isFinite(v) && v>0) p[id]=v; }); }
-    return shareListClean({w:w, s:s, p:p});
+    return shareListClean({w:w, s:s, p:p, e:edition});
   }
   function shareListLink(list){ return SHARE_LIST_BASE+shareListEncode(list); }
   function shareListMoney(list, id){
@@ -12244,7 +12244,7 @@ label.acctsetrow { align-items:center; }
   function shareListRow(list, id, qty){
     var c=cardById(id), name=c ? (c.name||id) : id, set=c&&SETS[c.set] ? SETS[c.set].name : "";
     var price=shareListMoney(list, id);
-    return '<li><span class="slname"><b>'+esc(name)+'</b> <small>'+esc(edCode(id))+(set?' · '+esc(set):'')+'</small></span>'
+    return '<li><span class="slname"><b>'+esc(name)+'</b> <small>'+esc(list.e==="jp" ? String(id).replace(/^E/,"") : id)+(set?' · '+esc(set):'')+'</small></span>'
       +(qty>1?'<span class="slqty">×'+qty+'</span>':'')+(price?'<span class="slprice">'+esc(price)+'</span>':'')+'</li>';
   }
   function shareListHtml(list){
@@ -12268,10 +12268,10 @@ label.acctsetrow { align-items:center; }
   function shareListStart(){
     var wishIds=CARDS.filter(function(c){ return isWished(c.id); }).map(function(c){ return c.id; });
     var ownMap=activeCol().own, collector=(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector");
-    var plain=shareListBuild(wishIds, ownMap, null);
+    var plain=shareListBuild(wishIds, ownMap, null, SEAL_ED);
     if(!plain){ toast("Add wishlist cards or spares to share a list"); return; }
     function send(withPrices){
-      var list=withPrices ? shareListBuild(wishIds, ownMap, function(id){ try{ return unitOf(id, priceMode()); }catch(e){ return 0; } }) : plain;
+      var list=withPrices ? shareListBuild(wishIds, ownMap, function(id){ try{ return unitOf(id, priceMode()); }catch(e){ return 0; } }, SEAL_ED) : plain;
       if(withPrices && list){ list.c=(CUR&&CUR.code)||""; }
       var url=shareListLink(list||plain), text="My Palworld TCG wants and spares";
       try{
@@ -12280,7 +12280,7 @@ label.acctsetrow { align-items:center; }
       copyPlainText(url, "Link copied", "Share link", "Select this link and send it to your trade partner.");
     }
     openAsk({title:"Share wants and spares", confirmOnly:true,
-      message:plain.w.length+" wanted · "+plain.s.length+" with spares. Anyone with the link can see this list, read-only, with no account. Prices are left out unless you add them.",
+      message:plain.w.length+" wanted · "+plain.s.length+" with spares. Anyone with the link can see this list, read only, with no account. Prices are left out unless you add them.",
       okText:"Share link", extraText:collector?"":"Include prices", onOk:function(){ send(false); }, onExtra:function(){ send(true); }});
   }
 
