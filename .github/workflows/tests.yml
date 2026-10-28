@@ -153,6 +153,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Per copy photos
+        run: node tools/test_copy_photos.cjs
+
       - name: Add to calendar on Releases (.ics)
         run: node tools/test_release_calendar.cjs
 
