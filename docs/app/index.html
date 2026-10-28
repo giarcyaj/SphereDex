@@ -2243,6 +2243,10 @@ label.acctsetrow { align-items:center; }
   .askbox textarea{ width:100%; min-height:190px; resize:vertical; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:11px 13px; color:var(--ink); font-family:var(--font-mono); font-size:.85rem; line-height:1.55; box-sizing:border-box; margin-bottom:16px; }
   .askbox textarea:focus{ outline:none; border-color:var(--accent); }
   .askbox.wide{ max-width:560px; }
+  .sharebox{ max-height:calc(100vh - 40px); overflow-y:auto; overscroll-behavior:contain; }
+  .sharebox h4{ margin:14px 0 6px; font-size:1rem; } .sharebox h4 small{ color:var(--ink-soft); font-weight:500; }
+  .sllist{ list-style:none; margin:0; padding:0; } .sllist li{ display:flex; gap:8px; align-items:baseline; padding:6px 0; border-top:1px solid var(--line); font-size:.9rem; }
+  .sllist .slname{ flex:1; min-width:0; overflow-wrap:anywhere; } .sllist small{ color:var(--ink-soft); } .slqty,.slprice{ font-variant-numeric:tabular-nums; white-space:nowrap; } .slempty{ margin:0 0 6px; }
   .askbox.wide .askbtns{ flex-wrap:wrap; }
   .askbox.deckownbox{ max-height:calc(100vh - 40px); overflow-y:auto; overscroll-behavior:contain; }
   .deckownlabel{ font-weight:700; font-size:.86rem; margin:0 0 8px; }
@@ -2901,7 +2905,8 @@ label.acctsetrow { align-items:center; }
   <div id="collGrid" hidden>
   <button class="backbtn" type="button" id="setsBack">&lsaquo; Browse by set</button>
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
-  <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishCsvBtn">Spreadsheet (CSV)</button><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button></div>
+  <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishCsvBtn">Spreadsheet (CSV)</button><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button><button class="btn sec" type="button" id="wishShareBtn">Share link</button></div>
+  <div class="modeexport" id="extrasExport" hidden><button class="btn sec" type="button" id="extrasShareBtn">Share spares link</button></div>
   <div class="collectedbar" id="collectedBar" hidden>
     <span class="cbsub" id="collectedSub"></span>
     <span class="cbtogs">
@@ -3464,6 +3469,15 @@ label.acctsetrow { align-items:center; }
     <p id="askMsg" hidden></p>
     <input id="askInput" type="text" autocomplete="off" spellcheck="false" aria-label="Enter value" />
     <div class="askbtns"><button type="button" id="askCancel">Cancel</button><button type="button" id="askExtra" hidden></button><button type="button" class="ok" id="askOk">OK</button></div>
+  </div>
+</div>
+
+<div class="askscrim" id="shareViewScrim" hidden>
+  <div class="askbox wide sharebox" role="dialog" aria-modal="true" aria-labelledby="shareViewTitle">
+    <h3 id="shareViewTitle">Shared wants and spares</h3>
+    <p>A read-only list someone shared with you. It does not change your collection.</p>
+    <div id="shareViewBody"></div>
+    <div class="askbtns"><button type="button" class="ok" id="shareViewClose">Close</button></div>
   </div>
 </div>
 
@@ -5280,7 +5294,7 @@ label.acctsetrow { align-items:center; }
         clearSinceVisit();
         filters.view=v[0];
         Array.prototype.forEach.call($("viewChips").querySelectorAll(".chip"), function(c){ c.setAttribute("aria-pressed","false"); });
-        b.setAttribute("aria-pressed","true"); render();
+        b.setAttribute("aria-pressed","true"); render(); if(typeof applyColMode==="function") applyColMode();
       };
       $("viewChips").appendChild(b);
     });
@@ -11075,7 +11089,7 @@ label.acctsetrow { align-items:center; }
       list.appendChild(row);
     });
   }
-  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var staples=$("missingStaples"); if(staples) staples.onclick=function(){ missingStaples=!missingStaples; renderMissing(); }; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; var share=$("copySummaryBtn"); if(share) share.onclick=function(){ copyPlainText(collectionSummaryText(), "Copied collection summary", "Collection summary", "Select the text, then copy."); }; })();
+  (function(){ var tabs=$("missingTabs"); if(tabs) Array.prototype.forEach.call(tabs.querySelectorAll(".missingtab"), function(button){ button.onclick=function(){ missingGoal=button.getAttribute("data-goal"); renderMissing(); }; }); var sort=$("missingSort"); if(sort) sort.onchange=function(){missingSort=sort.value;renderMissing();}; var staples=$("missingStaples"); if(staples) staples.onclick=function(){ missingStaples=!missingStaples; renderMissing(); }; var wishTcg=$("wishTcgBtn"); if(wishTcg) wishTcg.onclick=function(){ copyTcgplayerRows(wishlistTcgRows()); }; var wishCsv=$("wishCsvBtn"); if(wishCsv) wishCsv.onclick=function(){ exportWantList(wishlistWantItems(), "wishlist"); }; var wishShare=$("wishShareBtn"); if(wishShare) wishShare.onclick=shareListStart; var exShare=$("extrasShareBtn"); if(exShare) exShare.onclick=shareListStart; var share=$("copySummaryBtn"); if(share) share.onclick=function(){ copyPlainText(collectionSummaryText(), "Copied collection summary", "Collection summary", "Select the text, then copy."); }; })();
 
   // ---- Decklist import / export (plain text: "<qty> <card number> <name>" per line) ----
   // ---- Printable deck list: a personal copy for a tournament table, never the official registration form ----
@@ -12175,12 +12189,108 @@ label.acctsetrow { align-items:center; }
     if(getSug && !getSug.hidden) tradePaintSug("get");
   }
 
+  // ---- Share wants and spares as a link ----
+  // A read-only link that carries the list itself in the URL fragment: "#list=" plus base64url JSON. The
+  // fragment never reaches a server, so nothing is stored, no account is needed to open it, and it cannot
+  // change anyone's collection. Prices are left out unless the sender turns them on.
+  var SHARE_LIST_BASE="https://spheredex.app/app/#list=", SHARE_LIST_MAX=1000;
+  function shareListId(v){ v=String(v==null?"":v); return /^[A-Za-z0-9_.\-]{1,40}$/.test(v) ? v : ""; }
+  // Whatever arrives (a link someone pasted) is cleaned the same way as what we build: bounded, plain ids and counts.
+  function shareListClean(raw){
+    if(!raw || typeof raw!=="object") return null;
+    var w=[], s=[], seen={}, i, id, n, p=null;
+    var rw=Array.isArray(raw.w)?raw.w:[], rs=Array.isArray(raw.s)?raw.s:[];
+    for(i=0;i<rw.length && w.length<SHARE_LIST_MAX;i++){ id=shareListId(rw[i]); if(id && !seen["w"+id]){ seen["w"+id]=1; w.push(id); } }
+    for(i=0;i<rs.length && s.length<SHARE_LIST_MAX;i++){
+      id=shareListId(rs[i]&&rs[i][0]); n=Math.floor(+(rs[i]&&rs[i][1])); if(!isFinite(n)) n=0;
+      if(id && n>0 && !seen["s"+id]){ seen["s"+id]=1; s.push([id, Math.min(n,99)]); }
+    }
+    if(raw.p && typeof raw.p==="object" && !Array.isArray(raw.p)){
+      p={}; Object.keys(raw.p).forEach(function(k){ var pid=shareListId(k), v=+raw.p[k]; if(pid && isFinite(v) && v>0 && v<1e7) p[pid]=Math.round(v*100)/100; });
+      if(!Object.keys(p).length) p=null;
+    }
+    if(!w.length && !s.length) return null;
+    var c=String(raw.c||"").replace(/[^A-Za-z]/g,"").slice(0,3).toUpperCase();
+    return {v:1, w:w, s:s, p:p, c:p?c:""};
+  }
+  function shareListEncode(list){
+    var o={v:1, w:list.w, s:list.s}; if(list.p){ o.p=list.p; o.c=list.c||""; }
+    return btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function shareListDecode(str){
+    try{
+      var t=String(str||"").replace(/^#?(list=)?/,"").replace(/-/g,"+").replace(/_/g,"/").replace(/=+$/,"");
+      if(!t || t.length>60000 || /[^A-Za-z0-9+\/]/.test(t)) return null;
+      while(t.length%4) t+="=";
+      return shareListClean(JSON.parse(atob(t)));
+    }catch(e){ return null; }
+  }
+  // Wants are the wishlist. Spares are the copies beyond the first of anything in the collection.
+  function shareListBuild(wishIds, ownMap, priceOf){
+    var w=(wishIds||[]).slice(), s=[], p=priceOf?{}:null;
+    Object.keys(ownMap||{}).forEach(function(id){
+      var e=ownMap[id]; if(!e || typeof e!=="object") return;
+      var copies=rawCount(e.qty)+(Array.isArray(e.graded)?e.graded.length:0);
+      if(copies>=2) s.push([id, copies-1]);
+    });
+    if(p){ w.concat(s.map(function(r){ return r[0]; })).forEach(function(id){ var v=+priceOf(id); if(isFinite(v) && v>0) p[id]=v; }); }
+    return shareListClean({w:w, s:s, p:p});
+  }
+  function shareListLink(list){ return SHARE_LIST_BASE+shareListEncode(list); }
+  function shareListMoney(list, id){
+    var v=list.p && list.p[id]; if(!v) return "";
+    return (list.c?list.c+" ":"")+v.toFixed(2);
+  }
+  function shareListRow(list, id, qty){
+    var c=cardById(id), name=c ? (c.name||id) : id, set=c&&SETS[c.set] ? SETS[c.set].name : "";
+    var price=shareListMoney(list, id);
+    return '<li><span class="slname"><b>'+esc(name)+'</b> <small>'+esc(edCode(id))+(set?' · '+esc(set):'')+'</small></span>'
+      +(qty>1?'<span class="slqty">×'+qty+'</span>':'')+(price?'<span class="slprice">'+esc(price)+'</span>':'')+'</li>';
+  }
+  function shareListHtml(list){
+    function block(title, rows, empty){ return '<h4>'+title+' <small>'+rows.length+'</small></h4>'+(rows.length?'<ul class="sllist">'+rows.join("")+'</ul>':'<p class="slempty">'+empty+'</p>'); }
+    return block("Wants", list.w.map(function(id){ return shareListRow(list,id,1); }), "Nothing on their wishlist.")
+      + block("Spares", list.s.map(function(r){ return shareListRow(list,r[0],r[1]); }), "No spare copies.");
+  }
+  function shareListShow(list){
+    var sc=$("shareViewScrim"), body=$("shareViewBody"); if(!sc || !body || !list) return;
+    body.innerHTML=shareListHtml(list);
+    function close(){ sc.hidden=true; sc.onclick=null; $("shareViewClose").onclick=null; try{ history.replaceState(history.state, "", location.pathname+location.search); }catch(e){} }
+    $("shareViewClose").onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    sc.hidden=false;
+  }
+  function shareListOpenFromHash(){
+    var h=String(location.hash||""); if(h.indexOf("#list=")!==0) return false;
+    var list=shareListDecode(h);
+    if(!list){ toast("That shared list link is not valid"); return false; }
+    shareListShow(list); return true;
+  }
+  function shareListStart(){
+    var wishIds=CARDS.filter(function(c){ return isWished(c.id); }).map(function(c){ return c.id; });
+    var ownMap=activeCol().own, collector=(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector");
+    var plain=shareListBuild(wishIds, ownMap, null);
+    if(!plain){ toast("Add wishlist cards or spares to share a list"); return; }
+    function send(withPrices){
+      var list=withPrices ? shareListBuild(wishIds, ownMap, function(id){ try{ return unitOf(id, priceMode()); }catch(e){ return 0; } }) : plain;
+      if(withPrices && list){ list.c=(CUR&&CUR.code)||""; }
+      var url=shareListLink(list||plain), text="My Palworld TCG wants and spares";
+      try{
+        if(navigator.share){ var pr=navigator.share({title:"SphereDex", text:text, url:url}); if(pr && pr.then) pr.then(null, function(){}); return; }
+      }catch(e){}
+      copyPlainText(url, "Link copied", "Share link", "Select this link and send it to your trade partner.");
+    }
+    openAsk({title:"Share wants and spares", confirmOnly:true,
+      message:plain.w.length+" wanted · "+plain.s.length+" with spares. Anyone with the link can see this list, read-only, with no account. Prices are left out unless you add them.",
+      okText:"Share link", extraText:collector?"":"Include prices", onOk:function(){ send(false); }, onExtra:function(){ send(true); }});
+  }
+
   // ---- Navigation ----
   function applyColMode(){
     var head=$("colModeHead"), dash=$("colDash"), m=colMode();
     var titles={wish:"Wishlist", fav:"Favourites", graded:"Graded", collected:"What you have collected"};
     if(head){ head.hidden=(m==="col"); head.textContent=titles[m]||""; }
     var wishExport=$("wishExport"); if(wishExport) wishExport.hidden=!(m==="wish" && wishCount()>0);
+    var exX=$("extrasExport"); if(exX) exX.hidden=!((m==="col" || m==="collected") && filters.view==="extras");
     if(dash){ dash.hidden=(m!=="col"); }
     var share=$("colShare"); if(share) share.hidden=(m!=="col");
     var cb=$("collectedBar"); if(cb) cb.hidden=(m!=="collected");
@@ -12271,7 +12381,7 @@ label.acctsetrow { align-items:center; }
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
     if(!closed){ var es=$("eventScrim"); if(es && !es.hidden){ closeEventSheet(); closed=true; } }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["shareViewScrim","upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -16750,6 +16860,7 @@ label.acctsetrow { align-items:center; }
   applyMode();
   applySettings();
   render();
+  try{ shareListOpenFromHash(); window.addEventListener("hashchange", shareListOpenFromHash); }catch(e){}
   renderHome(); renderReleases();   // populate Home (the default page) and Releases once at startup
   try{ localStorage.setItem("palvault-last-visit", String(APP_OPENED_AT)); }catch(e){}
   try{ localStorage.setItem("palvault-last-total", String(TOTAL)); }catch(e){}
