@@ -3002,6 +3002,7 @@ label.acctsetrow { align-items:center; }
         <select class="sortsel" id="deckSel" aria-label="Active deck"></select>
         <p class="deckneedline" id="deckNeedLine" aria-live="polite" hidden></p>
         <button class="tbtn" id="deckNew" data-icon="plus">New</button>
+        <button class="tbtn ghost" id="deckBuilt" data-icon="check" aria-pressed="false" title="Mark this deck as built to reserve its copies">Mark built</button>
         <button class="tbtn ghost" id="deckRename" data-icon="pencil" title="Rename deck">Rename</button>
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
@@ -5440,7 +5441,7 @@ label.acctsetrow { align-items:center; }
         var copies=rawCount(s.qty)+(Array.isArray(s.graded)?s.graded.length:0);
         if(copies<1 || copies>=4) return false;
       }
-      if ((mode==="col" || mode==="collected") && filters.view==="extras" && copiesOf(s)<2) return false;
+      if ((mode==="col" || mode==="collected") && filters.view==="extras" && extraCopies(c.id, s)<2) return false;
       if (mode==="col" && filters.view==="wish" && !isWished(c.id)) return false;
       if (recentFilterOn() && !RECENT[c.id]) return false;   // only cards from the latest adding session
       if (sinceVisitOn() && !SINCE_VISIT[c.id]) return false;   // only the printings the home catch-up counted
@@ -5495,7 +5496,7 @@ label.acctsetrow { align-items:center; }
       // slabs, never when a filter or a search has simply hidden them.
       var noSlabs = gradedMode && !CARDS.some(function(c){ var g=o(c.id); return g.graded && g.graded.length; });
       // Extras only when the binder really holds no second copy of anything, not when a filter hid them.
-      var noExtras = filters.view==="extras" && (colMode()==="col" || colMode()==="collected") && !CARDS.some(function(c){ return copiesOf(o(c.id))>=2; });
+      var noExtras = filters.view==="extras" && (colMode()==="col" || colMode()==="collected") && !CARDS.some(function(c){ return extraCopies(c.id, o(c.id))>=2; });
       e.innerHTML = (recentFilterOn() && !Object.keys(RECENT).length)
         ? "<b>Nothing recently added yet</b>Cards you add from now on show up here, so you can see what you just added."
         : (wishMode && !wishCount())
@@ -5701,7 +5702,7 @@ label.acctsetrow { align-items:center; }
   function patchCard(c){
     // In the "collected" view a card that drops to 0 must leave the list, so fall back to a full render there.
     if(collectedMode && (+o(c.id).qty||0)<=0){ render(); return; }
-    if(filters.view==="extras" && copiesOf(o(c.id))<2){ render(); return; }
+    if(filters.view==="extras" && extraCopies(c.id, o(c.id))<2){ render(); return; }
     if(filters.view==="partial") { var totalCopies=rawCount(o(c.id).qty)+(Array.isArray(o(c.id).graded)?o(c.id).graded.length:0); if(totalCopies<1 || totalCopies>=4){ render(); return; } }
     // With the Recently added filter or sort on, redraw the grid when the card leaves the filtered list, or when
     // other cards join or leave the latest session (a new session began, a removal split it, or removing the only
@@ -9347,11 +9348,26 @@ label.acctsetrow { align-items:center; }
   function activeDeck(){ var ds=decks(); if(!ds.length) return null; return ds.filter(function(x){return x.id===STATE.activeDeck;})[0]||ds[0]; }
   // How many more copies a deck needs from the active collection, shown on every deck in the picker so a
   // buildable deck is visible without switching to it. Ids missing from the catalogue do not count.
-  function deckNeedCount(cards, ownMap){ var n=0, any=false;
+  function deckNeedCount(cards, ownMap, exceptId){ var n=0, any=false;
     Object.keys(cards||{}).forEach(function(id){ var q=+cards[id]||0; if(q<=0 || !byNumberIdx[id.toUpperCase()]) return; any=true;
-      n+=Math.max(0, q-((ownMap[id]&&+ownMap[id].qty)||0)); });
+      n+=Math.max(0, q-deckFreeQty(ownMap, id, exceptId)); });
     return any ? n : -1; }
-  function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own);
+  // Built decks: marking a deck Built reserves its copies. Every other deck then counts only the copies
+  // that are free, so two decks that each run 4 of a card are not both Ready to build on 4 owned copies.
+  // A deck is never held back by its own reservation. Reserving does nothing unless Player tools are on,
+  // since that is the only time decks can be seen or changed.
+  function deckBuilt(d){ return !!(d && d.built===true); }
+  function deckLockedQty(id, exceptId){ var n=0;
+    if(typeof playerToolsOn==="function" && !playerToolsOn()) return 0;
+    decks().forEach(function(d){ if(!deckBuilt(d) || (exceptId!=null && d.id===exceptId)) return;
+      var q=+(d.cards||{})[id]||0; if(q>0) n+=q; });
+    return n; }
+  // Copies of a card in this collection that the other built decks have not taken.
+  function deckFreeQty(ownMap, id, exceptId){ var have=(ownMap[id]&&+ownMap[id].qty)||0;
+    return Math.max(0, have-deckLockedQty(id, exceptId)); }
+  // Copies beyond one that no built deck needs, for the Extras view (two or more = extra).
+  function extraCopies(id, s){ return copiesOf(s)-deckLockedQty(id); }
+  function deckNeedLabel(d){ var n=deckNeedCount(d.cards, activeCol().own, d.id);
     return n<0 ? "" : (n===0 ? "Ready to build" : "Need "+n+" "+(n===1?"card":"cards")); }
   // Tournament check for official events outside Japan. Masters League (Bushiroad): only English
   // edition cards in the main deck; Soul cards may be any language; a card is legal from its
@@ -9475,6 +9491,7 @@ label.acctsetrow { align-items:center; }
   function deckStatusLabel(d){
     if(!d) return "";
     var need=deckNeedLabel(d);
+    if(deckBuilt(d)) need=need==="Ready to build" ? "Built" : ["Built", need].filter(Boolean).join(" · ");
     var tour=deckTournamentLabel(deckTournamentReport(d.cards, typeof byNumberIdx!=="undefined"?byNumberIdx:{}, activeCol().own, deckEventStored()));
     return [need, tour].filter(Boolean).join(" · ");
   }
@@ -9919,23 +9936,26 @@ label.acctsetrow { align-items:center; }
   }
   // Unique cards in a deck you hold too few copies of (own < deck qty, the Need first test).
   // Copies short do not add up: owning 2 of 4 counts once.
-  function deckNeedFirstCount(cards, own){
+  function deckNeedFirstCount(cards, own, exceptId){
     var n=0;
-    Object.keys(cards||{}).forEach(function(id){ var q=cards[id]; if(q>0 && ((own[id]&&own[id].qty)||0)<q) n++; });
+    Object.keys(cards||{}).forEach(function(id){ var q=cards[id]; if(q>0 && deckFreeQty(own, id, exceptId)<q) n++; });
     return n;
   }
   function renderDecks(){
     var wrap=$("deckList"); if(!wrap) return;
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
+    var bb=$("deckBuilt"); if(bb){ var on=deckBuilt(d); bb.textContent=on?"Built":"Mark built"; bb.setAttribute("aria-pressed", on?"true":"false");
+      bb.title=on?"Built: its copies are reserved. Tap to release them.":"Mark this deck as built to reserve its copies";
+      bb.onclick=function(){ var x=activeDeck(); if(!x) return; if(x.built===true) delete x.built; else x.built=true; save(); renderDecks(); toast(x.built===true?"Deck built, its copies are reserved":"Copies released"); }; }
     renderEventLog(d);
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckBuilt","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
     var totalCards=0, needed=0, ownedNeeded=0;
-    ids.forEach(function(id){ var q=d.cards[id]; totalCards+=q; needed+=q; var own=(activeCol().own[id]&&activeCol().own[id].qty)||0; ownedNeeded+=Math.min(q,own); });
+    ids.forEach(function(id){ var q=d.cards[id]; totalCards+=q; needed+=q; var own=deckFreeQty(activeCol().own, id, d.id); ownedNeeded+=Math.min(q,own); });
     var pct=pctOf(ownedNeeded,needed);
     var rep=deckStatsReport(d.cards||{}, byNumberIdx);
     var costs=Object.keys(rep.curve).sort(function(a,b){ return ((+a||0)-(+b||0)) || (a<b?-1:1); });
@@ -9981,11 +10001,11 @@ label.acctsetrow { align-items:center; }
     var needFirst=lsGet("palvault-deckneedfirst")==="1", nf=$("deckNeedFirst");
     if(nf){ nf.setAttribute("aria-pressed", needFirst?"true":"false");
       // The number counts the whole deck, so a stat focus slice never changes it.
-      nf.textContent="Need first "+deckNeedFirstCount(d.cards, activeCol().own);
+      nf.textContent="Need first "+deckNeedFirstCount(d.cards, activeCol().own, d.id);
       nf.onclick=function(){ lsSet("palvault-deckneedfirst", needFirst?"0":"1"); renderDecks(); }; }
     if(needFirst){
       var lack=[], rest=[];
-      shown.forEach(function(id){ var own=(activeCol().own[id]&&activeCol().own[id].qty)||0; (own<d.cards[id]?lack:rest).push(id); });
+      shown.forEach(function(id){ var own=deckFreeQty(activeCol().own, id, d.id); (own<d.cards[id]?lack:rest).push(id); });
       shown=lack.concat(rest);
     }
     if(!ids.length){ wrap.innerHTML='<div class="empty"><b>This deck is empty</b>Search above to add cards.</div>'; return; }
@@ -9993,7 +10013,7 @@ label.acctsetrow { align-items:center; }
     wrap.innerHTML="";
     shown.forEach(function(id){
       var c=byNumberIdx[id.toUpperCase()]; if(!c) return; var q=d.cards[id];
-      var own=(activeCol().own[id]&&activeCol().own[id].qty)||0, enough=own>=q;
+      var own=deckFreeQty(activeCol().own, id, d.id), enough=own>=q, held=deckLockedQty(id, d.id);
       var notes=deckTournamentRowNotes(c, q, deckOwnEntry(activeCol().own, id, c), deckEventStored());
       var noteHtml=notes.map(function(t){ return '<span class="own need">'+esc(t)+'</span>'; }).join("");
       var row=document.createElement("div"); row.className="deckrow";
@@ -10001,7 +10021,7 @@ label.acctsetrow { align-items:center; }
         '<div><div class="dn">'+esc(c.name)+'</div><div class="dnum2">'+c.id+'</div></div>'+
         '<span class="stepper" style="margin-left:auto"><button data-d="-1" aria-label="Remove one">–</button><span class="qv">'+q+'</span><button data-d="1" aria-label="Add one">+</button></span>'+
         (!enough?'<button class="missingwish deckwish '+(isWished(c.id)?'on':'')+'" type="button">'+(isWished(c.id)?'Wishlisted':'Wishlist')+'</button>':'')+
-        '<span class="own '+(enough?"have":"need")+'">own '+own+'/'+q+'</span>'+noteHtml;
+        '<span class="own '+(enough?"have":"need")+'">own '+own+'/'+q+'</span>'+(held?'<span class="own need">'+held+' held by built '+(held===1?'deck':'decks')+'</span>':'')+noteHtml;
       row.querySelectorAll(".stepper button").forEach(function(b){ b.onclick=function(){ d.cards[id]=Math.max(0,(d.cards[id]||0)+parseInt(b.getAttribute("data-d"),10)); if(d.cards[id]<=0) delete d.cards[id]; save(); renderDecks(); }; });
       var wish=row.querySelector(".deckwish"); if(wish) wish.onclick=function(){ toggleWish(c.id); save(); renderDecks(); renderHome(); if($("page-missing")&&!$("page-missing").hidden)renderMissing(); toast(isWished(c.id)?"Added to wishlist":"Removed from wishlist"); };
       wrap.appendChild(row);
@@ -10810,9 +10830,9 @@ label.acctsetrow { align-items:center; }
   }
   function deckMissingGoal(){
     var d=activeDeck(); if(!d) return null;
-    var needed={}; Object.keys(d.cards||{}).forEach(function(id){ var n=+d.cards[id]||0, owned=(own[id]&&own[id].qty)||0; if(n>owned) needed[id]=n-owned; });
+    var needed={}; Object.keys(d.cards||{}).forEach(function(id){ var n=+d.cards[id]||0, owned=deckFreeQty(own, id, d.id); if(n>owned) needed[id]=n-owned; });
     var ids=Object.keys(needed);
-    var total=0, ownedTotal=0; Object.keys(d.cards||{}).forEach(function(id){ var n=+d.cards[id]||0; total+=n; ownedTotal+=Math.min(n,(own[id]&&own[id].qty)||0); });
+    var total=0, ownedTotal=0; Object.keys(d.cards||{}).forEach(function(id){ var n=+d.cards[id]||0; total+=n; ownedTotal+=Math.min(n,deckFreeQty(own, id, d.id)); });
     if(!ids.length) return {deck:d,items:[],remaining:0,total:total,owned:ownedTotal,percent:total?100:0};
     return {deck:d,items:ids.map(function(id){ return {card:byNumberIdx[id.toUpperCase()],need:needed[id]}; }).filter(function(x){return !!x.card;}),remaining:ids.reduce(function(sum,id){return sum+needed[id];},0),total:total,owned:ownedTotal,percent:pctOf(ownedTotal,total)};
   }
@@ -11248,7 +11268,7 @@ label.acctsetrow { align-items:center; }
       while(taken(name)){ name=base+" "+n; n++; }
       var copy=JSON.parse(JSON.stringify(d)), t=Date.now();
       while(decks().some(function(k){ return k.id==="d"+t; })) t++;   // two quick taps must not share an id
-      copy.id="d"+t; copy.name=name;
+      copy.id="d"+t; copy.name=name; delete copy.built;   // a copy reserves nothing until it is built
       decks().push(copy); STATE.activeDeck=copy.id; save(); renderDecks(); toast("Deck duplicated");
       promptDeckNameAfterDupe(copy);
     };

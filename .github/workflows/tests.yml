@@ -161,6 +161,9 @@ jobs:
       - name: Trade checker
         run: node tools/test_trade_check.cjs
 
+      - name: Built decks hold their copies
+        run: node tools/test_built_decks.cjs
+
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
 

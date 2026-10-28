@@ -48,7 +48,7 @@ const FUNCS = [
   'deckCardOf', 'deckEventDay', 'deckDayLabel', 'cardEnglishRelease', 'deckTournamentRelease',
   'deckOwnEntry', 'deckTournamentQty', 'deckTournamentReport', 'deckTournamentNameLines',
   'deckTournamentSummary', 'deckTournamentLabel', 'deckEventStored', 'deckTournamentRowNotes',
-  'deckNeedCount', 'deckNeedLabel', 'deckStatusLabel',
+  'deckBuilt', 'deckLockedQty', 'deckFreeQty', 'deckNeedCount', 'deckNeedLabel', 'deckStatusLabel',
   'releaseYmd', 'monDateTime',
   'deckLegalityReport', 'textAllowsAnyNumber'
 ];
@@ -62,7 +62,7 @@ FixedDate.parse = RealDate.parse;
 FixedDate.UTC = RealDate.UTC;
 FixedDate.now = function() { return new RealDate(2026, 9, 22, 12, 0, 0).getTime(); };
 
-const sandbox = { Date: FixedDate, byNumberIdx: {}, activeCol: function() { return { own: {}, name: 'My Collection' }; }, lsGet: function() { return null; } };
+const sandbox = { decks: function() { return []; }, Date: FixedDate, byNumberIdx: {}, activeCol: function() { return { own: {}, name: 'My Collection' }; }, lsGet: function() { return null; } };
 vm.createContext(sandbox);
 vm.runInContext(
   FUNCS.map(appFunction).join('\n') + '\n' +
