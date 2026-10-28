@@ -56,3 +56,10 @@ test('wired into the detail sheet, search and merge', () => {
   assert.match(source, /whereMatches\(o\(c\.id\), filters\.q\)/);
   assert.match(source, /out\.where=String\(b\.where\)\.trim\(\)/);
 });
+test('labels named like Object.prototype keys still group', () => {
+  const cards = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }];
+  const own = { a: { qty: 1, where: 'constructor' }, b: { qty: 1, where: '__proto__' }, c: { qty: 1, where: 'toString' } };
+  const g = sb.whereGroups(own, cards);
+  assert.equal(g.length, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(g.map((x) => x.where).sort())), ['__proto__', 'constructor', 'toString']);
+});

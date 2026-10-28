@@ -5395,7 +5395,7 @@ label.acctsetrow { align-items:center; }
   }
   // Owned cards grouped by their label, labels A to Z, cards in the order given. Unlabelled cards are left out.
   function whereGroups(map, cards){
-    var by={}, order=[];
+    var by=Object.create(null), order=[];
     (cards||[]).forEach(function(c){
       var e=map && map[c.id]; if(!e || typeof e!=="object") return;
       var w=whereClean(e.where); if(!w) return;
