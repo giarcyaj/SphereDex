@@ -13777,7 +13777,7 @@ label.acctsetrow { align-items:center; }
         toast("Version "+v+" is out. Update SphereDex for the newest cards and prices.");
       } else {
         toast("Version "+v+" is ready. Reloading to get it\u2026");
-        try{ if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){ navigator.serviceWorker.getRegistration().then(function(r){ if(r&&r.update) r.update(); }).catch(function(){}); } }catch(e){}
+        try{ if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){ navigator.serviceWorker.getRegistration().then(function(r){ if(r&&r.update){ var u=r.update(); if(u&&u.catch) u.catch(function(){}); } }).catch(function(){}); } }catch(e){}
         setTimeout(function(){ try{ location.reload(); }catch(e){} }, 600);
       }
       return;
@@ -16680,7 +16680,7 @@ label.acctsetrow { align-items:center; }
     // The web also has a service worker holding the shell: let it look for a new one on the same beat.
     try{
       if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
-        navigator.serviceWorker.getRegistration().then(function(reg){ if(reg && reg.update) reg.update(); }).catch(function(){});
+        navigator.serviceWorker.getRegistration().then(function(reg){ if(reg && reg.update){ var u=reg.update(); if(u && u.catch) u.catch(function(){}); } }).catch(function(){});
       }
     }catch(e){}
   }
