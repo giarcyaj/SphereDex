@@ -50,6 +50,7 @@ Everything is stdlib only, so there is no install step. Run from this folder:
 # Node 22 guard suites
 node tools/test_carousel.cjs
 node tools/test_scan_review.cjs
+node tools/test_multi_scan.cjs
 node tools/test_editions.cjs
 node tools/test_v21.cjs
 node tools/test_card_language.cjs
