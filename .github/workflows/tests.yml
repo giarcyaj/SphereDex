@@ -200,6 +200,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Every step above names ONE suite, so a suite added without touching this file never ran. Five had
+      # already slipped through that way (price list, trial decks, work filter, service worker update,
+      # rewards statue). This runs the whole folder, so a new tools/test_*.cjs is covered the day it lands.
+      - name: Every Node suite, including any not named above
+        run: node --test tools/test_*.cjs
+
       - name: Run tool tests (news feed, Sieve, rebuild)
         working-directory: tools
         run: python -m unittest discover -p 'test_*.py' -v

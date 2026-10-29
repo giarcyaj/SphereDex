@@ -3035,7 +3035,7 @@ label.acctsetrow { align-items:center; }
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
-        <button class="tbtn ghost" id="deckShare" data-icon="upload" title="Share this deck as a link anyone can open">Share</button>
+        <button class="tbtn ghost" id="deckShare" data-icon="mail" title="Share this deck as a link anyone can open">Share</button>
         <button class="tbtn ghost" id="deckPrint" data-icon="news" title="A printable list of this deck">Print</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
         <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
@@ -3181,7 +3181,7 @@ label.acctsetrow { align-items:center; }
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
         </div>
         <div class="qopt">
-          <button class="qoptbtn" type="button" id="qPriceBtn" data-icon="search"><span>Price a list</span></button>
+          <button class="qoptbtn priceui" type="button" id="qPriceBtn" data-icon="search"><span>Price a list</span></button>
         </div>
         <div class="qopt">
           <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
@@ -4158,7 +4158,7 @@ label.acctsetrow { align-items:center; }
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.2.
-  var APP_VERSION = "2.4.6";
+  var APP_VERSION = "2.4.7";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -4223,6 +4223,11 @@ label.acctsetrow { align-items:center; }
       "Home redrawn \u00b7 every card draws the thing it is about",
       "Your market counts sealed as well as cards, with both readings a tap apart",
       "A Statue of Power on Rewards, and set tiles in their own colours"
+    ],
+    "2.4.7": [
+      "Share a deck as a link · and mark a whole Trial Deck as owned without scanning 60 cards",
+      "Photograph a binder page · every card on it is read at once, and you check them before they go in",
+      "Price a list, print what you are missing, and filter cards by what a Pal is good at"
     ],
     "2.4.6": [
       "Legends Awaken in full · all 164 cards with official art",
@@ -6254,7 +6259,7 @@ label.acctsetrow { align-items:center; }
       Object.keys(counts).forEach(function(ed){ if(counts[ed]) parts.push('<span class="ownpill" data-t="raw">'+counts[ed]+' raw'+(ed!=="unknown"?' · '+rawEditionLabel(ed):'')+' · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" data-edition="'+ed+'" type="button" aria-label="Remove one '+rawEditionLabel(ed)+' raw copy">−</button></span>'); });
       // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
       // again anywhere in the app, so there was no way to check a slab against its label.
-      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      gwork.forEach(function(g,i){ var gp=photoIdsClean(g.photos).length; parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+(gp?' · '+gp+(gp===1?' photo':' photos'):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
       if(cnWork.length>q) cnWork=cnWork.slice(0,q);
       copyNotesList(s).forEach(function(n){ parts.push('<span class="ownpill cnpill" style="padding-right:12px">'+esc(copyNoteLabel(n))+'</span>'); });
       host.hidden=!parts.length;
@@ -6264,7 +6269,7 @@ label.acctsetrow { align-items:center; }
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
       }
       if(q){
-        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have.</p>';
+        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have. Photos stay on this device and are not uploaded, so another device shows the copy but not the picture.</p>';
         cnWork.forEach(function(n,i){
           var ed=rawEditionKey(n.ed==null?"unknown":n.ed);
           cnHtml+='<div class="cnrow" data-cn="'+i+'">'+
@@ -11138,7 +11143,7 @@ label.acctsetrow { align-items:center; }
   }
   function trialDeckMessage(k, colName){
     var cards=trialDeckCards(k), main=0, souls=0, some=false;
-    cards.forEach(function(c){ var n=trialDeckCount(k,c); if(c.id===TRIAL_DECKS[k].soul) souls+=n; else main+=n; if(trialDeckHeld(c)>0) some=true; });
+    cards.forEach(function(c){ var n=trialDeckCount(k,c); if(c.id===TRIAL_DECKS[k].soul) souls+=n; else main+=n; if(trialDeckFamilyHeld(k,c)>0) some=true; });
     return "Every box holds these "+main+" cards and "+souls+" Soul cards. They are added to "+colName+", and next you pick the special card that was in your box."+
       (some ? " You already have some of them, so each card is topped up to the count in the box and nothing is counted twice." : "");
   }
@@ -11150,7 +11155,9 @@ label.acctsetrow { align-items:center; }
     $("deckOwnTitle").textContent="I own the "+((SETS[k]&&SETS[k].name)||k);
     // Page 1: every card in the box, with how many copies of it the box holds.
     list.innerHTML=trialDeckCards(k).map(function(c){
-      var n=trialDeckCount(k,c), held=trialDeckHeld(c);
+      // The same family count the top up uses, so "You have 2" matches what adding the deck will do. Counting
+      // only this exact printing made the window understate a card whose TSR or TSP you already own.
+      var n=trialDeckCount(k,c), held=trialDeckFamilyHeld(k,c);
       return '<div class="docard" role="group" aria-label="'+esc(c.name+", "+n+" in the box"+(held?", you have "+held:""))+'">'+
         '<img src="'+imgSrc(c)+'" alt="" loading="lazy"><span>'+esc(trialDeckName(c))+'</span><span class="doqty">×'+n+'</span>'+
         (held ? '<span class="dohave">You have '+held+'</span>' : '')+'</div>';
@@ -11465,7 +11472,11 @@ label.acctsetrow { align-items:center; }
   }
   function askImportSharedDeck(res){
     var n=deckShareCopies(res);
-    openAsk({title:"Import shared deck?", message:"“"+res.name+"” has "+n+" card"+(n===1?"":"s")+(res.skipped?(" ("+res.skipped+" couldn't be read)"):"")+". It is added as a new deck and your other decks are not touched.", confirmOnly:true, okText:"Import", onOk:function(){ importSharedDeck(res); }});
+    // Say that Deck tools is about to be switched on. Importing turns it on so the Decks section exists to
+    // put the deck in, and a collector who taps a friend's link would otherwise find new sections in their
+    // app with nothing to explain where they came from.
+    var turnsOn = !playerToolsOn() ? " Deck tools are switched on so you can see it, and you can turn them off again in Settings." : "";
+    openAsk({title:"Import shared deck?", message:"“"+res.name+"” has "+n+" card"+(n===1?"":"s")+(res.skipped?(" ("+res.skipped+" couldn't be read)"):"")+". It is added as a new deck and your other decks are not touched."+turnsOn, confirmOnly:true, okText:"Import", onOk:function(){ importSharedDeck(res); }});
   }
   function checkSharedDeckLink(){
     var h=""; try{ h=String(window.location.hash||""); }catch(e){}
@@ -11479,8 +11490,17 @@ label.acctsetrow { align-items:center; }
     if(!d) return;
     if(!deckShareCode(d).split("~")[1]){ toast("Add some cards before sharing"); return; }
     var url=deckShareUrl(d);
-    if(navigator.share && !window.IS_NATIVE){ navigator.share({title:d.name+" (SphereDex deck)", url:url}).catch(function(){}); return; }
-    copyPlainText(url, "Deck link copied", "Share deck link", "Clipboard access is not available here. Select this link and copy it, then send it to anyone. They can open it or paste it into Import.");
+    var copyIt=function(){ copyPlainText(url, "Deck link copied", "Share deck link", "Clipboard access is not available here. Select this link and copy it, then send it to anyone. They can open it or paste it into Import."); };
+    // IS_NATIVE without the window prefix on purpose. window.IS_NATIVE is never assigned (see the note by
+    // V2_PREVIEW), so the old test always read undefined and BOTH wrappers took the share sheet path, where
+    // a refusal was swallowed by an empty catch and tapping Share did nothing at all. The bare var is the
+    // real one and is assigned long before anyone can tap this. A share that genuinely fails copies the link
+    // instead; a share the person cancels themselves is left alone, which is what AbortError means.
+    if(navigator.share && !IS_NATIVE && !window.IS_IOS){
+      navigator.share({title:d.name+" (SphereDex deck)", url:url}).catch(function(e){ if(!e || e.name!=="AbortError") copyIt(); });
+      return;
+    }
+    copyIt();
   }
   function downloadDeckText(d, text){
     var nm=d.name;
@@ -13429,10 +13449,14 @@ label.acctsetrow { align-items:center; }
     if(f) f.textContent = cardsOwned + " / " + cardsTotal + " Pal cards \u00b7 " + done + " Pals complete";
     var chips = $("paldexChips");
     if(chips){
-      var counts = {all:all.length,
-        started: all.filter(function(g){ return g.owned > 0 && g.owned < g.total; }).length,
-        complete: done,
-        missing: all.filter(function(g){ return g.owned === 0; }).length};
+      // Count what the OTHER filters have left on screen, not the whole dex. These were taken from every Pal
+      // before the work filter ran, so turning on a work chip left "Not started 120" sitting above nine tiles.
+      // filter is passed as "all" on purpose: a status chip counts the Pals it WOULD show, not the current one.
+      var inView = all.filter(function(g){ return paldexGroupVisible(g, fold(paldexQuery), "all", paldexVariant, PAL_VARIANTS, keysOn(paldexWork)); });
+      var counts = {all:inView.length,
+        started: inView.filter(function(g){ return g.owned > 0 && g.owned < g.total; }).length,
+        complete: inView.filter(function(g){ return g.total > 0 && g.owned >= g.total; }).length,
+        missing: inView.filter(function(g){ return g.owned === 0; }).length};
       chips.innerHTML = [["all","All"],["started","Started"],["complete","Complete"],["missing","Not started"]]
         .map(function(pair){ return '<button class="palchip" type="button" data-f="'+pair[0]+'" aria-pressed="'+(paldexFilter===pair[0])+'">'+esc(pair[1])+' <b>'+counts[pair[0]]+'</b></button>'; }).join("");
       Array.prototype.forEach.call(chips.querySelectorAll(".palchip"), function(b){

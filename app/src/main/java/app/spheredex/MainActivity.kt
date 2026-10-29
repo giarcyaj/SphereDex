@@ -131,6 +131,29 @@ class MainActivity : ComponentActivity() {
                 super.createIntent(context, input).addCategory(Intent.CATEGORY_OPENABLE)
         }) { uri -> deliverChosen(if (uri != null) arrayOf(uri) else null) }
 
+    /**
+     * Where the camera writes, while a capture is in flight. onShowFileChooser used to send EVERY file
+     * input to the document picker, so an input carrying capture="environment" opened a file browser and
+     * the camera never ran: the photo scan's "Take photo" button could not take a photo on Android, only
+     * pick one already on the device. iOS honours capture by itself.
+     */
+    private var pendingCapture: Uri? = null
+
+    private val takePhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+            val shot = pendingCapture
+            pendingCapture = null
+            deliverChosen(if (ok && shot != null) arrayOf(shot) else null)
+        }
+
+    /** A content:// uri the camera app may write to, or null when that is not possible. */
+    private fun newCaptureUri(): Uri? = try {
+        val dir = java.io.File(cacheDir, "capture").apply { mkdirs() }
+        dir.listFiles()?.forEach { runCatching { it.delete() } }   // one shot at a time, never hoard photos
+        val file = java.io.File(dir, "scan-" + SystemClock.uptimeMillis() + ".jpg")
+        androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+    } catch (_: Exception) { null }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -237,6 +260,16 @@ class MainActivity : ComponentActivity() {
                 override fun onShowFileChooser(v: WebView?, callback: ValueCallback<Array<Uri>>?, params: WebChromeClient.FileChooserParams?): Boolean {
                     deliverChosen(null)   // resolve a stale request before taking the new one
                     fileCallback = callback
+                    // An input that asks for the camera gets the camera. If that cannot be set up, or no
+                    // camera app answers, fall through to the picker rather than leaving the button dead.
+                    if (params?.isCaptureEnabled == true) {
+                        val shot = newCaptureUri()
+                        if (shot != null) {
+                            pendingCapture = shot
+                            try { takePhotoLauncher.launch(shot); return true }
+                            catch (_: Exception) { pendingCapture = null }
+                        }
+                    }
                     try { openDocLauncher.launch(chooserMimes(params?.acceptTypes)) }
                     catch (_: Exception) { deliverChosen(null) }
                     return true
@@ -384,8 +417,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (out.isEmpty()) return arrayOf("*/*")
-        out.add("text/*")
-        out.add("application/octet-stream")
+        // text/* and octet-stream are here for the collection import, where a .csv or .json often arrives
+        // with the wrong type. A photo input must not pull them in, or the picker lists text files.
+        if (out.none { it.startsWith("image/") }) {
+            out.add("text/*")
+            out.add("application/octet-stream")
+        }
         return out.toTypedArray()
     }
 
