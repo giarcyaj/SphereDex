@@ -76,3 +76,20 @@ test('copyNoteClean cleans photo ids the same way photoIdsClean does', () => {
   const ids = ['pabc123', 'pabc123', 'bad id', 'pdef4567', 'pghi89012', 'pjkl01234'];
   assert.deepEqual(plain(sb.copyNoteClean({ ph: ids }).ph), plain(sb.photoIdsClean(ids)));
 });
+
+test('the strip keeps the class that gives it a full width row, and releases the last paint blob urls', () => {
+  // photoStrip used to ASSIGN host.className, which wiped the cnphotos / gphotos class the markup gave it.
+  // .cnphotos{grid-column:1/-1} was then lost and the Add photo control sat in one of the copy row's three
+  // columns, 75px wide inside a 265px row. It must ADD the class instead.
+  const strip = /function photoStrip\([\s\S]*?\n  \}/.exec(source)[0];
+  assert.doesNotMatch(strip, /host\.className\s*=/, 'photoStrip must not assign className');
+  assert.match(strip, /host\.classList\.add\("phstrip"\)/);
+  // and the blob urls it makes are revoked on the next paint, not left to pile up
+  assert.match(strip, /revokeObjectURL/);
+  assert.match(strip, /host\._phUrls\s*=\s*urls/);
+  // both hosts still carry their own full width rule
+  assert.match(source, /\.cnphotos\{grid-column:1\/-1\}/);
+  assert.match(source, /\.gphotos\{flex-basis:100%\}/);
+  assert.match(source, /<div class="cnphotos"/);
+  assert.match(source, /<div class="gphotos">/);
+});

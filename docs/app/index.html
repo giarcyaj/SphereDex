@@ -4523,7 +4523,13 @@ label.acctsetrow { align-items:center; }
   function photoStrip(host, ids, onChange){
     var list=photoIdsClean(ids), urls=[];
     host.innerHTML="";
-    host.className="phstrip";
+    // Release the blob urls the last paint made. This runs again after every add or unlink, and the <img>
+    // elements holding them have just been thrown away with innerHTML.
+    (host._phUrls||[]).forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(_){} });
+    host._phUrls=urls;
+    // Added, never assigned: the host keeps its own cnphotos or gphotos class, which is what gives the strip
+    // a full width row of its own inside the copy row's three column grid and the slab row's flex line.
+    host.classList.add("phstrip");
     list.forEach(function(id){
       var cell=document.createElement("span"); cell.className="phcell";
       var rm=document.createElement("button"); rm.type="button"; rm.className="phrm"; rm.setAttribute("aria-label","Remove photo"); rm.textContent="✕";
@@ -12713,7 +12719,17 @@ label.acctsetrow { align-items:center; }
   function globalSearchRows(q){
     var rows=[], add=function(type,title,meta,ico,score,run,img){ if(score>0) rows.push({type:type,title:title,meta:meta||"",icon:ico||"search",score:score,run:run,img:img||""}); };
     if(q.length<2) return rows;
-    var cards=CARDS.map(function(c){ return {c:c,s:globalTextScore(q, cardSearchText(c)+" "+(c.set||""))}; }).filter(function(x){return x.s>0;}).sort(function(a,b){return b.s-a.s;}).slice(0,5);
+    // Score the two names on their own as well as the whole blob. Scoring only the blob meant a card whose
+    // Japanese name is on display could never beat one that has no Japanese text yet: the untranslated card
+    // still reads "Chillet ..." so the blob STARTS with the query and scores 100, while the translated card
+    // only contains it further along and scores 82. Searching Chillet in Japanese mode then lost EBP01-025
+    // behind the newer sets entirely. A name match now scores as a name match whichever language is shown.
+    var cardScore=function(c){
+      return Math.max(globalTextScore(q, cardSearchText(c)+" "+(c.set||"")),
+                      globalTextScore(q, c.nameEn||c.name||""),
+                      globalTextScore(q, c.name||""));
+    };
+    var cards=CARDS.map(function(c){ return {c:c,s:cardScore(c)}; }).filter(function(x){return x.s>0;}).sort(function(a,b){return b.s-a.s;}).slice(0,5);
     cards.forEach(function(x){ var c=x.c; add("Card",c.name,c.id+" · "+(c.rare||c.kind)+" · "+((SETS[c.set]||{}).name||c.set),"grid",x.s,function(){openDetail(c);},imgSrc(c)); });
     (BROWSE_EXPANSIONS||[]).forEach(function(g){ var s=globalTextScore(q,g.name+" "+g.release); if(s) add("Set",g.name,"Set progress and missing cards","calendar",s+3,function(){openSetGroup(g.sets,"all");}); });
     SET_ORDER.forEach(function(k){ var nm=(SETS[k]||{}).name||k, s=globalTextScore(q,nm+" "+k); if(s) add("Set",nm,k,"calendar",s,function(){openSet(k,"all");}); });
