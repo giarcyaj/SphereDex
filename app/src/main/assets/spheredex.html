@@ -2361,6 +2361,11 @@ label.acctsetrow { align-items:center; }
   .scanreviewrow button[data-action="undo"]{ border:1px solid var(--el-Fire); border-radius:8px; background:transparent; color:var(--el-Fire); padding:6px 7px; font:700 .68rem var(--font-body); cursor:pointer; }
   @media (max-width:500px){ .scanreviewrow{ grid-template-columns:34px minmax(0,1fr); }.scanreviewactions{ grid-column:1/-1; justify-content:flex-end; padding-top:2px; } }
   .scanreviewempty{ padding:22px 5px; color:var(--ink-faint); text-align:center; font-size:.85rem; }
+  .scanreviewfind{ grid-column:1 / -1; margin-top:2px; }
+  .scanreviewfind input{ width:100%; box-sizing:border-box; margin:0 0 4px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); color:var(--ink); padding:6px 8px; font:600 .75rem var(--font-body); }
+  .scanreviewsugs button{ display:block; width:100%; box-sizing:border-box; margin:0 0 4px; text-align:left; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); padding:5px 7px; font:600 .72rem var(--font-body); cursor:pointer; }
+  .scanreviewrow.unmatched{ border-color:color-mix(in srgb, var(--gold) 50%, var(--line)); }
+  .closex{ border:0; background:transparent; color:var(--ink-faint); font-size:1.35rem; line-height:1; cursor:pointer; padding:0 2px; }
   /* ==== SCAN REVIEW END (styles) ==== */
   .scanhint{ text-align:center; font-size:.8rem; font-weight:600; color:var(--gold-deep); background:color-mix(in srgb,var(--gold) 13%,var(--surface-2)); border:1px solid color-mix(in srgb,var(--gold) 38%,var(--line-strong)); border-radius:12px; padding:8px 12px; margin:0 0 12px; }
   /* Scan popup duplicate check: gold when the target collection already holds this printing, accent when it is new. Plain token colours here; the color-mix tints live in the @supports block below
@@ -3167,6 +3172,10 @@ label.acctsetrow { align-items:center; }
           <button class="qoptbtn" type="button" id="qScanBtn" data-icon="camera"><span>Scan card with camera</span></button>
           <button class="qinfobtn" type="button" data-info="scan" data-icon="info" aria-label="About scanning"></button>
         </div>
+        <div class="qopt" id="qOptMulti">
+          <button class="qoptbtn" type="button" id="qMultiBtn" data-icon="camera"><span>Scan several cards</span></button>
+          <button class="qinfobtn" type="button" data-info="multi" data-icon="info" aria-label="About scanning several cards"></button>
+        </div>
         <div class="qopt">
           <button class="qoptbtn" type="button" id="qCsvBtn" data-icon="upload"><span>Import CSV</span></button>
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
@@ -3184,6 +3193,7 @@ label.acctsetrow { align-items:center; }
         <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001…" autocomplete="off" spellcheck="false" role="combobox" aria-label="Quick add" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
         <div class="qsug" id="qSug" role="listbox" hidden></div>
       </div>
+      <button type="button" class="scanwrong" id="qMultiReview" hidden>Review cards from the photo</button>
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
     </div>
@@ -3706,9 +3716,32 @@ label.acctsetrow { align-items:center; }
 <div class="scanscrim" id="scanReviewScrim" hidden>
   <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="scanReviewTitle">
     <div class="scanreviewtop"><div><div class="scaneyebrow">Continuous scan</div><h3 id="scanReviewTitle">Review this session</h3></div><button type="button" class="closex" id="scanReviewClose" aria-label="Close review">×</button></div>
-    <p class="scanreviewintro">Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.</p>
+    <p class="scanreviewintro" id="scanReviewIntro">Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.</p>
+    <div class="scanfield" id="scanReviewColWrap" hidden>
+      <div class="scanlab">Add to collection</div>
+      <select id="scanReviewCol" aria-label="Collection for these cards"></select>
+    </div>
     <div class="scanreviewlist" id="scanReviewList"></div>
     <div class="askbtns"><button type="button" class="ok" id="scanReviewDone">Done</button></div>
+  </div>
+</div>
+
+<div class="scanscrim" id="multiScanScrim" hidden>
+  <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="multiScanTitle">
+    <div class="scanreviewtop"><div><div class="scaneyebrow">Photo scan</div><h3 id="multiScanTitle">Scan several cards</h3></div><button type="button" class="closex" id="multiScanClose" aria-label="Close">×</button></div>
+    <p class="scanreviewintro" id="multiScanIntro">Take or choose one photo of a spread of pulls, or a binder page. SphereDex finds each card on this device. Nothing is added until you review the list.</p>
+    <div class="segrow" id="multiScanLayout" role="group" aria-label="Photo layout">
+      <button type="button" class="seg" data-layout="auto" aria-pressed="true">Auto</button>
+      <button type="button" class="seg" data-layout="b9" aria-pressed="false">9 pocket</button>
+      <button type="button" class="seg" data-layout="b12" aria-pressed="false">12 pocket</button>
+    </div>
+    <p class="qhint" id="multiScanStatus"></p>
+    <div class="askbtns">
+      <button type="button" id="multiScanFileBtn">Choose photo</button>
+      <button type="button" class="ok" id="multiScanCamBtn">Take photo</button>
+    </div>
+    <input type="file" id="multiScanFile" accept="image/*" hidden>
+    <input type="file" id="multiScanCam" accept="image/*" capture="environment" hidden>
   </div>
 </div>
 
@@ -15509,9 +15542,9 @@ label.acctsetrow { align-items:center; }
   // seam at the end of the section (also window.SCAN_REVIEW); tools/test_scan_review.cjs asserts the
   // markers exist once, nothing leaks outside them, all four shipped copies match, and the behaviour
   // still works against a stub DOM. Collection mutation helpers (changeRaw, save) stay outside.
-  var scanSession={count:0,value:0,ts:0,items:[]};  // local-only, undoable running tally across a continuous-scan burst
+  var scanSession={count:0,value:0,ts:0,items:[],pending:[]};  // local-only, undoable running tally across a continuous-scan burst. pending holds a photo of several cards until the user adds them.
   var scanReviewScrim=$("scanReviewScrim");
-  function resetScanSession(){ scanSession.count=0; scanSession.value=0; scanSession.ts=0; scanSession.items=[]; }
+  function resetScanSession(){ scanSession.count=0; scanSession.value=0; scanSession.ts=0; scanSession.items=[]; scanSession.pending=[]; }
   function scanSessionTotal(){ return scanSession.items.reduce(function(sum,item){ return sum+(+item.value||0); },0); }
   function recordScan(item){ scanSession.items.push(item); scanSession.count=scanSession.items.length; scanSession.value=scanSessionTotal(); scanSession.ts=Date.now(); }
   function scanRestore(item){
@@ -15539,10 +15572,102 @@ label.acctsetrow { align-items:center; }
     item.id=next.id; item.value=unitOfEntry(next.id, null, target)*qty; scanSession.value=scanSessionTotal(); scanSession.ts=Date.now();
     save(); scanRefreshPages(); refreshScanSessionUI(); renderScanReview();
   }
+  function scanPendingHits(q){
+    q=String(q||"").trim().toLowerCase();
+    if(q.length<2) return [];
+    var out=[];
+    for(var i=0;i<CARDS.length && out.length<6;i++){
+      var c=CARDS[i];
+      var name=String(c.name||"").toLowerCase(), id=String(c.id||"").toLowerCase(), ja=String(c.nameJa||"").toLowerCase();
+      if(name.indexOf(q)>=0 || id.indexOf(q)>=0 || (ja && ja.indexOf(q)>=0)) out.push(c);
+    }
+    return out;
+  }
+  function paintPendingSuggestions(row, index, q){
+    var sug=row.querySelector('[data-action="sugs"]'); if(!sug) return;
+    var hits=scanPendingHits(q);
+    sug.innerHTML=hits.map(function(c){ return '<button type="button" data-action="pick" data-id="'+esc(c.id)+'">'+esc(c.id)+' · '+esc(c.name)+'</button>'; }).join("");
+    Array.prototype.forEach.call(sug.querySelectorAll('[data-action="pick"]'), function(btn){
+      btn.onclick=function(){ scanAssignPending(index, btn.getAttribute("data-id")); };
+    });
+  }
+  function renderPendingRow(item, index){
+    var card=item.id ? byNumberIdx[String(item.id).toUpperCase()] : null;
+    var row=document.createElement("div"); row.className="scanreviewrow"+(card?"":" unmatched");
+    var variants=card ? CARDS.filter(function(c){ return c.base===card.base; }) : [];
+    var variantControl=variants.length>1?'<select class="scanreviewvariant" data-action="variant" aria-label="Correct printing for '+esc(card.name)+'">'+variants.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id===card.id?' selected':'')+'>'+esc(c.rare)+' · '+esc(c.id)+'</option>'; }).join("")+'</select>':'';
+    var title=card?esc(card.name):"Unmatched";
+    var sub=card ? esc(card.id)+(item.lowConf?" · check this match":"") : "Pick the card, or remove this row";
+    var find='<div class="scanreviewfind"><input data-action="find" type="search" placeholder="'+(card?"Change card":"Name or number")+'" aria-label="'+(card?"Change this card":"Find this card")+'" autocomplete="off"><div class="scanreviewsugs" data-action="sugs"></div></div>';
+    row.innerHTML='<img src="'+(item.thumb||(card?imgSrc(card):""))+'" alt=""><div><b>'+title+'</b><span>'+sub+'</span></div><div class="scanreviewactions">'+variantControl+'<button type="button" data-action="drop">Remove</button></div>'+find;
+    var drop=row.querySelector('[data-action="drop"]'); if(drop) drop.onclick=function(){ scanDropPending(index); };
+    var variant=row.querySelector('[data-action="variant"]'); if(variant) variant.onchange=function(){ scanAssignPending(index, variant.value); };
+    var findEl=row.querySelector('[data-action="find"]'); if(findEl) findEl.oninput=function(){ paintPendingSuggestions(row, index, findEl.value); };
+    return row;
+  }
+  function scanAssignPending(index, id){
+    var item=(scanSession.pending||[])[index]; if(!item) return;
+    item.id=id||""; item.lowConf=false;
+    renderScanReview();
+  }
+  function scanDropPending(index){
+    if(!scanSession.pending || index<0 || index>=scanSession.pending.length) return;
+    scanSession.pending.splice(index, 1);
+    refreshScanSessionUI(); renderScanReview();
+  }
+  function scanStagePending(items){
+    scanSession.pending=(items||[]).map(function(it){
+      return { id: it && it.id ? String(it.id) : "", lowConf: !!(it && it.lowConf), thumb: (it && it.thumb) || "", score: it && +it.score || 0 };
+    });
+    scanSession.ts=Date.now();
+    refreshScanSessionUI(); renderScanReview();
+  }
+  function scanPendingBlocked(){ return (scanSession.pending||[]).some(function(it){ return !it.id; }); }
+  function fillScanReviewCol(){
+    var sel=$("scanReviewCol"); if(!sel || !STATE || !STATE.cols) return;
+    var prev=sel.value;
+    var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){ return x.id===SETTINGS.defaultAddCol; })) ? SETTINGS.defaultAddCol : ((typeof activeCol==="function" && activeCol()) ? activeCol().id : "");
+    sel.innerHTML="";
+    STATE.cols.forEach(function(col){
+      var op=document.createElement("option"); op.value=col.id; op.textContent=col.name;
+      if(col.id===(prev||def)) op.selected=true;
+      sel.appendChild(op);
+    });
+  }
+  function commitPending(colId){
+    var pending=(scanSession.pending||[]).slice();
+    if(!pending.length || scanPendingBlocked()) return 0;
+    var added=0, left=[];
+    pending.forEach(function(item){
+      var card=item.id ? byNumberIdx[String(item.id).toUpperCase()] : null;
+      if(!card){ left.push(item); return; }
+      var ed=null;
+      if(typeof canEdition==="function" && canEdition(card) && typeof defaultEditionFor==="function"){
+        var def=defaultEditionFor(card); if(def) ed=def;
+      }
+      addToCollection(colId, card.id, null, ed);
+      var col=scanColById(colId), entry=col&&col.own[card.id];
+      recordScan({id:card.id, colId:colId, dest:"collection", type:"raw", edition:rawEditionKey(ed), qty:1, value: entry ? unitOfEntry(card.id, null, entry) : 0});
+      added++;
+    });
+    scanSession.pending=left;
+    refreshScanSessionUI(); renderScanReview();
+    return added;
+  }
   function renderScanReview(){
     var host=$("scanReviewList"); if(!host) return;
-    if(!scanSession.items.length){ host.innerHTML='<div class="scanreviewempty">No scans are waiting for review.</div>'; return; }
+    var pending=scanSession.pending||[];
+    var intro=$("scanReviewIntro"), colWrap=$("scanReviewColWrap"), done=$("scanReviewDone");
+    if(intro){
+      intro.textContent = pending.length
+        ? "Check each card before it is added. An unmatched card stays here until you pick one or remove the row."
+        : "Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.";
+    }
+    if(colWrap) colWrap.hidden=!pending.length;
+    if(done) done.textContent = pending.length ? "Add these cards" : "Done";
+    if(!scanSession.items.length && !pending.length){ host.innerHTML='<div class="scanreviewempty">No scans are waiting for review.</div>'; return; }
     host.innerHTML="";
+    pending.forEach(function(item, index){ host.appendChild(renderPendingRow(item, index)); });
     scanSession.items.slice().reverse().forEach(function(item){
       var card=byNumberIdx[item.id.toUpperCase()]; if(!card) return;
       var row=document.createElement("div"); row.className="scanreviewrow";
@@ -15566,24 +15691,861 @@ label.acctsetrow { align-items:center; }
     });
   }
   function closeScanReview(){ if(scanReviewScrim) scanReviewScrim.hidden=true; }
-  function openScanReview(){ if(!scanReviewScrim) return; renderScanReview(); scanReviewScrim.hidden=false; openOverlay(closeScanReview); }
+  function openScanReview(){ if(!scanReviewScrim) return; fillScanReviewCol(); renderScanReview(); scanReviewScrim.hidden=false; openOverlay(closeScanReview); }
   function refreshScanSessionUI(){
-    var ssEl=$("scanSess"), review=$("scanReviewBtn");
+    var ssEl=$("scanSess"), review=$("scanReviewBtn"), photo=$("qMultiReview");
     if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
-    if(review) review.hidden=!scanSession.items.length;
+    var waiting=!!(scanSession.items.length || (scanSession.pending && scanSession.pending.length));
+    if(review) review.hidden=!waiting;
+    if(photo) photo.hidden=!(scanSession.pending && scanSession.pending.length);
   }
 
   // Stable seam for the guard suite and outside callers (the capture flow records scans; the modal
-  // paints the session pill). Internal functions may be renamed freely behind this object.
+  // paints the session pill; a photo of several cards stages rows here before they are added).
+  // Internal functions may be renamed freely behind this object.
   var SCAN_REVIEW = {
     session: scanSession,
     total: scanSessionTotal, record: recordScan, reset: resetScanSession,
     restore: scanRestore, moveVariant: scanMoveVariant,
     render: renderScanReview, open: openScanReview, close: closeScanReview,
-    refresh: refreshScanSessionUI
+    refresh: refreshScanSessionUI,
+    stage: scanStagePending, assign: scanAssignPending, drop: scanDropPending,
+    blocked: scanPendingBlocked, commit: commitPending
   };
   if(typeof window!=="undefined") window.SCAN_REVIEW = SCAN_REVIEW;
   // ==== SCAN REVIEW END (logic) ====
+
+  // ==== MULTI SCAN BEGIN (logic; guarded by tools/test_multi_scan.cjs) ====
+  /* On-device multi-card photo scan.
+     Card regions come from a local-variance mask (a card is busier than a table or a
+     pocket), closed so the quiet text box stays inside the blob, then a rotated quad
+     from the blob's principal axes. Each quad is warped upright and compared to the
+     bundled card art with a coarse colour block descriptor. A weak or ambiguous
+     score stays unmatched so the review list can be picked by hand. */
+  var MULTI_SCAN = (function(){
+    var GW = 12, GH = 16, DESC = GW * GH * 3;
+    var CARD_ASPECT = 400 / 559;
+    var ACCEPT_SCORE = 0.72;
+    var ACCEPT_MARGIN = 0.045;
+    var SOFT_SCORE = 0.64;
+    var SOFT_MARGIN = 0.08;
+    var LOW_MARGIN = 0.07;
+
+    function lumaAt(rgba, i){
+      return rgba[i] * 0.299 + rgba[i + 1] * 0.587 + rgba[i + 2] * 0.114;
+    }
+
+    function integral(src, w, h){
+      var ii = new Float64Array((w + 1) * (h + 1));
+      var stride = w + 1;
+      for(var y = 0; y < h; y++){
+        var row = 0;
+        var srcRow = y * w;
+        var above = y * stride;
+        var dest = (y + 1) * stride;
+        for(var x = 0; x < w; x++){
+          row += src[srcRow + x];
+          ii[dest + x + 1] = ii[above + x + 1] + row;
+        }
+      }
+      return ii;
+    }
+    function rectSum(ii, stride, x0, y0, x1, y1){
+      return ii[y1 * stride + x1] - ii[y0 * stride + x1] - ii[y1 * stride + x0] + ii[y0 * stride + x0];
+    }
+    function boxBlur(src, w, h, r){
+      var ii = integral(src, w, h);
+      var stride = w + 1;
+      var out = new Float32Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          var n = (x1 - x0) * (y1 - y0);
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) / n;
+        }
+      }
+      return out;
+    }
+    function localStd(gray, w, h, r){
+      var sq = new Float32Array(gray.length);
+      for(var i = 0; i < gray.length; i++) sq[i] = gray[i] * gray[i];
+      var mu = boxBlur(gray, w, h, r);
+      var mu2 = boxBlur(sq, w, h, r);
+      var out = new Float32Array(gray.length);
+      for(var j = 0; j < gray.length; j++){
+        var v = mu2[j] - mu[j] * mu[j];
+        out[j] = v > 0 ? Math.sqrt(v) : 0;
+      }
+      return out;
+    }
+    function percentile(src, p){
+      // 256-bin histogram is enough: local std of an 8-bit image stays well under 128,
+      // but clamp into 0..255 so a bright photo cannot walk off the end.
+      var hist = new Uint32Array(256);
+      for(var i = 0; i < src.length; i++){
+        var b = src[i];
+        if(b < 0) b = 0;
+        else if(b > 255) b = 255;
+        hist[b | 0]++;
+      }
+      var need = Math.max(0, Math.min(src.length - 1, Math.floor(src.length * p)));
+      var seen = 0;
+      for(var k = 0; k < 256; k++){
+        seen += hist[k];
+        if(seen > need) return k;
+      }
+      return 255;
+    }
+    function dilate(mask, w, h, r){
+      var ii = integral(mask, w, h);
+      var stride = w + 1;
+      var out = new Uint8Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) > 0 ? 1 : 0;
+        }
+      }
+      return out;
+    }
+    function erode(mask, w, h, r){
+      var ii = integral(mask, w, h);
+      var stride = w + 1;
+      var out = new Uint8Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          var n = (x1 - x0) * (y1 - y0);
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) === n ? 1 : 0;
+        }
+      }
+      return out;
+    }
+
+    function downGray(rgba, w, h, maxEdge){
+      var scale = Math.min(1, maxEdge / Math.max(w, h));
+      var sw = Math.max(32, Math.round(w * scale));
+      var sh = Math.max(32, Math.round(h * scale));
+      var gray = new Float32Array(sw * sh);
+      for(var y = 0; y < sh; y++){
+        var y0 = (y * h / sh) | 0;
+        var y1 = ((y + 1) * h / sh) | 0;
+        if(y1 <= y0) y1 = y0 + 1;
+        if(y1 > h) y1 = h;
+        for(var x = 0; x < sw; x++){
+          var x0 = (x * w / sw) | 0;
+          var x1 = ((x + 1) * w / sw) | 0;
+          if(x1 <= x0) x1 = x0 + 1;
+          if(x1 > w) x1 = w;
+          var sum = 0, n = 0;
+          for(var yy = y0; yy < y1; yy++){
+            var row = yy * w;
+            for(var xx = x0; xx < x1; xx++){
+              sum += lumaAt(rgba, (row + xx) * 4);
+              n++;
+            }
+          }
+          gray[y * sw + x] = n ? sum / n : 0;
+        }
+      }
+      return { gray: gray, sw: sw, sh: sh, sx: w / sw, sy: h / sh };
+    }
+
+    function components(mask, w, h){
+      var label = new Int32Array(w * h);
+      var out = [];
+      var stack = [];
+      for(var i = 0; i < mask.length; i++){
+        if(!mask[i] || label[i]) continue;
+        var id = out.length + 1;
+        stack.length = 0;
+        stack.push(i);
+        label[i] = id;
+        var area = 0, minx = w, miny = h, maxx = 0, maxy = 0;
+        var sumX = 0, sumY = 0, sumXX = 0, sumYY = 0, sumXY = 0;
+        while(stack.length){
+          var p = stack.pop();
+          var x = p % w, y = (p / w) | 0;
+          area++;
+          if(x < minx) minx = x;
+          if(y < miny) miny = y;
+          if(x > maxx) maxx = x;
+          if(y > maxy) maxy = y;
+          sumX += x; sumY += y; sumXX += x * x; sumYY += y * y; sumXY += x * y;
+          if(x > 0 && mask[p - 1] && !label[p - 1]){ label[p - 1] = id; stack.push(p - 1); }
+          if(x + 1 < w && mask[p + 1] && !label[p + 1]){ label[p + 1] = id; stack.push(p + 1); }
+          if(y > 0 && mask[p - w] && !label[p - w]){ label[p - w] = id; stack.push(p - w); }
+          if(y + 1 < h && mask[p + w] && !label[p + w]){ label[p + w] = id; stack.push(p + w); }
+        }
+        out.push({ area: area, minx: minx, miny: miny, maxx: maxx, maxy: maxy,
+          sumX: sumX, sumY: sumY, sumXX: sumXX, sumYY: sumYY, sumXY: sumXY, id: id });
+      }
+      return { comps: out, label: label };
+    }
+
+    function orderCorners(pts){
+      var sums = pts.map(function(p){ return p.x + p.y; });
+      var diffs = pts.map(function(p){ return p.x - p.y; });
+      function at(arr, extreme){
+        var idx = 0;
+        for(var i = 1; i < arr.length; i++) if((extreme === "min" ? arr[i] < arr[idx] : arr[i] > arr[idx])) idx = i;
+        return pts[idx];
+      }
+      return [at(sums, "min"), at(diffs, "max"), at(sums, "max"), at(diffs, "min")];
+    }
+    function dist(a, b){ var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+    function quadAspect(q){
+      var width = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2;
+      var height = (dist(q[0], q[3]) + dist(q[1], q[2])) / 2;
+      if(height < 1) return 99;
+      return width / height;
+    }
+    function quadArea(q){
+      var a = 0;
+      for(var i = 0; i < 4; i++){
+        var p = q[i], n = q[(i + 1) % 4];
+        a += p.x * n.y - n.x * p.y;
+      }
+      return Math.abs(a) / 2;
+    }
+    function pcaQuad(comp, label, w){
+      var n = comp.area;
+      var cx = comp.sumX / n, cy = comp.sumY / n;
+      var cxx = comp.sumXX / n - cx * cx;
+      var cyy = comp.sumYY / n - cy * cy;
+      var cxy = comp.sumXY / n - cx * cy;
+      var angle = 0.5 * Math.atan2(2 * cxy, cxx - cyy);
+      var co = Math.cos(angle), si = Math.sin(angle);
+      var umin = Infinity, umax = -Infinity, vmin = Infinity, vmax = -Infinity;
+      for(var y = comp.miny; y <= comp.maxy; y++){
+        var row = y * w;
+        for(var x = comp.minx; x <= comp.maxx; x++){
+          var p = row + x;
+          if(label[p] !== comp.id) continue;
+          var dx = x - cx, dy = y - cy;
+          var u = dx * co + dy * si;
+          var v = -dx * si + dy * co;
+          if(u < umin) umin = u;
+          if(u > umax) umax = u;
+          if(v < vmin) vmin = v;
+          if(v > vmax) vmax = v;
+        }
+      }
+      function back(u, v){
+        return { x: cx + co * u - si * v, y: cy + si * u + co * v };
+      }
+      return orderCorners([back(umin, vmin), back(umax, vmin), back(umax, vmax), back(umin, vmax)]);
+    }
+
+    function boxOf(q){
+      var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      for(var i = 0; i < 4; i++){
+        if(q[i].x < minx) minx = q[i].x;
+        if(q[i].y < miny) miny = q[i].y;
+        if(q[i].x > maxx) maxx = q[i].x;
+        if(q[i].y > maxy) maxy = q[i].y;
+      }
+      return { minx: minx, miny: miny, maxx: maxx, maxy: maxy };
+    }
+    function iou(a, b){
+      var ix0 = Math.max(a.minx, b.minx), iy0 = Math.max(a.miny, b.miny);
+      var ix1 = Math.min(a.maxx, b.maxx), iy1 = Math.min(a.maxy, b.maxy);
+      var iw = ix1 - ix0, ih = iy1 - iy0;
+      if(iw <= 0 || ih <= 0) return 0;
+      var inter = iw * ih;
+      var ua = (a.maxx - a.minx) * (a.maxy - a.miny) + (b.maxx - b.minx) * (b.maxy - b.miny) - inter;
+      return ua > 0 ? inter / ua : 0;
+    }
+
+    function detectMask(gray, sw, sh){
+      var r = Math.max(2, (sw / 90) | 0);
+      var std = localStd(gray, sw, sh, r);
+      var p50 = percentile(std, 0.50);
+      var p85 = percentile(std, 0.85);
+      var th = Math.max(8, (p50 + p85) / 2 * 0.85);
+      var mask = new Uint8Array(sw * sh);
+      for(var i = 0; i < std.length; i++) mask[i] = std[i] >= th ? 1 : 0;
+      var closeR = Math.max(3, (sw / 70) | 0);
+      var closed = erode(dilate(mask, sw, sh, closeR), sw, sh, closeR);
+      var opened = dilate(erode(closed, sw, sh, 1), sw, sh, 1);
+      return opened;
+    }
+
+    function quadsFromMask(mask, sw, sh, map){
+      var found = components(mask, sw, sh);
+      var minArea = sw * sh * 0.012;
+      var maxArea = sw * sh * 0.70;
+      var quads = [];
+      for(var c = 0; c < found.comps.length; c++){
+        var comp = found.comps[c];
+        if(comp.area < minArea || comp.area > maxArea) continue;
+        var q = pcaQuad(comp, found.label, sw);
+        var aspect = quadAspect(q);
+        var portrait = aspect >= 0.52 && aspect <= 0.98;
+        var landscape = aspect >= 1.05 && aspect <= 1.90;
+        if(!portrait && !landscape) continue;
+        var qa = quadArea(q);
+        if(!qa || comp.area / qa < 0.45) continue;
+        var mapped = q.map(function(p){ return { x: p.x * map.sx, y: p.y * map.sy }; });
+        if(landscape){
+          // A card lying on its side: turn the quad so the long edge runs vertically.
+          mapped = [mapped[3], mapped[0], mapped[1], mapped[2]];
+        }
+        quads.push({ pts: mapped, area: comp.area, aspect: portrait ? aspect : 1 / aspect, box: boxOf(mapped) });
+      }
+      quads.sort(function(a, b){ return b.area - a.area; });
+      var kept = [];
+      for(var i = 0; i < quads.length; i++){
+        var hit = false;
+        for(var k = 0; k < kept.length; k++) if(iou(quads[i].box, kept[k].box) > 0.35){ hit = true; break; }
+        if(!hit) kept.push(quads[i]);
+        if(kept.length >= 16) break;
+      }
+      return orderQuads(kept);
+    }
+
+    function orderQuads(quads){
+      if(quads.length < 2) return quads;
+      var heights = quads.map(function(q){ return q.box.maxy - q.box.miny; }).sort(function(a, b){ return a - b; });
+      var med = heights[heights.length >> 1] || 1;
+      var rows = [];
+      quads.slice().sort(function(a, b){ return ((a.box.miny + a.box.maxy) - (b.box.miny + b.box.maxy)); }).forEach(function(q){
+        var cy = (q.box.miny + q.box.maxy) / 2;
+        var row = null;
+        for(var i = 0; i < rows.length; i++){
+          if(Math.abs(cy - rows[i].cy) < med * 0.45){ row = rows[i]; break; }
+        }
+        if(!row){ row = { cy: cy, items: [] }; rows.push(row); }
+        row.items.push(q);
+        var n = row.items.length;
+        row.cy = row.items.reduce(function(s, it){ return s + (it.box.miny + it.box.maxy) / 2; }, 0) / n;
+      });
+      var out = [];
+      rows.forEach(function(row){
+        row.items.sort(function(a, b){ return a.box.minx - b.box.minx; });
+        out.push.apply(out, row.items);
+      });
+      return out;
+    }
+
+    function detect(rgba, w, h){
+      if(!rgba || w < 32 || h < 32) return [];
+      var small = downGray(rgba, w, h, 520);
+      var mask = detectMask(small.gray, small.sw, small.sh);
+      return quadsFromMask(mask, small.sw, small.sh, small);
+    }
+
+    function sliceRGBA(rgba, w, h, x0, y0, x1, y1){
+      x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+      x1 = Math.min(w, Math.ceil(x1)); y1 = Math.min(h, Math.ceil(y1));
+      var cw = x1 - x0, ch = y1 - y0;
+      if(cw < 8 || ch < 8) return null;
+      var out = new Uint8ClampedArray(cw * ch * 4);
+      for(var y = 0; y < ch; y++){
+        var src = ((y0 + y) * w + x0) * 4;
+        out.set(rgba.subarray(src, src + cw * 4), y * cw * 4);
+      }
+      return { rgba: out, w: cw, h: ch, x0: x0, y0: y0 };
+    }
+
+    function contentBox(rgba, w, h){
+      var step = Math.max(1, (Math.max(w, h) / 180) | 0);
+      var corners = [];
+      function take(x0, y0, x1, y1){
+        for(var y = y0; y < y1; y += step){
+          for(var x = x0; x < x1; x += step) corners.push(lumaAt(rgba, (y * w + x) * 4));
+        }
+      }
+      var mw = Math.max(4, (w * 0.08) | 0), mh = Math.max(4, (h * 0.08) | 0);
+      take(0, 0, mw, mh); take(w - mw, 0, w, mh); take(0, h - mh, mw, h); take(w - mw, h - mh, w, h);
+      corners.sort(function(a, b){ return a - b; });
+      var med = corners[corners.length >> 1] || 0;
+      var col = new Float64Array(w), row = new Float64Array(h), cn = new Uint32Array(w), rn = new Uint32Array(h);
+      for(var y = 0; y < h; y += step){
+        for(var x = 0; x < w; x += step){
+          var d = Math.abs(lumaAt(rgba, (y * w + x) * 4) - med);
+          col[x] += d; cn[x]++; row[y] += d; rn[y]++;
+        }
+      }
+      function span(sum, n, len){
+        var on = [];
+        for(var i = 0; i < len; i++) if(n[i] && sum[i] / n[i] > 10) on.push(i);
+        if(on.length < 8) return [0, len - 1];
+        return [on[0], on[on.length - 1]];
+      }
+      var xs = span(col, cn, w), ys = span(row, rn, h);
+      return { x0: xs[0], x1: xs[1], y0: ys[0], y1: ys[1] };
+    }
+
+    function cellBusy(rgba, w, h){
+      var step = Math.max(1, (Math.max(w, h) / 40) | 0);
+      var sum = 0, sum2 = 0, n = 0;
+      for(var y = 0; y < h; y += step){
+        for(var x = 0; x < w; x += step){
+          var L = lumaAt(rgba, (y * w + x) * 4);
+          sum += L; sum2 += L * L; n++;
+        }
+      }
+      if(!n) return false;
+      var mean = sum / n;
+      var v = sum2 / n - mean * mean;
+      return v > 180;
+    }
+
+    function grid(rgba, w, h, cols, rows){
+      cols = cols || 3; rows = rows || 3;
+      var box = contentBox(rgba, w, h);
+      var cw = (box.x1 - box.x0) / cols;
+      var ch = (box.y1 - box.y0) / rows;
+      var quads = [];
+      for(var r = 0; r < rows; r++){
+        for(var c = 0; c < cols; c++){
+          var x0 = box.x0 + c * cw, x1 = x0 + cw;
+          var y0 = box.y0 + r * ch, y1 = y0 + ch;
+          var piece = sliceRGBA(rgba, w, h, x0, y0, x1, y1);
+          if(!piece) continue;
+          var found = detect(piece.rgba, piece.w, piece.h);
+          if(found.length){
+            var q = found[0];
+            q.pts = q.pts.map(function(p){ return { x: p.x + piece.x0, y: p.y + piece.y0 }; });
+            q.box = boxOf(q.pts);
+            quads.push(q);
+            continue;
+          }
+          if(!cellBusy(piece.rgba, piece.w, piece.h)) continue;
+          var m = 0.08;
+          var dx = piece.w * m, dy = piece.h * m;
+          var pts = [
+            { x: piece.x0 + dx, y: piece.y0 + dy },
+            { x: piece.x0 + piece.w - dx, y: piece.y0 + dy },
+            { x: piece.x0 + piece.w - dx, y: piece.y0 + piece.h - dy },
+            { x: piece.x0 + dx, y: piece.y0 + piece.h - dy }
+          ];
+          quads.push({ pts: pts, area: piece.w * piece.h, aspect: CARD_ASPECT, box: boxOf(pts), loose: true });
+        }
+      }
+      return quads;
+    }
+
+    function homography(dw, dh, quad){
+      // Maps output pixel (x, y) onto the source quad (TL, TR, BR, BL).
+      var src = quad, dst = [{x:0,y:0},{x:dw,y:0},{x:dw,y:dh},{x:0,y:dh}];
+      var A = [];
+      var b = [];
+      for(var i = 0; i < 4; i++){
+        var x = dst[i].x, y = dst[i].y, u = src[i].x, v = src[i].y;
+        A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+        A.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+        b.push(u); b.push(v);
+      }
+      // Gaussian elimination, 8x8.
+      var M = A.map(function(row, i){ return row.concat([b[i]]); });
+      for(var col = 0; col < 8; col++){
+        var piv = col;
+        for(var r = col + 1; r < 8; r++) if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+        var tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+        var div = M[col][col] || 1e-12;
+        for(var c2 = col; c2 < 9; c2++) M[col][c2] /= div;
+        for(var r2 = 0; r2 < 8; r2++){
+          if(r2 === col) continue;
+          var f = M[r2][col];
+          for(var c3 = col; c3 < 9; c3++) M[r2][c3] -= f * M[col][c3];
+        }
+      }
+      var h = M.map(function(row){ return row[8]; });
+      return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+    }
+
+    function warp(rgba, w, h, quad, dw, dh){
+      var H = homography(dw, dh, quad);
+      var out = new Uint8ClampedArray(dw * dh * 4);
+      for(var y = 0; y < dh; y++){
+        for(var x = 0; x < dw; x++){
+          var px = x + 0.5, py = y + 0.5;
+          var den = H[6] * px + H[7] * py + H[8];
+          if(!den) continue;
+          var sx = (H[0] * px + H[1] * py + H[2]) / den;
+          var sy = (H[3] * px + H[4] * py + H[5]) / den;
+          if(sx < 0 || sy < 0 || sx >= w - 1 || sy >= h - 1) continue;
+          var x0 = sx | 0, y0 = sy | 0;
+          var fx = sx - x0, fy = sy - y0;
+          var i00 = (y0 * w + x0) * 4;
+          var i10 = i00 + 4;
+          var i01 = i00 + w * 4;
+          var i11 = i01 + 4;
+          var o = (y * dw + x) * 4;
+          for(var ch = 0; ch < 4; ch++){
+            var a = rgba[i00 + ch], b = rgba[i10 + ch], c = rgba[i01 + ch], d = rgba[i11 + ch];
+            out[o + ch] = (a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy) | 0;
+          }
+        }
+      }
+      return out;
+    }
+
+    function describe(rgba, w, h, flip){
+      var x0 = (w * 0.10) | 0, x1 = Math.max(x0 + GW, (w * 0.90) | 0);
+      var y0 = (h * 0.10) | 0, y1 = Math.max(y0 + GH, (h * 0.90) | 0);
+      var cw = x1 - x0, ch = y1 - y0;
+      var bins = new Float64Array(DESC);
+      var counts = new Uint32Array(GW * GH);
+      for(var y = y0; y < y1; y++){
+        var by = ((y - y0) * GH / ch) | 0; if(by >= GH) by = GH - 1;
+        var sy = flip ? (h - 1 - y) : y;
+        for(var x = x0; x < x1; x++){
+          var bx = ((x - x0) * GW / cw) | 0; if(bx >= GW) bx = GW - 1;
+          var sx = flip ? (w - 1 - x) : x;
+          var i = (sy * w + sx) * 4;
+          var o = (by * GW + bx) * 3;
+          bins[o] += rgba[i]; bins[o + 1] += rgba[i + 1]; bins[o + 2] += rgba[i + 2];
+          counts[by * GW + bx]++;
+        }
+      }
+      var v = new Float32Array(DESC);
+      var mean = 0;
+      for(var k = 0; k < GW * GH; k++){
+        var n = counts[k] || 1;
+        v[k * 3] = bins[k * 3] / n;
+        v[k * 3 + 1] = bins[k * 3 + 1] / n;
+        v[k * 3 + 2] = bins[k * 3 + 2] / n;
+        mean += v[k * 3] + v[k * 3 + 1] + v[k * 3 + 2];
+      }
+      mean /= DESC;
+      var acc = 0;
+      for(var t = 0; t < DESC; t++){ v[t] -= mean; acc += v[t] * v[t]; }
+      var rms = Math.sqrt(acc / DESC) || 1;
+      for(var u = 0; u < DESC; u++) v[u] /= rms;
+      return v;
+    }
+
+    function dot(a, b){
+      var s = 0;
+      for(var i = 0; i < a.length; i++) s += a[i] * b[i];
+      return s;
+    }
+
+    // matrix is a Float32Array of length n * DESC, row-major. bases[i] groups printings.
+    function matchDescriptor(rgba, w, h, matrix, ids, bases){
+      if(!matrix || !ids || !ids.length) return null;
+      var n = ids.length;
+      var upright = describe(rgba, w, h, false);
+      var flipped = describe(rgba, w, h, true);
+      var best = -2, bestI = -1, second = -2, secondI = -1;
+      for(var i = 0; i < n; i++){
+        var row = i * DESC;
+        var s1 = 0, s2 = 0;
+        for(var k = 0; k < DESC; k++){
+          var m = matrix[row + k];
+          s1 += upright[k] * m;
+          s2 += flipped[k] * m;
+        }
+        var s = s1 > s2 ? s1 : s2;
+        s /= DESC;
+        if(s > best){ second = best; secondI = bestI; best = s; bestI = i; }
+        else if(s > second){ second = s; secondI = i; }
+      }
+      if(bestI < 0) return null;
+      var base = bases ? bases[bestI] : ids[bestI];
+      var rival = -2;
+      for(var j = 0; j < n; j++){
+        if(j === bestI) continue;
+        if(bases && bases[j] === base) continue;
+        var row2 = j * DESC;
+        var a = 0, b = 0;
+        for(var k2 = 0; k2 < DESC; k2++){
+          var m2 = matrix[row2 + k2];
+          a += upright[k2] * m2;
+          b += flipped[k2] * m2;
+        }
+        var sj = (a > b ? a : b) / DESC;
+        if(sj > rival) rival = sj;
+      }
+      var margin = best - (rival < -1 ? 0 : rival);
+      var strong = best >= ACCEPT_SCORE && margin >= ACCEPT_MARGIN;
+      // A clear gap over every other card, but a crop that is a bit loose: keep the
+      // guess and mark it for a look, instead of dropping the card.
+      var soft = !strong && best >= SOFT_SCORE && margin >= SOFT_MARGIN;
+      var ok = strong || soft;
+      return {
+        id: ok ? ids[bestI] : "",
+        guess: ids[bestI],
+        score: best,
+        margin: margin,
+        lowConf: soft || (strong && margin < LOW_MARGIN),
+        matched: ok
+      };
+    }
+
+    return {
+      GW: GW, GH: GH, DESC: DESC,
+      ACCEPT_SCORE: ACCEPT_SCORE, ACCEPT_MARGIN: ACCEPT_MARGIN,
+      detect: detect, grid: grid, warp: warp, describe: describe,
+      matchDescriptor: matchDescriptor, orderQuads: orderQuads,
+      quadAspect: quadAspect
+    };
+  })();
+
+  if(typeof window!=="undefined") window.MULTI_SCAN = MULTI_SCAN;
+  // ==== MULTI SCAN END (logic) ====
+
+  // Photo of several cards: pick or take one picture, find each card, match it on
+  // device, and stage the rows in the bulk scan review before anything is added.
+  (function(){
+    var scrim=$("multiScanScrim"); if(!scrim) return;
+    var layout="auto";
+    var busy=false;
+    var multiIndex=null;
+    var indexPromise=null;
+
+    function setStatus(text){ var el=$("multiScanStatus"); if(el) el.textContent=text||""; }
+    function yieldTick(){ return new Promise(function(res){ setTimeout(res, 0); }); }
+    function hideMulti(){ scrim.hidden=true; }
+    function openMulti(){
+      setStatus("");
+      scrim.hidden=false;
+      ensureIndex(function(done, total){
+        if(scrim.hidden || busy) return;
+        if(done<total) setStatus("Preparing the card match, "+done+" of "+total+"…");
+        else setStatus("");
+      });
+    }
+
+    var openBtn=$("qMultiBtn"); if(openBtn) openBtn.onclick=function(){ if(!busy) openMulti(); };
+    var again=$("qMultiReview"); if(again) again.onclick=function(){ if(SCAN_REVIEW) SCAN_REVIEW.open(); };
+    var closeBtn=$("multiScanClose"); if(closeBtn) closeBtn.onclick=hideMulti;
+    scrim.addEventListener("click", function(e){ if(e.target===scrim) hideMulti(); });
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scrim.hidden) hideMulti(); });
+
+    var bar=$("multiScanLayout");
+    if(bar) bar.addEventListener("click", function(e){
+      var b=e.target.closest ? e.target.closest(".seg") : null; if(!b) return;
+      layout=b.getAttribute("data-layout")||"auto";
+      Array.prototype.forEach.call(bar.querySelectorAll(".seg"), function(x){ x.setAttribute("aria-pressed", x===b ? "true" : "false"); });
+    });
+
+    function bindFile(btnId, inputId){
+      var btn=$(btnId), input=$(inputId); if(!btn || !input) return;
+      btn.onclick=function(){ if(!busy) input.click(); };
+      input.onchange=function(){
+        var file=input.files && input.files[0];
+        input.value="";
+        if(file) runFile(file);
+      };
+    }
+    bindFile("multiScanFileBtn", "multiScanFile");
+    bindFile("multiScanCamBtn", "multiScanCam");
+
+    function localArt(card){
+      var src="";
+      try{ src=imgSrc(card)||""; }catch(e){ src=""; }
+      if(!src || /^https?:/i.test(src) || /^data:/i.test(src)) return "";
+      return src;
+    }
+    function indexKey(){
+      return "v1-"+(typeof CATALOGUE_VERSION!=="undefined"?CATALOGUE_VERSION:0)+"-"+(CARDS?CARDS.length:0);
+    }
+    function cardsForIndex(){
+      var list=[];
+      CARDS.forEach(function(c){
+        var src=localArt(c); if(!src) return;
+        list.push({ id:c.id, base:c.base || String(c.id).replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,""), src:src });
+      });
+      return list;
+    }
+    function idbStore(mode){
+      return new Promise(function(resolve){
+        try{
+          var req=indexedDB.open("spheredex-match", 1);
+          req.onupgradeneeded=function(){ if(!req.result.objectStoreNames.contains("index")) req.result.createObjectStore("index"); };
+          req.onerror=function(){ resolve(null); };
+          req.onsuccess=function(){
+            try{ resolve(req.result.transaction("index", mode).objectStore("index")); }
+            catch(e){ resolve(null); }
+          };
+        }catch(e){ resolve(null); }
+      });
+    }
+    function idbGet(key){
+      return idbStore("readonly").then(function(store){
+        if(!store) return null;
+        return new Promise(function(resolve){
+          var g=store.get(key);
+          g.onsuccess=function(){ resolve(g.result||null); };
+          g.onerror=function(){ resolve(null); };
+        });
+      });
+    }
+    function idbPut(key, value){
+      return idbStore("readwrite").then(function(store){
+        if(!store) return false;
+        return new Promise(function(resolve){
+          try{
+            var p=store.put(value, key);
+            p.onsuccess=function(){ resolve(true); };
+            p.onerror=function(){ resolve(false); };
+          }catch(e){ resolve(false); }
+        });
+      });
+    }
+    function loadImg(src){
+      return new Promise(function(resolve){
+        var img=new Image();
+        img.onload=function(){ resolve(img); };
+        img.onerror=function(){ resolve(null); };
+        img.src=src;
+      });
+    }
+    function describeElement(img){
+      var nw=img.naturalWidth||img.width, nh=img.naturalHeight||img.height;
+      if(!nw || !nh) return null;
+      var w=48, h=Math.max(16, Math.round(w * nh / nw));
+      if(h>96){ h=96; w=Math.max(16, Math.round(h * nw / nh)); }
+      var canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      var g=canvas.getContext("2d", {willReadFrequently:true});
+      if(!g) return null;
+      g.drawImage(img, 0, 0, w, h);
+      var data=g.getImageData(0, 0, w, h);
+      return MULTI_SCAN.describe(data.data, w, h, false);
+    }
+    function buildIndex(onProgress){
+      var list=cardsForIndex();
+      var ids=[], bases=[], rows=[], i=0;
+      function step(){
+        if(i>=list.length){
+          var matrix=new Float32Array(ids.length * MULTI_SCAN.DESC);
+          for(var r=0;r<rows.length;r++) matrix.set(rows[r], r * MULTI_SCAN.DESC);
+          return { ids:ids, bases:bases, matrix:matrix, key:indexKey() };
+        }
+        var item=list[i++];
+        if(onProgress) onProgress(i, list.length);
+        return loadImg(item.src).then(function(img){
+          if(img){
+            var desc=describeElement(img);
+            if(desc){ ids.push(item.id); bases.push(item.base); rows.push(desc); }
+          }
+          return yieldTick().then(step);
+        });
+      }
+      return Promise.resolve().then(step);
+    }
+    function ensureIndex(onProgress){
+      if(multiIndex && multiIndex.key===indexKey() && multiIndex.ids.length){
+        if(onProgress) onProgress(multiIndex.ids.length, multiIndex.ids.length);
+        return Promise.resolve(multiIndex);
+      }
+      if(indexPromise) return indexPromise;
+      indexPromise=idbGet(indexKey()).then(function(cached){
+        if(cached && cached.ids && cached.ids.length && cached.matrix && cached.matrix.length===cached.ids.length*MULTI_SCAN.DESC){
+          multiIndex={ ids:cached.ids, bases:cached.bases||cached.ids, matrix:cached.matrix, key:indexKey() };
+          if(onProgress) onProgress(cached.ids.length, cached.ids.length);
+          return multiIndex;
+        }
+        return buildIndex(onProgress).then(function(idx){
+          multiIndex=idx;
+          if(idx.ids.length) idbPut(indexKey(), { ids:idx.ids, bases:idx.bases, matrix:idx.matrix });
+          return idx;
+        });
+      }).then(function(idx){ indexPromise=null; return idx; }, function(err){ indexPromise=null; throw err; });
+      return indexPromise;
+    }
+    function fitCanvas(source, sw, sh){
+      var maxEdge=1600;
+      var scale=Math.min(1, maxEdge / Math.max(sw, sh));
+      var w=Math.max(1, Math.round(sw * scale)), h=Math.max(1, Math.round(sh * scale));
+      var canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      var g=canvas.getContext("2d", {willReadFrequently:true});
+      g.drawImage(source, 0, 0, w, h);
+      var data=g.getImageData(0, 0, w, h);
+      return { rgba:data.data, w:w, h:h };
+    }
+    function decodeFile(file){
+      if(typeof createImageBitmap==="function"){
+        return createImageBitmap(file).then(function(bmp){
+          var image=fitCanvas(bmp, bmp.width, bmp.height);
+          if(bmp.close) try{ bmp.close(); }catch(e){}
+          return image;
+        }).catch(function(){ return decodeViaImage(file); });
+      }
+      return decodeViaImage(file);
+    }
+    function decodeViaImage(file){
+      return new Promise(function(resolve, reject){
+        var url=URL.createObjectURL(file);
+        var img=new Image();
+        img.onload=function(){ URL.revokeObjectURL(url); resolve(fitCanvas(img, img.naturalWidth||img.width, img.naturalHeight||img.height)); };
+        img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error("read")); };
+        img.src=url;
+      });
+    }
+    function thumbURL(rgba, w, h){
+      try{
+        var canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        var g=canvas.getContext("2d");
+        var img=g.createImageData(w, h);
+        img.data.set(rgba);
+        g.putImageData(img, 0, 0);
+        return canvas.toDataURL("image/jpeg", 0.72);
+      }catch(e){ return ""; }
+    }
+    function runFile(file){
+      if(!file || busy) return;
+      busy=true;
+      setStatus("Reading photo…");
+      decodeFile(file).then(function(image){
+        setStatus("Finding cards…");
+        return yieldTick().then(function(){
+          var quads=layout==="b9" ? MULTI_SCAN.grid(image.rgba, image.w, image.h, 3, 3)
+            : layout==="b12" ? MULTI_SCAN.grid(image.rgba, image.w, image.h, 3, 4)
+            : MULTI_SCAN.detect(image.rgba, image.w, image.h);
+          if(!quads.length){
+            setStatus("No separate cards found. Spread them out a little, or choose 9 pocket or 12 pocket for a binder page.");
+            busy=false;
+            return null;
+          }
+          setStatus("Preparing the card match…");
+          return ensureIndex(function(done, total){ setStatus("Preparing the card match, "+done+" of "+total+"…"); }).then(function(index){
+            var pending=[], i=0;
+            function next(){
+              if(i>=quads.length) return pending;
+              var n=i+1;
+              setStatus("Matching card "+n+" of "+quads.length+"…");
+              return yieldTick().then(function(){
+                var q=quads[i++];
+                var crop=MULTI_SCAN.warp(image.rgba, image.w, image.h, q.pts, 140, 196);
+                var thumb=MULTI_SCAN.warp(image.rgba, image.w, image.h, q.pts, 80, 112);
+                var m=index.ids.length ? MULTI_SCAN.matchDescriptor(crop, 140, 196, index.matrix, index.ids, index.bases) : null;
+                pending.push({ id: m && m.matched ? m.id : "", lowConf: !!(m && m.lowConf), score: m ? m.score : 0, thumb: thumbURL(thumb, 80, 112) });
+                return next();
+              });
+            }
+            return next();
+          });
+        });
+      }).then(function(pending){
+        busy=false;
+        if(!pending) return;
+        SCAN_REVIEW.stage(pending);
+        hideMulti();
+        SCAN_REVIEW.open();
+      }).catch(function(){
+        busy=false;
+        setStatus("That photo could not be read. Try another one.");
+      });
+    }
+  })();
+
 
   function paintSeg(rowId,attr,val){
     var row=$(rowId); if(!row) return;
@@ -15893,7 +16855,22 @@ label.acctsetrow { align-items:center; }
     };
     var reviewClose=$("scanReviewClose"), reviewDone=$("scanReviewDone");
     if(reviewClose) reviewClose.onclick=function(){ dismissOverlay(); };
-    if(reviewDone) reviewDone.onclick=function(){ dismissOverlay(); };
+    if(reviewDone) reviewDone.onclick=function(){
+      var pend=SCAN_REVIEW.session.pending||[];
+      if(pend.length){
+        if(SCAN_REVIEW.blocked()){
+          var intro=$("scanReviewIntro");
+          if(intro) intro.textContent="Pick a card for each unmatched row, or remove it, before adding.";
+          return;
+        }
+        var sel=$("scanReviewCol");
+        var colId=(sel&&sel.value) || ((typeof activeCol==="function" && activeCol()) ? activeCol().id : "");
+        var n=SCAN_REVIEW.commit(colId);
+        if(n && typeof toast==="function") toast(n===1 ? "Added 1 card" : "Added "+n+" cards");
+        return;
+      }
+      dismissOverlay();
+    };
     if(scanReviewScrim){
       scanReviewScrim.addEventListener("click",function(e){ if(e.target===scanReviewScrim) dismissOverlay(); });
       document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!scanReviewScrim.hidden) dismissOverlay(); });
@@ -15957,6 +16934,7 @@ label.acctsetrow { align-items:center; }
     var pb=$("qPriceBtn"); if(pb) pb.onclick=openPriceList;
     var Q_INFO={
       scan:"Point the camera at a card, or at the grading label on a slab. SphereDex recognises it right on your device (images are never uploaded) and shows a quick check before you add it. Keep scanning (on by default, in Settings) brings the camera back for the next card, so you can add a whole stack.",
+      multi:"Take or choose one photo of several cards, such as a spread of pulls or a binder page. SphereDex finds each card on this device (the photo is never uploaded) and opens the review list. Fix a match, or pick an unmatched card, before anything is added. Scan card with camera stays the way to scan a single card.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
       csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. Exports from palworldtcg.gg, Palify and Pal Collector are accepted too, with Japanese and Chinese cards read from a Language column. A Missing or Wishlist export is a shopping list, not a collection, so it cannot be imported. You see a preview before anything is added, and it lands as a new collection named after the file."
     };
