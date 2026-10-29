@@ -81,8 +81,8 @@ def app_version(src):
     return m.group(1)
 
 
-def highlights(src, version):
-    """RELEASE_HIGHLIGHTS[version] as written in the app, decoded from its JS escapes."""
+def highlight_map(src):
+    """RELEASE_HIGHLIGHTS object from the app source, decoded from its JS escapes."""
     m = re.search(r"var RELEASE_HIGHLIGHTS\s*=\s*\{", src)
     if not m:
         raise SystemExit("RELEASE_HIGHLIGHTS not found in src/paldeck.html")
@@ -96,7 +96,43 @@ def highlights(src, version):
             if depth == 0:
                 break
         i += 1
-    body = json.loads(src[start:i + 1])
+    return json.loads(src[start:i + 1])
+
+
+def ver_num(v):
+    p = str(v or "").split(".")
+
+    def part(i):
+        if i >= len(p) or not p[i].isdigit():
+            return 0
+        return int(p[i])
+
+    return part(0) * 10000 + part(1) * 100 + part(2)
+
+
+def described_version(src):
+    """The release the headliner can describe.
+
+    A feature release has its own lines. A store train bump can ship with nothing new
+    to announce, and the headliner keeps the newest earlier release.
+    """
+    version = app_version(src)
+    body = highlight_map(src)
+
+    def filled(v):
+        return any(str(x).strip() for x in body.get(v, []))
+
+    if filled(version):
+        return version
+    earlier = [v for v in body if ver_num(v) < ver_num(version) and filled(v)]
+    if not earlier:
+        raise SystemExit("no release highlights at or before %s" % version)
+    return max(earlier, key=ver_num)
+
+
+def highlights(src, version):
+    """RELEASE_HIGHLIGHTS[version] as written in the app, decoded from its JS escapes."""
+    body = highlight_map(src)
     if version not in body:
         raise SystemExit(
             "no RELEASE_HIGHLIGHTS for %s (have %s): add them, or pass --bullet"
