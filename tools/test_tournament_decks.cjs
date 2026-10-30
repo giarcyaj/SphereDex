@@ -294,6 +294,7 @@ function loadGrid() {
     keysOn: function(obj) { return Object.keys(obj).filter(function(k) { return obj[k]; }); },
     setFilterCodes: function() { return []; },
     promoTypeAllows: function() { return true; },
+    workMatches: function() { return true; },
     cardMatchesQuery: function(c, q) { return c.id.toLowerCase().indexOf(q.toLowerCase()) !== -1; },
     tdIsStapleCard: function(c) { return !!staple[c.id]; },
     isWished: function(id) { return !!wished[id]; },

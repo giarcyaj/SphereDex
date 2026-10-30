@@ -135,5 +135,18 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
-    </application>
+    
+        <!-- Lets the camera app write the photo scan shot into our own cache folder and hand back a uri.
+             Exported false and granted per use, so nothing else can read it. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+</application>
 </manifest>
