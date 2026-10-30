@@ -16,16 +16,32 @@ import make_kofi_card as k  # noqa: E402
 APP = open(k.APP, encoding="utf-8").read()
 
 
+def headliner(src):
+    """Lines for this build, or the newest earlier release when a train bump has none."""
+    described = k.described_version(src)
+    return described, k.highlights(src, described)
+
+
 class Highlights(unittest.TestCase):
     def test_this_build_has_them(self):
         version = k.app_version(APP)
-        lines = k.highlights(APP, version)
-        self.assertTrue(lines, "this build's version has no RELEASE_HIGHLIGHTS")
+        described, lines = headliner(APP)
+        self.assertTrue(lines, "no release highlights at or before this build")
         self.assertLessEqual(len(lines), 5)
+        self.assertLessEqual(k.ver_num(described), k.ver_num(version))
+
+    def test_a_train_bump_keeps_the_newest_earlier_release(self):
+        src = (
+            'var APP_VERSION = "2.4.8";\n'
+            'var RELEASE_HIGHLIGHTS = {"2.4": ["old"], "2.4.6": ["a"], "2.4.7": ["b", "c"]};'
+        )
+        self.assertEqual(k.described_version(src), "2.4.7")
+        self.assertEqual(k.highlights(src, k.described_version(src)), ["b", "c"])
 
     def test_js_escapes_are_decoded(self):
         # The app writes its separator as ·, which must reach the card as the character itself.
-        joined = " ".join(k.highlights(APP, k.app_version(APP)))
+        _described, lines = headliner(APP)
+        joined = " ".join(lines)
         self.assertNotIn("\\u", joined)
 
     def test_unknown_version_says_so(self):
@@ -45,7 +61,7 @@ class Fitting(unittest.TestCase):
         self.assertGreaterEqual(k.bullet_px(["x" * 4000]), k.BULLET_PX_MIN)
 
     def test_the_real_bullets_fit_on_one_line(self):
-        lines = k.highlights(APP, k.app_version(APP))
+        _described, lines = headliner(APP)
         px = k.bullet_px(lines)
         widest = max(len(b) for b in lines) * k.CHAR_RATIO * px
         self.assertLessEqual(widest, k.BULLET_ROOM)
@@ -69,11 +85,11 @@ class Copy(unittest.TestCase):
                         "the dash check cannot see bullet copy")
 
     def test_this_build_passes_the_check(self):
-        version = k.app_version(APP)
-        seen = k.visible_text(self.build(k.highlights(APP, version), version))
+        described, lines = headliner(APP)
+        seen = k.visible_text(self.build(lines, described))
         for bad in k.DASHES:
             self.assertNotIn(bad, seen, "a dash reached the card copy: %r" % bad)
-        self.assertIn(version, seen)
+        self.assertIn(described, seen)
 
     def test_markup_in_a_bullet_is_escaped(self):
         rows = k.rows_html(["Trades <b> & decks"])
