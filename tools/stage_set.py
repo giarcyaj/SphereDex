@@ -84,6 +84,39 @@ def fetch_products():
 PER_PAGE = 100
 KNOWN_KINDS = {"Pal", "Structure", "Gear", "Event", "Soul"}
 
+# Cards the official card list leaves out. A later stage of the same set must keep them: the list is
+# the source for everything else, and pasting a fresh raw_rows.js over the catalogue would drop a card
+# that was added by hand. Once the list starts returning the number, the official row wins and this
+# copy is not appended. ESOUL-011 is the gold SSS Soul in Legends Awaken (Jetragon foil), the same
+# shape as Dawn of Palpagos ESOUL-002. The artwork is published; the list is not.
+OMITTED_NOTE = "Added by hand because the official list omits it."
+OMITTED_BY_SET = {
+    "EBP02": [{
+        "card_number": "ESOUL-011",
+        "card_name": "Soul",
+        "card_kind": "Soul",
+        "card_kind_sub": "",
+        "rare": "SSS",
+        "color": "",
+        "type": "",
+        "aptitude": "",
+        "cost": "",
+        "power": "",
+        "attack": "",
+        "picture": "EBP02/ESOUL-011.png",
+    }],
+}
+
+
+def merge_omitted(code, cards):
+    """Append hand-kept cards the official list did not return. Never duplicates a number it did."""
+    have = {c.get("card_number") for c in cards}
+    extra = []
+    for card in OMITTED_BY_SET.get(code, []):
+        if card.get("card_number") not in have:
+            extra.append(dict(card))
+    return list(cards) + extra
+
 
 def fetch_set(code):
     """Paginate the expansion. A short page (< PER_PAGE) is the definitive last-page signal -
@@ -157,6 +190,15 @@ def main():
     complete = (args.limit == 0 and total is not None and len(cards) == total)
     if not args.limit and total is not None and len(cards) != total:
         print(f"!! WARNING: fetched {len(cards)} but upstream total={total} - stage may be incomplete")
+    # After the completeness check, so a hand-kept card is not mistaken for a short fetch.
+    # A --limit run is a sample of the list and does not append the kept cards.
+    kept = []
+    if args.limit == 0:
+        fetched_ids = {c.get("card_number") for c in cards}
+        cards = merge_omitted(code, cards)
+        kept = [c.get("card_number") for c in cards if c.get("card_number") not in fetched_ids]
+        if kept:
+            print("keeping " + ", ".join(kept) + " (" + OMITTED_NOTE[0].lower() + OMITTED_NOTE[1:] + ")")
     unknown_kinds = sorted({c.get("card_kind", "") for c in cards} - KNOWN_KINDS)
     if unknown_kinds:
         print(f"!! NOTE: unseen card_kind(s) {unknown_kinds} - verify empty-field handling for these")
@@ -164,7 +206,14 @@ def main():
 
     # ---- 1. RAW rows (app catalogue) ----
     rows = [to_row(c, code) for c in cards]
-    raw_js = ",\n".join(json.dumps(r, ensure_ascii=False, separators=(",", ":")) for r in rows)
+    chunks = []
+    for r in rows:
+        line = json.dumps(r, ensure_ascii=False, separators=(",", ":"))
+        if r[0] in kept:
+            # The comment rides above the row so a paste into RAW2 keeps the reason with the card.
+            line = "// " + r[0] + " " + OMITTED_NOTE + "\n" + line
+        chunks.append(line)
+    raw_js = ",\n".join(chunks)
     with open(os.path.join(out, "raw_rows.js"), "w", encoding="utf-8") as f:
         f.write("/* " + code + " - " + str(len(rows)) + " rows. Append to RAW2 in paldeck.html */\n")
         f.write(raw_js + "\n")
@@ -222,7 +271,7 @@ def main():
         "code": code, "name": name, "type": prod.get("type", ""),
         "release": release, "cardCount": len(cards), "upstreamTotal": total,
         "complete": bool(complete), "unknownKinds": unknown_kinds,
-        "missingImages": missing_img, "emDash": emdash,
+        "missingImages": missing_img, "emDash": emdash, "keptByHand": kept,
     }
     # snippets use the REAL app field names (verified against paldeck.html). Official product names
     # can contain literal double-quotes, so emit every display string as a safe JS literal.
@@ -250,6 +299,7 @@ def main():
         f"# Stage report: {code}", "",
         f"- Product: **{name}**  (`{meta['type']}`, release {release})",
         f"- Cards: **{len(cards)}** of upstream total **{total}**  ->  complete: **{complete}**",
+        "- Kept by hand: " + (", ".join(kept) if kept else "none") + " (" + OMITTED_NOTE[0].lower() + OMITTED_NOTE[1:] + ")",
         f"- By kind: " + ", ".join(f"{k} {n}" for k, n in kinds.most_common()),
         f"- Artwork: downloaded {dl}, reused {skipped}, missing {len(missing_img)}",
         f"- EM-dash cells (must be 0): {len(emdash)}",

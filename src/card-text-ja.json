@@ -1170,6 +1170,11 @@
    "name": "ソウル",
    "sourceNumber": "SOUL-008"
   },
+  "ESOUL-011": {
+   "match": "number only, card carries no stats",
+   "name": "ソウル",
+   "sourceNumber": "SOUL-011"
+  },
   "ESOUL-014": {
    "match": "number only, card carries no stats",
    "name": "ソウル",
