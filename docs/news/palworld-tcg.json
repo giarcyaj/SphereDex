@@ -1,6 +1,72 @@
 {
-  "updated_at": "2026-10-28T07:10:00Z",
+  "updated_at": "2026-10-29T07:15:00Z",
   "items": [
+    {
+      "title": "Kitanis Cup registration closes tomorrow",
+      "url": "https://x.com/PalworldOCG/status/2115654866236592392",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-29T04:00:01Z",
+      "category": "tournament",
+      "summary": "Official Japanese account reminds players that registration for the Kitanis Cup ends tomorrow.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2115654866236592392"
+    },
+    {
+      "title": "Errata published for PR Card Pack Vol.2",
+      "url": "https://x.com/PalworldOCG/status/2115632213555663315",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-29T02:30:00Z",
+      "category": "official",
+      "summary": "Official Japanese account posts an errata notice covering cards in PR Card Pack Vol.2.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2115632213555663315"
+    },
+    {
+      "title": "Selyne and Saya teaser ahead of Legends Awaken launch",
+      "url": "https://x.com/PalworldOCG_EN/status/2115624666307932483",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-29T02:00:01Z",
+      "category": "official",
+      "summary": "Official English account posts a Selyne and Saya teaser line announcing a new era, one day before Legends Awaken goes on sale on October 30.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2115624666307932483"
+    },
+    {
+      "title": "One day until Legends Awaken release",
+      "url": "https://x.com/PalworldOCG/status/2115624661744861682",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-29T02:00:00Z",
+      "category": "release",
+      "summary": "Official Japanese account counts down to the Legends Awaken release, one day away.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2115624661744861682"
+    },
+    {
+      "title": "r/PalworldTCG discusses Challenger Cup Season 2 rewards",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1xhm2sh/rewards_for_challenger_cup_season_2/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-10-28T11:58:43Z",
+      "category": "community",
+      "summary": "A thread on the Season 2 reward cards; commenters think one is an alt-art Awakening of Legends and the poster says the rewards cover January 1-31.",
+      "unconfirmed": false,
+      "id": "www-reddit-com-r-palworldtcg-comments-1xhm2sh-rewards-for-challenger-cup-season-2"
+    },
+    {
+      "title": "r/PalworldTCG shares a first look at Set 3 Eternal Ascent",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1xhm1fa/first_look_at_set_3_eternal_ascent/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-10-28T11:56:50Z",
+      "category": "community",
+      "summary": "Community post sharing a look at Eternal Ascent cards; commenters mention Lifmunk, Lunaris, and the knights Paladius and Necromus.",
+      "unconfirmed": false,
+      "id": "www-reddit-com-r-palworldtcg-comments-1xhm1fa-first-look-at-set-3-eternal-ascent"
+    },
     {
       "id": "x-com-palworldocg-en-status-2115262281898422455",
       "title": "Card reveal: SP Axel's Secret Plan (Legends Awaken)",
