@@ -4103,7 +4103,11 @@ label.acctsetrow { align-items:center; }
   // one it was built with, and keeps what it gets, so the cards survive going offline and the next launch.
   // Rows arrive in the same shape as the table above and go through the same builder, so a delivered card
   // is indistinguishable from a baked one everywhere else in the app.
-  var CATALOGUE_VERSION = 4;              // bump when new cards are baked into a build
+  // Bump when new cards are baked into a build. 5 rather than 4 on purpose: the payload published as 4 was
+  // built before Legends Awaken was finished and carries 342 cards with only 55 of its 164. An install that
+  // already fetched that copy stored version 4 and now asks have=4, so republishing as 4 would leave it
+  // stranded on a half set. 5 is newer than anything stored, so every build is offered the full 451.
+  var CATALOGUE_VERSION = 5;
   var CAT_KEY = "palvault-catalogue";
   function recountCards(){
     TOTAL = CARDS.length;
