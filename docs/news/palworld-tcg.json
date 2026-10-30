@@ -1,6 +1,76 @@
 {
-  "updated_at": "2026-10-29T07:15:00Z",
+  "updated_at": "2026-10-30T07:15:00Z",
   "items": [
+    {
+      "title": "Release-day live stream for Booster Pack Vol. 2",
+      "url": "https://x.com/PalworldOCG/status/2116031676858188190",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-30T04:57:20Z",
+      "category": "official",
+      "summary": "The Japanese account announced a launch-day YouTube live stream at 19:00 with producer Kitanis and two guests opening packs.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2116031676858188190",
+      "image": "https://pbs.twimg.com/media/HV2mzwwaIAAosiw.jpg"
+    },
+    {
+      "title": "New Booster Pack Vol. 2 advertisement in Osu Shopping District",
+      "url": "https://x.com/PalworldOCG/status/2116014688828043710",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-30T03:49:50Z",
+      "category": "official",
+      "summary": "Official Japanese account shows a new tarpaulin ad for Booster Pack Vol. 2 in the Osu Shopping District, on display until November 29.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2116014688828043710",
+      "image": "https://pbs.twimg.com/media/HV2X2BrbMAAZqQw.jpg"
+    },
+    {
+      "title": "Challengers Cup Season 1 tournament rescheduled",
+      "url": "https://x.com/PalworldOCG/status/2116005956438147118",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-10-30T03:15:08Z",
+      "category": "tournament",
+      "summary": "The event, cancelled because of Bushi Navi maintenance, is rescheduled to November 5 at 18:00 at Card Box Takatsuki; applications close November 4.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2116005956438147118"
+    },
+    {
+      "title": "Legends Awaken booster pack is now on sale",
+      "url": "https://x.com/PalworldOCG_EN/status/2116001384059621845",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-30T02:56:58Z",
+      "category": "release",
+      "summary": "The official English account says Legends Awaken launches worldwide today in English, Japanese and Simplified Chinese, adding new Legendary Pals.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2116001384059621845",
+      "image": "https://pbs.twimg.com/media/HV2LNKObUAApQFR.jpg"
+    },
+    {
+      "title": "r/PalworldTCG asks why Eternal Ascent box prices went up before launch",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1xj0ncd/is_there_a_reason_for_price_increases/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-10-30T00:08:38Z",
+      "category": "pricing",
+      "summary": "A poster shares screenshots showing GameNerdz raised Eternal Ascent box prices a month before sales start and asks whether there is a reason.",
+      "unconfirmed": false,
+      "id": "www-reddit-com-r-palworldtcg-comments-1xj0ncd-is-there-a-reason-for-price-increases"
+    },
+    {
+      "title": "Palworld OCG at Lucca Comics & Games 2026",
+      "url": "https://x.com/PalworldOCG_EN/status/2115734404773679262",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-10-29T09:16:05Z",
+      "category": "official",
+      "summary": "Demo sessions with prizes are running at booth CAR431 in Lucca, with Legends Awaken going on sale October 30.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2115734404773679262",
+      "image": "https://pbs.twimg.com/media/HVyCcV3aQAAX_yv.jpg"
+    },
     {
       "title": "Kitanis Cup registration closes tomorrow",
       "url": "https://x.com/PalworldOCG/status/2115654866236592392",
