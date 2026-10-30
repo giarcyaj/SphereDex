@@ -23,9 +23,13 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = "2.4"
-OUT_WEBP = ROOT / "docs" / "app" / "img" / "UPDATE_2_4.webp"
-OUT_PNG = ROOT / "tmp" / "banner-2.4.png"
+# The version and its four bullet lines come from the command line so a release does not need this file
+# edited. With no arguments it still renders 2.4 exactly as before, which is what the earlier banners used.
+#   python tools/make_release_banner.py 2.4.7 "Share a deck" "Photograph a page" "Price a list" "Work filter"
+VERSION = sys.argv[1] if len(sys.argv) > 1 else "2.4"
+_SLUG = VERSION.replace(".", "_")
+OUT_WEBP = ROOT / "docs" / "app" / "img" / ("UPDATE_%s.webp" % _SLUG)
+OUT_PNG = ROOT / "tmp" / ("banner-%s.png" % VERSION)
 W, H = 1600, 900
 
 FONTS = ROOT / "docs" / "fonts"
@@ -48,7 +52,11 @@ DOTS = [(55, 200, 103), (255, 176, 32), (18, 227, 245), (176, 124, 255)]
 
 # The panel rows: the headline card first. Numbers only; names are read from the data.
 PANEL_CARDS = ["EBP01-025", "EBP01-001"]
-BULLETS = ["Japanese card names", "Price history", "Stock at a glance", "Import from other trackers"]
+BULLETS = sys.argv[2:6] if len(sys.argv) > 2 else ["Japanese card names", "Price history", "Stock at a glance", "Import from other trackers"]
+# A dash in a bullet would reach the Home card, which is user facing copy, so refuse it here rather than ship it.
+for _b in BULLETS:
+    if any(ch in _b for ch in "-–—"):
+        raise SystemExit("banner bullet contains a dash, rewrite it: %r" % _b)
 
 
 def font(path, size):
