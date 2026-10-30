@@ -17,6 +17,7 @@ name: Tests
 #      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
 #      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
 #      tools/test_trade_check.cjs — trade checker lists, prices, collection move and history.
+#      tools/test_deck_share.cjs — deck share links: round trip, unknown cards and bad counts.
 #      tools/test_small_fixes.cjs — shop list open state, notification permission note, push registration, baked sealed art.
 #      tools/test_account_sync.cjs — accounts on one phone, follows saved to the account, the account settings
 #      merge, and the startup ordering guards (2.4.1 shipped blank from a top level read of a later var).
@@ -82,7 +83,9 @@ jobs:
             "SCAN REVIEW BEGIN (styles" \
             "SCAN REVIEW END (styles)" \
             "SCAN REVIEW BEGIN (logic" \
-            "SCAN REVIEW END (logic)"; do
+            "SCAN REVIEW END (logic)" \
+            "MULTI SCAN BEGIN (logic" \
+            "MULTI SCAN END (logic)"; do
             count=$(grep -c -F "$marker" src/paldeck.html || true); count=${count:-0}
             if [ "$count" != "1" ]; then
               echo "::error::src/paldeck.html must contain exactly one occurrence of: $marker (found ${count})"
@@ -106,6 +109,9 @@ jobs:
 
       - name: Scan-review guard suite
         run: node tools/test_scan_review.cjs
+
+      - name: Multi-card photo scan
+        run: node tools/test_multi_scan.cjs
 
       - name: Editions / CSV guard suite
         run: node tools/test_editions.cjs
@@ -152,6 +158,9 @@ jobs:
       - name: Chase card second hand check
         run: node tools/test_chase_check.cjs
 
+      - name: Per copy photos
+        run: node tools/test_copy_photos.cjs
+
       - name: Add to calendar on Releases (.ics)
         run: node tools/test_release_calendar.cjs
 
@@ -161,6 +170,11 @@ jobs:
       - name: Trade checker
         run: node tools/test_trade_check.cjs
 
+      - name: Printable missing cards checklist
+        run: node tools/test_missing_checklist.cjs
+
+      - name: Share a deck as a link
+        run: node tools/test_deck_share.cjs
       - name: Storage location
         run: node tools/test_storage_location.cjs
 
@@ -187,6 +201,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # Every step above names ONE suite, so a suite added without touching this file never ran. Five had
+      # already slipped through that way (price list, trial decks, work filter, service worker update,
+      # rewards statue). This runs the whole folder, so a new tools/test_*.cjs is covered the day it lands.
+      - name: Every Node suite, including any not named above
+        run: node --test tools/test_*.cjs
 
       - name: Run tool tests (news feed, Sieve, rebuild)
         working-directory: tools

@@ -424,6 +424,13 @@
   .deckprint li b { display:inline-block; min-width:2em; }
   .deckprint .dpnum { font-family:ui-monospace,Menlo,Consolas,monospace; margin-right:8px; }
   .deckprint .dpfoot { margin-top:20px; color:#555; font-size:.78rem; }
+  .deckprint .dpopt { display:flex; align-items:center; margin:4px 8px 4px 0; color:#111; font-size:.9rem; font-weight:650; }
+  .deckprint .dpopt input { margin:0 6px 0 0; }
+  .deckprint .dpbox { display:inline-block; width:.95em; height:.95em; border:1.5px solid #111; border-radius:2px; margin-right:8px; vertical-align:-.12em; }
+  .deckprint .dpqty { margin-left:6px; color:#333; }
+  .deckprint .dpkind { color:#555; font-size:.82rem; margin-left:6px; }
+  .deckprint .dpprice { float:right; font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .deckprint .dpset { break-inside:avoid; page-break-inside:avoid; }
   @media print {
     html.deckprinting body > *:not(#deckPrintSheet) { display:none !important; }
     html.deckprinting #deckPrintSheet { position:static; overflow:visible; }
@@ -958,6 +965,7 @@
   .palsugname{font-weight:700;font-size:.85rem;}
   .palsugno{font-size:.68rem;color:var(--ink-faint);}
   .palchips { display:flex; gap:7px; flex-wrap:wrap; }
+  .deckwork { margin:2px 0 8px; }
   .palchip { border:1px solid var(--line); background:transparent; color:var(--ink-soft); border-radius:999px; padding:6px 11px;
     font-size:.72rem; font-weight:700; font-family:var(--font-display); cursor:pointer; }
   .palchip b { color:var(--ink); font-family:var(--font-mono); font-weight:700; }
@@ -1964,6 +1972,14 @@ label.acctsetrow { align-items:center; }
   .copynotes .cnrow select{width:100%;min-width:0}.copynotes .cnnote{grid-column:1/-1}
   .copynotes .cnact{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center}.copynotes .cnact>*{margin:0 8px 0 0}
   .copynotes .cnadd{grid-column:1/-1;justify-self:start}
+  .cnphotos{grid-column:1/-1}.gphotos{flex-basis:100%}
+  .phstrip{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .phcell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2)}
+  .phcell img{width:100%;height:100%;object-fit:cover}
+  .phcell .phmiss{font-size:.62rem;line-height:1.2;text-align:center;color:var(--ink-faint);padding:4px}
+  .phcell .phrm{position:absolute;top:2px;right:2px;width:22px;height:22px;border:none;border-radius:11px;background:rgba(0,0,0,.6);color:#fff;font-size:.7rem;cursor:pointer;padding:0}
+  .phadd{cursor:pointer}
+  .no-flexgap .phstrip>*{margin:0 8px 8px 0}
   /* notification bell + What's-new popup */
   .bellbtn { position:relative; padding:9px 11px; }
   .bellbtn svg { display:block; }
@@ -2246,6 +2262,12 @@ label.acctsetrow { align-items:center; }
   .askbox input:focus{ outline:none; border-color:var(--accent); }
   .askbox textarea{ width:100%; min-height:190px; resize:vertical; background:var(--surface-2); border:1.5px solid var(--line-strong); border-radius:12px; padding:11px 13px; color:var(--ink); font-family:var(--font-mono); font-size:.85rem; line-height:1.55; box-sizing:border-box; margin-bottom:16px; }
   .askbox textarea:focus{ outline:none; border-color:var(--accent); }
+  .plside{ margin:6px 0 14px; } .plside h4{ margin:0 0 4px; font-family:var(--font-display); font-size:1rem; font-weight:800; }
+  .pltotal{ font-family:var(--font-display); font-size:1.5rem; font-weight:850; } .plsum,.plnone,.plea,.plid{ color:var(--ink-soft); font-size:.78rem; }
+  .pldiff{ font-family:var(--font-display); font-weight:800; font-size:1.1rem; margin:6px 0; }
+  .plrow{ display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid var(--line); }
+  .plmeta{ min-width:0; } .pln{ font-weight:650; font-size:.9rem; } .plmoney{ display:flex; flex-direction:column; align-items:flex-end; flex:none; font-weight:700; }
+  #plOut{ margin-bottom:12px; } #plTextA,#plTextB{ min-height:90px; margin-bottom:10px; }
   .askbox.wide{ max-width:560px; }
   .askbox.wide .askbtns{ flex-wrap:wrap; }
   .askbox.deckownbox{ max-height:calc(100vh - 40px); overflow-y:auto; overscroll-behavior:contain; }
@@ -2343,6 +2365,11 @@ label.acctsetrow { align-items:center; }
   .scanreviewrow button[data-action="undo"]{ border:1px solid var(--el-Fire); border-radius:8px; background:transparent; color:var(--el-Fire); padding:6px 7px; font:700 .68rem var(--font-body); cursor:pointer; }
   @media (max-width:500px){ .scanreviewrow{ grid-template-columns:34px minmax(0,1fr); }.scanreviewactions{ grid-column:1/-1; justify-content:flex-end; padding-top:2px; } }
   .scanreviewempty{ padding:22px 5px; color:var(--ink-faint); text-align:center; font-size:.85rem; }
+  .scanreviewfind{ grid-column:1 / -1; margin-top:2px; }
+  .scanreviewfind input{ width:100%; box-sizing:border-box; margin:0 0 4px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); color:var(--ink); padding:6px 8px; font:600 .75rem var(--font-body); }
+  .scanreviewsugs button{ display:block; width:100%; box-sizing:border-box; margin:0 0 4px; text-align:left; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); padding:5px 7px; font:600 .72rem var(--font-body); cursor:pointer; }
+  .scanreviewrow.unmatched{ border-color:color-mix(in srgb, var(--gold) 50%, var(--line)); }
+  .closex{ border:0; background:transparent; color:var(--ink-faint); font-size:1.35rem; line-height:1; cursor:pointer; padding:0 2px; }
   /* ==== SCAN REVIEW END (styles) ==== */
   .scanhint{ text-align:center; font-size:.8rem; font-weight:600; color:var(--gold-deep); background:color-mix(in srgb,var(--gold) 13%,var(--surface-2)); border:1px solid color-mix(in srgb,var(--gold) 38%,var(--line-strong)); border-radius:12px; padding:8px 12px; margin:0 0 12px; }
   /* Scan popup duplicate check: gold when the target collection already holds this printing, accent when it is new. Plain token colours here; the color-mix tints live in the @supports block below
@@ -2874,6 +2901,7 @@ label.acctsetrow { align-items:center; }
       </select>
       <div class="palchips" id="paldexChips"></div>
       <div class="palchips" id="paldexVariantChips"></div>
+      <div class="palchips" id="paldexWorkChips" hidden></div>
     </div>
     <div class="pallegend" id="paldexLegend"></div>
     <div class="palgrid" id="paldexGrid"></div>
@@ -2982,6 +3010,7 @@ label.acctsetrow { align-items:center; }
       <div class="chiprow" id="colorChips"><span class="grouplab">Color</span></div>
       <div class="chiprow" id="elChips"><span class="grouplab">Type</span></div>
       <div class="chiprow" id="kindChips"><span class="grouplab">Card</span></div>
+      <div class="chiprow" id="workChips" hidden><span class="grouplab">Work</span></div>
       <div class="chiprow" id="kwChips" hidden><span class="grouplab">Keyword</span></div>
       <div class="chiprow" id="rareChips"><span class="grouplab">Rarity</span></div>
       <div class="filteractions"><button class="btn sec" id="clearFilters">Clear all</button><button class="btn primary" id="doneFilters">Done</button></div>
@@ -3011,6 +3040,7 @@ label.acctsetrow { align-items:center; }
         <button class="tbtn ghost" id="deckDupe" data-icon="copy" title="Duplicate deck" aria-label="Duplicate deck">Duplicate</button>
         <button class="tbtn ghost" id="deckDelete" data-icon="trash" title="Delete deck">Delete</button>
         <button class="tbtn ghost" id="deckExport" data-icon="upload" title="Export this deck as a text decklist">Export</button>
+        <button class="tbtn ghost" id="deckShare" data-icon="mail" title="Share this deck as a link anyone can open">Share</button>
         <button class="tbtn ghost" id="deckPrint" data-icon="news" title="A printable list of this deck">Print</button>
         <button class="tbtn ghost" id="deckImport" data-icon="download" title="Import a text decklist as a new deck">Import</button>
         <button class="tbtn ghost" id="deckMatch" data-icon="life" title="Open the tabletop match tracker">Match</button>
@@ -3025,6 +3055,7 @@ label.acctsetrow { align-items:center; }
     <div class="deckcomplete" id="deckCompletion" hidden></div>
     <div class="deckwanted" id="deckWanted" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
+    <div class="palchips deckwork" id="deckWorkChips" hidden></div>
     <div class="decksug" id="deckSug" hidden></div>
     <div class="deckorderbar" id="deckOrderBar" hidden><button class="chip solid" type="button" id="deckNeedFirst" aria-pressed="false">Need first</button></div>
     <div class="decklist" id="deckList"></div>
@@ -3146,9 +3177,16 @@ label.acctsetrow { align-items:center; }
           <button class="qoptbtn" type="button" id="qScanBtn" data-icon="camera"><span>Scan card with camera</span></button>
           <button class="qinfobtn" type="button" data-info="scan" data-icon="info" aria-label="About scanning"></button>
         </div>
+        <div class="qopt" id="qOptMulti">
+          <button class="qoptbtn" type="button" id="qMultiBtn" data-icon="camera"><span>Scan several cards</span></button>
+          <button class="qinfobtn" type="button" data-info="multi" data-icon="info" aria-label="About scanning several cards"></button>
+        </div>
         <div class="qopt">
           <button class="qoptbtn" type="button" id="qCsvBtn" data-icon="upload"><span>Import CSV</span></button>
           <button class="qinfobtn" type="button" data-info="csv" data-icon="info" aria-label="About CSV import"></button>
+        </div>
+        <div class="qopt">
+          <button class="qoptbtn priceui" type="button" id="qPriceBtn" data-icon="search"><span>Price a list</span></button>
         </div>
         <div class="qopt">
           <button class="qoptbtn" type="button" id="qTextBtn" data-icon="search"><span>Text input</span></button>
@@ -3160,6 +3198,7 @@ label.acctsetrow { align-items:center; }
         <input id="qInput" class="qinput" placeholder="Try “Jormuntide”, “Grappling Gun”, or EBP01-001…" autocomplete="off" spellcheck="false" role="combobox" aria-label="Quick add" aria-autocomplete="list" aria-expanded="false" aria-controls="qSug" />
         <div class="qsug" id="qSug" role="listbox" hidden></div>
       </div>
+      <button type="button" class="scanwrong" id="qMultiReview" hidden>Review cards from the photo</button>
       <div class="qhint" id="qHint"></div>
       <div class="qrecent" id="qRecent"></div>
     </div>
@@ -3506,6 +3545,18 @@ label.acctsetrow { align-items:center; }
   </div>
 </div>
 
+<div class="askscrim" id="plScrim" hidden>
+  <div class="askbox wide eventbox" role="dialog" aria-modal="true" aria-labelledby="plTitle">
+    <h3 id="plTitle">Price a list</h3>
+    <p>Paste card numbers with quantities, one card per line. Nothing is added to your collection.</p>
+    <textarea id="plTextA" spellcheck="false" autocomplete="off" aria-label="Cards to price"></textarea>
+    <p>Optional: paste the other side of a trade to compare the two.</p>
+    <textarea id="plTextB" spellcheck="false" autocomplete="off" aria-label="Other side of a trade"></textarea>
+    <div id="plOut"></div>
+    <div class="askbtns"><button type="button" id="plClose">Close</button><button type="button" class="ok" id="plGo">Price it</button></div>
+  </div>
+</div>
+
 <div class="askscrim" id="eventScrim" hidden>
   <div class="askbox wide eventbox" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
     <h3 id="eventTitle">Log event</h3>
@@ -3677,9 +3728,32 @@ label.acctsetrow { align-items:center; }
 <div class="scanscrim" id="scanReviewScrim" hidden>
   <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="scanReviewTitle">
     <div class="scanreviewtop"><div><div class="scaneyebrow">Continuous scan</div><h3 id="scanReviewTitle">Review this session</h3></div><button type="button" class="closex" id="scanReviewClose" aria-label="Close review">×</button></div>
-    <p class="scanreviewintro">Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.</p>
+    <p class="scanreviewintro" id="scanReviewIntro">Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.</p>
+    <div class="scanfield" id="scanReviewColWrap" hidden>
+      <div class="scanlab">Add to collection</div>
+      <select id="scanReviewCol" aria-label="Collection for these cards"></select>
+    </div>
     <div class="scanreviewlist" id="scanReviewList"></div>
     <div class="askbtns"><button type="button" class="ok" id="scanReviewDone">Done</button></div>
+  </div>
+</div>
+
+<div class="scanscrim" id="multiScanScrim" hidden>
+  <div class="scanbox" role="dialog" aria-modal="true" aria-labelledby="multiScanTitle">
+    <div class="scanreviewtop"><div><div class="scaneyebrow">Photo scan</div><h3 id="multiScanTitle">Scan several cards</h3></div><button type="button" class="closex" id="multiScanClose" aria-label="Close">×</button></div>
+    <p class="scanreviewintro" id="multiScanIntro">Take or choose one photo of a spread of pulls, or a binder page. SphereDex finds each card on this device. Nothing is added until you review the list.</p>
+    <div class="segrow" id="multiScanLayout" role="group" aria-label="Photo layout">
+      <button type="button" class="seg" data-layout="auto" aria-pressed="true">Auto</button>
+      <button type="button" class="seg" data-layout="b9" aria-pressed="false">9 pocket</button>
+      <button type="button" class="seg" data-layout="b12" aria-pressed="false">12 pocket</button>
+    </div>
+    <p class="qhint" id="multiScanStatus"></p>
+    <div class="askbtns">
+      <button type="button" id="multiScanFileBtn">Choose photo</button>
+      <button type="button" class="ok" id="multiScanCamBtn">Take photo</button>
+    </div>
+    <input type="file" id="multiScanFile" accept="image/*" hidden>
+    <input type="file" id="multiScanCam" accept="image/*" capture="environment" hidden>
   </div>
 </div>
 
@@ -4041,7 +4115,11 @@ label.acctsetrow { align-items:center; }
   // one it was built with, and keeps what it gets, so the cards survive going offline and the next launch.
   // Rows arrive in the same shape as the table above and go through the same builder, so a delivered card
   // is indistinguishable from a baked one everywhere else in the app.
-  var CATALOGUE_VERSION = 4;              // bump when new cards are baked into a build
+  // Bump when new cards are baked into a build. 5 rather than 4 on purpose: the payload published as 4 was
+  // built before Legends Awaken was finished and carries 342 cards with only 55 of its 164. An install that
+  // already fetched that copy stored version 4 and now asks have=4, so republishing as 4 would leave it
+  // stranded on a half set. 5 is newer than anything stored, so every build is offered the full 451.
+  var CATALOGUE_VERSION = 5;
   var CAT_KEY = "palvault-catalogue";
   function recountCards(){
     TOTAL = CARDS.length;
@@ -4096,7 +4174,7 @@ label.acctsetrow { align-items:center; }
   var LS_WARN="Your browser is blocking storage, so changes will not be saved";
   // App version shown at the bottom of the app. Convention: bump +0.1 on every new build/push
   // (keep it in step with iOS MARKETING_VERSION + Android versionName). This build: 2.4.2.
-  var APP_VERSION = "2.4.6";
+  var APP_VERSION = "2.4.7";
   // Three short lines per version for the Home "latest update" headliner.
   // A behind install shows the newer version; everyone else sees this build's lines.
   // When a version ships, bump APP_VERSION above and APP_LATEST on the server to that
@@ -4161,6 +4239,11 @@ label.acctsetrow { align-items:center; }
       "Home redrawn \u00b7 every card draws the thing it is about",
       "Your market counts sealed as well as cards, with both readings a tap apart",
       "A Statue of Power on Rewards, and set tiles in their own colours"
+    ],
+    "2.4.7": [
+      "Share a deck as a link · and mark a whole Trial Deck as owned without scanning 60 cards",
+      "Photograph a binder page · every card on it is read at once, and you check them before they go in",
+      "Price a list, print what you are missing, and filter cards by what a Pal is good at"
     ],
     "2.4.6": [
       "Legends Awaken in full · all 164 cards with official art",
@@ -4424,6 +4507,105 @@ label.acctsetrow { align-items:center; }
     if(delta<0) n=-Math.min(b[key]||0,n);
     b[key]=(b[key]||0)+n; setRawCounts(e,b); return n;
   }
+  // OWN PHOTOS: optional photos on a numbered raw copy or a slab. The pictures stay on this device, in IndexedDB,
+  // and are never uploaded or synced. The collection only stores a short list of ids (ph on a numbered copy,
+  // photos on a slab), so localStorage and account sync stay small. An id with no picture on this device is
+  // shown as "On another device" and can be unlinked. Older app versions ignore the field.
+  var PHOTO_MAX=3, PHOTO_EDGE=1280, PHOTO_DB_NAME="spheredex-photos", PHOTO_STORE="photos";
+  function photoIdsClean(list){
+    var out=[]; if(!Array.isArray(list)) return out;
+    list.forEach(function(id){ if(typeof id==="string" && /^p[a-z0-9]{6,24}$/.test(id) && out.indexOf(id)<0 && out.length<PHOTO_MAX) out.push(id); });
+    return out;
+  }
+  function photoNewId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+  // Fit inside PHOTO_EDGE on the long side, never enlarging.
+  function photoFitSize(w, h){
+    w=+w||0; h=+h||0; if(w<=0||h<=0) return {w:0,h:0};
+    var k=Math.min(1, PHOTO_EDGE/Math.max(w,h));
+    return {w:Math.max(1,Math.round(w*k)), h:Math.max(1,Math.round(h*k))};
+  }
+  var PHOTO_DB=null;
+  function photoDb(){
+    if(PHOTO_DB) return PHOTO_DB;
+    PHOTO_DB=new Promise(function(res, rej){
+      try{
+        if(typeof indexedDB==="undefined" || !indexedDB) return rej(new Error("no idb"));
+        var rq=indexedDB.open(PHOTO_DB_NAME,1);
+        rq.onupgradeneeded=function(){ try{ rq.result.createObjectStore(PHOTO_STORE); }catch(_){} };
+        rq.onsuccess=function(){ res(rq.result); };
+        rq.onerror=function(){ rej(rq.error||new Error("idb")); };
+      }catch(e){ rej(e); }
+    });
+    PHOTO_DB.catch(function(){ PHOTO_DB=null; });
+    return PHOTO_DB;
+  }
+  function photoTx(mode, fn){
+    return photoDb().then(function(db){ return new Promise(function(res, rej){
+      var tx=db.transaction(PHOTO_STORE, mode), st=tx.objectStore(PHOTO_STORE), out=fn(st);
+      tx.oncomplete=function(){ res(out && out.result!==undefined ? out.result : undefined); };
+      tx.onerror=tx.onabort=function(){ rej(tx.error||new Error("idb")); };
+    }); });
+  }
+  function photoPut(id, blob){ return photoTx("readwrite", function(st){ return st.put(blob, id); }); }
+  function photoGet(id){ return photoTx("readonly", function(st){ return st.get(id); }); }
+  function photoDelete(ids){ photoIdsClean(ids).forEach(function(id){ photoTx("readwrite", function(st){ return st.delete(id); }).catch(function(){}); }); }
+  // Shrink a picked file to a JPEG so a phone photo costs a few hundred KB, not several MB.
+  function photoShrink(file){
+    return new Promise(function(res, rej){
+      try{
+        var url=URL.createObjectURL(file), img=new Image();
+        img.onload=function(){
+          try{
+            var z=photoFitSize(img.naturalWidth||img.width, img.naturalHeight||img.height);
+            if(!z.w) { URL.revokeObjectURL(url); return rej(new Error("empty")); }
+            var cv=document.createElement("canvas"); cv.width=z.w; cv.height=z.h;
+            cv.getContext("2d").drawImage(img,0,0,z.w,z.h);
+            URL.revokeObjectURL(url);
+            if(cv.toBlob) cv.toBlob(function(b){ b?res(b):rej(new Error("encode")); },"image/jpeg",0.8); else rej(new Error("encode"));
+          }catch(e){ rej(e); }
+        };
+        img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error("decode")); };
+        img.src=url;
+      }catch(e){ rej(e); }
+    });
+  }
+  // Pick, shrink and store one photo, then hand back its new id. Rejects when it cannot be kept.
+  function photoAdd(file){
+    return photoShrink(file).then(function(b){ var id=photoNewId(); return photoPut(id,b).then(function(){ return id; }); });
+  }
+  // A thumbnail strip for a list of ids. onChange(newList) runs after an add or an unlink.
+  function photoStrip(host, ids, onChange){
+    var list=photoIdsClean(ids), urls=[];
+    host.innerHTML="";
+    // Release the blob urls the last paint made. This runs again after every add or unlink, and the <img>
+    // elements holding them have just been thrown away with innerHTML.
+    (host._phUrls||[]).forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(_){} });
+    host._phUrls=urls;
+    // Added, never assigned: the host keeps its own cnphotos or gphotos class, which is what gives the strip
+    // a full width row of its own inside the copy row's three column grid and the slab row's flex line.
+    host.classList.add("phstrip");
+    list.forEach(function(id){
+      var cell=document.createElement("span"); cell.className="phcell";
+      var rm=document.createElement("button"); rm.type="button"; rm.className="phrm"; rm.setAttribute("aria-label","Remove photo"); rm.textContent="✕";
+      rm.onclick=function(){ photoDelete([id]); onChange(list.filter(function(x){ return x!==id; })); };
+      photoGet(id).then(function(b){
+        if(b){ var u=URL.createObjectURL(b); urls.push(u); var im=document.createElement("img"); im.alt="Photo of this copy"; im.src=u; cell.insertBefore(im, rm); }
+        else { var m=document.createElement("span"); m.className="phmiss"; m.textContent="On another device"; cell.insertBefore(m, rm); }
+      }).catch(function(){ var m=document.createElement("span"); m.className="phmiss"; m.textContent="Not available"; cell.insertBefore(m, rm); });
+      cell.appendChild(rm); host.appendChild(cell);
+    });
+    if(list.length<PHOTO_MAX){
+      var lab=document.createElement("label"); lab.className="btn phadd";
+      lab.appendChild(document.createTextNode(list.length?"Add another photo":"Add photo"));
+      var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.hidden=true; inp.setAttribute("aria-label","Add a photo of this copy");
+      inp.onchange=function(){
+        var f=inp.files && inp.files[0]; inp.value=""; if(!f) return;
+        photoAdd(f).then(function(id){ onChange(photoIdsClean(list.concat([id]))); })
+          .catch(function(){ try{ toast("Could not keep that photo on this device"); }catch(_){} });
+      };
+      lab.appendChild(inp); host.appendChild(lab);
+    }
+  }
   // Numbered copies: raw copies stay counts, and some of them can carry a serial out of the print run (372 of 750)
   // or a misprint tag with a short note. They live in copyNotes on the holding, never outnumber the raw copies,
   // and never change qty, the printing counts or any value. Older app versions simply ignore the array.
@@ -4432,7 +4614,10 @@ label.acctsetrow { align-items:center; }
     var dig=function(v){ return String(v==null?"":v).replace(/\D+/g,"").slice(0,7); };
     var out={}, sr=dig(n.serial), rn=dig(n.run), nt=String(n.note==null?"":n.note).replace(/\s+/g," ").trim().slice(0,80), ed=rawEditionKey(n.ed==null?"unknown":n.ed);
     if(sr) out.serial=sr; if(rn) out.run=rn; if(n.mis) out.mis=1; if(nt) out.note=nt; if(ed!=="unknown") out.ed=ed;
-    return (sr||rn||out.mis||nt) ? out : null;
+    // Self contained on purpose: the guard suites load this function on its own. Same rule as photoIdsClean.
+    var ph=[]; if(Array.isArray(n.ph)) n.ph.forEach(function(id){ if(typeof id==="string" && /^p[a-z0-9]{6,24}$/.test(id) && ph.indexOf(id)<0 && ph.length<3) ph.push(id); });
+    if(ph.length) out.ph=ph;
+    return (sr||rn||out.mis||nt||ph.length) ? out : null;
   }
   function copyNotesList(e){
     var q=rawCount(e&&e.qty), out=[];
@@ -4456,6 +4641,7 @@ label.acctsetrow { align-items:center; }
     if(n.mis) bits.push("Misprint");
     if(n.note) bits.push(n.note);
     if(n.ed && n.ed!=="unknown") bits.push(rawEditionLabel(n.ed));
+    var np=Array.isArray(n.ph)?n.ph.length:0; if(np) bits.push(np===1?"1 photo":np+" photos");
     return bits.join(" · ");
   }
   // The CSV Misprint cell: "Misprint", "Misprint: note", or just the note for an untagged copy.
@@ -4679,7 +4865,7 @@ label.acctsetrow { align-items:center; }
                       : '<div class="apill nolink">'+inner+'</div>';
   }
   function listPillsHtml(items, kind){ return (items||[]).map(function(x){ return listPillHtml(x, kind); }).join(""); }
-  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, keywords:{}, rares:{}, promos:{}, staples:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
+  var filters = { q:"", exps:{}, sets:{}, colors:{}, els:{}, kinds:{}, work:{}, keywords:{}, rares:{}, promos:{}, staples:{}, view:"all", sort:"num" };   // exps = chosen FILTER_SETS keys, sets = chosen product codes within them
   // Tournament staples is the one filter kept per Collection mode (staples[colMode()]), so turning it on in
   // Cards never silently narrows Wishlist, Favourites or Graded. Every other filter stays shared.
   function staplesOn(mode){ return !!filters.staples[mode||colMode()]; }
@@ -5296,6 +5482,15 @@ label.acctsetrow { align-items:center; }
       };
       $("viewChips").appendChild(b);
     });
+    var wkHost=$("workChips");
+    if(wkHost){
+      workNames().forEach(function(w){
+        var b = chip(w, "", "var(--accent)", false); b.classList.add("solid"); b.setAttribute("data-work", w);
+        b.onclick = function(){ filters.work[w]=!filters.work[w]; b.setAttribute("aria-pressed", filters.work[w]?"true":"false"); render(); };
+        wkHost.appendChild(b);
+      });
+      wkHost.hidden=!wkHost.querySelector(".chip");
+    }
     var kwHost=$("kwChips");
     if(kwHost){
       keywordNames().forEach(function(k){
@@ -5374,6 +5569,30 @@ label.acctsetrow { align-items:center; }
     if(typeof applyCardLang==="function") applyCardLang();
     return n;
   }
+  // Work types a Pal card can list (card sheet "Work"). Only real work types: a few cards also carry
+  // non-work tags in the same field, which stay on the sheet but are not filter chips.
+  var WORK_TYPES = ["Kindling","Watering","Planting","Generating Electricity","Electricity","Harvesting","Farming","Crafting","Collecting","Cooling","Transporting","Handiwork","Gathering","Lumbering","Mining","Medicine Production"];
+  function workNames(){
+    var seen={}; CARDS.forEach(function(c){ (c.apt||[]).forEach(function(w){ seen[w]=1; }); });
+    return WORK_TYPES.filter(function(w){ return seen[w]; });
+  }
+  // A card passes when no work chip is on, or it lists at least one of the chosen work types.
+  function workMatches(c, chosen){
+    if(!chosen || !chosen.length) return true;
+    var apt=(c&&c.apt)||[];
+    return chosen.some(function(w){ return apt.indexOf(w)!==-1; });
+  }
+  function workChipRow(host, on, onToggle){
+    if(!host) return;
+    host.innerHTML="";
+    workNames().forEach(function(w){
+      var b=document.createElement("button"); b.type="button"; b.className="palchip"; b.setAttribute("data-work", w);
+      b.setAttribute("aria-pressed", on[w]?"true":"false"); b.textContent=w;
+      b.onclick=function(){ onToggle(w); };
+      host.appendChild(b);
+    });
+    host.hidden=!host.firstChild;
+  }
   function keywordNames(){
     var seen={}, gloss=(typeof CARD_TEXT!=="undefined" && CARD_TEXT && CARD_TEXT.glossary)||{};
     CARDS.forEach(function(c){ (c.keywords||[]).forEach(function(k){ if(gloss[k] && gloss[k].text) seen[k]=1; }); });
@@ -5448,7 +5667,7 @@ label.acctsetrow { align-items:center; }
   }
   function visible(){
     var q = fold(filters.q.trim());
-    var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), rares=keysOn(filters.rares), sets=setFilterCodes();
+    var cols=keysOn(filters.colors), els=keysOn(filters.els), kinds=keysOn(filters.kinds), works=keysOn(filters.work||{}), rares=keysOn(filters.rares), sets=setFilterCodes();
     var promos=sets.indexOf("PR2026")!==-1 ? keysOn(filters.promos||{}) : [];
     var mode=colMode();
     RECENT=recentIds();
@@ -5467,6 +5686,7 @@ label.acctsetrow { align-items:center; }
       if (kinds.length && kinds.indexOf(c.kind)===-1) return false;
       if (rares.length && rares.indexOf(c.rare)===-1) return false;
       if (els.length && !els.some(function(e){return c.els.indexOf(e)!==-1;})) return false;
+      if (!workMatches(c, works)) return false;
       var s=o(c.id);
       if (mode==="col" && filters.view==="owned" && !has(s)) return false;
       if (mode==="col" && filters.view==="missing" && has(s)) return false;
@@ -6080,7 +6300,7 @@ label.acctsetrow { align-items:center; }
       Object.keys(counts).forEach(function(ed){ if(counts[ed]) parts.push('<span class="ownpill" data-t="raw">'+counts[ed]+' raw'+(ed!=="unknown"?' · '+rawEditionLabel(ed):'')+' · '+esc(condShort(s.cond))+'<button class="ownx" data-t="raw" data-edition="'+ed+'" type="button" aria-label="Remove one '+rawEditionLabel(ed)+' raw copy">−</button></span>'); });
       // The cert number is typed in the scan popup and stored on the slab, and until now it was never shown
       // again anywhere in the app, so there was no way to check a slab against its label.
-      gwork.forEach(function(g,i){ parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
+      gwork.forEach(function(g,i){ var gp=photoIdsClean(g.photos).length; parts.push('<span class="ownpill">'+esc(g.grader)+' '+esc(g.grade)+(rawEditionKey(g.edition)!=="unknown"?' · '+rawEditionLabel(rawEditionKey(g.edition)):'')+(g.cert?' · #'+esc(g.cert):'')+(gp?' · '+gp+(gp===1?' photo':' photos'):'')+'<button class="ownx" data-i="'+i+'" type="button" aria-label="Remove slab">✕</button></span>'); });
       if(cnWork.length>q) cnWork=cnWork.slice(0,q);
       copyNotesList(s).forEach(function(n){ parts.push('<span class="ownpill cnpill" style="padding-right:12px">'+esc(copyNoteLabel(n))+'</span>'); });
       host.hidden=!parts.length;
@@ -6090,7 +6310,7 @@ label.acctsetrow { align-items:center; }
         Array.prototype.forEach.call(host.querySelectorAll('[data-raw-edition]'),function(input){ input.onchange=function(){ var b=rawCounts(s); b[input.getAttribute('data-raw-edition')]=rawCount(input.value); setRawCounts(s,b); $("fQty").value=s.qty; updateSum(); persist(); paintBubbles(); paintOwn(); }; });
       }
       if(q){
-        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have.</p>';
+        var cnHtml='<div class="editioncounts copynotes"><p>Numbered copies. Give a raw copy its serial number out of the print run, or tag a misprint. This never changes how many copies you have. Photos stay on this device and are not uploaded, so another device shows the copy but not the picture.</p>';
         cnWork.forEach(function(n,i){
           var ed=rawEditionKey(n.ed==null?"unknown":n.ed);
           cnHtml+='<div class="cnrow" data-cn="'+i+'">'+
@@ -6098,6 +6318,7 @@ label.acctsetrow { align-items:center; }
             '<div class="field"><label for="cnRun'+i+'">Of</label><input id="cnRun'+i+'" data-cnf="run" type="text" inputmode="numeric" autocomplete="off" placeholder="750" value="'+esc(n.run||"")+'"></div>'+
             '<div class="field"><label for="cnEd'+i+'">Printing</label><select id="cnEd'+i+'" data-cnf="ed">'+printingKeys(c).map(function(k){ return '<option value="'+k+'"'+(k===ed?' selected':'')+'>'+rawEditionLabel(k)+'</option>'; }).join("")+'</select></div>'+
             '<div class="field cnnote"><label for="cnNote'+i+'">Note</label><input id="cnNote'+i+'" data-cnf="note" type="text" maxlength="80" autocomplete="off" placeholder="Optional" value="'+esc(n.note||"")+'"></div>'+
+            '<div class="cnphotos" data-cnph="'+i+'"></div>'+
             '<div class="cnact"><button class="chip solid" data-cnf="mis" type="button" aria-pressed="'+(n.mis?'true':'false')+'">Misprint</button><button class="btn" data-cnrm="'+i+'" type="button">Remove</button></div>'+
           '</div>';
         });
@@ -6106,13 +6327,15 @@ label.acctsetrow { align-items:center; }
         var cnStore=function(){ setCopyNotes(s,cnWork); persist(); paintOwnPills(); };
         Array.prototype.forEach.call(host.querySelectorAll(".cnrow"), function(row){
           var i=parseInt(row.getAttribute("data-cn"),10);
+          var phHost=row.querySelector("[data-cnph]");
+          if(phHost){ var phPaint=function(){ photoStrip(phHost, cnWork[i].ph, function(list){ if(list.length) cnWork[i].ph=list; else delete cnWork[i].ph; cnStore(); phPaint(); }); }; phPaint(); }
           Array.prototype.forEach.call(row.querySelectorAll("[data-cnf]"), function(el){
             var f=el.getAttribute("data-cnf");
             if(f==="mis") el.onclick=function(){ cnWork[i].mis=cnWork[i].mis?0:1; el.setAttribute("aria-pressed",cnWork[i].mis?"true":"false"); cnStore(); };
             else el.onchange=function(){ var v=el.value; if(f==="serial"||f==="run"){ v=String(v||"").replace(/\D+/g,"").slice(0,7); el.value=v; } cnWork[i][f]=v; cnStore(); };
           });
         });
-        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
+        Array.prototype.forEach.call(host.querySelectorAll("[data-cnrm]"), function(b){ b.onclick=function(){ var gone=cnWork.splice(parseInt(b.getAttribute("data-cnrm"),10),1)[0]; if(gone) photoDelete(gone.ph); setCopyNotes(s,cnWork); persist(); paintOwn(); }; });
         var cnAdd=$("cnAdd"); if(cnAdd) cnAdd.onclick=function(){ if(cnWork.length<q){ cnWork.push({serial:"",run:"",ed:"unknown",note:""}); paintOwn(); var f=$("cnSerial"+(cnWork.length-1)); if(f) try{ f.focus(); }catch(e){} } };
       }
       if(trackPaidOn()){
@@ -6133,7 +6356,7 @@ label.acctsetrow { align-items:center; }
       Array.prototype.forEach.call(host.querySelectorAll(".ownx"), function(b){
         b.onclick=function(){
           if(b.getAttribute("data-t")==="raw"){ changeRaw(s,-1,b.getAttribute("data-edition")); $("fQty").value=s.qty; }
-          else { gwork.splice(parseInt(b.getAttribute("data-i"),10),1); renderGrades(); }
+          else { var gx=gwork.splice(parseInt(b.getAttribute("data-i"),10),1)[0]; if(gx) photoDelete(gx.photos); renderGrades(); }
           updateSum(); persist(); paintBubbles(); paintOwn();
         };
       });
@@ -6206,13 +6429,16 @@ label.acctsetrow { align-items:center; }
           ('<select class="gEdition" aria-label="Slab printing">'+printingKeys(c).map(function(ed){return '<option value="'+ed+'"'+(rawEditionKey(g.edition)===ed?' selected':'')+'>'+rawEditionLabel(ed)+'</option>';}).join('')+'</select>')+
           '<input class="gv gVal" type="number" min="0" step="0.01" placeholder="Value '+esc(CUR.sym)+'" value="'+(g.value||0)+'">'+
           '<input class="gv gPaid paidui" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Paid" aria-label="Amount paid" value="'+(g.paid!=null && g.paid!=="" ? g.paid : "")+'">'+
-          '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>';
+          '<button class="grm" type="button" title="Remove" aria-label="Remove slab">✕</button>'+
+          '<div class="gphotos"></div>';
         row.querySelector(".gGrader").onchange=function(){ g.grader=this.value; };
         row.querySelector(".gGrade").onchange=function(){ g.grade=this.value; };
         var ge=row.querySelector(".gEdition"); if(ge) ge.onchange=function(){ if(this.value==="unknown") delete g.edition; else g.edition=this.value; paintOwn(); };
         row.querySelector(".gVal").oninput=function(){ g.value=parseFloat(this.value)||0; updateSum(); };
         var gPaid=row.querySelector(".gPaid"); if(gPaid) gPaid.oninput=function(){ var n=paidNumber(this.value); if(n==null) delete g.paid; else g.paid=n; };
-        row.querySelector(".grm").onclick=function(){ gwork.splice(i,1); renderGrades(); updateSum(); };
+        row.querySelector(".grm").onclick=function(){ photoDelete(g.photos); gwork.splice(i,1); renderGrades(); updateSum(); };
+        var gph=row.querySelector(".gphotos");
+        if(gph){ var gPaint=function(){ photoStrip(gph, g.photos, function(list){ if(list.length) g.photos=list; else delete g.photos; persist(); gPaint(); }); }; gPaint(); }
         gl.appendChild(row);
       });
     }
@@ -7321,6 +7547,7 @@ label.acctsetrow { align-items:center; }
       else if(firstAction==="collection") showPage("collection");
       else showPage("home");
     }, 40);
+    setTimeout(function(){ if(typeof checkSharedDeckLink==="function") checkSharedDeckLink(); }, 400);   // a deck link opened before onboarding is offered now
   }
   function maybeOnboard(){
     if(SETTINGS.onboarded) return;
@@ -9978,7 +10205,7 @@ label.acctsetrow { align-items:center; }
     buildDeckSel(); $("deckColName").textContent=activeCol().name;
     var d=activeDeck(); renderDeckNeedLine(d);
     renderEventLog(d);
-    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
+    ["deckSel","deckRename","deckDupe","deckDelete","deckExport","deckShare","deckPrint","deckOrderBar"].forEach(function(id){ var el=$(id); if(el) el.hidden=!d; });
     if(!d){ $("deckStats").innerHTML=""; renderDeckTournament(null); renderDeckLegality(null); renderDeckLab(null); renderDeckCompletion(null); renderMostWanted(); wrap.innerHTML='<div class="empty"><b>No decks yet</b>Tap New to start one, then search for cards to add.</div>'; return; }
     if(d.id!==deckFocusDeck){ deckFocus=null; deckFocusDeck=d.id; }
     var ids=Object.keys(d.cards||{}).filter(function(k){return d.cards[k]>0;});
@@ -10969,7 +11196,7 @@ label.acctsetrow { align-items:center; }
   }
   function trialDeckMessage(k, colName){
     var cards=trialDeckCards(k), main=0, souls=0, some=false;
-    cards.forEach(function(c){ var n=trialDeckCount(k,c); if(c.id===TRIAL_DECKS[k].soul) souls+=n; else main+=n; if(trialDeckHeld(c)>0) some=true; });
+    cards.forEach(function(c){ var n=trialDeckCount(k,c); if(c.id===TRIAL_DECKS[k].soul) souls+=n; else main+=n; if(trialDeckFamilyHeld(k,c)>0) some=true; });
     return "Every box holds these "+main+" cards and "+souls+" Soul cards. They are added to "+colName+", and next you pick the special card that was in your box."+
       (some ? " You already have some of them, so each card is topped up to the count in the box and nothing is counted twice." : "");
   }
@@ -10981,7 +11208,9 @@ label.acctsetrow { align-items:center; }
     $("deckOwnTitle").textContent="I own the "+((SETS[k]&&SETS[k].name)||k);
     // Page 1: every card in the box, with how many copies of it the box holds.
     list.innerHTML=trialDeckCards(k).map(function(c){
-      var n=trialDeckCount(k,c), held=trialDeckHeld(c);
+      // The same family count the top up uses, so "You have 2" matches what adding the deck will do. Counting
+      // only this exact printing made the window understate a card whose TSR or TSP you already own.
+      var n=trialDeckCount(k,c), held=trialDeckFamilyHeld(k,c);
       return '<div class="docard" role="group" aria-label="'+esc(c.name+", "+n+" in the box"+(held?", you have "+held:""))+'">'+
         '<img src="'+imgSrc(c)+'" alt="" loading="lazy"><span>'+esc(trialDeckName(c))+'</span><span class="doqty">×'+n+'</span>'+
         (held ? '<span class="dohave">You have '+held+'</span>' : '')+'</div>';
@@ -11043,12 +11272,13 @@ label.acctsetrow { align-items:center; }
     var eligibility=missingGoal==="sphere"?'Each official main-set printing counts once. Trial decks and promos do not count.':missingGoal==="master"?'Each catalogued printing counts once; raw or graded copies both qualify, while duplicates do not.':(missingGoal==="set"||missingGoal==="rarity"||missingGoal==="pal")?'Each unique printing counts once, whether raw or graded.':'';
     var wantRows=missingWantItems(missingGoal, data), tcgRows=wantRows.map(tcgRowOf);
     hero.innerHTML='<div class="missingherohead"><div><div class="missingeyebrow">'+esc(copy.eyebrow)+'</div><div class="missingname">'+esc(copy.name)+'</div></div><div class="missingcount"><b>'+copy.count+'</b>'+esc(copy.detail)+'</div></div>'+
-      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(wantRows.length?'<button class="btn sec" id="missingCsvAction" type="button">Spreadsheet (CSV)</button>':'')+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
+      '<div class="missingtrack"><span style="width:'+progress+'%"></span></div>'+sphereSilhouette+(eligibility?'<div class="sphereeligibility"><span>'+esc(eligibility)+'</span></div>':'')+missingTargetControl()+'<div class="missingfoot"><span>'+esc(copy.foot)+'</span><div class="missingactions">'+(wantRows.length?'<button class="btn sec" id="missingCsvAction" type="button">Spreadsheet (CSV)</button>':'')+(tcgRows.length?'<button class="btn sec" id="missingTcgAction" type="button">Copy for TCGplayer</button>':'')+(wantRows.length?'<button class="btn sec" id="missingPrintAction" type="button">Print checklist</button>':'')+(missingGoal==="sphere"&&items.length?'<button class="btn" id="missingBulkAction" type="button">Review &amp; wishlist</button>':'')+'<button class="btn primary" id="missingHeroAction" type="button">'+esc(copy.action)+'</button></div></div>';
     var choice=$("missingChoice"); if(choice) choice.onchange=function(){ missingChoice[missingGoal]=choice.value; renderMissing(); };
     var bulk=$("missingBulkAction"); if(bulk) bulk.onclick=function(){ addMissingToWishlist(items); };
     // Read the list when the button is TAPPED, not when this hero was drawn: collecting a card from the list
     // below patches this page in place rather than re-rendering it, so a snapshot would still carry cards you
     // have since collected. Both buttons recompute, so the pair can never disagree.
+    var missingPrint=$("missingPrintAction"); if(missingPrint) missingPrint.onclick=function(){ startMissingChecklist(missingWantItems(missingGoal, activeMissingGoal()), "Missing cards: "+(missingGoal==="master"?"all sets":copy.name)); };
     var missingTcg=$("missingTcgAction"); if(missingTcg) missingTcg.onclick=function(){ copyTcgplayerRows(missingTcgRows(missingGoal, activeMissingGoal())); };
     var missingCsv=$("missingCsvAction"); if(missingCsv) missingCsv.onclick=function(){
       exportWantList(missingWantItems(missingGoal, activeMissingGoal()), "missing "+(missingGoal==="master"?"cards":copy.name)); };
@@ -11170,6 +11400,61 @@ label.acctsetrow { align-items:center; }
     var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
     if(deckPrintCanPrint()) setTimeout(function(){ try{ window.print(); }catch(e){} }, 60);
   }
+  // ---- Printable missing cards checklist: what is still needed, per set, for a card show or a shop visit ----
+  // Plain text, no card images. Reuses the deck print sheet. Prices are optional and always off by default.
+  function missingChecklistGroups(items, priceOf){
+    var groups=[], byKey={};
+    (items||[]).forEach(function(item){
+      var c=item&&item.card; if(!c) return;
+      var need=Math.floor(+item.need||0); if(!(need>0)) return;
+      var key=String(c.set||"");
+      var g=byKey[key];
+      if(!g){ g={title:(SETS[key]&&SETS[key].name)||key||"Other", rows:[], total:0}; byKey[key]=g; groups.push(g); }
+      g.rows.push({id:c.id, name:c.name||"", printing:RARE_NAME[c.rare]||c.rare||"", need:need, price:priceOf?(priceOf(c)||""):""});
+      g.total+=1;
+    });
+    return groups;
+  }
+  function missingChecklistPriceOf(c){
+    if(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector") return "";
+    var u=0; try{ u=+unitOf(c.id, priceMode())||0; }catch(e){ u=0; }
+    return u>0 ? money(u) : "";
+  }
+  function missingChecklistText(title, groups){
+    var lines=[title||"Missing cards", "Personal copy."];
+    groups.forEach(function(g){
+      lines.push("", g.title+" ("+deckPrintCountLabel(g.total)+")");
+      g.rows.forEach(function(r){ lines.push("[ ] "+r.id+" "+r.name+(r.printing?" ("+r.printing+")":"")+(r.need>1?" x"+r.need:"")+(r.price?" "+r.price:"")); });
+    });
+    lines.push("", "SphereDex personal copy");
+    return lines.join("\n")+"\n";
+  }
+  function startMissingChecklist(items, title){
+    var el=$("deckPrintSheet"); if(!el || !items || !items.length){ toast("Nothing missing to print"); return; }
+    var showPrices=false, canPrint=deckPrintCanPrint();
+    var money_ok=!(typeof SETTINGS!=="undefined" && SETTINGS.mode==="collector");
+    function draw(){
+      var groups=missingChecklistGroups(items, showPrices?missingChecklistPriceOf:null);
+      var total=0; groups.forEach(function(g){ total+=g.total; });
+      el.innerHTML='<div class="dpbar"><button type="button" id="dpClose">Close</button>'+(canPrint?'<button type="button" id="dpPrint">Print</button>':'')+'<button type="button" id="dpCopy">Copy list</button>'+
+        (money_ok?'<label class="dpopt"><input type="checkbox" id="dpPrices"'+(showPrices?' checked':'')+'>Include prices</label>':'')+
+        (canPrint?'':'<p>Print is not available here. Copy the list, or take a screenshot.</p>')+'</div>'+
+        '<div class="dppage"><h1>'+esc(title||"Missing cards")+'</h1><p class="dpsub">'+deckPrintCountLabel(total)+' still needed. Personal copy.</p>'+
+        groups.map(function(g){ return '<div class="dpset"><h2>'+esc(g.title)+'</h2><p class="dpcount">'+deckPrintCountLabel(g.total)+'</p><ol>'+
+          g.rows.map(function(r){ return '<li><span class="dpbox"></span><span class="dpnum">'+esc(r.id)+'</span>'+esc(r.name)+
+            (r.printing?'<span class="dpkind">'+esc(r.printing)+'</span>':'')+(r.need>1?'<span class="dpqty">x'+r.need+'</span>':'')+
+            (r.price?'<span class="dpprice">'+esc(r.price)+'</span>':'')+'</li>'; }).join("")+'</ol></div>'; }).join("")+
+        '<p class="dpfoot">SphereDex personal copy</p></div>';
+      $("dpClose").onclick=function(){ dismissOverlay(); };
+      $("dpCopy").onclick=function(){ copyPlainText(missingChecklistText(title, groups), "Copied", "Copy list", "Clipboard access is not available here. Select this list and copy it."); };
+      var pb=$("dpPrint"); if(pb) pb.onclick=function(){ try{ window.print(); }catch(e){ toast("Print is not available here"); } };
+      var cb=$("dpPrices"); if(cb) cb.onchange=function(){ showPrices=cb.checked; var top=el.scrollTop; draw(); el.scrollTop=top; };
+    }
+    draw();
+    el.hidden=false; el.scrollTop=0;
+    document.documentElement.classList.add("deckprinting");
+    openOverlay(closeDeckPrint);
+  }
   function deckToText(d){
     var ids=Object.keys(d.cards||{}).filter(function(k){ return d.cards[k]>0; });
     ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
@@ -11202,6 +11487,73 @@ label.acctsetrow { align-items:center; }
     newDeck(); var d=activeDeck(); d.name=name||"Imported deck"; d.cards=res.cards; save(); renderDecks();
     toast("Imported deck “"+d.name+"” ("+res.added+" line"+(res.added>1?"s":"")+(res.skipped?(", "+res.skipped+" skipped"):"")+")");
     return true;
+  }
+  // ---- Share a deck as a link ----
+  // The whole deck rides inside the link (name, card numbers and copies), so there is no server and no account:
+  // https://spheredex.app/app/#deck=<name>~<CARD>:<copies>,<CARD>:<copies>. The part after # never leaves the
+  // device that opens it. Only card numbers the app knows are read back, so a hand edited link cannot add anything else.
+  var DECK_SHARE_BASE="https://spheredex.app/app/#deck=";
+  function deckShareCode(d){
+    var ids=Object.keys((d&&d.cards)||{}).filter(function(k){ return d.cards[k]>0; });
+    ids.sort(function(a,b){ var ca=byNumberIdx[a.toUpperCase()], cb=byNumberIdx[b.toUpperCase()]; return (ca&&cb)?(ca.setIdx-cb.setIdx||ca.seq-cb.seq):0; });
+    var parts=ids.filter(function(id){ return byNumberIdx[id.toUpperCase()]; }).map(function(id){ return id.toUpperCase()+":"+Math.min(DECK_LINE_MAX, d.cards[id]); });
+    return encodeURIComponent(String((d&&d.name)||"Deck").slice(0,40))+"~"+parts.join(",");
+  }
+  function deckShareUrl(d){ return DECK_SHARE_BASE+deckShareCode(d); }
+  // Accepts a whole link, "#deck=..." or the bare code. Returns {name, cards, added, skipped} or null when there is no code.
+  function parseDeckShare(text){
+    var t=String(text||"").trim(), m=/deck=([^\s&]+)/.exec(t);
+    var code=m?m[1]:t.replace(/^#/,"");
+    var i=code.lastIndexOf("~"); if(i<0 || /\s/.test(code)) return null;
+    var name="Shared deck";
+    try{ name=decodeURIComponent(code.slice(0,i)).replace(/[\r\n]+/g," ").trim().slice(0,40)||name; }catch(e){}
+    var cards={}, added=0, skipped=0;
+    code.slice(i+1).split(",").forEach(function(part){
+      if(!part) return;
+      var kv=part.split(":"), id=String(kv[0]||"").toUpperCase(), q=parseInt(kv[1],10);
+      if(byNumberIdx[id] && q>0){ cards[id]=Math.min(DECK_LINE_MAX,(cards[id]||0)+q); added++; } else skipped++;
+    });
+    return { name:name, cards:cards, added:added, skipped:skipped };
+  }
+  function deckShareCopies(res){ var n=0; Object.keys(res.cards).forEach(function(k){ n+=res.cards[k]; }); return n; }
+  function importSharedDeck(res){
+    if(!res || !res.added){ toast("That deck link has no cards the app knows"); return false; }
+    if(!playerToolsOn()){ SETTINGS.playerTools=true; saveSettings(); applyFeatureFlags(); buildNavMenu(); buildQuickMenuSettings(); }   // rebuild the nav so Decks appears, as the Settings switch does
+    createDeckFromParse(res.name, res);
+    showPage("decks");
+    return true;
+  }
+  function askImportSharedDeck(res){
+    var n=deckShareCopies(res);
+    // Say that Deck tools is about to be switched on. Importing turns it on so the Decks section exists to
+    // put the deck in, and a collector who taps a friend's link would otherwise find new sections in their
+    // app with nothing to explain where they came from.
+    var turnsOn = !playerToolsOn() ? " Deck tools are switched on so you can see it, and you can turn them off again in Settings." : "";
+    openAsk({title:"Import shared deck?", message:"“"+res.name+"” has "+n+" card"+(n===1?"":"s")+(res.skipped?(" ("+res.skipped+" couldn't be read)"):"")+". It is added as a new deck and your other decks are not touched."+turnsOn, confirmOnly:true, okText:"Import", onOk:function(){ importSharedDeck(res); }});
+  }
+  function checkSharedDeckLink(){
+    var h=""; try{ h=String(window.location.hash||""); }catch(e){}
+    if(!/^#deck=/.test(h)) return;
+    if(!SETTINGS.onboarded) return;   // a first visit finishes onboarding first (it would overwrite the player tools setting); finishOnboard calls this again
+    var res=parseDeckShare(h);
+    try{ history.replaceState(null,"",window.location.pathname+window.location.search); }catch(e){}
+    if(res) askImportSharedDeck(res); else toast("That deck link couldn't be read");
+  }
+  function shareDeck(d){
+    if(!d) return;
+    if(!deckShareCode(d).split("~")[1]){ toast("Add some cards before sharing"); return; }
+    var url=deckShareUrl(d);
+    var copyIt=function(){ copyPlainText(url, "Deck link copied", "Share deck link", "Clipboard access is not available here. Select this link and copy it, then send it to anyone. They can open it or paste it into Import."); };
+    // IS_NATIVE without the window prefix on purpose. window.IS_NATIVE is never assigned (see the note by
+    // V2_PREVIEW), so the old test always read undefined and BOTH wrappers took the share sheet path, where
+    // a refusal was swallowed by an empty catch and tapping Share did nothing at all. The bare var is the
+    // real one and is assigned long before anyone can tap this. A share that genuinely fails copies the link
+    // instead; a share the person cancels themselves is left alone, which is what AbortError means.
+    if(navigator.share && !IS_NATIVE && !window.IS_IOS){
+      navigator.share({title:d.name+" (SphereDex deck)", url:url}).catch(function(e){ if(!e || e.name!=="AbortError") copyIt(); });
+      return;
+    }
+    copyIt();
   }
   function downloadDeckText(d, text){
     var nm=d.name;
@@ -11276,9 +11628,13 @@ label.acctsetrow { align-items:center; }
       alt.hidden=false; alt.textContent="Download .txt"; alt.onclick=function(){ downloadDeckText(d, text); };
     } else {
       $("deckIOTitle").textContent="Import decklist";
-      $("deckIOHint").textContent="Paste a decklist below, one card per line (quantity then card number, like 4 EBP01-001). Or upload a file.";
+      $("deckIOHint").textContent="Paste a decklist below, one card per line (quantity then card number, like 4 EBP01-001), or paste a SphereDex deck link. Or upload a file.";
       ta.value=""; ta.readOnly=false;
-      act.textContent="Import"; act.onclick=function(){ if(createDeckFromParse("Imported deck", parseDeckList(ta.value))) close(); };
+      act.textContent="Import"; act.onclick=function(){
+        var sh=/deck=/.test(ta.value) ? parseDeckShare(ta.value) : null;
+        if(sh){ if(importSharedDeck(sh)) close(); return; }
+        if(createDeckFromParse("Imported deck", parseDeckList(ta.value))) close();
+      };
       alt.hidden=false; alt.textContent="Upload file"; alt.onclick=function(){ close(); doDeckImport(); };
     }
     sc.hidden=false;
@@ -11310,14 +11666,19 @@ label.acctsetrow { align-items:center; }
       }});
     }
     var dex=$("deckExport"); if(dex) dex.onclick=function(){ openDeckIO("export"); };
+    var dsh=$("deckShare"); if(dsh) dsh.onclick=function(){ shareDeck(activeDeck()); };
+    window.addEventListener("hashchange", checkSharedDeckLink);
+    setTimeout(checkSharedDeckLink, 1500);
     var dpr=$("deckPrint"); if(dpr) dpr.onclick=function(){ var d=activeDeck(); if(d) startDeckPrint(d); };
     var dim=$("deckImport"); if(dim) dim.onclick=function(){ openDeckIO("import"); };
     var dmatch=$("deckMatch"); if(dmatch) dmatch.onclick=function(){ showPage("match"); };
-    var si=$("deckSearch"), sug=$("deckSug");
+    var si=$("deckSearch"), sug=$("deckSug"), deckWork={};
     function closeSug(){ sug.hidden=true; sug.innerHTML=""; }
-    si.addEventListener("input", function(){
-      var q=fold(si.value.trim()); if(q.length<2){ closeSug(); return; }
-      var matches=CARDS.filter(function(c){ return cardMatchesQuery(c, si.value); }).slice(0,7);
+    function drawDeckWork(){ workChipRow($("deckWorkChips"), deckWork, function(w){ deckWork[w]=!deckWork[w]; var cb=$("deckWorkChips").querySelector('[data-work="'+w+'"]'); if(cb) cb.setAttribute("aria-pressed", deckWork[w]?"true":"false"); showSug(); }); }
+    function showSug(){
+      var works=keysOn(deckWork), q=fold(si.value.trim());
+      if(q.length<2 && !works.length){ closeSug(); return; }
+      var matches=CARDS.filter(function(c){ return (q.length<2 || cardMatchesQuery(c, si.value)) && workMatches(c, works) && (!works.length || c.kind==="Pal"); }).slice(0,works.length?12:7);
       if(!matches.length){ closeSug(); return; }
       sug.innerHTML=""; matches.forEach(function(c){ var b=document.createElement("button"); b.type="button";
         var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0, runs=deckAddRunQty(activeDeck(), c.id);
@@ -11325,8 +11686,10 @@ label.acctsetrow { align-items:center; }
         b.onclick=function(){ if(!activeDeck()) newDeck(); var d=activeDeck(); d.cards[c.id]=(d.cards[c.id]||0)+1; save(); renderDecks(); si.value=""; closeSug(); si.focus(); };
         sug.appendChild(b); });
       sug.hidden=false;
-    });
-    document.addEventListener("click", function(e){ if(!e.target.closest(".deckadd") && !e.target.closest(".decksug")) closeSug(); });
+    }
+    si.addEventListener("input", showSug);
+    drawDeckWork();
+    document.addEventListener("click", function(e){ if(!e.target.closest(".deckadd") && !e.target.closest(".decksug") && !e.target.closest(".deckwork")) closeSug(); });
   })();
 
   // ---- Tabletop match tracker (offline, on this device) ----
@@ -12320,7 +12683,7 @@ label.acctsetrow { align-items:center; }
     var closed=false;
     var cs=$("celebScrim"); if(cs && !cs.hidden){ cs.hidden=true; closed=true; }
     if(!closed){ var es=$("eventScrim"); if(es && !es.hidden){ closeEventSheet(); closed=true; } }
-    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","whereScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
+    if(!closed){ var found=["upScrim","globalSearchScrim","paScrim","askScrim","deckIOScrim","plScrim","whereScrim","fileIOScrim","csvPrevScrim"].some(function(id){ var e=$(id); if(e && !e.hidden){ e.hidden=true; return true; } return false; }); if(found) closed=true; }
     if(!closed){ var nl=$("navList"); if(nl && !nl.hidden){ closeNavMenu(); closed=true; } }
     if(!closed){ var cm=$("colMenu"); if(cm && !cm.hidden){ cm.hidden=true; closed=true; } }
     return closed;
@@ -12462,7 +12825,17 @@ label.acctsetrow { align-items:center; }
   function globalSearchRows(q){
     var rows=[], add=function(type,title,meta,ico,score,run,img){ if(score>0) rows.push({type:type,title:title,meta:meta||"",icon:ico||"search",score:score,run:run,img:img||""}); };
     if(q.length<2) return rows;
-    var cards=CARDS.map(function(c){ return {c:c,s:globalTextScore(q, cardSearchText(c)+" "+(c.set||""))}; }).filter(function(x){return x.s>0;}).sort(function(a,b){return b.s-a.s;}).slice(0,5);
+    // Score the two names on their own as well as the whole blob. Scoring only the blob meant a card whose
+    // Japanese name is on display could never beat one that has no Japanese text yet: the untranslated card
+    // still reads "Chillet ..." so the blob STARTS with the query and scores 100, while the translated card
+    // only contains it further along and scores 82. Searching Chillet in Japanese mode then lost EBP01-025
+    // behind the newer sets entirely. A name match now scores as a name match whichever language is shown.
+    var cardScore=function(c){
+      return Math.max(globalTextScore(q, cardSearchText(c)+" "+(c.set||"")),
+                      globalTextScore(q, c.nameEn||c.name||""),
+                      globalTextScore(q, c.name||""));
+    };
+    var cards=CARDS.map(function(c){ return {c:c,s:cardScore(c)}; }).filter(function(x){return x.s>0;}).sort(function(a,b){return b.s-a.s;}).slice(0,5);
     cards.forEach(function(x){ var c=x.c; add("Card",c.name,c.id+" · "+(c.rare||c.kind)+" · "+((SETS[c.set]||{}).name||c.set),"grid",x.s,function(){openDetail(c);},imgSrc(c)); });
     (BROWSE_EXPANSIONS||[]).forEach(function(g){ var s=globalTextScore(q,g.name+" "+g.release); if(s) add("Set",g.name,"Set progress and missing cards","calendar",s+3,function(){openSetGroup(g.sets,"all");}); });
     SET_ORDER.forEach(function(k){ var nm=(SETS[k]||{}).name||k, s=globalTextScore(q,nm+" "+k); if(s) add("Set",nm,k,"calendar",s,function(){openSet(k,"all");}); });
@@ -12749,7 +13122,7 @@ label.acctsetrow { align-items:center; }
   // table has no render for - or a file the build did not ship - falls back to that Pal's card art below.
   var PAL_ART = {"Lamball":"PAL_Lamball.webp","Cattiva":"PAL_Cattiva.webp","Chikipi":"PAL_Chikipi.webp","Lifmunk":"PAL_Lifmunk.webp","Fuack":"PAL_Fuack.webp","Celaray":"PAL_Celaray.webp","Teafant":"PAL_Teafant.webp","Gumoss":"PAL_Gumoss.webp","Jolthog":"PAL_Jolthog.webp","Jolthog Cryst":"PAL_Jolthog_Cryst.webp","Depresso":"PAL_Depresso.webp","Pengullet":"PAL_Pengullet.webp","Penking":"PAL_Penking.webp","Hoocrates":"PAL_Hoocrates.webp","Daedream":"PAL_Daedream.webp","Tanzee":"PAL_Tanzee.webp","Nox":"PAL_Nox.webp","Flambelle":"PAL_Flambelle.webp","Rooby":"PAL_Rooby.webp","Mau Cryst":"PAL_Mau_Cryst.webp","Rushoar":"PAL_Rushoar.webp","Foxparks":"PAL_Foxparks.webp","Eikthyrdeer Terra":"PAL_Eikthyrdeer_Terra.webp","Direhowl":"PAL_Direhowl.webp","Hangyu Cryst":"PAL_Hangyu_Cryst.webp","Azurobe":"PAL_Azurobe.webp","Sparkit":"PAL_Sparkit.webp","Kelpsea Ignis":"PAL_Kelpsea_Ignis.webp","Ribbuny":"PAL_Ribbuny.webp","Tombat":"PAL_Tombat.webp","Univolt":"PAL_Univolt.webp","Gobfin Ignis":"PAL_Gobfin_Ignis.webp","Loupmoon":"PAL_Loupmoon.webp","Cawgnito":"PAL_Cawgnito.webp","Arsox":"PAL_Arsox.webp","Elphidran":"PAL_Elphidran.webp","Elphidran Aqua":"PAL_Elphidran_Aqua.webp","Vanwyrm":"PAL_Vanwyrm.webp","Felbat":"PAL_Felbat.webp","Vaelet":"PAL_Vaelet.webp","Beegarde":"PAL_Beegarde.webp","Elizabee":"PAL_Elizabee.webp","Lovander":"PAL_Lovander.webp","Leezpunk":"PAL_Leezpunk.webp","Surfent":"PAL_Surfent.webp","Flopie":"PAL_Flopie.webp","Katress":"PAL_Katress.webp","Helzephyr":"PAL_Helzephyr.webp","Dinossom":"PAL_Dinossom.webp","Bushi":"PAL_Bushi.webp","Mammorest":"PAL_Mammorest.webp","Mammorest Cryst":"PAL_Mammorest_Cryst.webp","Petallia":"PAL_Petallia.webp","Incineram":"PAL_Incineram.webp","Pyrin":"PAL_Pyrin.webp","Pyrin Noct":"PAL_Pyrin_Noct.webp","Relaxaurus":"PAL_Relaxaurus.webp","Menasting":"PAL_Menasting.webp","Reindrix":"PAL_Reindrix.webp","Mossanda":"PAL_Mossanda.webp","Mossanda Lux":"PAL_Mossanda_Lux.webp","Chillet":"PAL_Chillet.webp","Ragnahawk":"PAL_Ragnahawk.webp","Digtoise":"PAL_Digtoise.webp","Broncherry":"PAL_Broncherry.webp","Dumud":"PAL_Dumud.webp","Kitsun":"PAL_Kitsun.webp","Blazehowl":"PAL_Blazehowl.webp","Blazehowl Noct":"PAL_Blazehowl_Noct.webp","Warsect":"PAL_Warsect.webp","Maraith":"PAL_Maraith.webp","Jormuntide":"PAL_Jormuntide.webp","Jormuntide Ignis":"PAL_Jormuntide_Ignis.webp","Suzaku":"PAL_Suzaku.webp","Suzaku Aqua":"PAL_Suzaku_Aqua.webp","Reptyro":"PAL_Reptyro.webp","Reptyro Cryst":"PAL_Reptyro_Cryst.webp","Cryolinx":"PAL_Cryolinx.webp","Wumpo":"PAL_Wumpo.webp","Wumpo Botan":"PAL_Wumpo_Botan.webp","Blazamut":"PAL_Blazamut.webp","Astegon":"PAL_Astegon.webp","Grizzbolt":"PAL_Grizzbolt.webp","Lyleen":"PAL_Lyleen.webp","Lyleen Noct":"PAL_Lyleen_Noct.webp","Shadowbeak":"PAL_Shadowbeak.webp"};
   function palImgSrc(g){ var f=PAL_ART[g.name]; if(f) return "img/"+f; if(g.hero) return imgSrc(g.hero); return ""; }
-  var paldexFilter = "all", paldexSort = "dex", paldexQuery = "", paldexVariant = "all", paldexView = (function(){ try{ return localStorage.getItem("palvault-paldex-view")||"grid"; }catch(e){ return "grid"; } })();
+  var paldexFilter = "all", paldexSort = "dex", paldexQuery = "", paldexVariant = "all", paldexWork = {}, paldexView = (function(){ try{ return localStorage.getItem("palvault-paldex-view")||"grid"; }catch(e){ return "grid"; } })();
   // Base Pal name: "Jormuntide - Surging Sea Serpent" -> "Jormuntide". The en dash is what separates the
   // Pal from its card title, so this also decides how the Missing screen's Pal goal groups cards. It reads
   // the English name whatever language is on display: a Japanese name puts the card title before the dash
@@ -13056,11 +13429,14 @@ label.acctsetrow { align-items:center; }
   }
   // Status and variant both apply. A status match used to return before the variant check, so
   // Not started + Rare listed every Pal.
-  function paldexGroupVisible(g, q, status, variant, variants){
+  function paldexGroupVisible(g, q, status, variant, variants, works){
     if(q && fold(g.name).indexOf(q) < 0) return false;
     if(status === "started" && !(g.owned > 0 && g.owned < g.total)) return false;
     if(status === "complete" && !(g.total > 0 && g.owned >= g.total)) return false;
     if(status === "missing" && g.owned !== 0) return false;
+    if(works && works.length){
+      if(!(g.cards||[]).some(function(c){ return works.some(function(w){ return ((c&&c.apt)||[]).indexOf(w)!==-1; }); })) return false;
+    }
     if(variant && variant !== "all"){
       var v=null, i;
       for(i=0;i<(variants||[]).length;i++){ if(variants[i].id===variant){ v=variants[i]; break; } }
@@ -13074,7 +13450,7 @@ label.acctsetrow { align-items:center; }
   function paldexFiltered(){
     var q = fold(paldexQuery);
     var out = palGroups().filter(function(g){
-      return paldexGroupVisible(g, q, paldexFilter, paldexVariant, PAL_VARIANTS);
+      return paldexGroupVisible(g, q, paldexFilter, paldexVariant, PAL_VARIANTS, keysOn(paldexWork));
     });
     if(paldexSort === "name") out.sort(function(a,b){ return a.name.localeCompare(b.name); });
     else if(paldexSort === "owned"){
@@ -13126,10 +13502,14 @@ label.acctsetrow { align-items:center; }
     if(f) f.textContent = cardsOwned + " / " + cardsTotal + " Pal cards \u00b7 " + done + " Pals complete";
     var chips = $("paldexChips");
     if(chips){
-      var counts = {all:all.length,
-        started: all.filter(function(g){ return g.owned > 0 && g.owned < g.total; }).length,
-        complete: done,
-        missing: all.filter(function(g){ return g.owned === 0; }).length};
+      // Count what the OTHER filters have left on screen, not the whole dex. These were taken from every Pal
+      // before the work filter ran, so turning on a work chip left "Not started 120" sitting above nine tiles.
+      // filter is passed as "all" on purpose: a status chip counts the Pals it WOULD show, not the current one.
+      var inView = all.filter(function(g){ return paldexGroupVisible(g, fold(paldexQuery), "all", paldexVariant, PAL_VARIANTS, keysOn(paldexWork)); });
+      var counts = {all:inView.length,
+        started: inView.filter(function(g){ return g.owned > 0 && g.owned < g.total; }).length,
+        complete: inView.filter(function(g){ return g.total > 0 && g.owned >= g.total; }).length,
+        missing: inView.filter(function(g){ return g.owned === 0; }).length};
       chips.innerHTML = [["all","All"],["started","Started"],["complete","Complete"],["missing","Not started"]]
         .map(function(pair){ return '<button class="palchip" type="button" data-f="'+pair[0]+'" aria-pressed="'+(paldexFilter===pair[0])+'">'+esc(pair[1])+' <b>'+counts[pair[0]]+'</b></button>'; }).join("");
       Array.prototype.forEach.call(chips.querySelectorAll(".palchip"), function(b){
@@ -13146,6 +13526,7 @@ label.acctsetrow { align-items:center; }
         b.onclick=function(){ paldexVariant=b.getAttribute("data-v"); renderPaldex(); };
       });
     }
+    workChipRow($("paldexWorkChips"), paldexWork, function(w){ paldexWork[w]=!paldexWork[w]; renderPaldex(); });
     var viewSel=$("paldexViewSel"); if(viewSel){ viewSel.value=paldexView; }
     var legend = $("paldexLegend");
     if(legend) legend.innerHTML = '<span>Every printing of a Pal in one place \u00b7 tap a pip for that card.</span>' +
@@ -13384,7 +13765,7 @@ label.acctsetrow { align-items:center; }
   function openRarity(r, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.rares[r]=true; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.rares[r]=true; filters.view=view;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     Array.prototype.forEach.call($("rareChips").querySelectorAll(".chip"), function(ch){
@@ -14481,7 +14862,7 @@ label.acctsetrow { align-items:center; }
   // Enter the binder with the Missing filter already selected. Optional text narrows the result to one Pal.
   function openMissingCollection(query){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="missing";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="missing";
     filters.q=query||"";   // setting the box's value fires no input event, so the filter is set here too
     var input=$("search"); if(input) input.value=filters.q;
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -14494,7 +14875,7 @@ label.acctsetrow { align-items:center; }
     var set={};
     CARDS.forEach(function(c){ var t=addedAt(c.id); if(PREVIOUS_VISIT && t>PREVIOUS_VISIT && t<APP_OPENED_AT) set[c.id]=true; });
     SINCE_VISIT=set;
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     filters.q="";
     var input=$("search"); if(input) input.value="";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -14504,7 +14885,7 @@ label.acctsetrow { align-items:center; }
   // "Collection / All cards": clear filters, turn fade ON (as requested), show the whole grid.
   function openAllCards(){
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
     syncSetChips();
     var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -14517,7 +14898,7 @@ label.acctsetrow { align-items:center; }
     view=view||"all";
     clearSinceVisit();
     // Start clean so a leftover color/rarity/element filter doesn't ride along.
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     var x=filterSetOf(k); if(x){ filters.exps[x.key]=true; if(x.products.length>1) filters.sets[k]=true; }   // one product: pick it under its set
     if(k==="PR2026" && promoTypeDef(promo)) filters.promos[promo]=true;   // a Releases promo box opens on its own type
     document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
@@ -14532,7 +14913,7 @@ label.acctsetrow { align-items:center; }
   function openSetGroup(sets, view){
     view=view||"all";
     clearSinceVisit();
-    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
+    filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view=view;
     FILTER_SETS.forEach(function(x){   // choose each set in the group; pick products only when the group is part of a set
       var inSet=setCodesOf(x).filter(function(k){ return sets.indexOf(k)!==-1; }); if(!inSet.length) return;
       filters.exps[x.key]=true; if(inSet.length<x.products.length) inSet.forEach(function(k){ filters.sets[k]=true; }); });
@@ -14959,6 +15340,94 @@ label.acctsetrow { align-items:center; }
     var h=$("qHint"); if(h){ h.className="qhint ok"; h.textContent="Added "+c.name+" ("+c.id+")."; }
     toast("Added "+c.name);
   }
+  // ---- Price a list ----
+  // Paste card numbers with optional quantities (4 EBP01-001, EBP01-001 x4) and see what the list is worth.
+  // Nothing is added to the collection. A second box prices the other side of a trade.
+  var PRICE_LIST_QTY_MAX=999;
+  function priceListParse(text, idx){
+    var order=[], qtys={}, unknown=[], seen={};
+    (text||"").split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line || line.charAt(0)==="#") return;
+      var ids=[], qty=null;
+      line.split(/[\s,;]+/).forEach(function(t){
+        t=(t||"").trim(); if(!t) return;
+        var up=t.toUpperCase().replace(/^#/,"").replace(/[^A-Z0-9-]/g,"");
+        if(up && idx[up]){ ids.push(up); return; }
+        var mq=t.match(/^(?:x\s*)?(\d+)\s*x?$/i);
+        if(mq){ if(qty==null) qty=parseInt(mq[1],10); return; }
+        if(/^[A-Z]{2,}\d*-\d+[A-Z]?$/.test(up) && !seen[up]){ seen[up]=1; unknown.push(up); }
+      });
+      var n=(qty!=null && qty>0) ? Math.min(PRICE_LIST_QTY_MAX, qty) : 1;
+      if(qty===0) return;
+      ids.forEach(function(id){
+        if(qtys[id]==null){ qtys[id]=0; order.push(id); }
+        qtys[id]=Math.min(PRICE_LIST_QTY_MAX, qtys[id]+(ids.length>1 ? 1 : n));
+      });
+    });
+    return { lines:order.map(function(id){ return {id:id, qty:qtys[id]}; }), unknown:unknown };
+  }
+  function priceListTotals(lines, unitOfFn, ownedFn){
+    var rows=[], total=0, unpriced=0, copies=0, fresh=0, have=0;
+    (lines||[]).forEach(function(l){
+      var q=l.qty|0; if(q<1) return;
+      var unit=null, n;
+      try{ n=+unitOfFn(l.id); }catch(e){ n=0; }
+      if(isFinite(n) && n>0) unit=Math.round(n*100)/100;
+      var owned=0; try{ owned=Math.max(0, (+ownedFn(l.id))|0); }catch(e2){ owned=0; }
+      var sum=unit==null ? null : Math.round(unit*q*100)/100;
+      if(sum==null) unpriced+=q; else total+=sum;
+      copies+=q; if(owned>0) have++; else fresh++;
+      rows.push({id:l.id, qty:q, unit:unit, sum:sum, owned:owned, isNew:owned<1});
+    });
+    return { rows:rows, total:Math.round(total*100)/100, unpriced:unpriced, copies:copies, cards:rows.length, newCards:fresh, ownedCards:have };
+  }
+  function priceListRowHtml(r){
+    var c=byNumberIdx[r.id]; var nm=c?c.name:r.id;
+    var price=r.sum==null ? "No price" : moneyIn(r.sum);
+    var each=r.unit==null ? "" : moneyIn(r.unit)+" each";
+    var tag=r.isNew ? "New" : "You own "+r.owned;
+    return '<div class="plrow"><div class="plmeta"><div class="pln">'+esc(nm)+'</div><div class="plid">'+esc(r.id)+' · '+esc(tag)+'</div></div><div class="plmoney priceui"><span>'+esc(price)+'</span><span class="plea">'+esc((r.qty>1?"×"+r.qty+" · ":"")+each)+'</span></div></div>';
+  }
+  function priceListSideHtml(title, res, tot){
+    var h='<div class="plside"><h4>'+esc(title)+'</h4>';
+    if(!tot.cards){ return h+'<p class="plnone">No card numbers found.</p></div>'; }
+    h+='<div class="pltotal priceui">'+esc(moneyIn(tot.total))+'</div>';
+    h+='<div class="plsum">'+tot.copies+' card'+(tot.copies===1?"":"s")+' · '+tot.newCards+' new · '+tot.ownedCards+' already owned'+(tot.unpriced?' · '+tot.unpriced+' without a price':'')+'</div>';
+    h+=tot.rows.map(priceListRowHtml).join("");
+    if(res.unknown.length) h+='<p class="plnone">Not recognised: '+esc(res.unknown.join(", "))+'</p>';
+    return h+'</div>';
+  }
+  function priceListDiffText(ta, tb){
+    if(!ta.cards || !tb.cards) return "";
+    if(!(ta.total>0) && !(tb.total>0)) return "";
+    var d=Math.round((tb.total-ta.total)*100)/100;
+    var tail=(ta.unpriced||tb.unpriced) ? ", counting priced cards only" : "";
+    if(d===0) return "Both lists are worth the same"+tail;
+    return (d>0 ? "List B is worth "+moneyIn(d)+" more" : "List A is worth "+moneyIn(-d)+" more")+tail;
+  }
+  function priceListRun(){
+    var a=$("plTextA"), b=$("plTextB"), out=$("plOut"); if(!a||!out) return;
+    var ownMap=activeOwn();
+    var ownedFn=function(id){ return tradeOwnedQty(ownMap, id); };
+    var ra=priceListParse(a.value, byNumberIdx), ta=priceListTotals(ra.lines, mktOf, ownedFn);
+    var html=priceListSideHtml(b&&b.value.trim()?"List A":"Your list", ra, ta);
+    if(b && b.value.trim()){
+      var rb=priceListParse(b.value, byNumberIdx), tb=priceListTotals(rb.lines, mktOf, ownedFn);
+      html+=priceListSideHtml("List B", rb, tb);
+      var dt=priceListDiffText(ta, tb);
+      if(dt) html='<div class="pldiff priceui">'+esc(dt)+'</div>'+html;
+    }
+    out.innerHTML=html;
+  }
+  function openPriceList(){
+    var sc=$("plScrim"); if(!sc) return;
+    var a=$("plTextA"), b=$("plTextB");
+    function close(){ sc.hidden=true; $("plClose").onclick=$("plGo").onclick=sc.onclick=null; }
+    $("plClose").onclick=close; sc.onclick=function(e){ if(e.target===sc) close(); };
+    $("plGo").onclick=priceListRun;
+    sc.hidden=false; setTimeout(function(){ if(a) a.focus(); }, 30);
+  }
+
   // Predictive search over Pal names, item names and card numbers.
   function searchCards(q){
     q=(q||"").trim().toLowerCase(); if(q.length<2) return [];
@@ -15166,9 +15635,9 @@ label.acctsetrow { align-items:center; }
   // seam at the end of the section (also window.SCAN_REVIEW); tools/test_scan_review.cjs asserts the
   // markers exist once, nothing leaks outside them, all four shipped copies match, and the behaviour
   // still works against a stub DOM. Collection mutation helpers (changeRaw, save) stay outside.
-  var scanSession={count:0,value:0,ts:0,items:[]};  // local-only, undoable running tally across a continuous-scan burst
+  var scanSession={count:0,value:0,ts:0,items:[],pending:[]};  // local-only, undoable running tally across a continuous-scan burst. pending holds a photo of several cards until the user adds them.
   var scanReviewScrim=$("scanReviewScrim");
-  function resetScanSession(){ scanSession.count=0; scanSession.value=0; scanSession.ts=0; scanSession.items=[]; }
+  function resetScanSession(){ scanSession.count=0; scanSession.value=0; scanSession.ts=0; scanSession.items=[]; scanSession.pending=[]; }
   function scanSessionTotal(){ return scanSession.items.reduce(function(sum,item){ return sum+(+item.value||0); },0); }
   function recordScan(item){ scanSession.items.push(item); scanSession.count=scanSession.items.length; scanSession.value=scanSessionTotal(); scanSession.ts=Date.now(); }
   function scanRestore(item){
@@ -15196,10 +15665,102 @@ label.acctsetrow { align-items:center; }
     item.id=next.id; item.value=unitOfEntry(next.id, null, target)*qty; scanSession.value=scanSessionTotal(); scanSession.ts=Date.now();
     save(); scanRefreshPages(); refreshScanSessionUI(); renderScanReview();
   }
+  function scanPendingHits(q){
+    q=String(q||"").trim().toLowerCase();
+    if(q.length<2) return [];
+    var out=[];
+    for(var i=0;i<CARDS.length && out.length<6;i++){
+      var c=CARDS[i];
+      var name=String(c.name||"").toLowerCase(), id=String(c.id||"").toLowerCase(), ja=String(c.nameJa||"").toLowerCase();
+      if(name.indexOf(q)>=0 || id.indexOf(q)>=0 || (ja && ja.indexOf(q)>=0)) out.push(c);
+    }
+    return out;
+  }
+  function paintPendingSuggestions(row, index, q){
+    var sug=row.querySelector('[data-action="sugs"]'); if(!sug) return;
+    var hits=scanPendingHits(q);
+    sug.innerHTML=hits.map(function(c){ return '<button type="button" data-action="pick" data-id="'+esc(c.id)+'">'+esc(c.id)+' · '+esc(c.name)+'</button>'; }).join("");
+    Array.prototype.forEach.call(sug.querySelectorAll('[data-action="pick"]'), function(btn){
+      btn.onclick=function(){ scanAssignPending(index, btn.getAttribute("data-id")); };
+    });
+  }
+  function renderPendingRow(item, index){
+    var card=item.id ? byNumberIdx[String(item.id).toUpperCase()] : null;
+    var row=document.createElement("div"); row.className="scanreviewrow"+(card?"":" unmatched");
+    var variants=card ? CARDS.filter(function(c){ return c.base===card.base; }) : [];
+    var variantControl=variants.length>1?'<select class="scanreviewvariant" data-action="variant" aria-label="Correct printing for '+esc(card.name)+'">'+variants.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id===card.id?' selected':'')+'>'+esc(c.rare)+' · '+esc(c.id)+'</option>'; }).join("")+'</select>':'';
+    var title=card?esc(card.name):"Unmatched";
+    var sub=card ? esc(card.id)+(item.lowConf?" · check this match":"") : "Pick the card, or remove this row";
+    var find='<div class="scanreviewfind"><input data-action="find" type="search" placeholder="'+(card?"Change card":"Name or number")+'" aria-label="'+(card?"Change this card":"Find this card")+'" autocomplete="off"><div class="scanreviewsugs" data-action="sugs"></div></div>';
+    row.innerHTML='<img src="'+(item.thumb||(card?imgSrc(card):""))+'" alt=""><div><b>'+title+'</b><span>'+sub+'</span></div><div class="scanreviewactions">'+variantControl+'<button type="button" data-action="drop">Remove</button></div>'+find;
+    var drop=row.querySelector('[data-action="drop"]'); if(drop) drop.onclick=function(){ scanDropPending(index); };
+    var variant=row.querySelector('[data-action="variant"]'); if(variant) variant.onchange=function(){ scanAssignPending(index, variant.value); };
+    var findEl=row.querySelector('[data-action="find"]'); if(findEl) findEl.oninput=function(){ paintPendingSuggestions(row, index, findEl.value); };
+    return row;
+  }
+  function scanAssignPending(index, id){
+    var item=(scanSession.pending||[])[index]; if(!item) return;
+    item.id=id||""; item.lowConf=false;
+    renderScanReview();
+  }
+  function scanDropPending(index){
+    if(!scanSession.pending || index<0 || index>=scanSession.pending.length) return;
+    scanSession.pending.splice(index, 1);
+    refreshScanSessionUI(); renderScanReview();
+  }
+  function scanStagePending(items){
+    scanSession.pending=(items||[]).map(function(it){
+      return { id: it && it.id ? String(it.id) : "", lowConf: !!(it && it.lowConf), thumb: (it && it.thumb) || "", score: it && +it.score || 0 };
+    });
+    scanSession.ts=Date.now();
+    refreshScanSessionUI(); renderScanReview();
+  }
+  function scanPendingBlocked(){ return (scanSession.pending||[]).some(function(it){ return !it.id; }); }
+  function fillScanReviewCol(){
+    var sel=$("scanReviewCol"); if(!sel || !STATE || !STATE.cols) return;
+    var prev=sel.value;
+    var def=(SETTINGS.defaultAddCol && SETTINGS.defaultAddCol!=="ask" && STATE.cols.some(function(x){ return x.id===SETTINGS.defaultAddCol; })) ? SETTINGS.defaultAddCol : ((typeof activeCol==="function" && activeCol()) ? activeCol().id : "");
+    sel.innerHTML="";
+    STATE.cols.forEach(function(col){
+      var op=document.createElement("option"); op.value=col.id; op.textContent=col.name;
+      if(col.id===(prev||def)) op.selected=true;
+      sel.appendChild(op);
+    });
+  }
+  function commitPending(colId){
+    var pending=(scanSession.pending||[]).slice();
+    if(!pending.length || scanPendingBlocked()) return 0;
+    var added=0, left=[];
+    pending.forEach(function(item){
+      var card=item.id ? byNumberIdx[String(item.id).toUpperCase()] : null;
+      if(!card){ left.push(item); return; }
+      var ed=null;
+      if(typeof canEdition==="function" && canEdition(card) && typeof defaultEditionFor==="function"){
+        var def=defaultEditionFor(card); if(def) ed=def;
+      }
+      addToCollection(colId, card.id, null, ed);
+      var col=scanColById(colId), entry=col&&col.own[card.id];
+      recordScan({id:card.id, colId:colId, dest:"collection", type:"raw", edition:rawEditionKey(ed), qty:1, value: entry ? unitOfEntry(card.id, null, entry) : 0});
+      added++;
+    });
+    scanSession.pending=left;
+    refreshScanSessionUI(); renderScanReview();
+    return added;
+  }
   function renderScanReview(){
     var host=$("scanReviewList"); if(!host) return;
-    if(!scanSession.items.length){ host.innerHTML='<div class="scanreviewempty">No scans are waiting for review.</div>'; return; }
+    var pending=scanSession.pending||[];
+    var intro=$("scanReviewIntro"), colWrap=$("scanReviewColWrap"), done=$("scanReviewDone");
+    if(intro){
+      intro.textContent = pending.length
+        ? "Check each card before it is added. An unmatched card stays here until you pick one or remove the row."
+        : "Every capture is shown here until you finish. Raw card captures can include extra copies or be corrected to another printing; any capture can be undone without affecting cards collected earlier.";
+    }
+    if(colWrap) colWrap.hidden=!pending.length;
+    if(done) done.textContent = pending.length ? "Add these cards" : "Done";
+    if(!scanSession.items.length && !pending.length){ host.innerHTML='<div class="scanreviewempty">No scans are waiting for review.</div>'; return; }
     host.innerHTML="";
+    pending.forEach(function(item, index){ host.appendChild(renderPendingRow(item, index)); });
     scanSession.items.slice().reverse().forEach(function(item){
       var card=byNumberIdx[item.id.toUpperCase()]; if(!card) return;
       var row=document.createElement("div"); row.className="scanreviewrow";
@@ -15223,24 +15784,861 @@ label.acctsetrow { align-items:center; }
     });
   }
   function closeScanReview(){ if(scanReviewScrim) scanReviewScrim.hidden=true; }
-  function openScanReview(){ if(!scanReviewScrim) return; renderScanReview(); scanReviewScrim.hidden=false; openOverlay(closeScanReview); }
+  function openScanReview(){ if(!scanReviewScrim) return; fillScanReviewCol(); renderScanReview(); scanReviewScrim.hidden=false; openOverlay(closeScanReview); }
   function refreshScanSessionUI(){
-    var ssEl=$("scanSess"), review=$("scanReviewBtn");
+    var ssEl=$("scanSess"), review=$("scanReviewBtn"), photo=$("qMultiReview");
     if(ssEl){ if(scanSession.count>0){ ssEl.hidden=false; ssEl.textContent=scanSession.count+" added this session"+((SETTINGS.mode!=="collector"&&scanSession.value>0)?" · "+money(scanSession.value):""); } else ssEl.hidden=true; }
-    if(review) review.hidden=!scanSession.items.length;
+    var waiting=!!(scanSession.items.length || (scanSession.pending && scanSession.pending.length));
+    if(review) review.hidden=!waiting;
+    if(photo) photo.hidden=!(scanSession.pending && scanSession.pending.length);
   }
 
   // Stable seam for the guard suite and outside callers (the capture flow records scans; the modal
-  // paints the session pill). Internal functions may be renamed freely behind this object.
+  // paints the session pill; a photo of several cards stages rows here before they are added).
+  // Internal functions may be renamed freely behind this object.
   var SCAN_REVIEW = {
     session: scanSession,
     total: scanSessionTotal, record: recordScan, reset: resetScanSession,
     restore: scanRestore, moveVariant: scanMoveVariant,
     render: renderScanReview, open: openScanReview, close: closeScanReview,
-    refresh: refreshScanSessionUI
+    refresh: refreshScanSessionUI,
+    stage: scanStagePending, assign: scanAssignPending, drop: scanDropPending,
+    blocked: scanPendingBlocked, commit: commitPending
   };
   if(typeof window!=="undefined") window.SCAN_REVIEW = SCAN_REVIEW;
   // ==== SCAN REVIEW END (logic) ====
+
+  // ==== MULTI SCAN BEGIN (logic; guarded by tools/test_multi_scan.cjs) ====
+  /* On-device multi-card photo scan.
+     Card regions come from a local-variance mask (a card is busier than a table or a
+     pocket), closed so the quiet text box stays inside the blob, then a rotated quad
+     from the blob's principal axes. Each quad is warped upright and compared to the
+     bundled card art with a coarse colour block descriptor. A weak or ambiguous
+     score stays unmatched so the review list can be picked by hand. */
+  var MULTI_SCAN = (function(){
+    var GW = 12, GH = 16, DESC = GW * GH * 3;
+    var CARD_ASPECT = 400 / 559;
+    var ACCEPT_SCORE = 0.72;
+    var ACCEPT_MARGIN = 0.045;
+    var SOFT_SCORE = 0.64;
+    var SOFT_MARGIN = 0.08;
+    var LOW_MARGIN = 0.07;
+
+    function lumaAt(rgba, i){
+      return rgba[i] * 0.299 + rgba[i + 1] * 0.587 + rgba[i + 2] * 0.114;
+    }
+
+    function integral(src, w, h){
+      var ii = new Float64Array((w + 1) * (h + 1));
+      var stride = w + 1;
+      for(var y = 0; y < h; y++){
+        var row = 0;
+        var srcRow = y * w;
+        var above = y * stride;
+        var dest = (y + 1) * stride;
+        for(var x = 0; x < w; x++){
+          row += src[srcRow + x];
+          ii[dest + x + 1] = ii[above + x + 1] + row;
+        }
+      }
+      return ii;
+    }
+    function rectSum(ii, stride, x0, y0, x1, y1){
+      return ii[y1 * stride + x1] - ii[y0 * stride + x1] - ii[y1 * stride + x0] + ii[y0 * stride + x0];
+    }
+    function boxBlur(src, w, h, r){
+      var ii = integral(src, w, h);
+      var stride = w + 1;
+      var out = new Float32Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          var n = (x1 - x0) * (y1 - y0);
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) / n;
+        }
+      }
+      return out;
+    }
+    function localStd(gray, w, h, r){
+      var sq = new Float32Array(gray.length);
+      for(var i = 0; i < gray.length; i++) sq[i] = gray[i] * gray[i];
+      var mu = boxBlur(gray, w, h, r);
+      var mu2 = boxBlur(sq, w, h, r);
+      var out = new Float32Array(gray.length);
+      for(var j = 0; j < gray.length; j++){
+        var v = mu2[j] - mu[j] * mu[j];
+        out[j] = v > 0 ? Math.sqrt(v) : 0;
+      }
+      return out;
+    }
+    function percentile(src, p){
+      // 256-bin histogram is enough: local std of an 8-bit image stays well under 128,
+      // but clamp into 0..255 so a bright photo cannot walk off the end.
+      var hist = new Uint32Array(256);
+      for(var i = 0; i < src.length; i++){
+        var b = src[i];
+        if(b < 0) b = 0;
+        else if(b > 255) b = 255;
+        hist[b | 0]++;
+      }
+      var need = Math.max(0, Math.min(src.length - 1, Math.floor(src.length * p)));
+      var seen = 0;
+      for(var k = 0; k < 256; k++){
+        seen += hist[k];
+        if(seen > need) return k;
+      }
+      return 255;
+    }
+    function dilate(mask, w, h, r){
+      var ii = integral(mask, w, h);
+      var stride = w + 1;
+      var out = new Uint8Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) > 0 ? 1 : 0;
+        }
+      }
+      return out;
+    }
+    function erode(mask, w, h, r){
+      var ii = integral(mask, w, h);
+      var stride = w + 1;
+      var out = new Uint8Array(w * h);
+      for(var y = 0; y < h; y++){
+        var y0 = y - r; if(y0 < 0) y0 = 0;
+        var y1 = y + r + 1; if(y1 > h) y1 = h;
+        for(var x = 0; x < w; x++){
+          var x0 = x - r; if(x0 < 0) x0 = 0;
+          var x1 = x + r + 1; if(x1 > w) x1 = w;
+          var n = (x1 - x0) * (y1 - y0);
+          out[y * w + x] = rectSum(ii, stride, x0, y0, x1, y1) === n ? 1 : 0;
+        }
+      }
+      return out;
+    }
+
+    function downGray(rgba, w, h, maxEdge){
+      var scale = Math.min(1, maxEdge / Math.max(w, h));
+      var sw = Math.max(32, Math.round(w * scale));
+      var sh = Math.max(32, Math.round(h * scale));
+      var gray = new Float32Array(sw * sh);
+      for(var y = 0; y < sh; y++){
+        var y0 = (y * h / sh) | 0;
+        var y1 = ((y + 1) * h / sh) | 0;
+        if(y1 <= y0) y1 = y0 + 1;
+        if(y1 > h) y1 = h;
+        for(var x = 0; x < sw; x++){
+          var x0 = (x * w / sw) | 0;
+          var x1 = ((x + 1) * w / sw) | 0;
+          if(x1 <= x0) x1 = x0 + 1;
+          if(x1 > w) x1 = w;
+          var sum = 0, n = 0;
+          for(var yy = y0; yy < y1; yy++){
+            var row = yy * w;
+            for(var xx = x0; xx < x1; xx++){
+              sum += lumaAt(rgba, (row + xx) * 4);
+              n++;
+            }
+          }
+          gray[y * sw + x] = n ? sum / n : 0;
+        }
+      }
+      return { gray: gray, sw: sw, sh: sh, sx: w / sw, sy: h / sh };
+    }
+
+    function components(mask, w, h){
+      var label = new Int32Array(w * h);
+      var out = [];
+      var stack = [];
+      for(var i = 0; i < mask.length; i++){
+        if(!mask[i] || label[i]) continue;
+        var id = out.length + 1;
+        stack.length = 0;
+        stack.push(i);
+        label[i] = id;
+        var area = 0, minx = w, miny = h, maxx = 0, maxy = 0;
+        var sumX = 0, sumY = 0, sumXX = 0, sumYY = 0, sumXY = 0;
+        while(stack.length){
+          var p = stack.pop();
+          var x = p % w, y = (p / w) | 0;
+          area++;
+          if(x < minx) minx = x;
+          if(y < miny) miny = y;
+          if(x > maxx) maxx = x;
+          if(y > maxy) maxy = y;
+          sumX += x; sumY += y; sumXX += x * x; sumYY += y * y; sumXY += x * y;
+          if(x > 0 && mask[p - 1] && !label[p - 1]){ label[p - 1] = id; stack.push(p - 1); }
+          if(x + 1 < w && mask[p + 1] && !label[p + 1]){ label[p + 1] = id; stack.push(p + 1); }
+          if(y > 0 && mask[p - w] && !label[p - w]){ label[p - w] = id; stack.push(p - w); }
+          if(y + 1 < h && mask[p + w] && !label[p + w]){ label[p + w] = id; stack.push(p + w); }
+        }
+        out.push({ area: area, minx: minx, miny: miny, maxx: maxx, maxy: maxy,
+          sumX: sumX, sumY: sumY, sumXX: sumXX, sumYY: sumYY, sumXY: sumXY, id: id });
+      }
+      return { comps: out, label: label };
+    }
+
+    function orderCorners(pts){
+      var sums = pts.map(function(p){ return p.x + p.y; });
+      var diffs = pts.map(function(p){ return p.x - p.y; });
+      function at(arr, extreme){
+        var idx = 0;
+        for(var i = 1; i < arr.length; i++) if((extreme === "min" ? arr[i] < arr[idx] : arr[i] > arr[idx])) idx = i;
+        return pts[idx];
+      }
+      return [at(sums, "min"), at(diffs, "max"), at(sums, "max"), at(diffs, "min")];
+    }
+    function dist(a, b){ var dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+    function quadAspect(q){
+      var width = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2;
+      var height = (dist(q[0], q[3]) + dist(q[1], q[2])) / 2;
+      if(height < 1) return 99;
+      return width / height;
+    }
+    function quadArea(q){
+      var a = 0;
+      for(var i = 0; i < 4; i++){
+        var p = q[i], n = q[(i + 1) % 4];
+        a += p.x * n.y - n.x * p.y;
+      }
+      return Math.abs(a) / 2;
+    }
+    function pcaQuad(comp, label, w){
+      var n = comp.area;
+      var cx = comp.sumX / n, cy = comp.sumY / n;
+      var cxx = comp.sumXX / n - cx * cx;
+      var cyy = comp.sumYY / n - cy * cy;
+      var cxy = comp.sumXY / n - cx * cy;
+      var angle = 0.5 * Math.atan2(2 * cxy, cxx - cyy);
+      var co = Math.cos(angle), si = Math.sin(angle);
+      var umin = Infinity, umax = -Infinity, vmin = Infinity, vmax = -Infinity;
+      for(var y = comp.miny; y <= comp.maxy; y++){
+        var row = y * w;
+        for(var x = comp.minx; x <= comp.maxx; x++){
+          var p = row + x;
+          if(label[p] !== comp.id) continue;
+          var dx = x - cx, dy = y - cy;
+          var u = dx * co + dy * si;
+          var v = -dx * si + dy * co;
+          if(u < umin) umin = u;
+          if(u > umax) umax = u;
+          if(v < vmin) vmin = v;
+          if(v > vmax) vmax = v;
+        }
+      }
+      function back(u, v){
+        return { x: cx + co * u - si * v, y: cy + si * u + co * v };
+      }
+      return orderCorners([back(umin, vmin), back(umax, vmin), back(umax, vmax), back(umin, vmax)]);
+    }
+
+    function boxOf(q){
+      var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+      for(var i = 0; i < 4; i++){
+        if(q[i].x < minx) minx = q[i].x;
+        if(q[i].y < miny) miny = q[i].y;
+        if(q[i].x > maxx) maxx = q[i].x;
+        if(q[i].y > maxy) maxy = q[i].y;
+      }
+      return { minx: minx, miny: miny, maxx: maxx, maxy: maxy };
+    }
+    function iou(a, b){
+      var ix0 = Math.max(a.minx, b.minx), iy0 = Math.max(a.miny, b.miny);
+      var ix1 = Math.min(a.maxx, b.maxx), iy1 = Math.min(a.maxy, b.maxy);
+      var iw = ix1 - ix0, ih = iy1 - iy0;
+      if(iw <= 0 || ih <= 0) return 0;
+      var inter = iw * ih;
+      var ua = (a.maxx - a.minx) * (a.maxy - a.miny) + (b.maxx - b.minx) * (b.maxy - b.miny) - inter;
+      return ua > 0 ? inter / ua : 0;
+    }
+
+    function detectMask(gray, sw, sh){
+      var r = Math.max(2, (sw / 90) | 0);
+      var std = localStd(gray, sw, sh, r);
+      var p50 = percentile(std, 0.50);
+      var p85 = percentile(std, 0.85);
+      var th = Math.max(8, (p50 + p85) / 2 * 0.85);
+      var mask = new Uint8Array(sw * sh);
+      for(var i = 0; i < std.length; i++) mask[i] = std[i] >= th ? 1 : 0;
+      var closeR = Math.max(3, (sw / 70) | 0);
+      var closed = erode(dilate(mask, sw, sh, closeR), sw, sh, closeR);
+      var opened = dilate(erode(closed, sw, sh, 1), sw, sh, 1);
+      return opened;
+    }
+
+    function quadsFromMask(mask, sw, sh, map){
+      var found = components(mask, sw, sh);
+      var minArea = sw * sh * 0.012;
+      var maxArea = sw * sh * 0.70;
+      var quads = [];
+      for(var c = 0; c < found.comps.length; c++){
+        var comp = found.comps[c];
+        if(comp.area < minArea || comp.area > maxArea) continue;
+        var q = pcaQuad(comp, found.label, sw);
+        var aspect = quadAspect(q);
+        var portrait = aspect >= 0.52 && aspect <= 0.98;
+        var landscape = aspect >= 1.05 && aspect <= 1.90;
+        if(!portrait && !landscape) continue;
+        var qa = quadArea(q);
+        if(!qa || comp.area / qa < 0.45) continue;
+        var mapped = q.map(function(p){ return { x: p.x * map.sx, y: p.y * map.sy }; });
+        if(landscape){
+          // A card lying on its side: turn the quad so the long edge runs vertically.
+          mapped = [mapped[3], mapped[0], mapped[1], mapped[2]];
+        }
+        quads.push({ pts: mapped, area: comp.area, aspect: portrait ? aspect : 1 / aspect, box: boxOf(mapped) });
+      }
+      quads.sort(function(a, b){ return b.area - a.area; });
+      var kept = [];
+      for(var i = 0; i < quads.length; i++){
+        var hit = false;
+        for(var k = 0; k < kept.length; k++) if(iou(quads[i].box, kept[k].box) > 0.35){ hit = true; break; }
+        if(!hit) kept.push(quads[i]);
+        if(kept.length >= 16) break;
+      }
+      return orderQuads(kept);
+    }
+
+    function orderQuads(quads){
+      if(quads.length < 2) return quads;
+      var heights = quads.map(function(q){ return q.box.maxy - q.box.miny; }).sort(function(a, b){ return a - b; });
+      var med = heights[heights.length >> 1] || 1;
+      var rows = [];
+      quads.slice().sort(function(a, b){ return ((a.box.miny + a.box.maxy) - (b.box.miny + b.box.maxy)); }).forEach(function(q){
+        var cy = (q.box.miny + q.box.maxy) / 2;
+        var row = null;
+        for(var i = 0; i < rows.length; i++){
+          if(Math.abs(cy - rows[i].cy) < med * 0.45){ row = rows[i]; break; }
+        }
+        if(!row){ row = { cy: cy, items: [] }; rows.push(row); }
+        row.items.push(q);
+        var n = row.items.length;
+        row.cy = row.items.reduce(function(s, it){ return s + (it.box.miny + it.box.maxy) / 2; }, 0) / n;
+      });
+      var out = [];
+      rows.forEach(function(row){
+        row.items.sort(function(a, b){ return a.box.minx - b.box.minx; });
+        out.push.apply(out, row.items);
+      });
+      return out;
+    }
+
+    function detect(rgba, w, h){
+      if(!rgba || w < 32 || h < 32) return [];
+      var small = downGray(rgba, w, h, 520);
+      var mask = detectMask(small.gray, small.sw, small.sh);
+      return quadsFromMask(mask, small.sw, small.sh, small);
+    }
+
+    function sliceRGBA(rgba, w, h, x0, y0, x1, y1){
+      x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+      x1 = Math.min(w, Math.ceil(x1)); y1 = Math.min(h, Math.ceil(y1));
+      var cw = x1 - x0, ch = y1 - y0;
+      if(cw < 8 || ch < 8) return null;
+      var out = new Uint8ClampedArray(cw * ch * 4);
+      for(var y = 0; y < ch; y++){
+        var src = ((y0 + y) * w + x0) * 4;
+        out.set(rgba.subarray(src, src + cw * 4), y * cw * 4);
+      }
+      return { rgba: out, w: cw, h: ch, x0: x0, y0: y0 };
+    }
+
+    function contentBox(rgba, w, h){
+      var step = Math.max(1, (Math.max(w, h) / 180) | 0);
+      var corners = [];
+      function take(x0, y0, x1, y1){
+        for(var y = y0; y < y1; y += step){
+          for(var x = x0; x < x1; x += step) corners.push(lumaAt(rgba, (y * w + x) * 4));
+        }
+      }
+      var mw = Math.max(4, (w * 0.08) | 0), mh = Math.max(4, (h * 0.08) | 0);
+      take(0, 0, mw, mh); take(w - mw, 0, w, mh); take(0, h - mh, mw, h); take(w - mw, h - mh, w, h);
+      corners.sort(function(a, b){ return a - b; });
+      var med = corners[corners.length >> 1] || 0;
+      var col = new Float64Array(w), row = new Float64Array(h), cn = new Uint32Array(w), rn = new Uint32Array(h);
+      for(var y = 0; y < h; y += step){
+        for(var x = 0; x < w; x += step){
+          var d = Math.abs(lumaAt(rgba, (y * w + x) * 4) - med);
+          col[x] += d; cn[x]++; row[y] += d; rn[y]++;
+        }
+      }
+      function span(sum, n, len){
+        var on = [];
+        for(var i = 0; i < len; i++) if(n[i] && sum[i] / n[i] > 10) on.push(i);
+        if(on.length < 8) return [0, len - 1];
+        return [on[0], on[on.length - 1]];
+      }
+      var xs = span(col, cn, w), ys = span(row, rn, h);
+      return { x0: xs[0], x1: xs[1], y0: ys[0], y1: ys[1] };
+    }
+
+    function cellBusy(rgba, w, h){
+      var step = Math.max(1, (Math.max(w, h) / 40) | 0);
+      var sum = 0, sum2 = 0, n = 0;
+      for(var y = 0; y < h; y += step){
+        for(var x = 0; x < w; x += step){
+          var L = lumaAt(rgba, (y * w + x) * 4);
+          sum += L; sum2 += L * L; n++;
+        }
+      }
+      if(!n) return false;
+      var mean = sum / n;
+      var v = sum2 / n - mean * mean;
+      return v > 180;
+    }
+
+    function grid(rgba, w, h, cols, rows){
+      cols = cols || 3; rows = rows || 3;
+      var box = contentBox(rgba, w, h);
+      var cw = (box.x1 - box.x0) / cols;
+      var ch = (box.y1 - box.y0) / rows;
+      var quads = [];
+      for(var r = 0; r < rows; r++){
+        for(var c = 0; c < cols; c++){
+          var x0 = box.x0 + c * cw, x1 = x0 + cw;
+          var y0 = box.y0 + r * ch, y1 = y0 + ch;
+          var piece = sliceRGBA(rgba, w, h, x0, y0, x1, y1);
+          if(!piece) continue;
+          var found = detect(piece.rgba, piece.w, piece.h);
+          if(found.length){
+            var q = found[0];
+            q.pts = q.pts.map(function(p){ return { x: p.x + piece.x0, y: p.y + piece.y0 }; });
+            q.box = boxOf(q.pts);
+            quads.push(q);
+            continue;
+          }
+          if(!cellBusy(piece.rgba, piece.w, piece.h)) continue;
+          var m = 0.08;
+          var dx = piece.w * m, dy = piece.h * m;
+          var pts = [
+            { x: piece.x0 + dx, y: piece.y0 + dy },
+            { x: piece.x0 + piece.w - dx, y: piece.y0 + dy },
+            { x: piece.x0 + piece.w - dx, y: piece.y0 + piece.h - dy },
+            { x: piece.x0 + dx, y: piece.y0 + piece.h - dy }
+          ];
+          quads.push({ pts: pts, area: piece.w * piece.h, aspect: CARD_ASPECT, box: boxOf(pts), loose: true });
+        }
+      }
+      return quads;
+    }
+
+    function homography(dw, dh, quad){
+      // Maps output pixel (x, y) onto the source quad (TL, TR, BR, BL).
+      var src = quad, dst = [{x:0,y:0},{x:dw,y:0},{x:dw,y:dh},{x:0,y:dh}];
+      var A = [];
+      var b = [];
+      for(var i = 0; i < 4; i++){
+        var x = dst[i].x, y = dst[i].y, u = src[i].x, v = src[i].y;
+        A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+        A.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+        b.push(u); b.push(v);
+      }
+      // Gaussian elimination, 8x8.
+      var M = A.map(function(row, i){ return row.concat([b[i]]); });
+      for(var col = 0; col < 8; col++){
+        var piv = col;
+        for(var r = col + 1; r < 8; r++) if(Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+        var tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+        var div = M[col][col] || 1e-12;
+        for(var c2 = col; c2 < 9; c2++) M[col][c2] /= div;
+        for(var r2 = 0; r2 < 8; r2++){
+          if(r2 === col) continue;
+          var f = M[r2][col];
+          for(var c3 = col; c3 < 9; c3++) M[r2][c3] -= f * M[col][c3];
+        }
+      }
+      var h = M.map(function(row){ return row[8]; });
+      return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+    }
+
+    function warp(rgba, w, h, quad, dw, dh){
+      var H = homography(dw, dh, quad);
+      var out = new Uint8ClampedArray(dw * dh * 4);
+      for(var y = 0; y < dh; y++){
+        for(var x = 0; x < dw; x++){
+          var px = x + 0.5, py = y + 0.5;
+          var den = H[6] * px + H[7] * py + H[8];
+          if(!den) continue;
+          var sx = (H[0] * px + H[1] * py + H[2]) / den;
+          var sy = (H[3] * px + H[4] * py + H[5]) / den;
+          if(sx < 0 || sy < 0 || sx >= w - 1 || sy >= h - 1) continue;
+          var x0 = sx | 0, y0 = sy | 0;
+          var fx = sx - x0, fy = sy - y0;
+          var i00 = (y0 * w + x0) * 4;
+          var i10 = i00 + 4;
+          var i01 = i00 + w * 4;
+          var i11 = i01 + 4;
+          var o = (y * dw + x) * 4;
+          for(var ch = 0; ch < 4; ch++){
+            var a = rgba[i00 + ch], b = rgba[i10 + ch], c = rgba[i01 + ch], d = rgba[i11 + ch];
+            out[o + ch] = (a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy) | 0;
+          }
+        }
+      }
+      return out;
+    }
+
+    function describe(rgba, w, h, flip){
+      var x0 = (w * 0.10) | 0, x1 = Math.max(x0 + GW, (w * 0.90) | 0);
+      var y0 = (h * 0.10) | 0, y1 = Math.max(y0 + GH, (h * 0.90) | 0);
+      var cw = x1 - x0, ch = y1 - y0;
+      var bins = new Float64Array(DESC);
+      var counts = new Uint32Array(GW * GH);
+      for(var y = y0; y < y1; y++){
+        var by = ((y - y0) * GH / ch) | 0; if(by >= GH) by = GH - 1;
+        var sy = flip ? (h - 1 - y) : y;
+        for(var x = x0; x < x1; x++){
+          var bx = ((x - x0) * GW / cw) | 0; if(bx >= GW) bx = GW - 1;
+          var sx = flip ? (w - 1 - x) : x;
+          var i = (sy * w + sx) * 4;
+          var o = (by * GW + bx) * 3;
+          bins[o] += rgba[i]; bins[o + 1] += rgba[i + 1]; bins[o + 2] += rgba[i + 2];
+          counts[by * GW + bx]++;
+        }
+      }
+      var v = new Float32Array(DESC);
+      var mean = 0;
+      for(var k = 0; k < GW * GH; k++){
+        var n = counts[k] || 1;
+        v[k * 3] = bins[k * 3] / n;
+        v[k * 3 + 1] = bins[k * 3 + 1] / n;
+        v[k * 3 + 2] = bins[k * 3 + 2] / n;
+        mean += v[k * 3] + v[k * 3 + 1] + v[k * 3 + 2];
+      }
+      mean /= DESC;
+      var acc = 0;
+      for(var t = 0; t < DESC; t++){ v[t] -= mean; acc += v[t] * v[t]; }
+      var rms = Math.sqrt(acc / DESC) || 1;
+      for(var u = 0; u < DESC; u++) v[u] /= rms;
+      return v;
+    }
+
+    function dot(a, b){
+      var s = 0;
+      for(var i = 0; i < a.length; i++) s += a[i] * b[i];
+      return s;
+    }
+
+    // matrix is a Float32Array of length n * DESC, row-major. bases[i] groups printings.
+    function matchDescriptor(rgba, w, h, matrix, ids, bases){
+      if(!matrix || !ids || !ids.length) return null;
+      var n = ids.length;
+      var upright = describe(rgba, w, h, false);
+      var flipped = describe(rgba, w, h, true);
+      var best = -2, bestI = -1, second = -2, secondI = -1;
+      for(var i = 0; i < n; i++){
+        var row = i * DESC;
+        var s1 = 0, s2 = 0;
+        for(var k = 0; k < DESC; k++){
+          var m = matrix[row + k];
+          s1 += upright[k] * m;
+          s2 += flipped[k] * m;
+        }
+        var s = s1 > s2 ? s1 : s2;
+        s /= DESC;
+        if(s > best){ second = best; secondI = bestI; best = s; bestI = i; }
+        else if(s > second){ second = s; secondI = i; }
+      }
+      if(bestI < 0) return null;
+      var base = bases ? bases[bestI] : ids[bestI];
+      var rival = -2;
+      for(var j = 0; j < n; j++){
+        if(j === bestI) continue;
+        if(bases && bases[j] === base) continue;
+        var row2 = j * DESC;
+        var a = 0, b = 0;
+        for(var k2 = 0; k2 < DESC; k2++){
+          var m2 = matrix[row2 + k2];
+          a += upright[k2] * m2;
+          b += flipped[k2] * m2;
+        }
+        var sj = (a > b ? a : b) / DESC;
+        if(sj > rival) rival = sj;
+      }
+      var margin = best - (rival < -1 ? 0 : rival);
+      var strong = best >= ACCEPT_SCORE && margin >= ACCEPT_MARGIN;
+      // A clear gap over every other card, but a crop that is a bit loose: keep the
+      // guess and mark it for a look, instead of dropping the card.
+      var soft = !strong && best >= SOFT_SCORE && margin >= SOFT_MARGIN;
+      var ok = strong || soft;
+      return {
+        id: ok ? ids[bestI] : "",
+        guess: ids[bestI],
+        score: best,
+        margin: margin,
+        lowConf: soft || (strong && margin < LOW_MARGIN),
+        matched: ok
+      };
+    }
+
+    return {
+      GW: GW, GH: GH, DESC: DESC,
+      ACCEPT_SCORE: ACCEPT_SCORE, ACCEPT_MARGIN: ACCEPT_MARGIN,
+      detect: detect, grid: grid, warp: warp, describe: describe,
+      matchDescriptor: matchDescriptor, orderQuads: orderQuads,
+      quadAspect: quadAspect
+    };
+  })();
+
+  if(typeof window!=="undefined") window.MULTI_SCAN = MULTI_SCAN;
+  // ==== MULTI SCAN END (logic) ====
+
+  // Photo of several cards: pick or take one picture, find each card, match it on
+  // device, and stage the rows in the bulk scan review before anything is added.
+  (function(){
+    var scrim=$("multiScanScrim"); if(!scrim) return;
+    var layout="auto";
+    var busy=false;
+    var multiIndex=null;
+    var indexPromise=null;
+
+    function setStatus(text){ var el=$("multiScanStatus"); if(el) el.textContent=text||""; }
+    function yieldTick(){ return new Promise(function(res){ setTimeout(res, 0); }); }
+    function hideMulti(){ scrim.hidden=true; }
+    function openMulti(){
+      setStatus("");
+      scrim.hidden=false;
+      ensureIndex(function(done, total){
+        if(scrim.hidden || busy) return;
+        if(done<total) setStatus("Preparing the card match, "+done+" of "+total+"…");
+        else setStatus("");
+      });
+    }
+
+    var openBtn=$("qMultiBtn"); if(openBtn) openBtn.onclick=function(){ if(!busy) openMulti(); };
+    var again=$("qMultiReview"); if(again) again.onclick=function(){ if(SCAN_REVIEW) SCAN_REVIEW.open(); };
+    var closeBtn=$("multiScanClose"); if(closeBtn) closeBtn.onclick=hideMulti;
+    scrim.addEventListener("click", function(e){ if(e.target===scrim) hideMulti(); });
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !scrim.hidden) hideMulti(); });
+
+    var bar=$("multiScanLayout");
+    if(bar) bar.addEventListener("click", function(e){
+      var b=e.target.closest ? e.target.closest(".seg") : null; if(!b) return;
+      layout=b.getAttribute("data-layout")||"auto";
+      Array.prototype.forEach.call(bar.querySelectorAll(".seg"), function(x){ x.setAttribute("aria-pressed", x===b ? "true" : "false"); });
+    });
+
+    function bindFile(btnId, inputId){
+      var btn=$(btnId), input=$(inputId); if(!btn || !input) return;
+      btn.onclick=function(){ if(!busy) input.click(); };
+      input.onchange=function(){
+        var file=input.files && input.files[0];
+        input.value="";
+        if(file) runFile(file);
+      };
+    }
+    bindFile("multiScanFileBtn", "multiScanFile");
+    bindFile("multiScanCamBtn", "multiScanCam");
+
+    function localArt(card){
+      var src="";
+      try{ src=imgSrc(card)||""; }catch(e){ src=""; }
+      if(!src || /^https?:/i.test(src) || /^data:/i.test(src)) return "";
+      return src;
+    }
+    function indexKey(){
+      return "v1-"+(typeof CATALOGUE_VERSION!=="undefined"?CATALOGUE_VERSION:0)+"-"+(CARDS?CARDS.length:0);
+    }
+    function cardsForIndex(){
+      var list=[];
+      CARDS.forEach(function(c){
+        var src=localArt(c); if(!src) return;
+        list.push({ id:c.id, base:c.base || String(c.id).replace(/(?:OSR|SSP|TSR|TSP|SP|SR)$/,""), src:src });
+      });
+      return list;
+    }
+    function idbStore(mode){
+      return new Promise(function(resolve){
+        try{
+          var req=indexedDB.open("spheredex-match", 1);
+          req.onupgradeneeded=function(){ if(!req.result.objectStoreNames.contains("index")) req.result.createObjectStore("index"); };
+          req.onerror=function(){ resolve(null); };
+          req.onsuccess=function(){
+            try{ resolve(req.result.transaction("index", mode).objectStore("index")); }
+            catch(e){ resolve(null); }
+          };
+        }catch(e){ resolve(null); }
+      });
+    }
+    function idbGet(key){
+      return idbStore("readonly").then(function(store){
+        if(!store) return null;
+        return new Promise(function(resolve){
+          var g=store.get(key);
+          g.onsuccess=function(){ resolve(g.result||null); };
+          g.onerror=function(){ resolve(null); };
+        });
+      });
+    }
+    function idbPut(key, value){
+      return idbStore("readwrite").then(function(store){
+        if(!store) return false;
+        return new Promise(function(resolve){
+          try{
+            var p=store.put(value, key);
+            p.onsuccess=function(){ resolve(true); };
+            p.onerror=function(){ resolve(false); };
+          }catch(e){ resolve(false); }
+        });
+      });
+    }
+    function loadImg(src){
+      return new Promise(function(resolve){
+        var img=new Image();
+        img.onload=function(){ resolve(img); };
+        img.onerror=function(){ resolve(null); };
+        img.src=src;
+      });
+    }
+    function describeElement(img){
+      var nw=img.naturalWidth||img.width, nh=img.naturalHeight||img.height;
+      if(!nw || !nh) return null;
+      var w=48, h=Math.max(16, Math.round(w * nh / nw));
+      if(h>96){ h=96; w=Math.max(16, Math.round(h * nw / nh)); }
+      var canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      var g=canvas.getContext("2d", {willReadFrequently:true});
+      if(!g) return null;
+      g.drawImage(img, 0, 0, w, h);
+      var data=g.getImageData(0, 0, w, h);
+      return MULTI_SCAN.describe(data.data, w, h, false);
+    }
+    function buildIndex(onProgress){
+      var list=cardsForIndex();
+      var ids=[], bases=[], rows=[], i=0;
+      function step(){
+        if(i>=list.length){
+          var matrix=new Float32Array(ids.length * MULTI_SCAN.DESC);
+          for(var r=0;r<rows.length;r++) matrix.set(rows[r], r * MULTI_SCAN.DESC);
+          return { ids:ids, bases:bases, matrix:matrix, key:indexKey() };
+        }
+        var item=list[i++];
+        if(onProgress) onProgress(i, list.length);
+        return loadImg(item.src).then(function(img){
+          if(img){
+            var desc=describeElement(img);
+            if(desc){ ids.push(item.id); bases.push(item.base); rows.push(desc); }
+          }
+          return yieldTick().then(step);
+        });
+      }
+      return Promise.resolve().then(step);
+    }
+    function ensureIndex(onProgress){
+      if(multiIndex && multiIndex.key===indexKey() && multiIndex.ids.length){
+        if(onProgress) onProgress(multiIndex.ids.length, multiIndex.ids.length);
+        return Promise.resolve(multiIndex);
+      }
+      if(indexPromise) return indexPromise;
+      indexPromise=idbGet(indexKey()).then(function(cached){
+        if(cached && cached.ids && cached.ids.length && cached.matrix && cached.matrix.length===cached.ids.length*MULTI_SCAN.DESC){
+          multiIndex={ ids:cached.ids, bases:cached.bases||cached.ids, matrix:cached.matrix, key:indexKey() };
+          if(onProgress) onProgress(cached.ids.length, cached.ids.length);
+          return multiIndex;
+        }
+        return buildIndex(onProgress).then(function(idx){
+          multiIndex=idx;
+          if(idx.ids.length) idbPut(indexKey(), { ids:idx.ids, bases:idx.bases, matrix:idx.matrix });
+          return idx;
+        });
+      }).then(function(idx){ indexPromise=null; return idx; }, function(err){ indexPromise=null; throw err; });
+      return indexPromise;
+    }
+    function fitCanvas(source, sw, sh){
+      var maxEdge=1600;
+      var scale=Math.min(1, maxEdge / Math.max(sw, sh));
+      var w=Math.max(1, Math.round(sw * scale)), h=Math.max(1, Math.round(sh * scale));
+      var canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      var g=canvas.getContext("2d", {willReadFrequently:true});
+      g.drawImage(source, 0, 0, w, h);
+      var data=g.getImageData(0, 0, w, h);
+      return { rgba:data.data, w:w, h:h };
+    }
+    function decodeFile(file){
+      if(typeof createImageBitmap==="function"){
+        return createImageBitmap(file).then(function(bmp){
+          var image=fitCanvas(bmp, bmp.width, bmp.height);
+          if(bmp.close) try{ bmp.close(); }catch(e){}
+          return image;
+        }).catch(function(){ return decodeViaImage(file); });
+      }
+      return decodeViaImage(file);
+    }
+    function decodeViaImage(file){
+      return new Promise(function(resolve, reject){
+        var url=URL.createObjectURL(file);
+        var img=new Image();
+        img.onload=function(){ URL.revokeObjectURL(url); resolve(fitCanvas(img, img.naturalWidth||img.width, img.naturalHeight||img.height)); };
+        img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error("read")); };
+        img.src=url;
+      });
+    }
+    function thumbURL(rgba, w, h){
+      try{
+        var canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        var g=canvas.getContext("2d");
+        var img=g.createImageData(w, h);
+        img.data.set(rgba);
+        g.putImageData(img, 0, 0);
+        return canvas.toDataURL("image/jpeg", 0.72);
+      }catch(e){ return ""; }
+    }
+    function runFile(file){
+      if(!file || busy) return;
+      busy=true;
+      setStatus("Reading photo…");
+      decodeFile(file).then(function(image){
+        setStatus("Finding cards…");
+        return yieldTick().then(function(){
+          var quads=layout==="b9" ? MULTI_SCAN.grid(image.rgba, image.w, image.h, 3, 3)
+            : layout==="b12" ? MULTI_SCAN.grid(image.rgba, image.w, image.h, 3, 4)
+            : MULTI_SCAN.detect(image.rgba, image.w, image.h);
+          if(!quads.length){
+            setStatus("No separate cards found. Spread them out a little, or choose 9 pocket or 12 pocket for a binder page.");
+            busy=false;
+            return null;
+          }
+          setStatus("Preparing the card match…");
+          return ensureIndex(function(done, total){ setStatus("Preparing the card match, "+done+" of "+total+"…"); }).then(function(index){
+            var pending=[], i=0;
+            function next(){
+              if(i>=quads.length) return pending;
+              var n=i+1;
+              setStatus("Matching card "+n+" of "+quads.length+"…");
+              return yieldTick().then(function(){
+                var q=quads[i++];
+                var crop=MULTI_SCAN.warp(image.rgba, image.w, image.h, q.pts, 140, 196);
+                var thumb=MULTI_SCAN.warp(image.rgba, image.w, image.h, q.pts, 80, 112);
+                var m=index.ids.length ? MULTI_SCAN.matchDescriptor(crop, 140, 196, index.matrix, index.ids, index.bases) : null;
+                pending.push({ id: m && m.matched ? m.id : "", lowConf: !!(m && m.lowConf), score: m ? m.score : 0, thumb: thumbURL(thumb, 80, 112) });
+                return next();
+              });
+            }
+            return next();
+          });
+        });
+      }).then(function(pending){
+        busy=false;
+        if(!pending) return;
+        SCAN_REVIEW.stage(pending);
+        hideMulti();
+        SCAN_REVIEW.open();
+      }).catch(function(){
+        busy=false;
+        setStatus("That photo could not be read. Try another one.");
+      });
+    }
+  })();
+
 
   function paintSeg(rowId,attr,val){
     var row=$(rowId); if(!row) return;
@@ -15550,7 +16948,22 @@ label.acctsetrow { align-items:center; }
     };
     var reviewClose=$("scanReviewClose"), reviewDone=$("scanReviewDone");
     if(reviewClose) reviewClose.onclick=function(){ dismissOverlay(); };
-    if(reviewDone) reviewDone.onclick=function(){ dismissOverlay(); };
+    if(reviewDone) reviewDone.onclick=function(){
+      var pend=SCAN_REVIEW.session.pending||[];
+      if(pend.length){
+        if(SCAN_REVIEW.blocked()){
+          var intro=$("scanReviewIntro");
+          if(intro) intro.textContent="Pick a card for each unmatched row, or remove it, before adding.";
+          return;
+        }
+        var sel=$("scanReviewCol");
+        var colId=(sel&&sel.value) || ((typeof activeCol==="function" && activeCol()) ? activeCol().id : "");
+        var n=SCAN_REVIEW.commit(colId);
+        if(n && typeof toast==="function") toast(n===1 ? "Added 1 card" : "Added "+n+" cards");
+        return;
+      }
+      dismissOverlay();
+    };
     if(scanReviewScrim){
       scanReviewScrim.addEventListener("click",function(e){ if(e.target===scanReviewScrim) dismissOverlay(); });
       document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!scanReviewScrim.hidden) dismissOverlay(); });
@@ -15611,8 +17024,10 @@ label.acctsetrow { align-items:center; }
     var sb=$("qScanBtn"); if(sb) sb.onclick=function(){ try{ if(native) window.AndroidScan.scan(); }catch(e){} };
     var tb=$("qTextBtn"); if(tb) tb.onclick=function(){ var qi=$("qInput"); if(qi){ qi.focus(); try{ qi.scrollIntoView({block:"center"}); }catch(e){} } };
     var cb=$("qCsvBtn"); if(cb) cb.onclick=doImportCsv;
+    var pb=$("qPriceBtn"); if(pb) pb.onclick=openPriceList;
     var Q_INFO={
       scan:"Point the camera at a card, or at the grading label on a slab. SphereDex recognises it right on your device (images are never uploaded) and shows a quick check before you add it. Keep scanning (on by default, in Settings) brings the camera back for the next card, so you can add a whole stack.",
+      multi:"Take or choose one photo of several cards, such as a spread of pulls or a binder page. SphereDex finds each card on this device (the photo is never uploaded) and opens the review list. Fix a match, or pick an unmatched card, before anything is added. Scan card with camera stays the way to scan a single card.",
       text:"Search by Pal name, item, or card number and tap a result to choose how to add it. Or paste several card numbers at once, separated by spaces or new lines, to add them in bulk.",
       csv:"Import a .csv or .txt with a column of card numbers (like <code>EBP01-001</code>), plus optional quantities. A CSV exported from SphereDex works too, including its optional Paid column. Exports from palworldtcg.gg, Palify and Pal Collector are accepted too, with Japanese and Chinese cards read from a Language column. A Missing or Wishlist export is a shopping list, not a collection, so it cannot be imported. You see a preview before anything is added, and it lands as a new collection named after the file."
     };
@@ -15634,7 +17049,7 @@ label.acctsetrow { align-items:center; }
     btn.onclick=function(){ var open=panel.hidden; panel.hidden=!open; btn.setAttribute("aria-expanded", open?"true":"false"); };
     $("doneFilters").onclick=function(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); };
     $("clearFilters").onclick=function(){
-      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
+      filters.exps={}; filters.sets={}; filters.colors={}; filters.els={}; filters.kinds={}; filters.work={}; filters.rares={}; filters.keywords={}; filters.promos={}; filters.staples={}; filters.view="all";
       document.querySelectorAll("#filterPanel .chip").forEach(function(ch){ ch.setAttribute("aria-pressed","false"); });
       syncSetChips();
       var allChip=$("viewChips").querySelector(".chip"); if(allChip) allChip.setAttribute("aria-pressed","true");
@@ -15642,7 +17057,7 @@ label.acctsetrow { align-items:center; }
     };
   })();
   function updateFilterCount(){
-    var n=0; ["exps","sets","colors","els","kinds","keywords","rares","promos"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
+    var n=0; ["exps","sets","colors","els","kinds","work","keywords","rares","promos"].forEach(function(k){ n+=Object.keys(filters[k]||{}).filter(function(x){return filters[k][x];}).length; });
     if(filters.view!=="all") n++;
     if(staplesOn()) n++;
     var st=$("stapleChip"); if(st) st.setAttribute("aria-pressed", staplesOn()?"true":"false");   // the chip follows the mode now showing

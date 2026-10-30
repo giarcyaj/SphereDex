@@ -50,6 +50,7 @@ Everything is stdlib only, so there is no install step. Run from this folder:
 # Node 22 guard suites
 node tools/test_carousel.cjs
 node tools/test_scan_review.cjs
+node tools/test_multi_scan.cjs
 node tools/test_editions.cjs
 node tools/test_v21.cjs
 node tools/test_card_language.cjs
@@ -64,8 +65,10 @@ node tools/test_sealed_images.cjs
 node tools/test_tournament_decks.cjs
 node tools/test_native_scan_numbers.cjs
 node tools/test_chase_check.cjs
+node tools/test_copy_photos.cjs
 node tools/test_market_index.cjs
 node tools/test_trade_check.cjs
+node tools/test_deck_share.cjs
 node tools/test_storage_location.cjs
 
 # Python 3.11 pipeline tests
