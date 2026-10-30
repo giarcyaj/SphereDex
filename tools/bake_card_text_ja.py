@@ -187,9 +187,15 @@ def resolve(cards, jp):
         ours = stats(c)
 
         # No stats on either side: a Soul. 1 to 1 by number, not a reordered series.
+        # A record marked _hand was merged in because the official list omits it (see
+        # stage_set.merge_omitted_japanese). It is kept, and labelled as such, rather than
+        # counted as a number the publisher printed.
         if cand is not None and all(v is None for v in ours):
-            resolved[num] = (cand, "number only, card carries no stats")
-            unverified.append(num)
+            if cand.get("_hand"):
+                resolved[num] = (cand, "kept by hand, official list omits it")
+            else:
+                resolved[num] = (cand, "number only, card carries no stats")
+                unverified.append(num)
             continue
 
         matches = [r for r in by_set.get(set_of(guess), []) if comparable(ours, stats(r))]
@@ -307,7 +313,10 @@ def reconcile(cards, resolved, by_set, vocab, unresolved):
 
 
 def build(cards, jp):
-    resolved, unverified, unresolved, vocab, absent = resolve(cards, jp)
+    # Same hand list stage_set uses. Merged here, before resolve, so a bake keeps the Japanese
+    # name of a card the official list omits (ESOUL-011) instead of dropping it as absent.
+    from stage_set import merge_omitted_japanese
+    resolved, unverified, unresolved, vocab, absent = resolve(cards, merge_omitted_japanese(jp))
     out = {}
     for num, (rec, how) in sorted(resolved.items()):
         entry = {"name": rec.get("card_name") or "", "sourceNumber": rec.get("card_number") or ""}

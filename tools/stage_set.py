@@ -104,6 +104,11 @@ OMITTED_BY_SET = {
         "power": "",
         "attack": "",
         "picture": "EBP02/ESOUL-011.png",
+        # Japanese list number and printed name. The Japanese list omits this card too.
+        "ja_number": "SOUL-011",
+        "ja_name": "ソウル",
+        "ja_text": "",
+        "ja_kind": "ソウル",
     }],
 }
 
@@ -116,6 +121,61 @@ def merge_omitted(code, cards):
         if card.get("card_number") not in have:
             extra.append(dict(card))
     return list(cards) + extra
+
+
+def japanese_record(card):
+    """One hand-kept card in the Japanese list's shape, or None when it has no Japanese twin."""
+    number = card.get("ja_number") or ""
+    if not number:
+        return None
+    return {
+        "card_number": number,
+        "card_name": card.get("ja_name") or "",
+        "text": card.get("ja_text") or "",
+        "rare": card.get("rare") or "",
+        "cost": card.get("cost") or "",
+        "power": card.get("power") or "",
+        "attack": card.get("attack") or "",
+        "card_kind": card.get("ja_kind") or "ソウル",
+        # resolve() reads this and does not copy it into the baked file.
+        "_hand": True,
+    }
+
+
+def merge_omitted_japanese(records):
+    """Append Japanese rows for hand-kept cards the Japanese list did not return.
+
+    The same rule as merge_omitted: a number the list has started returning is left as the
+    official record, so a later bake does not keep a stale hand copy over the real one.
+    """
+    have = {r.get("card_number") for r in records}
+    extra = []
+    for group in OMITTED_BY_SET.values():
+        for card in group:
+            row = japanese_record(card)
+            if row and row["card_number"] not in have:
+                extra.append(row)
+                have.add(row["card_number"])
+    return list(records) + extra
+
+
+def fetch_is_complete(official_count, upstream_total, limited=False):
+    """True when the official list was fetched in full.
+
+    Hand-kept rows are not part of this count. A fetch short by exactly those rows must stay
+    incomplete, even though adding them makes the staged length equal the upstream total.
+    """
+    return (not limited) and upstream_total is not None and official_count == upstream_total
+
+
+def cards_of_total_line(official_count, upstream_total, complete):
+    return (f"- Cards: **{official_count}** of upstream total **{upstream_total}**"
+            f"  ->  complete: **{complete}**")
+
+
+def incomplete_warning(official_count, upstream_total):
+    return (f"- !! INCOMPLETE: fetched {official_count} of upstream total {upstream_total}."
+            " Re-run before shipping.")
 
 
 def fetch_set(code):
@@ -187,11 +247,13 @@ def main():
     if not cards:
         print("!! no cards returned - is the card list published yet for this set?")
         sys.exit(2)
-    complete = (args.limit == 0 and total is not None and len(cards) == total)
-    if not args.limit and total is not None and len(cards) != total:
-        print(f"!! WARNING: fetched {len(cards)} but upstream total={total} - stage may be incomplete")
-    # After the completeness check, so a hand-kept card is not mistaken for a short fetch.
-    # A --limit run is a sample of the list and does not append the kept cards.
+    # Completeness is official rows only. merge_omitted runs after this, and every warning
+    # below keeps using official_n so a short fetch cannot look finished once the hand-kept
+    # rows are appended. A --limit run is a sample and does not append those rows.
+    official_n = len(cards)
+    complete = fetch_is_complete(official_n, total, limited=bool(args.limit))
+    if not args.limit and total is not None and not complete:
+        print(f"!! WARNING: fetched {official_n} but upstream total={total} - stage may be incomplete")
     kept = []
     if args.limit == 0:
         fetched_ids = {c.get("card_number") for c in cards}
@@ -202,7 +264,7 @@ def main():
     unknown_kinds = sorted({c.get("card_kind", "") for c in cards} - KNOWN_KINDS)
     if unknown_kinds:
         print(f"!! NOTE: unseen card_kind(s) {unknown_kinds} - verify empty-field handling for these")
-    print(f"fetched {len(cards)} cards (upstream total: {total})")
+    print(f"fetched {official_n} cards (upstream total: {total})")
 
     # ---- 1. RAW rows (app catalogue) ----
     rows = [to_row(c, code) for c in cards]
@@ -269,7 +331,8 @@ def main():
     release = prod.get("date", "")
     meta = {
         "code": code, "name": name, "type": prod.get("type", ""),
-        "release": release, "cardCount": len(cards), "upstreamTotal": total,
+        "release": release, "cardCount": official_n, "stagedCount": len(cards),
+        "upstreamTotal": total,
         "complete": bool(complete), "unknownKinds": unknown_kinds,
         "missingImages": missing_img, "emDash": emdash, "keptByHand": kept,
     }
@@ -287,7 +350,7 @@ def main():
 
     warn = []
     if not complete:
-        warn.append(f"- !! INCOMPLETE: fetched {len(cards)} of upstream total {total}. Re-run before shipping.")
+        warn.append(incomplete_warning(official_n, total))
     if unknown_kinds:
         warn.append(f"- !! UNSEEN card_kind(s): {unknown_kinds}. Confirm empty-field handling matches the app.")
     if missing_img:
@@ -298,7 +361,7 @@ def main():
     lines = [
         f"# Stage report: {code}", "",
         f"- Product: **{name}**  (`{meta['type']}`, release {release})",
-        f"- Cards: **{len(cards)}** of upstream total **{total}**  ->  complete: **{complete}**",
+        cards_of_total_line(official_n, total, complete),
         "- Kept by hand: " + (", ".join(kept) if kept else "none") + " (" + OMITTED_NOTE[0].lower() + OMITTED_NOTE[1:] + ")",
         f"- By kind: " + ", ".join(f"{k} {n}" for k, n in kinds.most_common()),
         f"- Artwork: downloaded {dl}, reused {skipped}, missing {len(missing_img)}",

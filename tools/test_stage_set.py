@@ -39,5 +39,40 @@ class MergeOmittedTests(unittest.TestCase):
         self.assertIn("official list omits", S.OMITTED_NOTE.lower())
 
 
+class CompletenessTests(unittest.TestCase):
+    def test_a_fetch_short_by_the_kept_rows_stays_incomplete(self):
+        # 163 official rows, upstream total 164. Appending ESOUL-011 makes the staged
+        # length equal the total. Completeness must still report 163 of 164.
+        official = [card("EBP02-%03d" % i) for i in range(1, 164)]
+        self.assertEqual(len(official), 163)
+        staged = S.merge_omitted("EBP02", official)
+        self.assertEqual(len(staged), 164)
+        complete = S.fetch_is_complete(len(official), 164)
+        self.assertFalse(complete)
+        line = S.cards_of_total_line(len(official), 164, complete)
+        warning = S.incomplete_warning(len(official), 164)
+        self.assertIn("**163** of upstream total **164**", line)
+        self.assertIn("complete: **False**", line)
+        self.assertEqual(
+            warning,
+            "- !! INCOMPLETE: fetched 163 of upstream total 164. Re-run before shipping.",
+        )
+        self.assertNotIn("**164** of upstream total **164**", line)
+        self.assertNotIn("fetched 164 of upstream total 164", warning)
+
+    def test_a_full_official_fetch_stays_complete_when_the_soul_is_extra(self):
+        official = [card("EBP02-%03d" % i) for i in range(1, 165)]
+        self.assertEqual(len(official), 164)
+        self.assertEqual(len(S.merge_omitted("EBP02", official)), 165)
+        self.assertTrue(S.fetch_is_complete(len(official), 164))
+        line = S.cards_of_total_line(164, 164, True)
+        self.assertIn("**164** of upstream total **164**", line)
+        self.assertIn("complete: **True**", line)
+
+    def test_a_limited_sample_is_not_a_complete_fetch(self):
+        self.assertFalse(S.fetch_is_complete(164, 164, limited=True))
+        self.assertFalse(S.fetch_is_complete(10, None))
+
+
 if __name__ == "__main__":
     unittest.main()
