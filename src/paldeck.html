@@ -2562,6 +2562,7 @@ label.acctsetrow { align-items:center; }
 
   /* Collector mode, hide every price / value surface */
   .collector .priceui{ display:none !important; }
+  .setcard .setval{ margin-top:2px; }
   /* Deck tools follow Play. Paid amounts follow Track value. Both start off until that choice, or a Settings switch, turns them on. */
   html:not(.playertools) .deckui{ display:none !important; }
   html:not(.trackpaid) .paidui{ display:none !important; }
@@ -2948,6 +2949,11 @@ label.acctsetrow { align-items:center; }
       <div class="lab" id="valLab">Binder value</div>
       <div class="big" id="valStat">$0</div>
       <div class="meta" id="valMeta">based on last 5 sold</div>
+    </div>
+    <div class="panel priceui" id="setValPanel" hidden>
+      <div class="lab" id="setValLab">Set value</div>
+      <div class="big" id="setValLive">$0</div>
+      <div class="meta" id="setValMeta"></div>
     </div>
     <div class="panel dualpanel" id="dualPanel" role="button" tabindex="0" title="Tap to switch: sets completed, chase, promo, rewards">
       <div class="lab" id="dualLab">Sets completed</div>
@@ -5968,6 +5974,12 @@ label.acctsetrow { align-items:center; }
     _rewardsN = Math.min(SPHERE_TIERS.length, maxTierReached()+1); _rewardsT = SPHERE_TIERS.length;
     paintDual();
     $("valStat").textContent = money(binderValue(valueBasis));
+    (function(){ var pn=$("setValPanel"); if(!pn) return; var codes=(Object.keys(filters.exps).length)?setFilterCodes():[];
+      if(!codes.length || SETTINGS.mode==="collector"){ pn.hidden=true; return; }
+      var v=setValues(codes); pn.hidden=false;
+      $("setValLab").textContent="Owned value in this set";
+      $("setValLive").textContent="Live "+money(v.live);
+      $("setValMeta").textContent="Sold "+money(v.sold)+(v.unpriced?" · "+v.unpriced+" owned unpriced":""); })();
     $("valMeta").textContent = (valueBasis==="sold"?"based on last 5 sold":"based on live listings")+(gradedCount?(" · "+gradedCount+(gradedCount===1?" slab":" slabs")):"");
     var cb=$("colorBars"); cb.innerHTML="";
     COLORS.forEach(function(c){
@@ -8162,6 +8174,13 @@ label.acctsetrow { align-items:center; }
   function sealUnit(s, mode){ var pr=sealPrice(s), sold=((mode||priceMode())==="sold"); var pv=sold?pr.sold:pr.list; if(pv!=null&&+pv>0) return +pv; return +pr.mkt||0; }
   function sealedValueMode(mode){ var t=0; SEALED.forEach(function(p){ if(p.pre) return; var s=sealItem(p.id); t+=rawCount(s.qty)*sealUnit(s,mode); }); return t; }
   function sealedValue(){ return sealedValueMode(priceMode()); }
+  // Value of owned copies (qty x unit price + graded) inside a set or group of sets, live and sold together.
+  function setValues(codes){ var r={live:0,sold:0,unpriced:0};
+    CARDS.forEach(function(c){ if(codes.indexOf(c.set)===-1) return; var e=o(c.id); if(!(rawCount(e.qty)>0 || (e.graded||[]).length)) return;
+      var l=cardValueMode(c.id,"live"), d=cardValueMode(c.id,"sold"); r.live+=l; r.sold+=d; if(!l && !d) r.unpriced++; });
+    return r; }
+  function setValueLine(codes){ var v=setValues(codes); if(!(v.live>0 || v.sold>0)) return "";
+    return '<div class="smeta setval priceui"><span>Live '+money(v.live)+'</span><span>Sold '+money(v.sold)+'</span></div>'; }
   function cardsValueMode(mode){ return CARDS.reduce(function(a,c){ var e=o(c.id); var v=rawCount(e.qty)*unitOf(c.id,mode); (e.graded||[]).forEach(function(g){ v+=(+g.value||0); }); return a+v; },0); }
   function cardsValue(){ return cardsValueMode(priceMode()); }
   // Cost basis counts only copies, slabs and sealed items with a recorded paid amount. A blank is unset, not zero.
@@ -14762,6 +14781,7 @@ label.acctsetrow { align-items:center; }
       '<div class="sbody">'+
         '<div class="snm">'+esc(SETS[k].name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
+        setValueLine([k])+
         '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
         '<div class="setfoot">'+(meta.release?'<span class="setrel">'+esc(meta.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
       '</div>';
@@ -14792,6 +14812,7 @@ label.acctsetrow { align-items:center; }
       '<div class="sbody">'+
         '<div class="snm">'+esc(x.name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
+        setValueLine(x.sets)+
         '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
         '<div class="setfoot">'+(x.release?'<span class="setrel">'+esc(x.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
       '</div>';
