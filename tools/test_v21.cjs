@@ -177,9 +177,9 @@ test('verified card text covers the cached set and does not invent the missing s
     if (!row) { unknown += copies; unknownIds.push(base); return; }
     if (row.text) withText += copies; else empty += copies;
   });
-  assert.equal(printings.length, 277);
+  assert.equal(printings.length, 278);
   assert.equal(withText, 248);
-  assert.equal(empty, 26);
+  assert.equal(empty, 27);
   assert.equal(unknown, 3);
   assert.equal(withText + empty + unknown, printings.length);
   assert.deepEqual(unknownIds.sort(), ['ESOUL-014', 'ESOUL-015', 'ESOUL-016']);

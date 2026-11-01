@@ -141,6 +141,31 @@ class ReconcileTests(BakeTestCase):
         self.assertEqual(len(hit), 1)
         self.assertIn("collision on クルリス", hit[0][3])
 
+    def test_the_gold_soul_the_japanese_list_omits_is_kept(self):
+        # The official Japanese list has no SOUL-011. The bake must still keep ソウル,
+        # from the same hand list stage_set uses, and say that it was kept by hand.
+        cards = [{"number": "ESOUL-011", "name": "Soul", "cost": "", "power": "", "attack": ""}]
+        with mock.patch.object(bake, "source_numbers", return_value={}):
+            entries, unverified, unresolved, _, absent = bake.build(cards, [])
+        self.assertEqual(unresolved, [])
+        self.assertEqual(absent, [])
+        self.assertEqual(unverified, [])
+        self.assertEqual(entries["ESOUL-011"]["name"], "ソウル")
+        self.assertEqual(entries["ESOUL-011"]["sourceNumber"], "SOUL-011")
+        self.assertEqual(entries["ESOUL-011"]["match"], "kept by hand, official list omits it")
+        self.assertNotIn("text", entries["ESOUL-011"])
+
+    def test_an_official_japanese_printing_wins_over_the_hand_copy(self):
+        cards = [{"number": "ESOUL-011", "name": "Soul", "cost": "", "power": "", "attack": ""}]
+        official = {"card_number": "SOUL-011", "card_name": "公式ソウル", "text": "official text"}
+        with mock.patch.object(bake, "source_numbers", return_value={}):
+            entries, _, unresolved, _, absent = bake.build(cards, [official])
+        self.assertEqual(unresolved, [])
+        self.assertEqual(absent, [])
+        self.assertEqual(entries["ESOUL-011"]["name"], "公式ソウル")
+        self.assertEqual(entries["ESOUL-011"]["text"], "official text")
+        self.assertEqual(entries["ESOUL-011"]["match"], "number only, card carries no stats")
+
     def test_souls_may_share_the_one_japanese_soul_name(self):
         cards = [{"number": "ESOUL-001", "name": "Soul A", "cost": "", "power": "", "attack": ""},
                  {"number": "ESOUL-002", "name": "Soul B", "cost": "", "power": "", "attack": ""}]
