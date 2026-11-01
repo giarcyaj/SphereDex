@@ -2128,6 +2128,7 @@ label.acctsetrow { align-items:center; }
   .effigy-glow { position:absolute; inset:6px; border-radius:50%; background: radial-gradient(circle, color-mix(in srgb, var(--eff) 46%, transparent) 0%, transparent 68%); opacity:0; transition:opacity .25s; }
   .achievement.earned .effigy-glow { opacity:1; }
   .effigy-img, .effigy-svg { position:relative; width:44px; height:44px; display:block; object-fit:contain; filter: grayscale(1) opacity(.42); transition: filter .25s; }
+  .effigy-svg.statue-svg { width:56px; height:56px; }
   .achievement.earned .effigy-img { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)) drop-shadow(0 1px 6px rgba(0,0,0,.18)); }
   .achievement.earned .effigy-svg { filter:none; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--eff) 54%, transparent)); }
 
@@ -7680,7 +7681,7 @@ label.acctsetrow { align-items:center; }
     chev:'<path d="M6 9l6 6 6-6"/>',
     menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
     dots:'<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
-    statue:'<circle cx="12" cy="5.2" r="2.4"/><path d="M12 7.6v2.6"/><path d="M10.5 10.2h3l.8 5.4h-4.6z"/><path d="M8.3 15.6h7.4v2H8.3z"/><path d="M6.1 17.6h11.8v2.4H6.1z"/>',
+    statue:'<g stroke-width=".55" stroke-linejoin="round"><path d="M5.5 20h13v1.8h-13z" fill="#8e6d47" stroke="#d6b879"/><path d="M7 18.4h10V20H7z" fill="#b29260" stroke="#f0d597"/><path d="M7.7 11.2h8.6v7.2H7.7z" fill="#574e43" stroke="#b09264"/><path d="M9.4 8.5 8.7 2.2 10.9 5.4h2.2l2.2-3.2-.7 6.3-2.6 1.8z" fill="#c4aa77" stroke="#f1d699"/><path d="m9.5 5.2 1 1.3-.4 1.5M14.5 5.2l-1 1.3.4 1.5" fill="#75654d" stroke="#75654d"/><path d="m10 7.5 2-.5 2 .5-.7 1.1L12 9.7l-1.3-1.1z" fill="#e0c48a" stroke="#f3dca6"/><path d="m10.4 7.6.7.2m1.8 0 .7-.2" stroke="#21383c" stroke-width=".65"/><path d="m9.5 9.2-2.1 1.4 1.1 3.8 1.5-.5.3-2.5h3.4l.3 2.5 1.5.5 1.1-3.8-2.1-1.4-2.5 1.5z" fill="#a28b63" stroke="#d9bc80"/><path d="m9.5 9.2 2.5 1.5 2.5-1.5-.6 2.2-1.9 1-1.9-1z" fill="#d5b774" stroke="#f0d59a"/><path d="M10.1 13.4h3.8l.7 4.6h-2.2l-.4-2.5-.4 2.5H9.4z" fill="#bba072" stroke="#e3c58b"/><path d="m7.9 11.4 1 2 2 1m5.2-3-1 2-2 1" fill="none" stroke="#eed59e" stroke-width="1.2"/><circle cx="12" cy="13.3" r="1.8" fill="#133f50" stroke="#65d7ee"/><circle cx="12" cy="13.3" r="1.1" fill="#4fdaef" stroke="none"/><path d="m11.6 12.7.7-.2m-.3 2 .4-.3" stroke="#e1fcff" stroke-width=".45"/><path d="M8.6 17.4h2.5v1H8.6zm4.3 0h2.5v1h-2.5z" fill="#d9bd88" stroke="#f1d89f"/><path d="M10.5 20.7h3" stroke="#edce88"/></g>',
     effigy:'<path d="M12 3l2 7h-2l-1 9 1-9H8l2-7z" stroke-width="1.8"/><path d="M12 12v2"/><path d="M9 16h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLifmunk:'<path d="M12 3c1.2 1.2 2 2.2 2 3.5 0 1.8-1.2 3.2-2.8 3.6l.8 5.2H9l.8-5.2C8.1 9.7 7 8.3 7 6.5c0-1.3.8-2.3 2-3.5h3z" fill="none"/><circle cx="12" cy="7.2" r="1.2" fill="currentColor" stroke="none"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
     effigyLamball:'<circle cx="12" cy="8" r="3.2" fill="none"/><path d="M9 7l-2-1M15 7l2-1"/><path d="M9 17h6v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>',
@@ -13654,7 +13655,7 @@ label.acctsetrow { align-items:center; }
   function effigySVG(name){
     var inner = ICONS[name];
     if(!inner) inner = ICONS["effigy"];
-    return '<svg class="effigy-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>';
+    return '<svg class="effigy-svg'+(name==="statue"?' statue-svg':'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>';
   }
   function effigyImg(name){
     var f=EFFIGY_FILE[name];
