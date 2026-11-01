@@ -911,6 +911,11 @@
   .setcard .snm { font-family:var(--font-display); font-weight:750; font-size:1rem; letter-spacing:-.01em; }
   .setcard .smeta { font-size:.76rem; color:var(--ink-soft); display:flex; justify-content:center; gap:10px; }
   .setcard .smeta b { font-family:var(--font-mono); color:var(--ink); font-weight:600; }
+  .setcard .setvalue { font-size:.76rem; color:var(--ink-soft); text-align:center; }
+  .setcard .setvaluerow { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; margin-top:5px; text-align:left; }
+  .setcard .setvalue b { margin-left:8px; font-family:var(--font-mono); color:var(--accent-ink); font-weight:700; overflow-wrap:anywhere; }
+  .setcard .setvaluerow.live, .setcard .setvaluerow.live b { color:var(--up); }
+  .setcard .setvaluerow.sold, .setcard .setvaluerow.sold b { color:var(--azure); }
   .setcard .strack { height:10px; border-radius:6px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden; }
   .setcard .sfill { display:block; height:100%; border-radius:6px; min-width:4px; transition:width .5s cubic-bezier(.2,.7,.2,1);
     background:var(--accent); }
@@ -14701,6 +14706,7 @@ label.acctsetrow { align-items:center; }
         '<div class="snm">All Cards</div>'+
         '<div class="smeta"><span>'+aw+'% complete</span><b>'+oAll+'/'+tAll+'</b></div>'+
         '<div class="strack"><span class="sfill" style="width:'+aw+'%"></span></div>'+
+        setCollectionValueHtml(SET_ORDER)+
         '<div class="setfoot"><button class="missbtn" type="button">View all cards →</button></div>'+
       '</div>';
     all.onclick=function(){ openAllCards(); }; tapTarget(all);
@@ -14741,6 +14747,18 @@ label.acctsetrow { align-items:center; }
     BROWSE_EXPANSIONS.forEach(function(x){ if(!x.upcoming && setsFinished(x.sets, sp)) n++; });
     return n;
   }
+  // Both market bases for owned copies and graded cards in the active collection.
+  function setCollectionValueHtml(sets){
+    var live=0, sold=0;
+    CARDS.forEach(function(c){
+      if(sets.indexOf(c.set)<0) return;
+      live+=cardValueMode(c.id,"live");
+      sold+=cardValueMode(c.id,"sold");
+    });
+    return '<div class="setvalue"><span>Your collection value</span>'+
+      '<div class="setvaluerow live"><span>Live listings</span><b>'+esc(money(live))+'</b></div>'+
+      '<div class="setvaluerow sold"><span>Sold listings</span><b>'+esc(money(sold))+'</b></div></div>';
+  }
   // A single released set tile (used for Promo Cards).
   function oneSetTile(k, sp){
     var owned=sp.owned[k], tot=sp.tot[k], w=pctOf(owned,tot), box=boxSrc(k), miss=tot-owned, meta=SET_META[k]||{}, logo=meta.logo, art=meta.art;
@@ -14756,6 +14774,7 @@ label.acctsetrow { align-items:center; }
         '<div class="snm">'+esc(SETS[k].name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
         '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
+        setCollectionValueHtml([k])+
         '<div class="setfoot">'+(meta.release?'<span class="setrel">'+esc(meta.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
       '</div>';
     el.onclick=function(){ openSet(k); };
@@ -14786,6 +14805,7 @@ label.acctsetrow { align-items:center; }
         '<div class="snm">'+esc(x.name)+'</div>'+
         '<div class="smeta"><span>'+w+'% complete</span><b>'+owned+'/'+tot+'</b></div>'+
         '<div class="strack"><span class="sfill" style="width:'+w+'%"></span></div>'+
+        setCollectionValueHtml(x.sets)+
         '<div class="setfoot">'+(x.release?'<span class="setrel">'+esc(x.release)+'</span>':'')+'<button class="missbtn" type="button">'+(miss>0?miss+' missing →':'complete '+icon('check'))+'</button></div>'+
       '</div>';
     el.onclick=function(){ openSetGroup(x.sets); };
