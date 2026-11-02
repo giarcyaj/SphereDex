@@ -7228,6 +7228,7 @@ label.acctsetrow { align-items:center; }
     });
     var sealedAt=-1; groups.forEach(function(g,i){ if(g.key==="sealed") sealedAt=i; });
     if(sealedAt>=0){ var sg=groups.splice(sealedAt,1)[0]; groups.push(sg); }
+    groups=groups.filter(function(g){ return g.lines.length; });   // a holding with no copies or slabs adds no section
     return {name:(col&&col.name)||"Collection", groups:groups, count:count, total:total, withValue:!!withValue};
   }
   function inventoryReportHtml(col, withValue, dateLabel){

@@ -88,3 +88,11 @@ test('a serial on a copy with unspecified printing is kept', () => {
   const d = make(c).inventoryReportData(c, false);
   assert.equal(d.groups[0].lines[0].serial, '372');
 });
+
+test('holdings with no copies or slabs add no empty set section', () => {
+  const c = { name: 'Z', sealed: {}, own: { 'A-1': { qty: 0 }, 'B-1': { qty: 0, graded: [] } } };
+  const sb = make(c);
+  const d = sb.inventoryReportData(c, true);
+  assert.equal(d.groups.length, 0);
+  assert.match(sb.inventoryReportHtml(c, true, 'x'), /Nothing in this collection yet/);
+});
