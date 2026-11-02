@@ -209,8 +209,9 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
 
 test('Legends Awaken numbers import, parallels included', () => {
   // BP02-001, then BP02-005, used to be this suite's example of a card SphereDex did not carry.
-  // Legends Awaken is in the catalogue IN FULL now, all 164 printings from the official card list,
-  // so every real number in the set resolves. The unknown example is therefore a number the set
+  // Legends Awaken is in the catalogue IN FULL now: 164 printings from the official card list,
+  // plus ESOUL-011, the gold Soul that list omits. Every real number in the set resolves.
+  // The unknown example is therefore a number the set
   // cannot ever have: it stops at 100 base cards, and the list is complete.
   const res = A.parseCsvCollection(csv([
     'Number,Qty',

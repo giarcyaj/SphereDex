@@ -70,6 +70,10 @@ node tools/test_inventory_report.cjs
 node tools/test_market_index.cjs
 node tools/test_trade_check.cjs
 node tools/test_deck_share.cjs
+node tools/test_storage_location.cjs
+node tools/test_share_list.cjs
+node tools/test_built_decks.cjs
+node tools/test_grading_submissions.cjs
 
 # Python 3.11 pipeline tests
 cd tools && python -m unittest discover -p 'test_*.py' -v
