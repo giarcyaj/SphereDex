@@ -48,7 +48,7 @@ const FUNCS = [
   'deckCardOf', 'deckEventDay', 'deckDayLabel', 'cardEnglishRelease', 'deckTournamentRelease',
   'deckOwnEntry', 'deckTournamentQty', 'deckTournamentReport', 'deckTournamentNameLines',
   'deckTournamentSummary', 'deckTournamentLabel', 'deckEventStored', 'deckTournamentRowNotes',
-  'deckNeedCount', 'deckNeedLabel', 'deckStatusLabel',
+  'deckBuilt', 'deckLockedQty', 'deckFreeQty', 'deckNeedCount', 'deckNeedLabel', 'deckStatusLabel',
   'releaseYmd', 'monDateTime',
   'deckLegalityReport', 'textAllowsAnyNumber'
 ];
@@ -62,7 +62,7 @@ FixedDate.parse = RealDate.parse;
 FixedDate.UTC = RealDate.UTC;
 FixedDate.now = function() { return new RealDate(2026, 9, 22, 12, 0, 0).getTime(); };
 
-const sandbox = { Date: FixedDate, byNumberIdx: {}, activeCol: function() { return { own: {}, name: 'My Collection' }; }, lsGet: function() { return null; } };
+const sandbox = { decks: function() { return []; }, Date: FixedDate, byNumberIdx: {}, activeCol: function() { return { own: {}, name: 'My Collection' }; }, lsGet: function() { return null; } };
 vm.createContext(sandbox);
 vm.runInContext(
   FUNCS.map(appFunction).join('\n') + '\n' +
@@ -266,6 +266,17 @@ test('the status line keeps Ready to build and adds the tournament verdict besid
   // Owning the cards is "Ready to build". It is not "Tournament ready": this fixture is a two
   // card deck, so it breaks the 50 main and 10 Soul rules and the picker must not claim otherwise.
   assert.equal(sandbox.deckStatusLabel({ cards: cards }), 'Ready to build · Check deck legality');
+});
+
+test('copies held by another built deck are not available for the event check', () => {
+  const pal = card({ id: 'EBP01-001', name: 'Lamball' });
+  const byId = { 'EBP01-001': pal };
+  const own = { 'EBP01-001': { qty: 4 } };
+  const free = sandbox.deckTournamentReport({ 'EBP01-001': 4 }, byId, own, '2026-10-22');
+  assert.equal(free.shortMain, 0);
+  const held = sandbox.deckTournamentReport({ 'EBP01-001': 4 }, byId, own, '2026-10-22', undefined, function() { return 4; });
+  assert.equal(held.shortMain, 4);
+  assert.equal(held.dateState, 'bad');
 });
 
 test('tournament copy has no dashes', () => {
