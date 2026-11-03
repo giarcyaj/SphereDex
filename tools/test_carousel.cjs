@@ -1194,3 +1194,17 @@ test('card of the day: the price surfaces follow collector mode', () => {
   assert.match(css, /\.collector \.priceui\{ display:none !important; \}/,
     'the app wide collector-mode price hide is still in place');
 });
+
+// Every release banner committed under docs/app/img must be wired into RELEASE_ART. A web build whose
+// server latest has moved past a banner's version only finds it there, so a missing key silently drops
+// the picture off the "What's new" slide (2.4.7 was missing while its UPDATE_2_4_7.webp sat in the repo).
+test('every committed UPDATE_ banner has a RELEASE_ART key', () => {
+  const src = fs.readFileSync(FILES.src, 'utf8');
+  const imgDir = path.join(REPO, 'docs', 'app', 'img');
+  const banners = fs.readdirSync(imgDir).map((f) => /^UPDATE_(\d+(?:_\d+)*)\.webp$/.exec(f)).filter(Boolean);
+  assert.ok(banners.length > 0, 'found release banners');
+  for (const m of banners) {
+    const ver = m[1].split('_').join('.');
+    assert.ok(src.includes('"' + ver + '": "img/UPDATE_' + m[1] + '.webp"'), 'RELEASE_ART has ' + ver);
+  }
+});
