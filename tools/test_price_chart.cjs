@@ -38,7 +38,7 @@ const sandbox = {
   // The chart names where a card's prices came from, so the sandbox needs the same lookups the app has.
   PRICESRC: { 'EBP01-002': 'ebay-active' },
   PRICESRC_SOLD: { 'EBP01-002': 'openwebninja' },
-  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' || v === 'cardtrader' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
+  srcKind: (v) => (v === 'tcgplayer' || v === 'palworld' || v === 'cardtrader' || v === 'compsniper' ? v : v === 'ebay-active' ? 'list' : v ? 'sold' : ''),
   isConverted: () => false,
 };
 vm.createContext(sandbox);
@@ -204,6 +204,9 @@ test('the chart names where these particular prices came from', () => {
   sandbox.PRICESRC['EBP01-004'] = 'cardtrader';
   assert.equal(sandbox.pxSourceLine('EBP01-004'),
     'Live listings from CardTrader (EU asking prices).', 'the cardtrader tag keeps its own label');
+  sandbox.PRICESRC_SOLD['EBP01-006'] = 'compsniper';
+  assert.equal(sandbox.pxSourceLine('EBP01-006'),
+    'Last sold from CompSniper (sold comps).', 'the compsniper tag keeps its own label');
   assert.equal(sandbox.pxSourceLine('NOT-A-CARD'), '', 'a card with no known source claims nothing');
   sandbox.cardPricePoints = (id, mode) => (mode === 'live' ? pts([['2026-09-24', 2], ['2026-10-07', 3]]) : []);
   assert.match(sandbox.fullPriceChartHtml('EBP01-002'), /class="pxsrc"/);
@@ -212,6 +215,8 @@ test('the chart names where these particular prices came from', () => {
   sandbox.PRICESRC['EBP01-005'] = 'palworld';
   assert.match(sandbox.fullPriceChartHtml('EBP01-005'), /href="https:\/\/palworldprices\.com"/,
     'a Palworld Prices figure links back to palworldprices.com');
+  const soldCs = sandbox.fullPriceChartHtml('EBP01-006');
+  assert.match(soldCs, /href="https:\/\/compsniper\.com"/, 'a CompSniper figure links back to CompSniper');
 });
 
 // ---- where the credits live -----------------------------------------------------------------------------
@@ -255,6 +260,8 @@ test('every source with a licence obligation is named on the licences page', () 
   assert.match(page, /palworldprices\.com/, 'Palworld Prices gets its required link back');
   assert.match(page, /https:\/\/www\.cardtrader\.com/, 'CardTrader is credited with a link');
   assert.ok(page.includes('EU asking prices'), 'CardTrader is described as EU asking prices');
+  assert.match(page, /https:\/\/compsniper\.com/, 'CompSniper is credited with a link');
+  assert.ok(page.includes('sold comps'), 'CompSniper is described as sold comps');
 });
 
 test('Palworld Prices keeps a link back on the public pages that name it', () => {
@@ -263,6 +270,17 @@ test('Palworld Prices keeps a link back on the public pages that name it', () =>
   assert.match(home, /href="https:\/\/palworldprices\.com"/);
   assert.match(privacy, /href="https:\/\/palworldprices\.com"/);
   assert.match(source, /href="https:\/\/palworldprices\.com"/, 'the in app source list links back too');
+});
+
+test('CompSniper is credited on the pages that name price sources', () => {
+  const home = fs.readFileSync(path.join(root, 'docs', 'index.html'), 'utf8');
+  const privacy = fs.readFileSync(path.join(root, 'docs', 'privacy.html'), 'utf8');
+  assert.match(home, /href="https:\/\/compsniper\.com"/);
+  assert.match(home, /CompSniper<\/a> \(sold comps\)/);
+  assert.match(privacy, /href="https:\/\/compsniper\.com"/);
+  assert.match(source, /href="https:\/\/compsniper\.com"/, 'the in app source list links back too');
+  assert.match(source, /s==="compsniper"/, 'compsniper stays its own source kind');
+  assert.match(source, /sold \? \[site\+" sold listings", cs,/, 'sold prices name CompSniper after the local eBay sold listings');
 });
 
 test('there is a close X as well as the Done button', () => {
