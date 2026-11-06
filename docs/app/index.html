@@ -15097,6 +15097,38 @@ label.acctsetrow { align-items:center; }
     for(i=0;i<ids.length;i++){ c=byNumberIdx[ids[i].toUpperCase()]; if(c) out.push(c); }
     return out;
   }
+  // ---- Home-screen widget snapshot (Android) --------------------------------------------------
+  // The widget cannot run this page, so the app hands the native side a small, already formatted
+  // snapshot whenever Home is drawn: the next dated release, the closest set goal, and the collection
+  // value with the day's move. Values are left out entirely when price hiding (collector mode) is on.
+  // The release carries its own day (target = local midnight in ms) so the widget keeps counting down
+  // on its own between app opens. Tapping a row opens the "go" page through the existing SDOpenPush.
+  function widgetSnapshot(){
+    var snap={ v:1, at:Date.now(), hidePrices:(SETTINGS.mode==="collector"), release:null, set:null, value:null };
+    try{
+      var r=nextHomeReleaseGroup();
+      if(r){ var ymd=releaseYmd(r.date);
+        if(ymd) snap.release={ title:String(r.title||""), date:shortReleaseDate(r.date), target:new Date(ymd[0],ymd[1]-1,ymd[2]).getTime(), go:"releases" }; }
+    }catch(e){}
+    try{
+      var c=closestSetMissingGoal();
+      if(c) snap.set={ name:String((SETS[c.set]||{}).name||c.set), owned:c.owned, total:c.total, pct:c.percent, go:"collection" };
+    }catch(e){}
+    if(!snap.hidePrices){
+      try{
+        var val=cardsValue()+sealedValue(), move=0, n=0;
+        CARDS.forEach(function(k){ var e=o(k.id), now=+PRICEBOOK[k.id]||0, before=+PRICEPREV[k.id]||0; if((+e.qty||0)>0&&now>0&&before>0){ move+=(+e.qty||0)*(now-before); n++; } });
+        snap.value={ text:money(val), move:n?((move>=0?"+":"-")+money(Math.abs(move))):"", up:move>=0, go:"portfolio" };
+      }catch(e){}
+    }
+    return snap;
+  }
+  var _widgetTimer=0;
+  function pushWidgetSnapshot(){
+    if(!(window.AndroidWidget && typeof window.AndroidWidget.update==="function")) return;
+    clearTimeout(_widgetTimer);
+    _widgetTimer=setTimeout(function(){ try{ window.AndroidWidget.update(JSON.stringify(widgetSnapshot())); }catch(e){} }, 400);
+  }
   function renderHome(){
     var total=TOTAL, ownedP=CARDS.filter(function(c){return has(o(c.id));}).length;
     var pct=pctOf(ownedP,total);
@@ -15192,6 +15224,7 @@ label.acctsetrow { align-items:center; }
     renderFeatured();
     checkRewards();
     renderRewards();
+    pushWidgetSnapshot();
   }
   // Browse-by-set tiles live on the CARDS page. First tile is "Collection" (all cards); the rest
   // are the sets. Tapping any tile opens the card grid (openAllCards / openSet).

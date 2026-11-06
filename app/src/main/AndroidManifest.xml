@@ -136,6 +136,18 @@
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
     
+        <!-- Home-screen widget. Reads only the snapshot the app saved; taps open MainActivity inside this app. -->
+        <receiver
+            android:name=".SphereWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sphere_widget_info" />
+        </receiver>
+
         <!-- Lets the camera app write the photo scan shot into our own cache folder and hand back a uri.
              Exported false and granted per use, so nothing else can read it. -->
         <provider

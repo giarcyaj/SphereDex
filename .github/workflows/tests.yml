@@ -161,6 +161,8 @@ jobs:
 
       - name: Per copy photos
         run: node tools/test_copy_photos.cjs
+      - name: Android widget snapshot
+        run: node tools/test_widget_snapshot.cjs
       - name: Collection inventory report
         run: node tools/test_inventory_report.cjs
 

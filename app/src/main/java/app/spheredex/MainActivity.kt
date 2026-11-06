@@ -279,6 +279,7 @@ class MainActivity : ComponentActivity() {
             addJavascriptInterface(IconBridge(), "AndroidIcon")
             addJavascriptInterface(PushBridge(), "AndroidPush")
             addJavascriptInterface(FileBridge(), "AndroidFiles")
+            addJavascriptInterface(WidgetBridge(), "AndroidWidget")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -514,6 +515,18 @@ class MainActivity : ComponentActivity() {
         }
         @JavascriptInterface
         fun getPrefs(): String = try { Push.currentPrefs(this@MainActivity) } catch (_: Exception) { "" }
+    }
+
+    /** Exposed to the web app as window.AndroidWidget. update() stores the latest widget snapshot (JSON,
+     *  prices already left out when price hiding is on) and redraws any widgets on the home screen. */
+    inner class WidgetBridge {
+        @JavascriptInterface
+        fun update(json: String?) {
+            try {
+                WidgetStore.save(this@MainActivity, json ?: return)
+                SphereWidget.refresh(this@MainActivity)
+            } catch (_: Exception) {}
+        }
     }
 
     /** Exposed to the web app as window.AndroidFiles. save() opens the system "Save as" picker for an
