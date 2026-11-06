@@ -105,3 +105,12 @@ test('typed amounts accept a decimal point or a decimal comma', () => {
   assert.equal(n(''), 0);
   assert.equal(n('abc'), 0);
 });
+
+test('removing the last buy price and budget forgets the currency', () => {
+  const sb = make({});
+  sb.setWishTarget('A', 5); sb.setWishBudget(20);
+  sb.setWishTarget('A', 0);
+  assert.equal(sb.STATE.wishCur, 'USD', 'the budget still holds the currency');
+  sb.setWishBudget(0);
+  assert.equal('wishCur' in sb.STATE, false);
+});

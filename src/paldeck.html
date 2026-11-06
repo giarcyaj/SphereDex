@@ -4442,7 +4442,7 @@ label.acctsetrow { align-items:center; }
   function isWished(id){ return !!(STATE.wishlist && STATE.wishlist[id]); }
   function wishlistAt(id){ return (STATE.wishlistAt && +STATE.wishlistAt[id]) || 0; }
   function toggleWish(id){
-    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; if(STATE.wishPrio) delete STATE.wishPrio[id]; if(STATE.wishTarget) delete STATE.wishTarget[id]; }
+    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; if(STATE.wishPrio) delete STATE.wishPrio[id]; if(STATE.wishTarget){ delete STATE.wishTarget[id]; wishCurTidy(); } }
     else { STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); }
   }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
@@ -4464,8 +4464,10 @@ label.acctsetrow { align-items:center; }
   function wishCurOk(){ return !STATE.wishCur || STATE.wishCur===curCode(); }
   function setWishTarget(id, v){
     if(!STATE.wishTarget || typeof STATE.wishTarget!=="object") STATE.wishTarget={};
-    v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; delete STATE.wishBudget; } STATE.wishCur=curCode(); STATE.wishTarget[id]=Math.round(v*100)/100; } else delete STATE.wishTarget[id];
+    v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; delete STATE.wishBudget; } STATE.wishCur=curCode(); STATE.wishTarget[id]=Math.round(v*100)/100; } else { delete STATE.wishTarget[id]; wishCurTidy(); }
   }
+  // With no buy price and no budget left there is no currency to remember.
+  function wishCurTidy(){ if(!Object.keys(STATE.wishTarget||{}).length && !(+STATE.wishBudget>0)) delete STATE.wishCur; }
   // Reads a typed amount the way people write it: 12.50, 12,50 or 1,250.50. The last separator is the decimal
   // point when it is followed by one or two digits, otherwise it is a thousands separator.
   function parseWishAmount(txt){
@@ -4474,7 +4476,7 @@ label.acctsetrow { align-items:center; }
     return n && +n>0 ? +n : 0;
   }
   function wishBudget(){ var v=wishCurOk() ? +STATE.wishBudget : 0; return v>0 ? v : 0; }
-  function setWishBudget(v){ v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; } STATE.wishCur=curCode(); STATE.wishBudget=Math.round(v*100)/100; } else delete STATE.wishBudget; }
+  function setWishBudget(v){ v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; } STATE.wishCur=curCode(); STATE.wishBudget=Math.round(v*100)/100; } else { delete STATE.wishBudget; wishCurTidy(); } }
   function wishBuyNow(){
     var rank={must:0,want:1,someday:2}, rows=[];
     if(!wishCurOk()) return {rows:[], total:0, budget:0, left:null, stale:STATE.wishCur};
@@ -17956,7 +17958,7 @@ label.acctsetrow { align-items:center; }
     var al=mergeAlerts(local.alerts, remote.alerts); if(al) out.alerts=al; else delete out.alerts;
     // Anything a newer app keeps at the top of the state survives this one. The server's _acct is handled by
     // adoptRemote, and _local only ever comes from this device.
-    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local") out[k]=remote[k]; }
+    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local" && k!=="wishBudget" && k!=="wishCur") out[k]=remote[k]; }
     return out;
   }
   // Take the server's copy, or the merge of it with this device's. opts.merged: blob is already that union and

@@ -1275,3 +1275,19 @@ test('wishlist buy prices and budget never cross currencies in a merge', () => {
   assert.equal(fresh.wishTarget.B, 12);
   assert.equal(fresh.wishBudget, 50);
 });
+
+test('a currency clash does not bring the other device\'s budget back, and a cleared device takes the other\'s', () => {
+  const sb = pureSandbox();
+  const col = [{ id: 'c1', name: 'Mine', own: {} }];
+  const clash = sb.mergeStates({ cols: col, active: 'c1', wishCur: 'GBP', wishTarget: { A: 8 } },
+    { cols: col, active: 'c1', wishCur: 'USD', wishTarget: { B: 12 }, wishBudget: 50 });
+  assert.equal(clash.wishCur, 'GBP');
+  assert.equal(clash.wishBudget, undefined, 'the USD budget is not read as pounds');
+  assert.equal(J(clash.wishTarget), J({ A: 8 }));
+  // this device cleared everything (no wishCur), so the other device's amounts come through whole
+  const cleared = sb.mergeStates({ cols: col, active: 'c1' },
+    { cols: col, active: 'c1', wishCur: 'USD', wishTarget: { B: 12 }, wishBudget: 50 });
+  assert.equal(cleared.wishCur, 'USD');
+  assert.equal(cleared.wishBudget, 50);
+  assert.equal(cleared.wishTarget.B, 12);
+});
