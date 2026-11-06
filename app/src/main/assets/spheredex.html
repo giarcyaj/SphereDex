@@ -3094,6 +3094,7 @@ label.acctsetrow { align-items:center; }
     <div class="deckwanted" id="deckWanted" hidden></div>
     <div class="deckwinners" id="deckWinners" hidden></div>
     <label class="search deckadd"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="deckSearch" type="search" placeholder="Add cards by name, number, effect or keyword…" autocomplete="off" /></label>
+    <div class="palchips deckown"><button class="chip solid" type="button" id="deckOwnedOnly" aria-pressed="false">Owned only</button></div>
     <div class="palchips deckwork" id="deckWorkChips" hidden></div>
     <div class="decksug" id="deckSug" hidden></div>
     <div class="deckorderbar" id="deckOrderBar" hidden><button class="chip solid" type="button" id="deckNeedFirst" aria-pressed="false">Need first</button></div>
@@ -5690,6 +5691,12 @@ label.acctsetrow { align-items:center; }
     if(!chosen || !chosen.length) return true;
     var apt=(c&&c.apt)||[];
     return chosen.some(function(w){ return apt.indexOf(w)!==-1; });
+  }
+  // Deck builder "Owned only": keep a card in the add list only when the active collection holds at least one copy.
+  function deckOwnedPass(own, id, on){
+    if(!on) return true;
+    var o=own&&own[id];
+    return !!(o&&o.qty>0);
   }
   function workChipRow(host, on, onToggle){
     if(!host) return;
@@ -11974,8 +11981,9 @@ label.acctsetrow { align-items:center; }
     function drawDeckWork(){ workChipRow($("deckWorkChips"), deckWork, function(w){ deckWork[w]=!deckWork[w]; var cb=$("deckWorkChips").querySelector('[data-work="'+w+'"]'); if(cb) cb.setAttribute("aria-pressed", deckWork[w]?"true":"false"); showSug(); }); }
     function showSug(){
       var works=keysOn(deckWork), q=fold(si.value.trim());
-      if(q.length<2 && !works.length){ closeSug(); return; }
-      var matches=CARDS.filter(function(c){ return (q.length<2 || cardMatchesQuery(c, si.value)) && workMatches(c, works) && (!works.length || c.kind==="Pal"); }).slice(0,works.length?12:7);
+      var ownedOnly=lsGet("palvault-deckownedonly")==="1", ownMap=activeCol().own;
+      if(q.length<2 && !works.length && !ownedOnly){ closeSug(); return; }
+      var matches=CARDS.filter(function(c){ return (q.length<2 || cardMatchesQuery(c, si.value)) && workMatches(c, works) && (!works.length || c.kind==="Pal") && deckOwnedPass(ownMap, c.id, ownedOnly); }).slice(0,(works.length||ownedOnly)?12:7);
       if(!matches.length){ closeSug(); return; }
       sug.innerHTML=""; matches.forEach(function(c){ var b=document.createElement("button"); b.type="button";
         var own=(activeCol().own[c.id]&&activeCol().own[c.id].qty)||0, runs=deckAddRunQty(activeDeck(), c.id);
@@ -11986,7 +11994,11 @@ label.acctsetrow { align-items:center; }
     }
     si.addEventListener("input", showSug);
     drawDeckWork();
-    document.addEventListener("click", function(e){ if(!e.target.closest(".deckadd") && !e.target.closest(".decksug") && !e.target.closest(".deckwork")) closeSug(); });
+    var doo=$("deckOwnedOnly");
+    function drawOwnedOnly(){ if(doo) doo.setAttribute("aria-pressed", lsGet("palvault-deckownedonly")==="1"?"true":"false"); }
+    if(doo) doo.onclick=function(){ lsSet("palvault-deckownedonly", lsGet("palvault-deckownedonly")==="1"?"0":"1"); drawOwnedOnly(); showSug(); };
+    drawOwnedOnly();
+    document.addEventListener("click", function(e){ if(!e.target.closest(".deckadd") && !e.target.closest(".decksug") && !e.target.closest(".deckwork") && !e.target.closest(".deckown")) closeSug(); });
   })();
 
   // ---- Tabletop match tracker (offline, on this device) ----
