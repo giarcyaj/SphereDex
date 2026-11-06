@@ -111,6 +111,133 @@ class SweepTests(unittest.TestCase):
         self.assertEqual(len(payload["products"]), 2)
 
 
+DELAY = (
+    'The Palworld Official Card Game Booster Pack "Eternal Ascent", originally scheduled for release '
+    "on Friday, January 29, 2027, will be slightly delayed. "
+    "(Before) Scheduled for release on Friday, January 29, 2027 "
+    "(After) Scheduled for release on Saturday, January 30, 2027"
+)
+LIVE = {
+    "products": [
+        {"id": "box-bp03", "set": "Eternal Ascent", "name": "Booster Box", "code": "BP03",
+         "date": "Jan 29, 2027", "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "pack-bp03", "set": "Eternal Ascent", "name": "Booster Pack", "code": "",
+         "date": "Jan 29, 2027", "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "box-eternal-ascent", "set": "Eternal Ascent", "name": "Booster Box", "code": "",
+         "date": "Jan 29, 2027", "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "pack-eternal-ascent", "set": "Eternal Ascent", "name": "Booster Pack", "code": "",
+         "date": "Jan 29, 2027", "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "box-bp02", "set": "Legends Awaken", "name": "Booster Box", "code": "BP02",
+         "date": "Oct 30, 2026", "link": "https://en.palworld-official-cardgame.com/news/post-7"},
+        {"id": "box-tba", "set": "Future Set", "name": "Booster Box", "code": "BP99", "date": ""},
+    ],
+    "sets": {"Eternal Ascent": {"logo": "REL_LOGO_BP03", "release": "Jan 29, 2027"}},
+}
+
+
+class PostponeTests(unittest.TestCase):
+    def test_a_delay_notice_uses_the_later_day(self):
+        self.assertEqual(rs.best_date(DELAY, "Booster Pack"), "Jan 30, 2027")
+        self.assertEqual(rs.parse_date("On sale January 29, 2027"), "Jan 29, 2027")
+
+    def test_mixed_dates_stay_on_their_own_products(self):
+        text = (
+            'Trial Deck "Eternal Ascent Red·Green" (TD03) goes on sale December 18, 2026. '
+            'Booster Pack "Eternal Ascent" (BP03) releases on January 30, 2027.'
+        )
+        posts = [post('Booster Pack "Eternal Ascent" details', "https://en.example/mixed", content=text)]
+        payload, _ = rs.sweep(posts, {}, force=False, sieve=FakeSieve(), get=lambda *a, **k: b"", today=TODAY)
+        by_id = {p["id"]: p for p in payload["products"]}
+        self.assertEqual(by_id["box-bp03"]["date"], "Jan 30, 2027")
+        self.assertEqual(by_id["pack-bp03"]["date"], "Jan 30, 2027")
+        self.assertEqual(by_id["td-td03"]["date"], "Dec 18, 2026")
+        self.assertNotEqual(by_id["box-bp03"]["date"], by_id["td-td03"]["date"])
+        self.assertEqual(payload["sets"]["Eternal Ascent"]["release"], "Dec 18, 2026",
+                         "the set date is the first product, and it is not copied onto the booster")
+
+    def test_seen_delay_corrects_the_canonical_ids_and_a_rerun_is_empty(self):
+        delay = post('Notice of Release Date Delay for Booster Pack "Eternal Ascent"',
+                     "https://en.palworld-official-cardgame.com/news/post-15", content=DELAY)
+        preorder = post('Booster Pack "Eternal Ascent" Preorders Now Available!',
+                        "https://en.palworld-official-cardgame.com/news/post-10",
+                        content="More details will be announced soon.")
+        seen = {
+            "https://en.palworld-official-cardgame.com/news/post-15": "",
+            "https://en.palworld-official-cardgame.com/news/post-10": "https://cdn.example/old-banner.png",
+        }
+        payload, _ = rs.sweep([delay, preorder], seen, force=False, sieve=FakeSieve(),
+                              get=lambda *a, **k: b"", today=dt.date(2026, 11, 6), catalog=LIVE)
+        ids = [p["id"] for p in payload["products"]]
+        self.assertEqual(ids, ["box-bp03", "pack-bp03"])
+        self.assertTrue(all(p["date"] == "Jan 30, 2027" and p["pre"] for p in payload["products"]))
+        self.assertTrue(all(p["link"].endswith("/news/post-15") for p in payload["products"]))
+        self.assertEqual(payload["sets"]["Eternal Ascent"]["release"], "Jan 30, 2027")
+        self.assertEqual(payload["sets"]["Eternal Ascent"]["logo"], "REL_LOGO_BP03")
+        self.assertEqual(payload["retire"], ["box-eternal-ascent", "pack-eternal-ascent"])
+        self.assertNotIn("box-bp02", ids)
+        self.assertNotIn("box-tba", ids)
+        self.assertNotIn("box-eternal-ascent", ids)
+
+        again, _ = rs.sweep([delay, preorder], {**seen, **payload["posts"]}, force=False, sieve=FakeSieve(),
+                            get=lambda *a, **k: b"", today=dt.date(2026, 11, 6), catalog=LIVE)
+        self.assertEqual(again["products"], [])
+
+        forced, _ = rs.sweep([delay, preorder], {**seen, **payload["posts"]}, force=True, sieve=FakeSieve(),
+                             get=lambda *a, **k: b"", today=dt.date(2026, 11, 6), catalog=LIVE)
+        self.assertEqual([p["id"] for p in forced["products"]], ["box-bp03", "pack-bp03"])
+        self.assertTrue(all(p["date"] == "Jan 30, 2027" for p in forced["products"]))
+
+    def test_an_earlier_day_does_not_replace_a_later_catalogue_date(self):
+        catalog = {"products": [
+            {"id": "box-bp03", "set": "Eternal Ascent", "name": "Booster Box", "code": "BP03",
+             "date": "Jan 30, 2027"},
+            {"id": "pack-bp03", "set": "Eternal Ascent", "name": "Booster Pack", "code": "",
+             "date": "Jan 30, 2027"},
+        ], "sets": {}}
+        posts = [post('Booster Pack "Eternal Ascent" Preorders Now Available!', "https://site.test/old",
+                      content="On sale January 29, 2027")]
+        payload, _ = rs.sweep(posts, {}, force=False, sieve=FakeSieve(), get=lambda *a, **k: b"",
+                              today=TODAY, catalog=catalog)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_missing_banner_does_not_reopen_a_seen_post_as_a_new_id(self):
+        posts = [post('Booster Pack "Eternal Ascent" Preorders Now Available!',
+                      "https://en.palworld-official-cardgame.com/news/post-10")]
+        seen = {"https://en.palworld-official-cardgame.com/news/post-10": "https://cdn.example/banner.png"}
+        payload, _ = rs.sweep(posts, seen, force=False, sieve=FakeSieve(), get=lambda *a, **k: b"",
+                              today=TODAY, catalog=LIVE)
+        self.assertEqual(payload["products"], [])
+
+    def test_trial_decks_keep_the_set_date_when_the_booster_moves(self):
+        catalog = {"products": LIVE["products"] + [
+            {"id": "td-ea-rg", "set": "Eternal Ascent", "name": "Trial Deck, Red · Green", "code": "TD03",
+             "date": "Dec 18, 2026"},
+            {"id": "td-ea-bp", "set": "Eternal Ascent", "name": "Trial Deck, Blue · Purple", "code": "TD04",
+             "date": "Dec 18, 2026"},
+        ], "sets": {"Eternal Ascent": {"logo": "REL_LOGO_BP03", "release": "Dec 18, 2026"}}}
+        delay = post('Notice of Release Date Delay for Booster Pack "Eternal Ascent"',
+                     "https://en.palworld-official-cardgame.com/news/post-15", content=DELAY)
+        payload, _ = rs.sweep([delay], {delay["link"]: ""}, force=False, sieve=FakeSieve(),
+                              get=lambda *a, **k: b"", today=dt.date(2026, 11, 6), catalog=catalog)
+        self.assertEqual({p["id"]: p["date"] for p in payload["products"]},
+                         {"box-bp03": "Jan 30, 2027", "pack-bp03": "Jan 30, 2027"})
+        self.assertEqual(payload["sets"]["Eternal Ascent"]["release"], "Dec 18, 2026")
+
+    def test_review_fixture_matches_the_correction_sweep(self):
+        import json
+        from pathlib import Path
+        delay = post('Notice of Release Date Delay for Booster Pack "Eternal Ascent"',
+                     "https://en.palworld-official-cardgame.com/news/post-15", content=DELAY)
+        payload, _ = rs.sweep([delay], {delay["link"]: ""}, force=False, sieve=FakeSieve(),
+                              get=lambda *a, **k: b"", today=dt.date(2026, 11, 6), catalog=LIVE)
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "releases" / "en-eternal-ascent-2026-11-06.json").read_text(encoding="utf-8"))
+        self.assertEqual(payload["products"], fixture["post_body"]["products"])
+        self.assertEqual(payload["sets"], fixture["post_body"]["sets"])
+        self.assertEqual(payload["retire"], fixture["review_retire"])
+        self.assertNotIn("box-bp02", [p["id"] for p in payload["products"]])
+        self.assertNotIn("box-tba", [p["id"] for p in payload["products"]])
+
+
 class PublishTests(unittest.TestCase):
     def test_images_upload_first_and_their_paths_go_in_the_payload(self):
         calls = []

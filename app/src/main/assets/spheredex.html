@@ -8171,8 +8171,10 @@ label.acctsetrow { align-items:center; }
     { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"75 sleeves · 10 cards", box:"BOX_SS01", banner:"BOX_BANNER_SS01", code:"SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
     { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD03", code:"TD03", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["TD03","Red・Green"], pre:true, date:"Dec 18, 2026" },
     { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD04", code:"TD04", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["TD04","Blue・Purple"], pre:true, date:"Dec 18, 2026" },
-    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" },
-    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" }
+    // EN booster street date is 30 Jan 2027. Official delay post-15 moved it from 29 Jan;
+    // trial decks stay 18 Dec, and the expansion line above stays on that first street date.
+    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027" },
+    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027" }
   ];
   // ---- Auto release-date updates from the news feed ----
   // The backend refreshes the official news nightly; the app parses a concrete "Month D, YYYY" out of any
@@ -8199,8 +8201,12 @@ label.acctsetrow { align-items:center; }
   // ---- Release data from the news sweep ----
   // tools/release_sweep.py reads official announcement posts (banner text included) and publishes new
   // sealed products, dates, banners and set logos to /api/releases, so a new product or a moved date
-  // reaches this install without a build. Baked data wins where both exist, except a date for an
-  // upcoming product: the sweep's is newer. Images are served by the backend (/api/release-img/...).
+  // reaches this install without a build. Baked art and names win where both exist. For an upcoming
+  // product, a concrete date wins when it is the later of the baked date and the sweep date, so a
+  // postponement applies and a stale earlier sweep date cannot put a corrected build back. A date
+  // moved earlier still needs a build that bakes that earlier day. Images are served by the backend
+  // (/api/release-img/...). An uncoded duplicate of a product we already track by code is the same
+  // product: it is not added again, and it does not move the dated row.
   var REL_KEY = "palvault-releases";
   function storedReleases(){ try{ return JSON.parse(lsGet(REL_KEY)||"null"); }catch(e){ return null; } }
   // What the sweep CHANGED, kept so Home can say so on the next open. applyReleases already knows which
@@ -8217,6 +8223,28 @@ label.acctsetrow { align-items:center; }
     }catch(e){}
   }
   function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
+  // The later concrete day. A vague or empty incoming date never clears a day we already have.
+  function laterReleaseDate(current, incoming){
+    var b=releaseDayTime(incoming); if(!b) return current||"";
+    var a=releaseDayTime(current); if(!a) return incoming;
+    return b>=a ? incoming : current;
+  }
+  // A codeless sweep row for a set we already track under a product code. Packs often carry no code
+  // of their own; they follow the one coded box in that set (pack-bp03 beside box-bp03).
+  function releaseAlias(r){
+    if(!r || r.code) return null;
+    var kind=sealKind(r.name);
+    var coded=SEALED.filter(function(x){ return x.set===r.set && sealKind(x.name)===kind && x.code; });
+    if(coded.length===1) return coded[0];
+    if(kind==="pack"){
+      var box=SEALED.filter(function(x){ return x.set===r.set && sealKind(x.name)==="box" && x.code; });
+      if(box.length===1){
+        var pack=SEALED.filter(function(x){ return x.id==="pack-"+String(box[0].code).toLowerCase(); })[0];
+        if(pack) return pack;
+      }
+    }
+    return null;
+  }
   function applyReleases(pay){
     if(!pay || !pay.version) return false;
     var base=apiBase(), changed=false;
@@ -8225,9 +8253,16 @@ label.acctsetrow { align-items:center; }
     (pay.products||[]).forEach(function(r){
       if(!r || !r.id || !r.set) return;
       var p=SEALED.filter(function(x){ return x.id===r.id; })[0]
-        || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null);
+        || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null)
+        || releaseAlias(r);
       if(p){
-        if(sealPreRaw(p) && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; relNews("date", p); }
+        // The alias is the same product already on the list. It must not add a second tile or
+        // drag the canonical date backwards.
+        var alias=p.id!==r.id && !r.code;
+        if(!alias && sealPreRaw(p) && r.date){
+          var next=laterReleaseDate(p.date, r.date);
+          if(next!==p.date){ p.date=next; p.srv=true; changed=true; relNews("date", p); }
+        }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
       }
@@ -8385,9 +8420,81 @@ label.acctsetrow { align-items:center; }
   // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
   // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
   // are often truncated mid-date and drop the year. A release month well before the news month rolls to next year.
-  function parseNewsDate(text, newsIso){
-    var m=/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/i.exec(text||"");
-    if(!m) return null; var mo=_MONIX[m[1].toLowerCase()], day=+m[2], yr=m[3]?+m[3]:0;
+  function parseNewsDate(text, newsIso, product){
+    var src=String(text||"");
+    var re=/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/ig;
+    var all=[], found; while((found=re.exec(src))) all.push(found);
+    if(!all.length) return null;
+    // One date keeps the old rule: the first day in the item. Two dates need a choice, or a
+    // trial deck day stated first would move the booster, and a "before" day would hide the delay.
+    var m=all[0];
+    var name=String(product&&product.name||"").toLowerCase();
+    var fam=/booster/.test(name)?"booster":(/deck/.test(name)?"deck":"");
+    // One date that sits in a sentence about the other product is not this product's day.
+    // The trial deck post names the set and only December 18; that must not move the booster.
+    if(all.length===1 && fam){
+      var only=all[0];
+      var cut1=Math.max(src.lastIndexOf(".", only.index), src.lastIndexOf("!", only.index), src.lastIndexOf("?", only.index), src.lastIndexOf("\n", only.index));
+      var end1=src.length, marks1=[".","!","?","\n"];
+      for(var c1=0;c1<marks1.length;c1++){ var at1=src.indexOf(marks1[c1], only.index+only[0].length); if(at1>=0 && at1<end1) end1=at1; }
+      var sent1=src.slice(cut1+1, end1).toLowerCase();
+      var d1=/trial deck|starter deck/.test(sent1), b1=/booster/.test(sent1);
+      if(fam==="booster" && d1 && !b1) return null;
+      if(fam==="deck" && b1 && !d1) return null;
+    }
+    if(all.length>1){
+      function beforeOf(match){ return src.slice(Math.max(0,match.index-70), match.index).toLowerCase(); }
+      function kindOf(match){
+        var w=src.slice(Math.max(0,match.index-160), Math.min(src.length, match.index+match[0].length+90)).toLowerCase();
+        var deck=/trial deck|starter deck/.test(w), booster=/booster/.test(w);
+        return deck&&!booster?"deck":(booster&&!deck?"booster":"");
+      }
+      var revised=[], old=false;
+      for(var r=0;r<all.length;r++){
+        if(/\b(before|originally|previously)\b/.test(beforeOf(all[r]))) old=true;
+        if(/\b(after|moved to|postponed to|rescheduled to|delayed to)\b/.test(beforeOf(all[r]))) revised.push(all[r]);
+      }
+      if(old && revised.length){
+        var fit=revised.filter(function(match){ var k=kindOf(match); return !(fam && k && k!==fam); });
+        if(fit.length){
+          m=fit[0];
+          for(var f=1;f<fit.length;f++){
+            var yA=+(m[3]||0), yB=+(fit[f][3]||0);
+            if(yB>yA || (yB===yA && (_MONIX[fit[f][1].toLowerCase()]>_MONIX[m[1].toLowerCase()] || (_MONIX[fit[f][1].toLowerCase()]===_MONIX[m[1].toLowerCase()] && +fit[f][2]>+m[2])))) m=fit[f];
+          }
+          var moR=_MONIX[m[1].toLowerCase()], dayR=+m[2], yrR=m[3]?+m[3]:0;
+          if(moR==null||dayR<1||dayR>31) return null;
+          if(!yrR){ var nyR=/(20\d{2})-(\d{2})/.exec(newsIso||"");
+            if(nyR){ yrR=+nyR[1]; if(moR < (+nyR[2]-1)-1) yrR+=1; } else { yrR=new Date().getFullYear(); } }
+          return MONTHS[moR]+" "+dayR+", "+yrR;
+        }
+      }
+      function score(match){
+        var w=src.slice(Math.max(0,match.index-160), Math.min(src.length, match.index+match[0].length+90)).toLowerCase();
+        var before=src.slice(Math.max(0,match.index-70), match.index).toLowerCase();
+        var s=0, deck=/trial deck|starter deck/.test(w), booster=/booster/.test(w);
+        if(fam==="booster"){ if(booster&&!deck) s+=5; else if(deck&&!booster) s-=8; }
+        if(fam==="deck"){ if(deck&&!booster) s+=5; else if(booster&&!deck) s-=8; }
+        // The date's own sentence, so a short post that mentions both products does not
+        // let the first day win just because both names fit in one wide window.
+        var cut=Math.max(src.lastIndexOf(".", match.index), src.lastIndexOf("!", match.index), src.lastIndexOf("?", match.index), src.lastIndexOf("\n", match.index));
+        var end=src.length, marks=[".","!","?","\n"];
+        for(var c=0;c<marks.length;c++){ var at=src.indexOf(marks[c], match.index+match[0].length); if(at>=0 && at<end) end=at; }
+        var sentence=src.slice(cut+1, end).toLowerCase();
+        var sDeck=/trial deck|starter deck/.test(sentence), sBoost=/booster/.test(sentence);
+        if(fam==="booster"){ if(sBoost&&!sDeck) s+=8; else if(sDeck&&!sBoost) s-=8; }
+        if(fam==="deck"){ if(sDeck&&!sBoost) s+=8; else if(sBoost&&!sDeck) s-=8; }
+        if(/\b(after|moved to|postponed to|rescheduled to|delayed to)\b/.test(before)) s+=6;
+        if(/\b(before|originally|previously)\b/.test(before)) s-=6;
+        var nk=(product&&product.nk)||[];
+        for(var n=0;n<nk.length;n++){ if(nk[n] && w.indexOf(String(nk[n]).toLowerCase())>=0){ s+=2; break; } }
+        return s;
+      }
+      var bestS=score(all[0]);
+      for(var i=1;i<all.length;i++){ var sc=score(all[i]); if(sc>bestS){ m=all[i]; bestS=sc; } }
+      if(fam && bestS<0) return null;
+    }
+    var mo=_MONIX[m[1].toLowerCase()], day=+m[2], yr=m[3]?+m[3]:0;
     if(mo==null||day<1||day>31) return null;
     if(!yr){ var ny=/(20\d{2})-(\d{2})/.exec(newsIso||"");
       if(ny){ yr=+ny[1]; if(mo < (+ny[2]-1)-1) yr+=1; } else { yr=new Date().getFullYear(); } }
@@ -8400,7 +8507,7 @@ label.acctsetrow { align-items:center; }
   // Match each upcoming product to the NEWEST news item that names it AND signals a release, then adopt its date.
   function buildReleaseOverrides(items){
     if(!items||!items.length) return false;
-    var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
+    var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|in stores|pre-?order|reprint)/i;
     var changed=false;
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
     SEALED.forEach(function(p){ if(!sealPreRaw(p) || (p.srv && p.date)) return;
@@ -8415,7 +8522,7 @@ label.acctsetrow { align-items:center; }
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
         if(!keys.some(function(k){ return lc.indexOf(String(k).toLowerCase())>=0; })) continue;
         if(!SIGNAL.test(text)) continue;
-        var d=parseNewsDate(text, it.date); if(!d) continue;
+        var d=parseNewsDate(text, it.date, p); if(!d) continue;
         if(RELEASE_OVERRIDES[p.id]!==d){ RELEASE_OVERRIDES[p.id]=d; changed=true; } break;   // newest match wins
       }
     });
