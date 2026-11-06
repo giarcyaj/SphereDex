@@ -15,7 +15,7 @@ assert.ok(start > 0 && end > start, 'wishlist priority block exists, once');
 assert.equal(source.split('WISHLIST PRIORITY BEGIN').length, 2);
 
 function make(prices) {
-  const sb = { STATE: { wishlist: {}, wishlistAt: {} }, mktOf: (id) => prices[id] || 0 };
+  const sb = { STATE: { wishlist: {}, wishlistAt: {} }, mktOf: (id) => prices[id] || 0, cur: 'USD', curCode() { return sb.cur; } };
   vm.createContext(sb);
   vm.runInContext(source.slice(start, end), sb);
   return sb;
@@ -68,4 +68,27 @@ test('budget flags the cards that run past it', () => {
   assert.deepEqual(Array.from(r.rows.map((x) => x.over)), [false, false, true]);
   assert.equal(r.total, 24);
   assert.equal(r.left, -4);
+});
+
+test('buy prices and budget do not carry over to another currency', () => {
+  const sb = make({ A: 8 });
+  sb.STATE.wishlist.A = true;
+  sb.setWishTarget('A', 10); sb.setWishBudget(50);
+  assert.equal(sb.wishBuyNow().rows.length, 1);
+  sb.cur = 'GBP';
+  const r = sb.wishBuyNow();
+  assert.equal(r.rows.length, 0);
+  assert.equal(r.stale, 'USD');
+  assert.equal(sb.wishTarget('A'), 0);
+  assert.equal(sb.wishBudget(), 0);
+  sb.setWishTarget('A', 9);   // setting again in the new currency starts clean
+  assert.equal(sb.wishBudget(), 0);
+  assert.equal(sb.wishBuyNow().rows.length, 1);
+  assert.equal(sb.STATE.wishCur, 'GBP');
+});
+
+test('a buy price can be removed', () => {
+  const sb = make({});
+  sb.setWishTarget('A', 5); sb.setWishTarget('A', 0);
+  assert.equal(sb.wishTarget('A'), 0);
 });
