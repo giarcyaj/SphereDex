@@ -8171,10 +8171,11 @@ label.acctsetrow { align-items:center; }
     { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"75 sleeves · 10 cards", box:"BOX_SS01", banner:"BOX_BANNER_SS01", code:"SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
     { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD03", code:"TD03", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["TD03","Red・Green"], pre:true, date:"Dec 18, 2026" },
     { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD04", code:"TD04", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["TD04","Blue・Purple"], pre:true, date:"Dec 18, 2026" },
-    // EN booster street date is 30 Jan 2027. Official delay post-15 moved it from 29 Jan;
-    // trial decks stay 18 Dec, and the expansion line above stays on that first street date.
-    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027" },
-    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027" }
+    // EN booster street date is 30 Jan 2027, from the delay notice (post-15, 2026-11-06T11:50:21).
+    // srcAt is that announcement's time. A feed row replaces this day only when its asOf is newer,
+    // or when it is the same announcement edited. Trial decks stay 18 Dec.
+    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027", link:"https://en.palworld-official-cardgame.com/news/post-15", srcAt:"2026-11-06T11:50:21" },
+    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027", link:"https://en.palworld-official-cardgame.com/news/post-15", srcAt:"2026-11-06T11:50:21" }
   ];
   // ---- Auto release-date updates from the news feed ----
   // The backend refreshes the official news nightly; the app parses a concrete "Month D, YYYY" out of any
@@ -8201,12 +8202,13 @@ label.acctsetrow { align-items:center; }
   // ---- Release data from the news sweep ----
   // tools/release_sweep.py reads official announcement posts (banner text included) and publishes new
   // sealed products, dates, banners and set logos to /api/releases, so a new product or a moved date
-  // reaches this install without a build. Baked art and names win where both exist. For an upcoming
-  // product, a concrete date wins when it is the later of the baked date and the sweep date, so a
-  // postponement applies and a stale earlier sweep date cannot put a corrected build back. A date
-  // moved earlier still needs a build that bakes that earlier day. Images are served by the backend
-  // (/api/release-img/...). An uncoded duplicate of a product we already track by code is the same
-  // product: it is not added again, and it does not move the dated row.
+  // reaches this install without a build. Baked art and names win where both exist. A feed date
+  // replaces a baked one when the feed row is a newer announcement (asOf after srcAt), earlier or
+  // later on the calendar, or when it is the same announcement edited. A feed row with no asOf does
+  // not override a baked date that names its source: the live feed still has the old preorder and
+  // does not say when that row was written. Images are served by the backend (/api/release-img/...).
+  // An uncoded duplicate of a product we already track by code is the same product: it is not added
+  // again, and it does not move the dated row.
   var REL_KEY = "palvault-releases";
   function storedReleases(){ try{ return JSON.parse(lsGet(REL_KEY)||"null"); }catch(e){ return null; } }
   // What the sweep CHANGED, kept so Home can say so on the next open. applyReleases already knows which
@@ -8223,11 +8225,18 @@ label.acctsetrow { align-items:center; }
     }catch(e){}
   }
   function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
-  // The later concrete day. A vague or empty incoming date never clears a day we already have.
-  function laterReleaseDate(current, incoming){
-    var b=releaseDayTime(incoming); if(!b) return current||"";
-    var a=releaseDayTime(current); if(!a) return incoming;
-    return b>=a ? incoming : current;
+  function asofMs(s){ var t=Date.parse(String(s||"")); return isNaN(t)?0:t; }
+  // Which street day to keep. Newer announcement wins in either direction. No clock and a different
+  // source does not. An empty incoming day never clears a day we already have.
+  function adoptServerDate(p, r){
+    if(!r || !r.date) return (p&&p.date)||"";
+    if(!p || !p.date) return r.date;
+    if(r.date===p.date) return p.date;
+    var inc=asofMs(r.asOf), cur=asofMs(p.srcAt);
+    if(inc && cur) return inc>cur ? r.date : p.date;
+    if(inc && !cur) return r.date;
+    if(!inc && cur) return (r.link && p.link && r.link===p.link) ? r.date : p.date;
+    return r.date;
   }
   // A codeless sweep row for a set we already track under a product code. Packs often carry no code
   // of their own; they follow the one coded box in that set (pack-bp03 beside box-bp03).
@@ -8260,8 +8269,8 @@ label.acctsetrow { align-items:center; }
         // drag the canonical date backwards.
         var alias=p.id!==r.id && !r.code;
         if(!alias && sealPreRaw(p) && r.date){
-          var next=laterReleaseDate(p.date, r.date);
-          if(next!==p.date){ p.date=next; p.srv=true; changed=true; relNews("date", p); }
+          var next=adoptServerDate(p, r);
+          if(next!==p.date){ p.date=next; if(r.asOf) p.srcAt=r.asOf; if(r.link) p.link=r.link; p.srv=true; changed=true; relNews("date", p); }
         }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
@@ -8443,25 +8452,33 @@ label.acctsetrow { align-items:center; }
       if(fam==="deck" && b1 && !d1) return null;
     }
     if(all.length>1){
-      function beforeOf(match){ return src.slice(Math.max(0,match.index-70), match.index).toLowerCase(); }
+      function beforeOf(match){ return src.slice(Math.max(0,match.index-80), match.index).toLowerCase(); }
       function kindOf(match){
         var w=src.slice(Math.max(0,match.index-160), Math.min(src.length, match.index+match[0].length+90)).toLowerCase();
         var deck=/trial deck|starter deck/.test(w), booster=/booster/.test(w);
         return deck&&!booster?"deck":(booster&&!deck?"booster":"");
       }
+      var revRe=/\b(after|moved to|postponed to|rescheduled to|delayed to|corrected to|brought forward to)\b/g;
+      var supRe=/\b(before|originally|previously|instead of|original date)\b/g;
+      function closestRole(before){
+        var rev=-1, sup=-1, m;
+        revRe.lastIndex=0; while((m=revRe.exec(before))) rev=m.index;
+        supRe.lastIndex=0; while((m=supRe.exec(before))) sup=m.index;
+        if(rev<0 && sup<0) return "";
+        if(rev>=0 && (sup<0 || rev>sup)) return "revised";
+        return "superseded";
+      }
       var revised=[], old=false;
       for(var r=0;r<all.length;r++){
-        if(/\b(before|originally|previously)\b/.test(beforeOf(all[r]))) old=true;
-        if(/\b(after|moved to|postponed to|rescheduled to|delayed to)\b/.test(beforeOf(all[r]))) revised.push(all[r]);
+        var role=closestRole(beforeOf(all[r]));
+        if(role==="superseded") old=true;
+        if(role==="revised") revised.push(all[r]);
       }
       if(old && revised.length){
         var fit=revised.filter(function(match){ var k=kindOf(match); return !(fam && k && k!==fam); });
         if(fit.length){
           m=fit[0];
-          for(var f=1;f<fit.length;f++){
-            var yA=+(m[3]||0), yB=+(fit[f][3]||0);
-            if(yB>yA || (yB===yA && (_MONIX[fit[f][1].toLowerCase()]>_MONIX[m[1].toLowerCase()] || (_MONIX[fit[f][1].toLowerCase()]===_MONIX[m[1].toLowerCase()] && +fit[f][2]>+m[2])))) m=fit[f];
-          }
+          for(var f=1;f<fit.length;f++){ if(fit[f].index>m.index) m=fit[f]; }
           var moR=_MONIX[m[1].toLowerCase()], dayR=+m[2], yrR=m[3]?+m[3]:0;
           if(moR==null||dayR<1||dayR>31) return null;
           if(!yrR){ var nyR=/(20\d{2})-(\d{2})/.exec(newsIso||"");
@@ -8484,8 +8501,8 @@ label.acctsetrow { align-items:center; }
         var sDeck=/trial deck|starter deck/.test(sentence), sBoost=/booster/.test(sentence);
         if(fam==="booster"){ if(sBoost&&!sDeck) s+=8; else if(sDeck&&!sBoost) s-=8; }
         if(fam==="deck"){ if(sDeck&&!sBoost) s+=8; else if(sBoost&&!sDeck) s-=8; }
-        if(/\b(after|moved to|postponed to|rescheduled to|delayed to)\b/.test(before)) s+=6;
-        if(/\b(before|originally|previously)\b/.test(before)) s-=6;
+        if(/\b(after|moved to|postponed to|rescheduled to|delayed to|corrected to|brought forward to)\b/.test(before)) s+=6;
+        if(/\b(before|originally|previously|instead of|original date)\b/.test(before)) s-=6;
         var nk=(product&&product.nk)||[];
         for(var n=0;n<nk.length;n++){ if(nk[n] && w.indexOf(String(nk[n]).toLowerCase())>=0){ s+=2; break; } }
         return s;

@@ -40,7 +40,7 @@ function releaseSandbox(sealed, expansions) {
   };
   vm.createContext(sb);
   vm.runInContext([
-    'monDateTime', 'releaseDayTime', 'sealKind', 'sealDate', 'sealPreRaw', 'laterReleaseDate',
+    'monDateTime', 'releaseDayTime', 'sealKind', 'sealDate', 'sealPreRaw', 'asofMs', 'adoptServerDate',
     'releaseAlias', 'relNews', 'applyReleases', 'parseNewsDate', 'buildReleaseOverrides'
   ].map(appFunction).join('\n'), sb);
   return sb;
@@ -50,8 +50,8 @@ function baked() {
   return [
     { id: 'td-ea-rg', set: 'Eternal Ascent', name: 'Trial Deck, Red · Green', code: 'TD03', pre: true, date: 'Dec 18, 2026', nk: ['TD03', 'Red・Green'] },
     { id: 'td-ea-bp', set: 'Eternal Ascent', name: 'Trial Deck, Blue · Purple', code: 'TD04', pre: true, date: 'Dec 18, 2026', nk: ['TD04', 'Blue・Purple'] },
-    { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', pre: true, date: 'Jan 30, 2027', banner: 'BOX_BANNER_BP03', nk: ['BP03', 'Eternal Ascent'] },
-    { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', pre: true, date: 'Jan 30, 2027', nk: ['BP03', 'Eternal Ascent'] },
+    { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', pre: true, date: 'Jan 30, 2027', banner: 'BOX_BANNER_BP03', nk: ['BP03', 'Eternal Ascent'], link: 'https://en.palworld-official-cardgame.com/news/post-15', srcAt: '2026-11-06T11:50:21' },
+    { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', pre: true, date: 'Jan 30, 2027', nk: ['BP03', 'Eternal Ascent'], link: 'https://en.palworld-official-cardgame.com/news/post-15', srcAt: '2026-11-06T11:50:21' },
     { id: 'box-bp02', set: 'Legends Awaken', name: 'Booster Box', code: 'BP02', pre: true, date: 'Oct 30, 2026', nk: ['Legends Awaken'] }
   ];
 }
@@ -88,6 +88,14 @@ test('news keeps the booster on 30 Jan when a trial deck post is newer', () => {
   assert.equal(sb.RELEASE_OVERRIDES['box-bp02'], undefined);
 });
 
+test('a headline correction to an earlier day is the new day, not the original one', () => {
+  // Synthetic. Not an Eternal Ascent date. The corrected day is earlier than the day it replaces.
+  const sb = releaseSandbox(baked(), []);
+  const box = sb.SEALED.filter((p) => p.id === 'box-bp03')[0];
+  const text = 'Booster Pack "Sample Set" release date corrected to March 2, 2027, instead of the original date of June 20, 2027.';
+  assert.equal(sb.parseNewsDate(text, '2026-10-01', box), 'Mar 2, 2027');
+});
+
 test('a stale earlier sweep date and an uncoded duplicate do not move the baked booster', () => {
   const sealed = baked();
   const expansions = [{ name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: 'LOGO_BP03' }];
@@ -111,20 +119,52 @@ test('a stale earlier sweep date and an uncoded duplicate do not move the baked 
   assert.equal(expansions[0].release, 'Dec 18, 2026', 'an existing expansion keeps its first street date');
 });
 
-test('a later sweep date still moves an upcoming product, and a new product is still added', () => {
+test('a newer announcement moves the day in either direction, and an older source does not', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, [{ name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: '' }]);
+  // Synthetic later delay. The clock is newer than post-15, so the later day applies.
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Feb 6, 2027', asOf: '2026-12-01T00:00:00', link: 'https://en.example/later' },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Feb 6, 2027', asOf: '2026-12-01T00:00:00', link: 'https://en.example/later' }
+    ]
+  });
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Feb 6, 2027');
+  // Synthetic earlier correction, newer again than the delay above.
+  sb.applyReleases({
+    version: 3,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 15, 2027', asOf: '2027-01-02T00:00:00', link: 'https://en.example/earlier' },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 15, 2027', asOf: '2027-01-02T00:00:00', link: 'https://en.example/earlier' }
+    ]
+  });
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 15, 2027');
+  assert.equal(sealed.filter((p) => p.id === 'td-ea-rg')[0].date, 'Dec 18, 2026');
+  // The original preorder is older and has no asOf. It must not undo the correction.
+  sb.applyReleases({
+    version: 4,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 29, 2027', link: 'https://en.palworld-official-cardgame.com/news/post-10' }
+    ]
+  });
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 15, 2027');
+});
+
+test('an edit of the same announcement applies without asOf, and a new product is still added', () => {
   const sealed = baked();
   const sb = releaseSandbox(sealed, [{ name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: '' }]);
   sb.applyReleases({
     version: 2,
     products: [
-      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Feb 6, 2027' },
-      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Feb 6, 2027' },
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 20, 2027', link: 'https://en.palworld-official-cardgame.com/news/post-15' },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 20, 2027', link: 'https://en.palworld-official-cardgame.com/news/post-15' },
       { id: 'box-newset', set: 'Brand New', name: 'Booster Box', code: 'BP09', date: 'Mar 1, 2027' }
     ],
     sets: { 'Brand New': { release: 'Mar 1, 2027', logo: '' } }
   });
-  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Feb 6, 2027');
-  assert.equal(sealed.filter((p) => p.id === 'pack-bp03')[0].date, 'Feb 6, 2027');
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 20, 2027');
+  assert.equal(sealed.filter((p) => p.id === 'pack-bp03')[0].date, 'Jan 20, 2027');
   assert.equal(sealed.filter((p) => p.id === 'td-ea-rg')[0].date, 'Dec 18, 2026');
   assert.ok(sealed.some((p) => p.id === 'box-newset' && p.date === 'Mar 1, 2027'));
   assert.equal(sb.BROWSE_EXPANSIONS.filter((x) => x.name === 'Eternal Ascent')[0].release, 'Dec 18, 2026');
