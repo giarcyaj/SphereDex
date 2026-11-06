@@ -1,6 +1,29 @@
 {
-  "updated_at": "2026-11-05T07:00:00Z",
+  "updated_at": "2026-11-06T07:15:00Z",
   "items": [
+    {
+      "id": "en-palworld-official-cardgame-com-news-post-14",
+      "title": "Bushiroad English Conference Autumn 2026: trial decks, Eternal Ascent, support app and events",
+      "url": "https://en.palworld-official-cardgame.com/news/post-14",
+      "source": "news",
+      "source_name": "Palworld Official Card Game",
+      "published_at": "2026-11-06T04:17:04Z",
+      "category": "official",
+      "summary": "The official site recaps the autumn conference: Trial Decks TD03 (Red/Green) and TD04 (Blue/Purple) arrive 18 December, Booster Pack Eternal Ascent (100 card types, new Rank Up ability) is set for 30 January 2027, a Legends Awaken release tournament runs in November with an ESOUL-017 promo, an official support app is coming soon, and Masters League 26/27 starts this month.",
+      "unconfirmed": false,
+      "image": "https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/11/04152539/1920x1080_06.png"
+    },
+    {
+      "id": "en-palworld-official-cardgame-com-news-post-15",
+      "title": "Eternal Ascent release date moves to 30 January 2027",
+      "url": "https://en.palworld-official-cardgame.com/news/post-15",
+      "source": "news",
+      "source_name": "Palworld Official Card Game",
+      "published_at": "2026-11-06",
+      "category": "release",
+      "summary": "Bushiroad says Booster Pack Eternal Ascent will be slightly delayed from 29 January to Saturday 30 January 2027, citing work to improve manufacturing and quality control. The notice does not mention preorders.",
+      "unconfirmed": false
+    },
     {
       "title": "SSP Orserk (Thunderclap Roar) card reveal",
       "url": "https://x.com/PalworldOCG/status/2118161377986818544",
@@ -97,7 +120,7 @@
       "source_name": "@PalworldOCG",
       "published_at": "2026-11-03T02:00:01Z",
       "category": "reveal",
-      "summary": "The Japanese account shows the SSP version of Frostallion – Everlasting Rime from the Legends Awaken booster pack, which is on sale now.",
+      "summary": "The Japanese account shows the SSP version of Frostallion \u2013 Everlasting Rime from the Legends Awaken booster pack, which is on sale now.",
       "unconfirmed": false,
       "id": "x-com-palworldocg-status-2117436607066451973",
       "image": "https://pbs.twimg.com/amplify_video_thumb/2117190853257297920/img/xH-PWB_q5s560inp.jpg"
@@ -309,37 +332,37 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2112000783244009490",
-      "title": "Card reveal: Tombat – Resonance of Shadows and Nox – One-Way Ticket (Legends Awaken)",
+      "title": "Card reveal: Tombat \u2013 Resonance of Shadows and Nox \u2013 One-Way Ticket (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-19T02:00:00Z",
       "category": "reveal",
-      "summary": "The official English account revealed Tombat – Resonance of Shadows and Nox – One-Way Ticket, both from Legends Awaken, which goes on sale on 30 October.",
+      "summary": "The official English account revealed Tombat \u2013 Resonance of Shadows and Nox \u2013 One-Way Ticket, both from Legends Awaken, which goes on sale on 30 October.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HT_mAtIbUAA53oE.jpg"
     },
     {
       "id": "x-com-palworldocg-en-status-2111638397685215466",
-      "title": "Card reveal: Shroomer Noct – Spores of the Void and Electric Medicine Workbench (Legends Awaken)",
+      "title": "Card reveal: Shroomer Noct \u2013 Spores of the Void and Electric Medicine Workbench (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2111638397685215466",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-18T02:00:01Z",
       "category": "reveal",
-      "summary": "Shroomer Noct – Spores of the Void and the Electric Medicine Workbench were revealed for Legends Awaken, on sale 30 October.",
+      "summary": "Shroomer Noct \u2013 Spores of the Void and the Electric Medicine Workbench were revealed for Legends Awaken, on sale 30 October.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HT_mQTObYAAuSdD.jpg"
     },
     {
       "id": "x-com-palworldocg-en-status-2111276012453401079",
-      "title": "Card reveal: Quivern Botan – Meadow's Grace and Refined Metal Axe (Legends Awaken)",
+      "title": "Card reveal: Quivern Botan \u2013 Meadow's Grace and Refined Metal Axe (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2111276012453401079",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-17T02:00:01Z",
       "category": "reveal",
-      "summary": "Quivern Botan – Meadow's Grace and the Refined Metal Axe gear card were revealed for Legends Awaken, on sale 30 October.",
+      "summary": "Quivern Botan \u2013 Meadow's Grace and the Refined Metal Axe gear card were revealed for Legends Awaken, on sale 30 October.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HUy6egwasAAQKBw.jpg"
     },
@@ -357,13 +380,13 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2110929406663540863",
-      "title": "Card reveal: SSP Anubis – Noble Reaper and Orserk – Thunderclap Roar (Legends Awaken)",
+      "title": "Card reveal: SSP Anubis \u2013 Noble Reaper and Orserk \u2013 Thunderclap Roar (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2110929406663540863",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-16T03:02:44Z",
       "category": "reveal",
-      "summary": "The SSP versions of Anubis – Noble Reaper and Orserk – Thunderclap Roar were shown for Legends Awaken.",
+      "summary": "The SSP versions of Anubis \u2013 Noble Reaper and Orserk \u2013 Thunderclap Roar were shown for Legends Awaken.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HUuFyW0bwAAWHPb.jpg"
     },
@@ -375,7 +398,7 @@
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-16T02:55:44Z",
       "category": "reveal",
-      "summary": "SSP versions of Jetragon – Legendary Guardian Dragon, Frostallion – Everlasting Rime and Frostallion Noct – Eternal Darkness were shown for Legends Awaken.",
+      "summary": "SSP versions of Jetragon \u2013 Legendary Guardian Dragon, Frostallion \u2013 Everlasting Rime and Frostallion Noct \u2013 Eternal Darkness were shown for Legends Awaken.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HUqjNPjaQAAYN4g.jpg"
     },
@@ -393,36 +416,36 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2110679809831645670",
-      "title": "Card reveal: Mammorest – Gaia Crusher and Beware of Mammorest Sign (Legends Awaken)",
+      "title": "Card reveal: Mammorest \u2013 Gaia Crusher and Beware of Mammorest Sign (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2110679809831645670",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-15T10:30:55Z",
       "category": "reveal",
-      "summary": "Mammorest – Gaia Crusher and the Beware of Mammorest Sign structure were revealed for Legends Awaken, on sale 30 October.",
+      "summary": "Mammorest \u2013 Gaia Crusher and the Beware of Mammorest Sign structure were revealed for Legends Awaken, on sale 30 October.",
       "unconfirmed": false,
       "image": "https://pbs.twimg.com/media/HUqkBOPaMAEemCE.jpg"
     },
     {
       "id": "x-com-palworldocg-en-status-2110626728897081508",
-      "title": "Errata notice for Swee – Hibernating Together (EBP02-034)",
+      "title": "Errata notice for Swee \u2013 Hibernating Together (EBP02-034)",
       "url": "https://x.com/PalworldOCG_EN/status/2110626728897081508",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-15T07:00:00Z",
       "category": "official",
-      "summary": "An errata was issued for Swee – Hibernating Together, affecting both EBP02-034 and its SR version.",
+      "summary": "An errata was issued for Swee \u2013 Hibernating Together, affecting both EBP02-034 and its SR version.",
       "unconfirmed": false
     },
     {
       "id": "x-com-palworldocg-en-status-2110188847837610367",
-      "title": "Card reveal: Pengullet – Locked and Loaded and Stun Baton (Legends Awaken)",
+      "title": "Card reveal: Pengullet \u2013 Locked and Loaded and Stun Baton (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2110188847837610367",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-14T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Pengullet – Locked and Loaded (EBP02-033, C) and Stun Baton (EBP02-043, Gear) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Pengullet \u2013 Locked and Loaded (EBP02-033, C) and Stun Baton (EBP02-043, Gear) for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -438,35 +461,35 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2109826458185040061",
-      "title": "Card reveal: Chillet Ignis – Ember-Clad Dragon and Arsox – Blazing Fury (Legends Awaken)",
+      "title": "Card reveal: Chillet Ignis \u2013 Ember-Clad Dragon and Arsox \u2013 Blazing Fury (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2109826458185040061",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-13T02:00:00Z",
       "category": "reveal",
-      "summary": "Official English account reveals Chillet Ignis – Ember-Clad Dragon (EBP02-004) and Arsox – Blazing Fury (EBP02-009) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Chillet Ignis \u2013 Ember-Clad Dragon (EBP02-004) and Arsox \u2013 Blazing Fury (EBP02-009) for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
       "id": "x-com-palworldocg-en-status-2109464070680416290",
-      "title": "Card reveal: Saya's Crescent Moon and Daedream – Blissful Dreams (Legends Awaken)",
+      "title": "Card reveal: Saya's Crescent Moon and Daedream \u2013 Blissful Dreams (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2109464070680416290",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-12T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Saya's Crescent Moon (EBP02-095) and Daedream – Blissful Dreams (EBP02-082) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Saya's Crescent Moon (EBP02-095) and Daedream \u2013 Blissful Dreams (EBP02-082) for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
       "id": "x-com-palworldocg-en-status-2109101685054579155",
-      "title": "Card reveal: Sweepa – Record Breaker, Swee – Hibernating Together and Sweepa Saddle (Legends Awaken)",
+      "title": "Card reveal: Sweepa \u2013 Record Breaker, Swee \u2013 Hibernating Together and Sweepa Saddle (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2109101685054579155",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-11T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Sweepa – Record Breaker (EBP02-027), Swee – Hibernating Together (EBP02-034) and Sweepa Saddle (EBP02-045) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Sweepa \u2013 Record Breaker (EBP02-027), Swee \u2013 Hibernating Together (EBP02-034) and Sweepa Saddle (EBP02-045) for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -493,13 +516,13 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2108019245854703970",
-      "title": "Card reveal: Lifmunk – Hidden Power and Lifmunk's Submachine Gun (Legends Awaken)",
+      "title": "Card reveal: Lifmunk \u2013 Hidden Power and Lifmunk's Submachine Gun (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2108019245854703970",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-08T02:18:47Z",
       "category": "reveal",
-      "summary": "Official English account reveals Lifmunk – Hidden Power (EBP02-056, U) and Lifmunk's Submachine Gun for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Lifmunk \u2013 Hidden Power (EBP02-056, U) and Lifmunk's Submachine Gun for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -526,24 +549,24 @@
       "unconfirmed": false
     },
     {
-      "title": "Card reveal: Mau – Greed Beckons and Sibelyx – Silken Spinner (Legends Awaken)",
+      "title": "Card reveal: Mau \u2013 Greed Beckons and Sibelyx \u2013 Silken Spinner (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2107652128122810688",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-07T02:00:00Z",
       "category": "reveal",
-      "summary": "Official English account reveals Mau – Greed Beckons (EBP02-080, U) and Sibelyx – Silken Spinner (EBP02-028, R) for Booster Pack Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Mau \u2013 Greed Beckons (EBP02-080, U) and Sibelyx \u2013 Silken Spinner (EBP02-028, R) for Booster Pack Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false,
       "id": "x-com-palworldocg-en-status-2107652128122810688"
     },
     {
-      "title": "Palworld OCG PR cards for BanG Dream! 13th☆LIVE concert attendees",
+      "title": "Palworld OCG PR cards for BanG Dream! 13th\u2606LIVE concert attendees",
       "url": "https://foilwire.com/2026/10/06/palworld-ocg-will-give-mugendai-mewtype-pr-cards-at-bang-dream-13th%e2%98%86live/",
       "source": "news",
       "source_name": "FoilWire",
       "published_at": "2026-10-06T16:24:52Z",
       "category": "official",
-      "summary": "Attendees of Mugendai Mewtype's \"DIMENSIONAL OVERLAP\" DAY2 show at BanG Dream! 13th☆LIVE (October 11, 2026, Tokyo Garden Theater) each receive one random special Palworld OCG PR card; Palworld OCG also has merchandise and displays at the event (October 10–12).",
+      "summary": "Attendees of Mugendai Mewtype's \"DIMENSIONAL OVERLAP\" DAY2 show at BanG Dream! 13th\u2606LIVE (October 11, 2026, Tokyo Garden Theater) each receive one random special Palworld OCG PR card; Palworld OCG also has merchandise and displays at the event (October 10\u201312).",
       "unconfirmed": false,
       "id": "foilwire-com-2026-10-06-palworld-ocg-will-give-mugendai-mewtype-pr-cards-at-bang"
     },
@@ -581,13 +604,13 @@
       "id": "x-com-palworldocg-en-status-2106927356304818281"
     },
     {
-      "title": "Card reveal: Seed Machine Gun and Eikthyrdeer – Warden of the Woods",
+      "title": "Card reveal: Seed Machine Gun and Eikthyrdeer \u2013 Warden of the Woods",
       "url": "https://x.com/PalworldOCG_EN/status/2106564969664004482",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-04T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Seed Machine Gun (EBP02-072, Event) and Eikthyrdeer – Warden of the Woods (EBP02-099) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Seed Machine Gun (EBP02-072, Event) and Eikthyrdeer \u2013 Warden of the Woods (EBP02-099) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false,
       "id": "x-com-palworldocg-en-status-2106564969664004482"
     },
@@ -609,19 +632,19 @@
       "source_name": "@PalworldOCG",
       "published_at": "2026-10-03T09:30:25Z",
       "category": "tournament",
-      "summary": "Official Japanese account posts Masters League 26-27 Tokyo Autumn block winners and podium results across A–F blocks.",
+      "summary": "Official Japanese account posts Masters League 26-27 Tokyo Autumn block winners and podium results across A\u2013F blocks.",
       "unconfirmed": false,
       "id": "x-com-palworldocg-status-2106315929328202178"
     },
     {
       "id": "x-com-palworldocg-en-status-2106202576467165196",
-      "title": "Card reveal: Relaxaurus Lux – Party Time and Foxparks – Breathing Practice",
+      "title": "Card reveal: Relaxaurus Lux \u2013 Party Time and Foxparks \u2013 Breathing Practice",
       "url": "https://x.com/PalworldOCG_EN/status/2106202576467165196",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-03T02:00:00Z",
       "category": "reveal",
-      "summary": "Official English account reveals Relaxaurus Lux – Party Time (EBP02-010) and Foxparks – Breathing Practice (EBP02-013) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Relaxaurus Lux \u2013 Party Time (EBP02-010) and Foxparks \u2013 Breathing Practice (EBP02-013) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -648,13 +671,13 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2105840194419364339",
-      "title": "Card reveal: Faleris – Marcus' Soaring Wings (Legends Awaken)",
+      "title": "Card reveal: Faleris \u2013 Marcus' Soaring Wings (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2105840194419364339",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-02T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Faleris – Marcus' Soaring Wings (EBP02-003) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Faleris \u2013 Marcus' Soaring Wings (EBP02-003) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -665,7 +688,7 @@
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-01T12:00:02Z",
       "category": "official",
-      "summary": "Official English account announces a Palworld OFFICIAL CARD GAME booth with GameTrade at Lucca Comics & Games in Italy, October 28–November 1, 2026.",
+      "summary": "Official English account announces a Palworld OFFICIAL CARD GAME booth with GameTrade at Lucca Comics & Games in Italy, October 28\u2013November 1, 2026.",
       "unconfirmed": false
     },
     {
@@ -681,13 +704,13 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2105477803244228934",
-      "title": "Card reveal: Bristla – Regal Gaze and Beegarde – Faithful Honor",
+      "title": "Card reveal: Bristla \u2013 Regal Gaze and Beegarde \u2013 Faithful Honor",
       "url": "https://x.com/PalworldOCG_EN/status/2105477803244228934",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-10-01T02:00:00Z",
       "category": "reveal",
-      "summary": "Official English account reveals Bristla – Regal Gaze (EBP02-011) and Beegarde – Faithful Honor (EBP02-055) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Bristla \u2013 Regal Gaze (EBP02-011) and Beegarde \u2013 Faithful Honor (EBP02-055) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -703,24 +726,24 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2105115418776002628",
-      "title": "Card reveal: Foxcicle – Aurora Hymn and Jolthog Cryst – Midwinter Awakening",
+      "title": "Card reveal: Foxcicle \u2013 Aurora Hymn and Jolthog Cryst \u2013 Midwinter Awakening",
       "url": "https://x.com/PalworldOCG_EN/status/2105115418776002628",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-09-30T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Foxcicle – Aurora Hymn (EBP02-026) and Jolthog Cryst – Midwinter Awakening (EBP02-029) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Foxcicle \u2013 Aurora Hymn (EBP02-026) and Jolthog Cryst \u2013 Midwinter Awakening (EBP02-029) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
       "id": "x-com-palworldocg-en-status-2104753031913062618",
-      "title": "Card reveal: Orserk – Thunderclap Roar and Flambelle – Feverish Tears (Legends Awaken)",
+      "title": "Card reveal: Orserk \u2013 Thunderclap Roar and Flambelle \u2013 Feverish Tears (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2104753031913062618",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-09-29T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Orserk – Thunderclap Roar (EBP02-001) and Flambelle – Feverish Tears (EBP02-007) for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Orserk \u2013 Thunderclap Roar (EBP02-001) and Flambelle \u2013 Feverish Tears (EBP02-007) for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
@@ -747,13 +770,13 @@
     },
     {
       "id": "x-com-palworldocg-en-status-2104390642336137721",
-      "title": "Card reveal: Selyne – Saya's Moonlit Beacon (Legends Awaken)",
+      "title": "Card reveal: Selyne \u2013 Saya's Moonlit Beacon (Legends Awaken)",
       "url": "https://x.com/PalworldOCG_EN/status/2104390642336137721",
       "source": "x",
       "source_name": "@PalworldOCG_EN",
       "published_at": "2026-09-28T02:00:01Z",
       "category": "reveal",
-      "summary": "Official English account reveals Selyne – Saya's Moonlit Beacon for Legends Awaken, on sale October 30, 2026.",
+      "summary": "Official English account reveals Selyne \u2013 Saya's Moonlit Beacon for Legends Awaken, on sale October 30, 2026.",
       "unconfirmed": false
     },
     {
