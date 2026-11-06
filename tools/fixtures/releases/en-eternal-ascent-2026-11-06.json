@@ -17,7 +17,7 @@
       "sets.Eternal Ascent.release": ["Jan 29, 2027 on the live feed at 07:46 UTC 6 Nov 2026", "Jan 30, 2027"]
     },
     "set_date": "The app expansion line stays 18 Dec 2026 because that is the EN trial deck street date and applyReleases does not overwrite an expansion that is already in the build. This payload's sets.release is 30 Jan 2027 because the live /api/releases catalogue has no trial deck rows to anchor an earlier day. Do not copy sets.release onto the booster rows. TD03 and TD04 stay 18 Dec 2026.",
-    "asOf": "The sweep orders announcements by WordPress modified time, not by which street day is later. asOf is kept on the in-memory row and stripped from the admin POST, because the worker is not known to store it. GET /api/releases must return asOf before the app can apply a correction whose URL is not the baked source. Same-URL edits apply without asOf, because link is already stored.",
+    "asOf": "UTC instant from post-15 modified_gmt 2026-11-06T03:13:14, emitted as 2026-11-06T03:13:14Z. Site-local 11:50:21 and 12:13:14 are not converted by assuming an offset. post-10 modified_gmt 2026-11-06T06:46:13 is later and is not used, because that post's current text asserts no street day. The admin POST includes asOf. srcAt and retire are not sent. Merge backend PR 34 before this app PR.",
     "retire": "box-eternal-ascent and pack-eternal-ascent are uncoded duplicates of box-bp03 and pack-bp03. publish() does not send review_retire. The worker merges by id and this repo cannot delete those rows.",
     "leave_untouched": ["box-bp02", "pack-bp02", "td-ea-rg", "td-ea-bp", "any row whose date is unknown or TBA"]
   },
@@ -34,7 +34,8 @@
         "name": "Booster Box",
         "sub": "",
         "code": "BP03",
-        "q": "Palworld Eternal Ascent Booster Box"
+        "q": "Palworld Eternal Ascent Booster Box",
+        "asOf": "2026-11-06T03:13:14Z"
       },
       {
         "set": "Eternal Ascent",
@@ -47,7 +48,8 @@
         "name": "Booster Pack",
         "sub": "",
         "code": "",
-        "q": "Palworld Eternal Ascent Booster Pack"
+        "q": "Palworld Eternal Ascent Booster Pack",
+        "asOf": "2026-11-06T03:13:14Z"
       }
     ],
     "sets": {

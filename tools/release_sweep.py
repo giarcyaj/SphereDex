@@ -13,11 +13,12 @@ site whose title announces a product (e.g. 'Booster Pack "Eternal Ascent" Preord
      every app merges into its release timeline, Browse tiles and Sealed list at launch.
 
 Posts already processed are skipped (the backend remembers them). A post is opened again when
-its text changed, or when its revision time is newer than the announcement that set the
-catalogue date. The street day can move earlier or later: the newer announcement wins, and an
-unchanged older post does not. A missing banner is not a new announcement. Without
-BACKEND_ADMIN_KEY the tool skips cleanly. The admin POST does not send asOf; the worker does
-not yet store that clock. See the review fixture.
+its text changed. A street day is replaced only by a newer absolute asOf, earlier or later on
+the calendar. asOf is WordPress modified_gmt, or date_gmt when modified_gmt is absent,
+normalized to UTC with a Z suffix. Site-local modified/date are not used. A post whose current
+text asserts no street day is not given that clock, so a later edit of an old preorder cannot
+restamp a cached day. The same URL without asOf is not a newer edit. Without
+BACKEND_ADMIN_KEY the tool skips cleanly. Merge the backend draft before this app draft.
 
 Usage:
   python tools/release_sweep.py                    # sweep + publish
@@ -384,43 +385,98 @@ class SieveReader:
 
 # ---- sweep -------------------------------------------------------------------------------------------
 
+_UTC_BODY = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?$")
+
+
+def normalize_utc(raw: str, *, gmt_field: bool = False) -> str:
+    """Absolute UTC instant, `YYYY-MM-DDTHH:MM:SSZ`, at most 40 characters.
+
+    A WordPress `*_gmt` value has no suffix and is already UTC, so the Z is added rather than
+    converted. A naive timestamp from any other field is rejected. Offsets other than UTC are
+    rejected. The backend refuses those ambiguous values.
+    """
+    text = (raw or "").strip()
+    if not text or len(text) > 40:
+        return ""
+    if text.endswith("+00:00") or text.endswith("-00:00"):
+        text = text[:-6] + "Z"
+    elif re.search(r"[+-]\d{2}:?\d{2}$", text):
+        return ""
+    elif text.endswith("Z"):
+        pass
+    elif gmt_field:
+        text += "Z"
+    else:
+        return ""
+    if len(text) > 40:
+        return ""
+    body = text[:-1]
+    frac = ""
+    if "." in body:
+        body, frac = body.split(".", 1)
+        frac = "." + frac
+    if not _UTC_BODY.match(body + frac):
+        return ""
+    try:
+        _dt.datetime.strptime(body, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return ""
+    return body + frac + "Z"
+
+
+def asof_utc(value: str) -> _dt.datetime | None:
+    norm = normalize_utc(value, gmt_field=False)
+    if not norm:
+        return None
+    body = norm[:-1]
+    micro = 0
+    if "." in body:
+        body, frac = body.split(".", 1)
+        micro = int((frac + "000000")[:6])
+    try:
+        parsed = _dt.datetime.strptime(body, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return None
+    return parsed.replace(microsecond=micro, tzinfo=_dt.timezone.utc)
+
+
 def post_asof(post: dict) -> str:
-    """Revision clock for one announcement. An edit's modified time is newer than its publish time."""
-    return str(post.get("modified") or post.get("date") or "").strip()
+    """Revision clock from modified_gmt, else date_gmt. Site-local modified/date are ignored."""
+    raw = str(post.get("modified_gmt") or post.get("date_gmt") or "").strip()
+    return normalize_utc(raw, gmt_field=True)
 
 
-def source_asof(product: dict, sources: dict[str, str]) -> str:
-    stamped = str(product.get("asOf") or "").strip()
-    if stamped:
-        return stamped
-    return sources.get(str(product.get("link") or ""), "")
+def stored_asof(product: dict | None) -> str:
+    if not product:
+        return ""
+    return normalize_utc(str(product.get("asOf") or ""), gmt_field=False)
 
 
-def keeps_current(incoming_asof: str, incoming_link: str, product: dict | None, sources: dict[str, str]) -> bool:
-    """True when this announcement must not replace the catalogue row.
+def keeps_current(incoming_asof: str, product: dict | None) -> bool:
+    """True when this stamp must not replace the product's day.
 
-    A newer revision wins whether the street day moves forward or back. An older post, or a
-    different post we cannot time, does not. Calendar order is not the comparison.
+    A newer absolute asOf wins in either calendar direction. An equal or older stamp does not.
+    The first valid stamp may replace an unstamped day. A missing stamp does not replace a day,
+    including when the URL is the same. URL equality is not revision evidence.
     """
     if not product or not product.get("date"):
         return False
-    current = source_asof(product, sources)
-    prod_link = str(product.get("link") or "")
-    if incoming_asof and current:
-        return incoming_asof <= current
-    if incoming_link and prod_link and incoming_link == prod_link:
-        return False
-    if prod_link and incoming_link and incoming_link != prod_link:
+    inc = asof_utc(incoming_asof)
+    if not inc:
         return True
-    return False
+    cur = asof_utc(stored_asof(product))
+    if not cur:
+        return False
+    return inc <= cur
 
 
 def _should_revisit(post: dict, ptype: str, set_name: str, title: str, text: str,
-                    catalog: dict | None, sources: dict[str, str]) -> bool:
-    """A seen post is worth reading again when its revision is newer and names a different day.
+                    catalog: dict | None) -> bool:
+    """A seen post is worth reading again only when its current text asserts a different day
+    and that assertion has a newer stamp.
 
-    With no catalogue, a seen post stays seen. That keeps the first announcement idempotent and
-    stops a failed image read from minting a second id.
+    No asserted day means do not reopen it. A later edit that names no street day must not
+    inherit the catalogue's cached day. With no catalogue, a seen post stays seen.
     """
     if not _catalog_products(catalog):
         return False
@@ -430,9 +486,9 @@ def _should_revisit(post: dict, ptype: str, set_name: str, title: str, text: str
     sample = products_for(ptype, set_name, "", date, "", "", None)[0]
     resolved = resolve_row(sample, catalog)
     current = _find_product(_catalog_products(catalog), resolved["id"])
-    if current is None or str(current.get("date") or "") == date:
+    if current is None:
         return False
-    return not keeps_current(post_asof(post), str(post.get("link") or ""), current, sources)
+    return not keeps_current(post_asof(post), current)
 
 
 def _product_window(text: str, set_name: str, ptype: str = "") -> str:
@@ -459,7 +515,6 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
     payload: dict = {"products": [], "sets": {}, "posts": {}, "retire": []}
     images: dict[str, bytes] = {}
     catalog = catalog or {"products": [], "sets": {}}
-    sources = {str(p.get("link") or ""): post_asof(p) for p in posts if p.get("link")}
     for post in posts:
         title = strip_html(str((post.get("title") or {}).get("rendered") or ""))
         link = str(post.get("link") or "")
@@ -472,7 +527,7 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
         stamp = announcement_stamp(image_url, title, text)
         if not force and seen.get(link) == stamp:
             continue
-        if not force and link in seen and not _should_revisit(post, ptype, set_name, title, text, catalog, sources):
+        if not force and link in seen and not _should_revisit(post, ptype, set_name, title, text, catalog):
             continue
         text_date = best_date(f"{title}\n{text}", ptype)
         sieve_date, sieve_code = sieve.release(link, set_name)
@@ -506,15 +561,20 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                 print(f"release-sweep: banner processing failed for {link}: {exc}", file=sys.stderr)
         items = [{"ptype": ptype, "set_name": set_name, "date": date, "code": code, "banner": banner_key}]
         items.extend({**extra, "banner": ""} for extra in _body_extras(text, (ptype, set_name)))
-        asof = post_asof(post)
         emitted = 0
         for item in items:
+            # Stamp only a day this fetch actually asserts. A newer edit with no street day
+            # must not lend its clock to a cached date.
+            revision = post_asof(post) if item.get("date") else ""
             rows = products_for(item["ptype"], item["set_name"], item["code"], item["date"], link,
                                 item["banner"], today)
             for row in rows:
                 resolved = resolve_row(row, catalog)
-                resolved["asOf"] = asof
-                if not _merge_row(payload, resolved, catalog, sources):
+                if revision:
+                    resolved["asOf"] = revision
+                else:
+                    resolved.pop("asOf", None)
+                if not _merge_row(payload, resolved, catalog):
                     continue
                 emitted += 1
                 base_set = resolved["set"]
@@ -657,37 +717,51 @@ def backed_set_release(set_name: str, catalog: dict | None, emitted: list[dict])
     return min(dates, key=_sort_key) if dates else ""
 
 
-def _merge_row(payload: dict, row: dict, catalog: dict | None = None, sources: dict[str, str] | None = None) -> bool:
-    """One id per product. A newer announcement replaces the day. An empty date does not."""
-    sources = sources or {}
-    incoming_asof = str(row.get("asOf") or "")
+def _apply_stamp(existing: dict, row: dict) -> bool:
+    """Copy an asserted day when its stamp is newer. An empty date changes nothing."""
+    incoming = stored_asof(row)
+    if not row.get("date") or keeps_current(incoming, existing):
+        return False
+    changed = False
+    if existing.get("date") != row["date"]:
+        existing["date"] = row["date"]
+        existing["pre"] = row.get("pre", existing.get("pre"))
+        changed = True
+    if row.get("link") and existing.get("link") != row.get("link"):
+        existing["link"] = row["link"]
+        changed = True
+    if incoming and existing.get("asOf") != incoming:
+        existing["asOf"] = incoming
+        changed = True
+    if row.get("code") and not existing.get("code"):
+        existing["code"] = row["code"]
+        changed = True
+    if row.get("banner") and not existing.get("banner"):
+        existing["banner"] = row["banner"]
+        changed = True
+    return changed
+
+
+def _merge_row(payload: dict, row: dict, catalog: dict | None = None) -> bool:
+    """One id per product. A newer UTC stamp replaces the day. An empty date does not."""
+    incoming = stored_asof(row)
+    if incoming:
+        row["asOf"] = incoming
+    else:
+        row.pop("asOf", None)
     for existing in payload["products"]:
         if existing.get("id") != row.get("id"):
             continue
-        if not row.get("date"):
-            return False
-        if keeps_current(incoming_asof, str(row.get("link") or ""), existing, sources):
-            return False
-        changed = False
-        if existing.get("date") != row["date"]:
-            existing["date"] = row["date"]
-            existing["pre"] = row.get("pre", existing.get("pre"))
-            existing["link"] = row.get("link") or existing.get("link")
-            existing["asOf"] = incoming_asof
-            changed = True
-        if row.get("code") and not existing.get("code"):
-            existing["code"] = row["code"]
-            changed = True
-        if row.get("banner") and not existing.get("banner"):
-            existing["banner"] = row["banner"]
-            changed = True
-        return changed
+        return _apply_stamp(existing, row)
     current = _find_product(_catalog_products(catalog), row.get("id") or "")
-    if not row.get("date") and current and current.get("date"):
+    if not row.get("date"):
+        if current and current.get("date"):
+            return False
+        payload["products"].append(row)
+        return True
+    if current and _apply_stamp(dict(current), row) is False and keeps_current(incoming, current):
         return False
-    if current and current.get("date") and keeps_current(incoming_asof, str(row.get("link") or ""), current, sources):
-        return False
-    if current and current.get("date") and row.get("date") == current.get("date"):
+    if current and current.get("date") == row.get("date") and stored_asof(current) == incoming and (current.get("link") or "") == (row.get("link") or ""):
         return False
     payload["products"].append(row)
     return True
@@ -727,14 +801,17 @@ def backend_call(method: str, path: str, key: str, body: dict | None = None, bas
         return json.loads(resp.read().decode("utf-8") or "{}")
 
 
-# Keys the live admin POST already accepts. asOf is the revision clock the app needs in order
-# to apply an earlier or later correction, but this worker is not in this repo and is not known
-# to store or return it. Sending it could reject the whole publish. retire is review-only.
+# The backend draft accepts these keys plus asOf. srcAt and retire are app/review fields and
+# are not sent. asOf is included only when it is a valid UTC instant and the row asserts a day.
 _POST_PRODUCT_KEYS = ("id", "set", "name", "sub", "code", "date", "pre", "banner", "box", "q", "link")
 
 
 def _posted_product(row: dict) -> dict:
-    return {key: row.get(key, "" if key != "pre" else False) for key in _POST_PRODUCT_KEYS}
+    posted = {key: row.get(key, "" if key != "pre" else False) for key in _POST_PRODUCT_KEYS}
+    stamp = stored_asof(row)
+    if stamp and posted.get("date"):
+        posted["asOf"] = stamp
+    return posted
 
 
 def publish(payload: dict, images: dict[str, bytes], key: str, base: str = BACKEND, call=backend_call) -> dict:
