@@ -29,7 +29,7 @@ const box = {
   dayKeyAdd: (k, n) => { const d = new Date(k + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
 };
 vm.createContext(box);
-const names = ['dailyHash', 'dailyMask', 'dailyClues', 'dailyPool', 'dailyAnswer', 'dailyCorrect', 'dailyKnownName', 'dailyFinish', 'dailyLiveStreak'];
+const names = ['dailyHash', 'dailyMask', 'dailyClues', 'dailyPool', 'dailyAnswer', 'dailyNorm', 'dailyCorrect', 'dailyKnownName', 'dailyFinish', 'dailyLiveStreak'];
 vm.runInContext(names.map(appFunction).join('\n'), box);
 
 const card = (id, name, extra) => Object.assign({ id, base: id, special: false, nameEn: name, name, set: 'S1', color: 'Red', kind: 'Pal', sub: 'Lucky Pal', cost: '4', power: '400', els: ['Fire'], apt: ['Kindling'], keywords: [], rulesEn: 'When Gobfin attacks, draw a card.' }, extra || {});
@@ -94,4 +94,11 @@ test('the day\'s card is kept with the game and a guess after midnight is not sc
 test('Souls and cards that share a name never become the answer', () => {
   const pool = box.dailyPool([card('S-1', 'Soul', { kind: 'Soul' }), card('S-2', 'Soul', { kind: 'Soul' }), card('P-1', 'Twin'), card('P-2', 'Twin'), card('P-3', 'Solo')]);
   assert.deepEqual(pool.map((c) => c.id), ['P-3']);
+});
+
+test('a typed hyphen or em dash matches the en dash in a card title', () => {
+  const dashed = card('D-1', 'Suzaku \u2013 Hellfire Wings');
+  assert.ok(box.dailyCorrect(dashed, 'suzaku - hellfire wings'));
+  assert.ok(box.dailyCorrect(dashed, 'Suzaku \u2014  Hellfire Wings'));
+  assert.ok(box.dailyKnownName([dashed], 'Suzaku - Hellfire Wings'));
 });

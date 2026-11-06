@@ -14159,8 +14159,10 @@ label.acctsetrow { align-items:center; }
     return Object.keys(seen).sort().map(function(k){ return seen[k]; }).filter(function(c){ return c.kind!=="Soul" && uses[fold(c.nameEn||c.name)]===1 && dailyClues(c).length>=3; });
   }
   function dailyAnswer(cards, day){ var pool=dailyPool(cards); return pool.length ? pool[dailyHash("spheredex-daily-"+day)%pool.length] : null; }
-  function dailyCorrect(answer, guess){ return !!answer && fold(guess).trim()===fold(answer.nameEn||answer.name).trim(); }
-  function dailyKnownName(cards, guess){ var g=fold(guess).trim(); return !!g && cards.some(function(c){ return fold(c.nameEn||c.name).trim()===g; }); }
+  // Card titles use an en dash ("Suzaku – Hellfire Wings"); a typed hyphen or em dash must count as the same name.
+  function dailyNorm(str){ return fold(str).replace(/[\u2010-\u2015\u2212]/g,"-").replace(/\s+/g," ").trim(); }
+  function dailyCorrect(answer, guess){ return !!answer && dailyNorm(guess)===dailyNorm(answer.nameEn||answer.name); }
+  function dailyKnownName(cards, guess){ var g=dailyNorm(guess); return !!g && cards.some(function(c){ return dailyNorm(c.nameEn||c.name)===g; }); }
   // Streak bookkeeping, applied once when a day's game ends. A missed day or a loss starts the streak again.
   function dailyFinish(stats, day, won){
     var s={ streak:+(stats&&stats.streak)||0, best:+(stats&&stats.best)||0, wins:+(stats&&stats.wins)||0, played:+(stats&&stats.played)||0, last:(stats&&stats.last)||"" };
