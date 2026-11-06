@@ -237,8 +237,8 @@ test('a bad live payload leaves the bundled copy in place', async function() {
 
 test('Eternal Ascent lists the booster and both trial decks', function() {
   assert.match(source, /code:"EBP03", name:"Booster Box"/);
-  assert.match(source, /id:"box-bp03"[^}]*date:"Jan 29, 2027"/);
-  assert.match(source, /id:"pack-bp03"[^}]*date:"Jan 29, 2027"/);
+  assert.match(source, /id:"box-bp03"[^}]*date:"Jan 30, 2027"/);
+  assert.match(source, /id:"pack-bp03"[^}]*date:"Jan 30, 2027"/);
   assert.match(source, /id:"td-ea-rg"[^}]*nk:\["TD03","Red・Green"\][^}]*date:"Dec 18, 2026"/);
   assert.match(source, /id:"td-ea-bp"[^}]*nk:\["TD04","Blue・Purple"\][^}]*date:"Dec 18, 2026"/);
   assert.match(source, /id="upScrim"/);
