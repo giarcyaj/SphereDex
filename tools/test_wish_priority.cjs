@@ -92,3 +92,16 @@ test('a buy price can be removed', () => {
   sb.setWishTarget('A', 5); sb.setWishTarget('A', 0);
   assert.equal(sb.wishTarget('A'), 0);
 });
+
+test('typed amounts accept a decimal point or a decimal comma', () => {
+  const sb = make({});
+  const n = (t) => sb.parseWishAmount(t);
+  assert.equal(n('12.50'), 12.5);
+  assert.equal(n('12,50'), 12.5);
+  assert.equal(n('1,250.50'), 1250.5);
+  assert.equal(n('1.250,50'), 1250.5);
+  assert.equal(n('1,250'), 1250);
+  assert.equal(n('€ 9'), 9);
+  assert.equal(n(''), 0);
+  assert.equal(n('abc'), 0);
+});

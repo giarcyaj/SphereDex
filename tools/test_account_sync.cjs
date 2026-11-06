@@ -1255,3 +1255,23 @@ test('a pre order no shop row covers links the official page, never eBay', () =>
   assert.doesNotMatch(appFunction('stockOfficialHtml'), /ebay/i);
   assert.match(source, /var STOCK_ALL_IDS=\[[^\]]*"box-bp03","pack-bp03"\]/, 'Eternal Ascent box and pack are checked for stock');
 });
+
+test('wishlist buy prices and budget never cross currencies in a merge', () => {
+  const sb = pureSandbox();
+  const col = [{ id: 'c1', name: 'Mine', own: {} }];
+  const local = { cols: col, active: 'c1', wishCur: 'GBP', wishTarget: { A: 8 }, wishBudget: 40 };
+  const remote = { cols: col, active: 'c1', wishCur: 'USD', wishTarget: { A: 10, B: 12 }, wishBudget: 50 };
+  const m = sb.mergeStates(local, remote);
+  assert.equal(m.wishCur, 'GBP');
+  assert.equal(J(m.wishTarget), J({ A: 8 }), 'the other currency\'s prices are dropped');
+  assert.equal(m.wishBudget, 40);
+  // the same currency unions, this device winning a clash
+  const same = sb.mergeStates(local, { cols: col, active: 'c1', wishCur: 'GBP', wishTarget: { A: 9, B: 12 }, wishBudget: 50 });
+  assert.equal(J(same.wishTarget), J({ A: 8, B: 12 }));
+  assert.equal(same.wishBudget, 40);
+  // a device that never set any takes the other's, with its currency
+  const fresh = sb.mergeStates({ cols: col, active: 'c1' }, remote);
+  assert.equal(fresh.wishCur, 'USD');
+  assert.equal(fresh.wishTarget.B, 12);
+  assert.equal(fresh.wishBudget, 50);
+});

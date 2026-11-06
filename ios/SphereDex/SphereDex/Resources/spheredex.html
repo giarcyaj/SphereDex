@@ -4465,6 +4465,13 @@ label.acctsetrow { align-items:center; }
     if(!STATE.wishTarget || typeof STATE.wishTarget!=="object") STATE.wishTarget={};
     v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; delete STATE.wishBudget; } STATE.wishCur=curCode(); STATE.wishTarget[id]=Math.round(v*100)/100; } else delete STATE.wishTarget[id];
   }
+  // Reads a typed amount the way people write it: 12.50, 12,50 or 1,250.50. The last separator is the decimal
+  // point when it is followed by one or two digits, otherwise it is a thousands separator.
+  function parseWishAmount(txt){
+    var t=String(txt==null?"":txt).replace(/[^0-9.,]/g,""), m=t.match(/^(.*)[.,](\d{1,2})$/);
+    var n = m ? m[1].replace(/[.,]/g,"")+"."+m[2] : t.replace(/[.,]/g,"");
+    return n && +n>0 ? +n : 0;
+  }
   function wishBudget(){ var v=wishCurOk() ? +STATE.wishBudget : 0; return v>0 ? v : 0; }
   function setWishBudget(v){ v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; } STATE.wishCur=curCode(); STATE.wishBudget=Math.round(v*100)/100; } else delete STATE.wishBudget; }
   function wishBuyNow(){
@@ -5966,7 +5973,7 @@ label.acctsetrow { align-items:center; }
       }
     }
     box.innerHTML=h;
-    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){ setWishBudget(bi.value); save(); renderWishPlan(); };
+    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){ setWishBudget(parseWishAmount(bi.value)); save(); renderWishPlan(); };
     var bb=$("wishBuyBtn"); if(bb) bb.onclick=function(){ wishPlanOpen=!wishPlanOpen; renderWishPlan(); };
   }
   // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
@@ -6133,7 +6140,7 @@ label.acctsetrow { align-items:center; }
     if (wpr) wpr.addEventListener("click", function(ev){ ev.stopPropagation(); cycleWishPrio(c.id); save(); render(); });
     var wtg=el.querySelector(".wtarget");
     if (wtg) wtg.addEventListener("click", function(ev){ ev.stopPropagation();
-      openAsk({title:"Buy "+c.name+" at or under", message:"Enter a price. It shows in Buy now when the current price is at or under it.", value:wishTarget(c.id)>0?String(wishTarget(c.id)):"", okText:"Save", extraText:wishTarget(c.id)>0?"Remove price":"", onExtra:function(){ setWishTarget(c.id, 0); save(); render(); }, onOk:function(v){ setWishTarget(c.id, String(v).replace(/[^0-9.]/g,"")); save(); render(); }});
+      openAsk({title:"Buy "+c.name+" at or under", message:"Enter a price. It shows in Buy now when the current price is at or under it.", value:wishTarget(c.id)>0?String(wishTarget(c.id)):"", okText:"Save", extraText:wishTarget(c.id)>0?"Remove price":"", onExtra:function(){ setWishTarget(c.id, 0); save(); render(); }, onOk:function(v){ setWishTarget(c.id, parseWishAmount(v)); save(); render(); }});
     });
     el.querySelector(".ownbtn").addEventListener("click", function(ev){ ev.stopPropagation();
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
@@ -17901,9 +17908,13 @@ label.acctsetrow { align-items:center; }
     out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
     out.wishlistAt=Object.assign({}, remote.wishlistAt||{}, local.wishlistAt||{});   // this device's date wins a clash
     out.wishPrio=Object.assign({}, plainObj(remote.wishPrio)?remote.wishPrio:{}, plainObj(local.wishPrio)?local.wishPrio:{});
-    out.wishTarget=Object.assign({}, plainObj(remote.wishTarget)?remote.wishTarget:{}, plainObj(local.wishTarget)?local.wishTarget:{});
-    if(typeof local.wishCur==="string" && local.wishCur) out.wishCur=local.wishCur; else if(typeof remote.wishCur==="string" && remote.wishCur) out.wishCur=remote.wishCur; else delete out.wishCur;
-    if(+local.wishBudget>0) out.wishBudget=+local.wishBudget; else if(+remote.wishBudget>0) out.wishBudget=+remote.wishBudget; else delete out.wishBudget;
+    // Buy prices and the budget are amounts in one currency (wishCur). When the two devices disagree on it, this
+    // device's amounts win whole and the other device's are dropped, so no amount is read in the wrong currency.
+    var lCur=(typeof local.wishCur==="string" && local.wishCur) ? local.wishCur : "", rCur=(typeof remote.wishCur==="string" && remote.wishCur) ? remote.wishCur : "";
+    var curClash=!!(lCur && rCur && lCur!==rCur);
+    out.wishTarget=Object.assign({}, (!curClash && plainObj(remote.wishTarget))?remote.wishTarget:{}, plainObj(local.wishTarget)?local.wishTarget:{});
+    if(lCur || rCur) out.wishCur=lCur||rCur; else delete out.wishCur;
+    if(+local.wishBudget>0) out.wishBudget=+local.wishBudget; else if(+remote.wishBudget>0 && !curClash) out.wishBudget=+remote.wishBudget; else delete out.wishBudget;
     // Trades sit beside decks. Union them by id, this device winning a clash, or the other device's
     // history is dropped the next time this one syncs. A draft with cards or a note stays here; an empty
     // draft takes the other device's trade in progress.
