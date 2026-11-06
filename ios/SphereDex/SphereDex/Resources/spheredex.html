@@ -14142,7 +14142,9 @@ label.acctsetrow { align-items:center; }
   // One entry per card number, preferring the base printing, in a fixed order so every device agrees.
   function dailyPool(cards){
     var seen={}; cards.forEach(function(c){ var b=c.base; if(!seen[b] || (seen[b].special && !c.special)) seen[b]=c; });
-    return Object.keys(seen).sort().map(function(k){ return seen[k]; }).filter(function(c){ return dailyClues(c).length>=3; });
+    // A name shared by several card numbers (every Soul is just "Soul") would make the answer a free guess, so only uniquely named cards play.
+    var uses={}; Object.keys(seen).forEach(function(k){ var n=fold(seen[k].nameEn||seen[k].name); uses[n]=(uses[n]||0)+1; });
+    return Object.keys(seen).sort().map(function(k){ return seen[k]; }).filter(function(c){ return c.kind!=="Soul" && uses[fold(c.nameEn||c.name)]===1 && dailyClues(c).length>=3; });
   }
   function dailyAnswer(cards, day){ var pool=dailyPool(cards); return pool.length ? pool[dailyHash("spheredex-daily-"+day)%pool.length] : null; }
   function dailyCorrect(answer, guess){ return !!answer && fold(guess).trim()===fold(answer.nameEn||answer.name).trim(); }

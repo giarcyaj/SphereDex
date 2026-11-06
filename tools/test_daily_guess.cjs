@@ -90,3 +90,8 @@ test('the day\'s card is kept with the game and a guess after midnight is not sc
   assert.match(fn, /g\.answer=ans\.id/, 'and it is saved the first time the day is drawn');
   assert.match(fn, /todayKey\(\)!==day/, 'a submit checks the date has not moved on');
 });
+
+test('Souls and cards that share a name never become the answer', () => {
+  const pool = box.dailyPool([card('S-1', 'Soul', { kind: 'Soul' }), card('S-2', 'Soul', { kind: 'Soul' }), card('P-1', 'Twin'), card('P-2', 'Twin'), card('P-3', 'Solo')]);
+  assert.deepEqual(pool.map((c) => c.id), ['P-3']);
+});
