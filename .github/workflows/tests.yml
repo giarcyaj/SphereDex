@@ -188,6 +188,8 @@ jobs:
         run: node tools/test_grading_submissions.cjs
       - name: Daily Pal guess
         run: node tools/test_daily_guess.cjs
+      - name: Deck owned only guard
+        run: node tools/test_deck_owned_only.cjs
 
       - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
         run: node tools/test_small_fixes.cjs
