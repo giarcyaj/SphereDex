@@ -8224,14 +8224,33 @@ label.acctsetrow { align-items:center; }
     }catch(e){}
   }
   function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
-  // Absolute UTC only. A naive timestamp is not a revision, and a same URL without one is not an edit.
+  // Absolute instant. Z or a numeric offset, at most 40 characters. A naive string is not a
+  // revision, including a raw WordPress *_gmt value. More than 24 hours ahead of now is not one.
+  // Date.UTC keeps the comparison off the device timezone, so .000Z and +09:00 of the same
+  // moment compare equal to the baked Z instant.
   function asofMs(s){
     var v=String(s||"").trim();
     if(!v || v.length>40) return 0;
-    var m=/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?(Z|\+00:00|-00:00)$/.exec(v);
+    var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2}|[+-]\d{4})$/.exec(v);
     if(!m) return 0;
-    var t=Date.parse(m[1]+(m[2]||"")+"Z");
-    return isNaN(t)?0:t;
+    var y=+m[1], mo=+m[2], d=+m[3], h=+m[4], mi=+m[5], se=+m[6];
+    if(mo<1||mo>12||d<1||d>31||h>23||mi>59||se>59) return 0;
+    var ms=0;
+    if(m[7]){ var frac=m[7].slice(1), scale=Math.min(frac.length,3); ms=+frac.slice(0,scale); while(scale<3){ ms*=10; scale++; } }
+    var probe=new Date(Date.UTC(y, mo-1, d));
+    if(probe.getUTCFullYear()!==y||probe.getUTCMonth()!==mo-1||probe.getUTCDate()!==d) return 0;
+    var utc=Date.UTC(y, mo-1, d, h, mi, se, ms);
+    if(isNaN(utc)) return 0;
+    var off=0;
+    if(m[8]!=="Z"){
+      var sign=m[8].charAt(0)==="-"?-1:1, digits=m[8].slice(1).replace(":","");
+      var hh=+digits.slice(0,2), mm=+digits.slice(2,4);
+      if(hh>23||mm>59) return 0;
+      off=sign*(hh*60+mm)*60000;
+    }
+    var instant=utc-off;
+    if(instant>Date.now()+24*60*60*1000) return 0;
+    return instant;
   }
   // Which street day to keep. A newer absolute asOf wins in either calendar direction. No asOf
   // does not replace a stamped day. An unstamped product still accepts an unstamped feed day.

@@ -88,6 +88,32 @@ test('news keeps the booster on 30 Jan when a trial deck post is newer', () => {
   assert.equal(sb.RELEASE_OVERRIDES['box-bp02'], undefined);
 });
 
+test('the baked UTC instant matches a millisecond stamp and the same moment with an offset', () => {
+  const sb = releaseSandbox(baked(), []);
+  const bakedAt = sb.asofMs('2026-11-06T03:13:14Z');
+  assert.ok(bakedAt > 0);
+  assert.equal(sb.asofMs('2026-11-06T03:13:14.000Z'), bakedAt);
+  assert.equal(sb.asofMs('2026-11-06T12:13:14+09:00'), bakedAt);
+  assert.equal(sb.asofMs('2026-11-06T03:13:14'), 0, 'naive, including a raw _gmt value, is not a stamp');
+  const realNow = sb.Date.now;
+  try {
+    sb.Date.now = function() { return Date.parse('2026-11-06T12:00:00Z'); };
+    assert.equal(sb.asofMs('2026-11-07T12:00:01Z'), 0, 'more than 24 hours ahead is rejected');
+    assert.ok(sb.asofMs('2026-11-07T11:00:00Z') > 0, 'a stamp inside 24 hours is still a stamp');
+  } finally {
+    sb.Date.now = realNow;
+  }
+  const sealed = baked();
+  const app = releaseSandbox(sealed, []);
+  app.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 29, 2027', asOf: '2026-11-06T03:13:14.000Z', link: 'https://en.palworld-official-cardgame.com/news/post-15' }
+    ]
+  });
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 30, 2027', 'the same instant does not replace the day');
+});
+
 test('a headline correction to an earlier day is the new day, not the original one', () => {
   // Synthetic. Not an Eternal Ascent date. The corrected day is earlier than the day it replaces.
   const sb = releaseSandbox(baked(), []);
@@ -126,8 +152,8 @@ test('a newer announcement moves the day in either direction, and an older sourc
   sb.applyReleases({
     version: 2,
     products: [
-      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Feb 6, 2027', asOf: '2026-12-01T00:00:00Z', link: 'https://en.example/later' },
-      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Feb 6, 2027', asOf: '2026-12-01T00:00:00Z', link: 'https://en.example/later' }
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Feb 6, 2027', asOf: '2026-11-06T04:00:00.000Z', link: 'https://en.example/later' },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Feb 6, 2027', asOf: '2026-11-06T04:00:00.000Z', link: 'https://en.example/later' }
     ]
   });
   assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Feb 6, 2027');
@@ -135,8 +161,8 @@ test('a newer announcement moves the day in either direction, and an older sourc
   sb.applyReleases({
     version: 3,
     products: [
-      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 15, 2027', asOf: '2027-01-02T00:00:00Z', link: 'https://en.example/earlier' },
-      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 15, 2027', asOf: '2027-01-02T00:00:00Z', link: 'https://en.example/earlier' }
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 15, 2027', asOf: '2026-11-06T14:00:00+09:00', link: 'https://en.example/earlier' },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 15, 2027', asOf: '2026-11-06T14:00:00+09:00', link: 'https://en.example/earlier' }
     ]
   });
   assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 15, 2027');
@@ -168,15 +194,15 @@ test('the same URL without asOf cannot roll back a stamped day, and a stamped ed
   sb.applyReleases({
     version: 3,
     products: [
-      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 20, 2027', asOf: '2026-12-01T00:00:00', link: link }
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 20, 2027', asOf: '2026-11-06T03:13:14', link: link }
     ]
   });
   assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 30, 2027');
   sb.applyReleases({
     version: 4,
     products: [
-      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 20, 2027', asOf: '2026-12-01T00:00:00Z', link: link },
-      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 20, 2027', asOf: '2026-12-01T00:00:00Z', link: link },
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 20, 2027', asOf: '2026-11-06T06:00:00.000Z', link: link },
+      { id: 'pack-bp03', set: 'Eternal Ascent', name: 'Booster Pack', date: 'Jan 20, 2027', asOf: '2026-11-06T06:00:00.000Z', link: link },
       { id: 'box-newset', set: 'Brand New', name: 'Booster Box', code: 'BP09', date: 'Mar 1, 2027' }
     ],
     sets: { 'Brand New': { release: 'Mar 1, 2027', logo: '' } }

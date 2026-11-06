@@ -4,6 +4,8 @@ import importlib.util
 import json
 import unittest
 
+_dt = dt
+
 import release_sweep as rs
 
 HAVE_IMAGING = bool(importlib.util.find_spec("numpy") and importlib.util.find_spec("PIL"))
@@ -269,17 +271,31 @@ class ProvenanceTests(unittest.TestCase):
         ], "sets": {"Sample Set": {"logo": "", "release": "Apr 4, 2027"}}}
 
     def test_gmt_clock_is_utc_and_site_local_time_is_not_a_stamp(self):
-        self.assertEqual(rs.normalize_utc(DELAY_GMT, gmt_field=True), DELAY_ASOF)
-        self.assertEqual(rs.normalize_utc("2026-11-06T03:13:14+00:00"), DELAY_ASOF)
-        self.assertEqual(rs.normalize_utc("2026-11-06T11:50:21"), "")
-        self.assertEqual(rs.normalize_utc("2026-11-06T11:50:21+09:00", gmt_field=True), "")
-        quiet = post("Booster Pack \"Sample Set\" note", "https://example.test/quiet",
-                     content="More details will be announced soon.",
-                     modified_gmt="2026-12-01T00:00:00")
-        quiet["modified"] = "2026-12-01T09:00:00"
-        self.assertEqual(rs.post_asof(quiet), "2026-12-01T00:00:00Z")
-        quiet.pop("modified_gmt")
-        self.assertEqual(rs.post_asof(quiet), "")
+        # Real post-15 shape: modified_gmt has no suffix. The asOf we send appends Z and does not
+        # invent milliseconds. The backend may store .000Z; that is the same instant.
+        self.assertEqual(rs.serialize_wp_gmt(DELAY_GMT), DELAY_ASOF)
+        self.assertEqual(rs.asof_utc(DELAY_ASOF), rs.asof_utc("2026-11-06T03:13:14.000Z"))
+        self.assertEqual(rs.asof_utc(DELAY_ASOF), rs.asof_utc("2026-11-06T12:13:14+09:00"))
+        self.assertIsNone(rs.asof_utc(DELAY_GMT), "a naive _gmt value is not itself an asOf")
+        self.assertEqual(rs.stored_asof({"asOf": DELAY_GMT}), "")
+        now = _dt.datetime(2026, 11, 6, 12, 0, tzinfo=_dt.timezone.utc)
+        within = post("Booster Pack \"Sample Set\" note", "https://example.test/soon",
+                      modified_gmt="2026-11-07T11:00:00")
+        self.assertEqual(rs.post_asof(within, now), "2026-11-07T11:00:00Z")
+        too_far = post("Booster Pack \"Sample Set\" note", "https://example.test/far",
+                       modified_gmt="2026-11-07T12:00:01")
+        self.assertEqual(rs.post_asof(too_far, now), "")
+        both = post("Booster Pack \"Sample Set\" note", "https://example.test/both",
+                    modified_gmt=DELAY_GMT, date_gmt="2026-11-06T02:50:21")
+        both["modified"] = "2026-11-06T12:13:14"
+        self.assertEqual(rs.post_asof(both), DELAY_ASOF)
+        broken = post("Booster Pack \"Sample Set\" note", "https://example.test/broken",
+                      modified_gmt="not-a-time", date_gmt=DELAY_GMT)
+        self.assertEqual(rs.post_asof(broken), "", "a present modified_gmt does not fall through")
+        only_published = post("Booster Pack \"Sample Set\" note", "https://example.test/published",
+                              date_gmt=DELAY_GMT)
+        only_published["date"] = "2026-11-06T11:50:21"
+        self.assertEqual(rs.post_asof(only_published), DELAY_ASOF)
 
     def test_a_later_edit_with_no_street_day_does_not_restamp_a_cached_day(self):
         # Verified clocks: post-10 modified_gmt is later than post-15, and the current text

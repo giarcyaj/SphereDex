@@ -385,71 +385,85 @@ class SieveReader:
 
 # ---- sweep -------------------------------------------------------------------------------------------
 
-_UTC_BODY = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?$")
+# WordPress *_gmt is UTC with no suffix. asOf itself must carry Z or a numeric offset.
+# The backend stores UTC as YYYY-MM-DDTHH:mm:ss.sssZ and rejects a naive string.
+_WP_GMT = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?$")
+_ASOF = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2}|[+-]\d{4})$")
+_ASOF_FUTURE = _dt.timedelta(hours=24)
 
 
-def normalize_utc(raw: str, *, gmt_field: bool = False) -> str:
-    """Absolute UTC instant, `YYYY-MM-DDTHH:MM:SSZ`, at most 40 characters.
-
-    A WordPress `*_gmt` value has no suffix and is already UTC, so the Z is added rather than
-    converted. A naive timestamp from any other field is rejected. Offsets other than UTC are
-    rejected. The backend refuses those ambiguous values.
-    """
+def serialize_wp_gmt(raw: str) -> str:
+    """Turn a WordPress *_gmt value into an asOf. Naive in, Z appended. Not a valid asOf until then."""
     text = (raw or "").strip()
+    if not text or not _WP_GMT.match(text):
+        return ""
+    stamped = text + "Z"
+    if len(stamped) > 40 or asof_utc(stamped, check_future=False) is None:
+        return ""
+    return stamped
+
+
+def asof_utc(value: str, now: _dt.datetime | None = None, *, check_future: bool = True) -> _dt.datetime | None:
+    """Absolute instant. Naive strings are rejected, including a raw *_gmt value. A stamp more
+    than 24 hours ahead of now is rejected, matching the backend."""
+    text = (value or "").strip()
     if not text or len(text) > 40:
-        return ""
-    if text.endswith("+00:00") or text.endswith("-00:00"):
-        text = text[:-6] + "Z"
-    elif re.search(r"[+-]\d{2}:?\d{2}$", text):
-        return ""
-    elif text.endswith("Z"):
-        pass
-    elif gmt_field:
-        text += "Z"
+        return None
+    match = _ASOF.match(text)
+    if not match:
+        return None
+    year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    hour, minute, second = int(match.group(4)), int(match.group(5)), int(match.group(6))
+    if month < 1 or month > 12 or day < 1 or hour > 23 or minute > 59 or second > 59:
+        return None
+    frac = (match.group(7) or ".")[1:]
+    micro = int((frac + "000000")[:6]) if frac else 0
+    try:
+        parsed = _dt.datetime(year, month, day, hour, minute, second, micro, tzinfo=_dt.timezone.utc)
+    except ValueError:
+        return None
+    if parsed.month != month or parsed.day != day:
+        return None
+    zone = match.group(8)
+    if zone != "Z":
+        sign = -1 if zone[0] == "-" else 1
+        digits = zone[1:].replace(":", "")
+        off = sign * (int(digits[:2]) * 60 + int(digits[2:])) 
+        parsed -= _dt.timedelta(minutes=off)
+    if check_future:
+        clock = now or _dt.datetime.now(_dt.timezone.utc)
+        if clock.tzinfo is None:
+            clock = clock.replace(tzinfo=_dt.timezone.utc)
+        if parsed > clock + _ASOF_FUTURE:
+            return None
+    return parsed
+
+
+def post_asof(post: dict, now: _dt.datetime | None = None) -> str:
+    """modified_gmt, or date_gmt only when modified_gmt is absent. Site-local fields are ignored.
+
+    The returned string has Z appended. A present but unusable modified_gmt does not fall through
+    to date_gmt. A stamp more than 24 hours in the future is not returned.
+    """
+    if str(post.get("modified_gmt") or "").strip():
+        raw = str(post.get("modified_gmt")).strip()
+    elif str(post.get("date_gmt") or "").strip():
+        raw = str(post.get("date_gmt")).strip()
     else:
         return ""
-    if len(text) > 40:
+    stamped = serialize_wp_gmt(raw)
+    if not stamped or asof_utc(stamped, now) is None:
         return ""
-    body = text[:-1]
-    frac = ""
-    if "." in body:
-        body, frac = body.split(".", 1)
-        frac = "." + frac
-    if not _UTC_BODY.match(body + frac):
-        return ""
-    try:
-        _dt.datetime.strptime(body, "%Y-%m-%dT%H:%M:%S")
-    except ValueError:
-        return ""
-    return body + frac + "Z"
-
-
-def asof_utc(value: str) -> _dt.datetime | None:
-    norm = normalize_utc(value, gmt_field=False)
-    if not norm:
-        return None
-    body = norm[:-1]
-    micro = 0
-    if "." in body:
-        body, frac = body.split(".", 1)
-        micro = int((frac + "000000")[:6])
-    try:
-        parsed = _dt.datetime.strptime(body, "%Y-%m-%dT%H:%M:%S")
-    except ValueError:
-        return None
-    return parsed.replace(microsecond=micro, tzinfo=_dt.timezone.utc)
-
-
-def post_asof(post: dict) -> str:
-    """Revision clock from modified_gmt, else date_gmt. Site-local modified/date are ignored."""
-    raw = str(post.get("modified_gmt") or post.get("date_gmt") or "").strip()
-    return normalize_utc(raw, gmt_field=True)
+    return stamped
 
 
 def stored_asof(product: dict | None) -> str:
+    """The asOf string when it is already an absolute stamp. A naive string is not one."""
     if not product:
         return ""
-    return normalize_utc(str(product.get("asOf") or ""), gmt_field=False)
+    text = str(product.get("asOf") or "").strip()
+    return text if asof_utc(text) is not None else ""
 
 
 def keeps_current(incoming_asof: str, product: dict | None) -> bool:
