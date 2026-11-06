@@ -74,6 +74,7 @@ node tools/test_storage_location.cjs
 node tools/test_share_list.cjs
 node tools/test_built_decks.cjs
 node tools/test_grading_submissions.cjs
+node tools/test_daily_guess.cjs
 
 # Python 3.11 pipeline tests
 cd tools && python -m unittest discover -p 'test_*.py' -v
