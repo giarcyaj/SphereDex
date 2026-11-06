@@ -14161,9 +14161,11 @@ label.acctsetrow { align-items:center; }
   function dailyGame(day){ try{ var r=JSON.parse(lsGet("palvault-daily")||"null"); if(r && r.day===day && Array.isArray(r.guesses)) return r; }catch(e){} return {day:day, guesses:[], over:false, won:false}; }
   function renderDailyGuess(){
     var host=$("dailyGuess"); if(!host) return;
-    var day=todayKey(), ans=dailyAnswer(CARDS, day);
+    var day=todayKey(), g=dailyGame(day), ans=g.answer ? cardById(g.answer) : null;
+    // The day's card is chosen once and kept with the game, so a catalogue update part way through cannot swap it.
+    if(!ans){ ans=dailyAnswer(CARDS, day); if(ans){ g.answer=ans.id; lsSet("palvault-daily", JSON.stringify(g)); } }
     if(!ans){ host.innerHTML='<p class="dgmiss">No card list to play with yet.</p>'; return; }
-    var g=dailyGame(day), clues=dailyClues(ans), shown=Math.min(clues.length, g.over?clues.length:g.guesses.length+1), stats=dailyStats();
+    var clues=dailyClues(ans), shown=Math.min(clues.length, g.over?clues.length:g.guesses.length+1), stats=dailyStats();
     var h='<p class="dgstreak">Streak '+dailyLiveStreak(stats,day)+' · Best '+(+stats.best||0)+' · Won '+(+stats.wins||0)+'</p><ol class="dgclues">';
     for(var i=0;i<shown;i++) h+='<li><b>'+esc(clues[i].label)+'</b>'+esc(clues[i].text)+'</li>';
     h+='</ol>';
@@ -14179,6 +14181,7 @@ label.acctsetrow { align-items:center; }
     var form=$("dailyForm");
     if(form) form.onsubmit=function(ev){
       ev.preventDefault();
+      if(todayKey()!==day){ renderDailyGuess(); toast("A new card is ready"); return; }   // left open past midnight
       var v=($("dailyInput").value||"").trim();
       if(!dailyKnownName(CARDS, v)){ toast("Pick a card name from the list"); return; }
       var gg=dailyGame(day);

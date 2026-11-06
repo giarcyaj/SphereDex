@@ -83,3 +83,10 @@ test('the game is wired into Rewards and uses no card art', () => {
   const copy = source.slice(source.indexOf('>Daily Pal guess<'), source.indexOf('id="dailyGuess"'));
   assert.doesNotMatch(copy.replace(/<[^>]+>/g, ''), /[-‐-―]/, 'no dashes in the intro copy');
 });
+
+test('the day\'s card is kept with the game and a guess after midnight is not scored against yesterday', () => {
+  const fn = appFunction('renderDailyGuess');
+  assert.match(fn, /g\.answer\s*\?\s*cardById\(g\.answer\)/, 'the saved answer wins over a recomputed one');
+  assert.match(fn, /g\.answer=ans\.id/, 'and it is saved the first time the day is drawn');
+  assert.match(fn, /todayKey\(\)!==day/, 'a submit checks the date has not moved on');
+});
