@@ -74,6 +74,7 @@ node tools/test_storage_location.cjs
 node tools/test_share_list.cjs
 node tools/test_built_decks.cjs
 node tools/test_grading_submissions.cjs
+node tools/test_daily_guess.cjs
 node tools/test_deck_owned_only.cjs
 
 # Python 3.11 pipeline tests

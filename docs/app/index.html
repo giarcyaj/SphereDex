@@ -2086,6 +2086,15 @@ label.acctsetrow { align-items:center; }
   .ksrow.tot .ksn { font-family:var(--font-display); } .ksrow.tot .ksc { color:var(--accent-ink); }
 
   /* Set rewards */
+  .dailyguess { max-width:640px; padding:14px; border:1px solid var(--line,rgba(128,128,128,.3)); border-radius:14px; margin-bottom:6px; }
+  .dgstreak { font-size:.85rem; color:var(--ink-soft); margin:0 0 10px; }
+  .dgclues { margin:0 0 12px; padding:0; list-style:none; display:grid; gap:6px; }
+  .dgclues li { padding:8px 10px; border-radius:10px; background:rgba(128,128,128,.12); font-size:.9rem; }
+  .dgclues li b { display:block; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); }
+  .dgform { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .dgform input { flex:1 1 200px; min-width:0; font:inherit; padding:10px; border-radius:10px; border:1px solid rgba(128,128,128,.4); background:transparent; color:inherit; }
+  .dgmiss { font-size:.85rem; color:var(--ink-soft); margin:4px 0; }
+  .dgend { font-weight:600; margin:6px 0 0; }
   .rwintro { color:var(--ink-soft); font-size:.9rem; max-width:640px; margin:-4px 0 16px; }
   /* Sphere themes / app icon picker */
   .spherethemes { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; }
@@ -2949,6 +2958,9 @@ label.acctsetrow { align-items:center; }
     <div class="setspheres" id="rewardGrid"></div>
     <div class="rwcap" id="rewardCap"></div>
 
+    <h2 class="sech" style="margin-top:30px">Daily Pal guess</h2>
+    <p class="rwintro">One optional guess a day. A clue about a hidden card unlocks with each wrong guess, using SphereDex card data only. Win to keep a streak. Everything stays on this device.</p>
+    <div class="dailyguess" id="dailyGuess"></div>
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
     <p class="rwintro">Pal is available from the start. Higher themes unlock as your collection reaches milestones and remain available once earned, even when a new set adds more cards. Set one as your app icon and colour theme; the header orb becomes that Sphere and the app recolours to match. On Android the home-screen icon changes too.</p>
     <div class="spherethemes" id="sphereThemes"></div>
@@ -14113,6 +14125,94 @@ label.acctsetrow { align-items:center; }
     var vs = $("paldexViewSel");
     if(vs) vs.onchange=function(){ paldexView=vs.value; try{ localStorage.setItem("palvault-paldex-view", paldexView); }catch(e){} renderPaldex(); };
   })();
+  /* Daily Pal guess. One hidden card a day, the same for everyone on the same date, picked from SphereDex card data
+     alone (no card art is shown or altered). A clue unlocks with each wrong guess. The logic is plain functions of
+     their inputs so the guard suite can run them. State lives on the device, not in the collection. */
+  var DAILY_MAX_GUESSES=6;
+  function dailyHash(str){ var h=2166136261; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
+  function dailyMask(text, name){
+    var out=String(text||"");
+    String(name||"").split(/[^A-Za-z0-9À-ɏ]+/).forEach(function(w){
+      if(w.length<3) return;
+      out=out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi"),"___");
+    });
+    return out;
+  }
+  function dailyClues(c){
+    var out=[], st=SETS[c.set];
+    if(st && st.name) out.push({label:"Set", text:st.name});
+    out.push({label:"Colour and type", text:c.color+" "+c.kind+(c.sub?", "+c.sub:"")});
+    var nums=[]; if(c.cost!=null && c.cost!=="") nums.push("Cost "+c.cost); if(c.power) nums.push("Power "+c.power);
+    if(nums.length) out.push({label:"Numbers", text:nums.join(", ")});
+    if(c.els && c.els.length) out.push({label:"Element", text:c.els.join(", ")});
+    var extra=[]; if(c.apt && c.apt.length) extra.push("Work: "+c.apt.join(", ")); if(c.keywords && c.keywords.length) extra.push("Keywords: "+c.keywords.join(", "));
+    if(extra.length) out.push({label:"Abilities", text:extra.join(". ")});
+    var rules=dailyMask(c.rulesEn||"", c.nameEn||c.name).trim();
+    if(rules) out.push({label:"Rules text", text:rules.length>160?rules.slice(0,157)+"...":rules});
+    return out;
+  }
+  // One entry per card number, preferring the base printing, in a fixed order so every device agrees.
+  function dailyPool(cards){
+    var seen={}; cards.forEach(function(c){ var b=c.base; if(!seen[b] || (seen[b].special && !c.special)) seen[b]=c; });
+    // A name shared by several card numbers (every Soul is just "Soul") would make the answer a free guess, so only uniquely named cards play.
+    var uses={}; Object.keys(seen).forEach(function(k){ var n=fold(seen[k].nameEn||seen[k].name); uses[n]=(uses[n]||0)+1; });
+    return Object.keys(seen).sort().map(function(k){ return seen[k]; }).filter(function(c){ return c.kind!=="Soul" && uses[fold(c.nameEn||c.name)]===1 && dailyClues(c).length>=3; });
+  }
+  function dailyAnswer(cards, day){ var pool=dailyPool(cards); return pool.length ? pool[dailyHash("spheredex-daily-"+day)%pool.length] : null; }
+  // Card titles use an en dash ("Suzaku – Hellfire Wings"); a typed hyphen or em dash must count as the same name.
+  function dailyNorm(str){ return fold(str).replace(/[\u2010-\u2015\u2212]/g,"-").replace(/\s+/g," ").trim(); }
+  function dailyCorrect(answer, guess){ return !!answer && dailyNorm(guess)===dailyNorm(answer.nameEn||answer.name); }
+  function dailyKnownName(cards, guess){ var g=dailyNorm(guess); return !!g && cards.some(function(c){ return dailyNorm(c.nameEn||c.name)===g; }); }
+  // Streak bookkeeping, applied once when a day's game ends. A missed day or a loss starts the streak again.
+  function dailyFinish(stats, day, won){
+    var s={ streak:+(stats&&stats.streak)||0, best:+(stats&&stats.best)||0, wins:+(stats&&stats.wins)||0, played:+(stats&&stats.played)||0, last:(stats&&stats.last)||"" };
+    if(s.last===day) return s;
+    s.played++;
+    if(won){ s.streak=(s.last===dayKeyAdd(day,-1)?s.streak:0)+1; s.wins++; if(s.streak>s.best) s.best=s.streak; }
+    else s.streak=0;
+    s.last=day; return s;
+  }
+  function dailyLiveStreak(stats, day){ return (stats && stats.last && (stats.last===day || stats.last===dayKeyAdd(day,-1))) ? (+stats.streak||0) : 0; }
+  function dailyStats(){ try{ var r=JSON.parse(lsGet("palvault-daily-stats")||"null"); return r&&typeof r==="object"?r:{}; }catch(e){ return {}; } }
+  function dailyGame(day){ try{ var r=JSON.parse(lsGet("palvault-daily")||"null"); if(r && r.day===day && Array.isArray(r.guesses)) return r; }catch(e){} return {day:day, guesses:[], over:false, won:false}; }
+  function renderDailyGuess(){
+    var host=$("dailyGuess"); if(!host) return;
+    var day=todayKey(), g=dailyGame(day), ans=g.answer ? cardById(g.answer) : null;
+    // The day's card is chosen once and kept with the game, so a catalogue update part way through cannot swap it.
+    if(!ans){ ans=dailyAnswer(CARDS, day); if(ans){ g.answer=ans.id; lsSet("palvault-daily", JSON.stringify(g)); } }
+    if(!ans){ host.innerHTML='<p class="dgmiss">No card list to play with yet.</p>'; return; }
+    var clues=dailyClues(ans), shown=Math.min(clues.length, g.over?clues.length:g.guesses.length+1), stats=dailyStats();
+    var h='<p class="dgstreak">Streak '+dailyLiveStreak(stats,day)+' · Best '+(+stats.best||0)+' · Won '+(+stats.wins||0)+'</p><ol class="dgclues">';
+    for(var i=0;i<shown;i++) h+='<li><b>'+esc(clues[i].label)+'</b>'+esc(clues[i].text)+'</li>';
+    h+='</ol>';
+    if(g.over){
+      h+='<p class="dgend">'+(g.won?'Correct. ':'Not this time. ')+'Today’s card: '+esc(ans.nameEn||ans.name)+' ('+esc(ans.id)+')</p><p class="dgmiss">A new card arrives tomorrow.</p>';
+    } else {
+      h+='<form class="dgform" id="dailyForm" autocomplete="off"><input id="dailyInput" list="dailyNames" placeholder="Type a card name" aria-label="Your guess"><button class="btn" type="submit">Guess</button></form><datalist id="dailyNames"></datalist><p class="dgmiss">Guess '+(g.guesses.length+1)+' of '+DAILY_MAX_GUESSES+'</p>';
+    }
+    if(g.guesses.length) h+='<p class="dgmiss">Tried: '+g.guesses.map(esc).join(", ")+'</p>';
+    host.innerHTML=h;
+    var dl=$("dailyNames");
+    if(dl){ var seen={}, opts=""; CARDS.forEach(function(c){ var n=c.nameEn||c.name; if(!seen[n]){ seen[n]=1; opts+='<option value="'+esc(n)+'"></option>'; } }); dl.innerHTML=opts; }
+    var form=$("dailyForm");
+    if(form) form.onsubmit=function(ev){
+      ev.preventDefault();
+      if(todayKey()!==day){ renderDailyGuess(); toast("A new card is ready"); return; }   // left open past midnight
+      var v=($("dailyInput").value||"").trim();
+      if(!dailyKnownName(CARDS, v)){ toast("Pick a card name from the list"); return; }
+      var gg=dailyGame(day);
+      if(gg.over) return;
+      gg.guesses.push(v);
+      var won=dailyCorrect(ans, v);
+      if(won || gg.guesses.length>=DAILY_MAX_GUESSES){
+        gg.over=true; gg.won=won;
+        lsSet("palvault-daily-stats", JSON.stringify(dailyFinish(dailyStats(), day, won)));
+      }
+      lsSet("palvault-daily", JSON.stringify(gg));
+      renderDailyGuess();
+      try{ renderAchievements(); }catch(e){}
+    };
+  }
   function renderRewards(){
     var host=$("rewardGrid"); if(!host) return;
     var col=activeCol(), earned=(col.setSpheres||{}), done=0;
@@ -14134,6 +14234,7 @@ label.acctsetrow { align-items:center; }
       cap.className=done===SET_SPHERE_TRACKS.length?"rwcap gold":"rwcap";
       cap.innerHTML=(done===SET_SPHERE_TRACKS.length?icon('starf')+" Every current Set Sphere earned. Master collector.":done+" of "+SET_SPHERE_TRACKS.length+" Set Spheres earned.");
     }
+    renderDailyGuess();
     renderSphereThemes();
     renderAchievements();
   }
@@ -14212,7 +14313,8 @@ label.acctsetrow { align-items:center; }
       {name:"Cattiva Effigy",how:"Add a card to your wishlist",ok:wishCount()>=1, icon:"effigyCattiva", eff:"var(--el-Neutral)"},
       {name:"Lunaris Effigy",how:"Earn a Set Sphere",ok:completed>=1, icon:"effigyLunaris", eff:"#a0e0e8"},
       {name:"Relaxaurus Effigy",how:"Earn every available Set Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0, icon:"effigyRelaxaurus", eff:"#4ec07a"},
-      {name:"Yakumo Effigy",how:"Own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"var(--el-Dark)"}
+      {name:"Yakumo Effigy",how:"Own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"var(--el-Dark)"},
+      {name:"Daily Pal Guess",how:"Win 3 daily guesses",ok:(+dailyStats().wins||0)>=3, icon:"effigy", eff:"#5aa8d6"}
     ];
     host.innerHTML=badges.map(function(b){
       var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'</div>';
