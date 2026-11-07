@@ -8614,9 +8614,11 @@ label.acctsetrow { align-items:center; }
   // Month names for sealShipped and parseNewsDate. applyReleased() runs at startup
   // just below, so the table is assigned before that call.
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-  // The sweep owns the day on screen once it has stated one. A headline is only the displayed
-  // day when the sweep has not taken that product.
-  function sweepOwnsDisplayedDay(p){ return !!(p && p.srv && String(p.date||"").trim()); }
+  // A stated day that already has an announcement clock is the day on screen. A later sweep
+  // flag is the same kind of ownership. A headline is only the displayed day when neither is set.
+  function sweepOwnsDisplayedDay(p){
+    return !!(p && String(p.date||"").trim() && (p.srv || String(p.srcAt||"").trim()));
+  }
   function retireHeadlineDay(p){
     if(!p || !p.id || !RELEASE_OVERRIDES[p.id]) return false;
     delete RELEASE_OVERRIDES[p.id];
@@ -8624,7 +8626,7 @@ label.acctsetrow { align-items:center; }
     return true;
   }
   function sealDate(p){
-    if(p && p.srv && String(p.date||"").trim()) return p.date;
+    if(sweepOwnsDisplayedDay(p)) return p.date;
     var o=p&&RELEASE_OVERRIDES[p.id];
     return o||(p?p.date:"");
   }
@@ -8765,7 +8767,7 @@ label.acctsetrow { align-items:center; }
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
     SEALED.forEach(function(p){
       if(!sealPreRaw(p)) return;
-      if(p.srv && String(p.date||"").trim()){
+      if(sweepOwnsDisplayedDay(p)){
         if(RELEASE_OVERRIDES[p.id]){ delete RELEASE_OVERRIDES[p.id]; changed=true; }
         return;
       }

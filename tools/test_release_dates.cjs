@@ -83,8 +83,11 @@ test('news keeps the booster on 30 Jan when a trial deck post is newer', () => {
     { date: '2026-11-06', title: 'Delay', summary: DELAY }
   ]);
   assert.equal(changed, true);
-  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], 'Jan 30, 2027');
-  assert.equal(sb.RELEASE_OVERRIDES['pack-bp03'], 'Jan 30, 2027');
+  // The boosters already carry the announcement clock, so a headline cannot cover them.
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+  assert.equal(sb.RELEASE_OVERRIDES['pack-bp03'], undefined);
+  assert.equal(sb.sealDate(sealed.filter((p) => p.id === 'box-bp03')[0]), 'Jan 30, 2027');
+  assert.equal(sb.sealDate(sealed.filter((p) => p.id === 'pack-bp03')[0]), 'Jan 30, 2027');
   assert.equal(sb.RELEASE_OVERRIDES['td-ea-rg'], 'Dec 18, 2026');
   assert.equal(sb.RELEASE_OVERRIDES['td-ea-bp'], 'Dec 18, 2026');
   assert.equal(sb.RELEASE_OVERRIDES['box-bp02'], undefined);
@@ -236,7 +239,9 @@ test('the same URL without asOf cannot roll back a stamped day, and a stamped ed
 
 test('a feed that repeats the baked day keeps the sweep in charge of that day', () => {
   const headline = [{ date: '2026-11-07', title: 'Eternal Ascent booster', summary: 'The booster release date is January 29, 2027. Preorder now.' }];
-  const open = releaseSandbox(baked(), []);
+  const openSealed = baked();
+  delete openSealed.filter((p) => p.id === 'box-bp03')[0].srcAt;
+  const open = releaseSandbox(openSealed, []);
   open.buildReleaseOverrides(headline);
   assert.equal(open.RELEASE_OVERRIDES['box-bp03'], 'Jan 29, 2027');
   const sealed = baked();
@@ -260,6 +265,7 @@ test('a feed that repeats the baked day keeps the sweep in charge of that day', 
 test('a headline that arrives first cannot stay on screen once the sweep owns the day', () => {
   const headline = [{ date: '2026-11-07', title: 'Eternal Ascent booster', summary: 'The booster release date is January 29, 2027. Preorder now.' }];
   const sealed = baked();
+  delete sealed.filter((p) => p.id === 'box-bp03')[0].srcAt;
   const sb = releaseSandbox(sealed, []);
   const box = () => sealed.filter((p) => p.id === 'box-bp03')[0];
   sb.buildReleaseOverrides(headline);
@@ -318,7 +324,7 @@ test('an empty day clock does not retire a headline, and stating the day then do
   });
   assert.equal(box().srv, undefined);
   assert.equal(box().date, 'Jan 30, 2027');
-  assert.equal(sb.sealDate(box()), 'Jan 29, 2027');
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
   sb.applyReleases({
     version: 3,
     products: [
@@ -338,6 +344,34 @@ test('an empty day clock does not retire a headline, and stating the day then do
   assert.equal(fresh().srv, true);
   assert.equal(sb.sealDate(fresh()), 'Apr 2, 2027');
   assert.equal(sb.RELEASE_OVERRIDES['box-fresh'], undefined);
+});
+
+test('a stamped official day drops a saved older headline without a new sweep', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  const box = () => sealed.filter((p) => p.id === 'box-bp03')[0];
+  const deck = () => sealed.filter((p) => p.id === 'td-ea-rg')[0];
+  assert.equal(box().srv, undefined);
+  assert.ok(box().srcAt);
+  sb.lsSet('palvault-release-dates', JSON.stringify({
+    'box-bp03': { d: 'Jan 29, 2027', base: 'Jan 30, 2027' },
+    'td-ea-rg': { d: 'Dec 11, 2026', base: 'Dec 18, 2026' },
+  }));
+  sb.loadReleaseOverrides();
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  assert.equal(sb.RELEASE_OVERRIDES['td-ea-rg'], 'Dec 11, 2026');
+  assert.equal(sb.sealDate(deck()), 'Dec 11, 2026');
+  assert.equal(JSON.parse(sb.lsGet('palvault-release-dates'))['box-bp03'], undefined);
+  assert.equal(JSON.parse(sb.lsGet('palvault-release-dates'))['td-ea-rg'].d, 'Dec 11, 2026');
+  sb.RELEASE_OVERRIDES = {};
+  sb.loadReleaseOverrides();
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  assert.equal(sb.sealDate(deck()), 'Dec 11, 2026');
+  const headline = [{ date: '2026-11-07', title: 'Eternal Ascent', summary: 'Eternal Ascent Red・Green and the booster release date is January 29, 2027. Preorder now.' }];
+  sb.buildReleaseOverrides(headline);
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  assert.notEqual(sb.sealDate(deck()), 'Jan 30, 2027');
 });
 
 test('a product that is already out is not moved by the sweep or a headline', () => {
