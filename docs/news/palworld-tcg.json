@@ -1,6 +1,66 @@
 {
-  "updated_at": "2026-11-04T07:00:00Z",
+  "updated_at": "2026-11-07T07:10:00Z",
   "items": [
+    {
+      "title": "Producer Kitanaya's Cup deck revealed",
+      "url": "https://x.com/PalworldOCG/status/2118942133986210087",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:42:27Z",
+      "category": "tournament",
+      "summary": "Official Japanese account posts the deck list that producer Kitanaya played at the Kitanaya Cup.",
+      "image": "https://pbs.twimg.com/media/HWf-oaZaYAEHdxh.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118942133986210087"
+    },
+    {
+      "title": "Kitanaya Cup wrap-up: a second cup is planned",
+      "url": "https://x.com/PalworldOCG/status/2118942116923752601",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:42:23Z",
+      "category": "tournament",
+      "summary": "The organisers thank attendees and say a second Kitanaya Cup is planned, with more news to come.",
+      "image": "https://pbs.twimg.com/media/HWf-nSGaAAA1xKR.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118942116923752601"
+    },
+    {
+      "title": "Kitanaya Cup results: Bakura goes undefeated",
+      "url": "https://x.com/PalworldOCG/status/2118934862451396681",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:13:33Z",
+      "category": "tournament",
+      "summary": "Results are out for the Kitanaya Cup, where the player Bakura finished with a perfect win record.",
+      "image": "https://pbs.twimg.com/media/HWf4BlybAAA0MSe.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118934862451396681"
+    },
+    {
+      "title": "Masters League 26/27 kicks off this weekend",
+      "url": "https://x.com/PalworldOCG_EN/status/2118652111013761032",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-11-06T10:30:00Z",
+      "category": "tournament",
+      "summary": "The English account reminds players to read the Tournament Overview and rules before their opening round at the first Masters League event this weekend.",
+      "image": "https://pbs.twimg.com/media/HWbzk_3aMAAVpgw.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2118652111013761032"
+    },
+    {
+      "title": "Christmas Snowdown 2026 offers a Chillet and Chillet Ignis promo",
+      "url": "https://x.com/PalworldOCG_EN/status/2118560174789267484",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-11-06T04:24:41Z",
+      "category": "tournament",
+      "summary": "December's Christmas Snowdown event gives every participant a Chillet and Chillet Ignis promo card; sign-up opens on Bushi Navi.",
+      "image": "https://pbs.twimg.com/media/HWajP7bbcAAAWdV.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2118560174789267484"
+    },
     {
       "title": "Bushiroad TCG November and December release schedule revealed",
       "url": "https://x.com/PalworldOCG/status/2117844290130890852",
