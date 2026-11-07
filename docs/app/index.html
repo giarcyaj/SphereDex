@@ -1871,6 +1871,19 @@ label.acctsetrow { align-items:center; }
   }
   .modeexport { margin:-6px 0 12px; display:flex; gap:8px; flex-wrap:wrap; }
   .modeexport[hidden] { display:none; }
+  .wishplan { margin:0 0 12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+  .wishplan[hidden] { display:none; }
+  .wishplan .wpbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .wishplan label { font-size:.82rem; color:var(--ink-soft); }
+  .wishplan input { width:7em; }
+  .wishplan .wprow { display:flex; gap:8px; align-items:center; padding:7px 0; border-top:1px solid var(--line); font-size:.85rem; }
+  .wishplan .wprow .wpn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wishplan .wprow.over { opacity:.55; }
+  .wishplan .wpsum { margin-top:8px; font-size:.85rem; color:var(--ink-soft); }
+  .wishrow { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .wprio, .wtarget { font-size:.7rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-soft); cursor:pointer; }
+  .wprio.p-must { color:var(--ink); border-color:var(--el-Fire,#e5533d); }
+  .wprio.p-someday { opacity:.7; }
   .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   .deckcurve, .deckkinds, .deckcolors { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
   .dbar, .dchip { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:10px; padding:6px 8px; min-width:44px; cursor:pointer; font:inherit; text-align:center; }
@@ -2982,6 +2995,7 @@ label.acctsetrow { align-items:center; }
   <button class="backbtn" type="button" id="setsBack">&lsaquo; Browse by set</button>
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
   <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishCsvBtn">Spreadsheet (CSV)</button><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button><button class="btn sec" type="button" id="wishShareBtn">Share link</button></div>
+  <section class="wishplan" id="wishPlan" aria-label="Wishlist budget and Buy now" hidden></section>
   <div class="modeexport" id="extrasExport" hidden><button class="btn sec" type="button" id="extrasShareBtn">Share spares link</button></div>
   <div class="collectedbar" id="collectedBar" hidden>
     <span class="cbsub" id="collectedSub"></span>
@@ -4417,6 +4431,10 @@ label.acctsetrow { align-items:center; }
     if(!st.wishlist || typeof st.wishlist!=="object") st.wishlist={};
     if(!st.wishlistAt || typeof st.wishlistAt!=="object") st.wishlistAt={};
     if(!st.fav || typeof st.fav!=="object") st.fav={};
+    if(st.wishPrio!==undefined && !plainObj(st.wishPrio)) delete st.wishPrio;
+    if(st.wishTarget!==undefined && !plainObj(st.wishTarget)) delete st.wishTarget;
+    if(st.wishBudget!==undefined && !(+st.wishBudget>=0)) delete st.wishBudget;
+    if(st.wishCur!==undefined && typeof st.wishCur!=="string") delete st.wishCur;
     var cols=st.cols||[], col=null, i;
     for(i=0;i<cols.length;i++){ if(cols[i] && cols[i].id===st.active){ col=cols[i]; break; } }
     if(!col) col=cols[0]||null;
@@ -4436,10 +4454,55 @@ label.acctsetrow { align-items:center; }
   function isWished(id){ return !!(STATE.wishlist && STATE.wishlist[id]); }
   function wishlistAt(id){ return (STATE.wishlistAt && +STATE.wishlistAt[id]) || 0; }
   function toggleWish(id){
-    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; }
+    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; if(STATE.wishPrio) delete STATE.wishPrio[id]; if(STATE.wishTarget){ delete STATE.wishTarget[id]; wishCurTidy(); } }
     else { STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); }
   }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
+  function curCode(){ return (typeof CUR==="object" && CUR && CUR.code) || ""; }
+  // ---- WISHLIST PRIORITY BEGIN ----
+  // Each wishlist card can be tagged Must have, Want or Someday and given a "buy at or under" price, and the
+  // wishlist has one optional monthly budget. A card with no tag counts as Want. The Buy now list is every
+  // wished card whose current price is at or under its own price, Must haves first, with a running total.
+  var WISH_PRIOS=["must","want","someday"], WISH_PRIO_LABEL={must:"Must have",want:"Want",someday:"Someday"};
+  function wishPrio(id){ var p=STATE.wishPrio && STATE.wishPrio[id]; return WISH_PRIOS.indexOf(p)>=0 ? p : "want"; }
+  function setWishPrio(id, p){
+    if(!STATE.wishPrio || typeof STATE.wishPrio!=="object") STATE.wishPrio={};
+    if(p==="want" || WISH_PRIOS.indexOf(p)<0) delete STATE.wishPrio[id]; else STATE.wishPrio[id]=p;
+  }
+  function cycleWishPrio(id){ var n=WISH_PRIOS[(WISH_PRIOS.indexOf(wishPrio(id))+1)%WISH_PRIOS.length]; setWishPrio(id, n); return n; }
+  function wishTarget(id){ var v=STATE.wishTarget && wishCurOk() ? +STATE.wishTarget[id] : 0; return v>0 ? v : 0; }
+  // Buy prices and the budget are amounts in one currency. The code is kept with them, so after the currency
+  // picker changes they are not read as the same number in another currency (Buy now asks to set them again).
+  function wishCurOk(){ return !STATE.wishCur || STATE.wishCur===curCode(); }
+  function setWishTarget(id, v){
+    if(!STATE.wishTarget || typeof STATE.wishTarget!=="object") STATE.wishTarget={};
+    v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; delete STATE.wishBudget; } STATE.wishCur=curCode(); STATE.wishTarget[id]=Math.round(v*100)/100; } else { delete STATE.wishTarget[id]; wishCurTidy(); }
+  }
+  // With no buy price and no budget left there is no currency to remember.
+  function wishCurTidy(){ if(!Object.keys(STATE.wishTarget||{}).length && !(+STATE.wishBudget>0)) delete STATE.wishCur; }
+  // Reads a typed amount the way people write it: 12.50, 12,50 or 1,250.50. The last separator is the decimal
+  // point when it is followed by one or two digits, otherwise it is a thousands separator.
+  function parseWishAmount(txt){
+    var t=String(txt==null?"":txt).replace(/[^0-9.,]/g,""), m=t.match(/^(.*)[.,](\d{1,2})$/);
+    var n = m ? m[1].replace(/[.,]/g,"")+"."+m[2] : t.replace(/[.,]/g,"");
+    return n && +n>0 ? +n : 0;
+  }
+  function wishBudget(){ var v=wishCurOk() ? +STATE.wishBudget : 0; return v>0 ? v : 0; }
+  function setWishBudget(v){ v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; } STATE.wishCur=curCode(); STATE.wishBudget=Math.round(v*100)/100; } else { delete STATE.wishBudget; wishCurTidy(); } }
+  function wishBuyNow(){
+    var rank={must:0,want:1,someday:2}, rows=[];
+    if(!wishCurOk()) return {rows:[], total:0, budget:0, left:null, stale:STATE.wishCur};
+    Object.keys(STATE.wishlist||{}).forEach(function(id){
+      var t=wishTarget(id), pr=+mktOf(id)||0;
+      if(t>0 && pr>0 && pr<=t) rows.push({id:id, prio:wishPrio(id), price:pr, target:t});
+    });
+    rows.sort(function(a,b){ return (rank[a.prio]-rank[b.prio]) || (a.price-b.price) || (a.id<b.id?-1:a.id>b.id?1:0); });
+    var budget=wishBudget(), run=0;
+    rows.forEach(function(r){ run+=r.price; r.cum=Math.round(run*100)/100; r.over=budget>0 && r.cum>budget; });
+    var total=Math.round(run*100)/100;
+    return {rows:rows, total:total, budget:budget, left:budget>0 ? Math.round((budget-total)*100)/100 : null};
+  }
+  // ---- WISHLIST PRIORITY END ----
   // Global favourites (starred standout cards), separate from owning or wishing.
   function isFav(id){ return !!(STATE.fav && STATE.fav[id]); }
   function toggleFav(id){ if(STATE.fav[id]) delete STATE.fav[id]; else STATE.fav[id]=true; }
@@ -5915,6 +5978,25 @@ label.acctsetrow { align-items:center; }
     }
     try{ renderCountAndStats(cards); }catch(e){ reportError(e, "count/stats"); }
   }
+  // The budget box and Buy now list at the top of the Wishlist.
+  var wishPlanOpen=false;
+  function renderWishPlan(){
+    var box=$("wishPlan"); if(!box) return;
+    if(!(colMode()==="wish" && wishCount()>0)){ box.hidden=true; return; }
+    box.hidden=false;
+    var bn=wishBuyNow(), h='<div class="wpbar"><label for="wishBudgetIn">Monthly budget</label><input id="wishBudgetIn" type="number" min="0" step="1" inputmode="decimal" placeholder="Optional" value="'+(bn.budget>0?esc(bn.budget):"")+'"><button class="btn sec" type="button" id="wishBuyBtn" aria-expanded="'+wishPlanOpen+'">Buy now ('+bn.rows.length+')</button></div>';
+    if(wishPlanOpen){
+      if(bn.stale) h+='<div class="wpsum">Your buy prices and budget were set in '+esc(bn.stale)+'. Set them again in this currency.</div>';
+      else if(!bn.rows.length) h+='<div class="wpsum">Nothing at or under your buy prices yet. Set a buy price on a wishlist card.</div>';
+      else {
+        bn.rows.forEach(function(r){ var c=cardById(r.id); h+='<div class="wprow'+(r.over?' over':'')+'"><span class="wpn">'+esc(c?c.name:r.id)+' <small>'+esc(WISH_PRIO_LABEL[r.prio])+'</small></span><span>'+esc(money(r.price))+'</span></div>'; });
+        h+='<div class="wpsum">Total '+esc(money(bn.total))+(bn.budget>0 ? ' of '+esc(money(bn.budget))+' budget · '+(bn.left>=0 ? esc(money(bn.left))+' left' : esc(money(-bn.left))+' over (dimmed cards are past the budget)') : '')+'</div>';
+      }
+    }
+    box.innerHTML=h;
+    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){ setWishBudget(parseWishAmount(bi.value)); save(); renderWishPlan(); };
+    var bb=$("wishBuyBtn"); if(bb) bb.onclick=function(){ wishPlanOpen=!wishPlanOpen; renderWishPlan(); };
+  }
   // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
   // estimate says it covers only the cards shown.
   function wishCountText(shown, total, est){
@@ -5925,6 +6007,7 @@ label.acctsetrow { align-items:center; }
   function renderCountAndStats(cards){
     var m=colMode();
     var wb=$("whereBtn"); if(wb){ wb.hidden=!(m==="col" || m==="collected") || !whereGroups(activeCol().own||{}, CARDS).length; wb.onclick=openWhere; }
+    try{ renderWishPlan(); }catch(e){ reportError(e, "wish plan"); }
     if(m==="wish") $("countLine").textContent = wishCountText(cards.length, CARDS.filter(function(c){ return isWished(c.id); }).length, money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0)));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
@@ -6064,6 +6147,7 @@ label.acctsetrow { align-items:center; }
       '<div class="cbody">'+
         '<div class="cname">'+esc(c.name)+(dateTag? ' <small class="datetag" style="font-weight:400;opacity:.72">'+dateTag+'</small>':'')+'</div>'+
         (priceTag?'<div class="cstats">'+priceTag+'</div>':'')+
+        (wishMode && wished ? '<div class="wishrow"><button class="wprio p-'+wishPrio(c.id)+'" type="button" aria-label="Priority: '+WISH_PRIO_LABEL[wishPrio(c.id)]+'. Tap to change">'+WISH_PRIO_LABEL[wishPrio(c.id)]+'</button><button class="wtarget" type="button" aria-label="Buy at or under price">'+(wishTarget(c.id)>0 ? 'Buy at \u2264 '+esc(money(wishTarget(c.id))) : 'Set buy price')+'</button></div>' : '')+
       '</div>'+
       '<div class="cardfoot iconfoot">'+
         (owned
@@ -6073,6 +6157,12 @@ label.acctsetrow { align-items:center; }
       '</div>';
     var wb=el.querySelector(".wishbtn");
     if (wb) wb.addEventListener("click", function(ev){ ev.stopPropagation(); toggleWish(c.id); save(); render(); buildColSel(); });
+    var wpr=el.querySelector(".wprio");
+    if (wpr) wpr.addEventListener("click", function(ev){ ev.stopPropagation(); cycleWishPrio(c.id); save(); render(); });
+    var wtg=el.querySelector(".wtarget");
+    if (wtg) wtg.addEventListener("click", function(ev){ ev.stopPropagation();
+      openAsk({title:"Buy "+c.name+" at or under", message:"Enter a price. It shows in Buy now when the current price is at or under it.", value:wishTarget(c.id)>0?String(wishTarget(c.id)):"", okText:"Save", extraText:wishTarget(c.id)>0?"Remove price":"", onExtra:function(){ setWishTarget(c.id, 0); save(); render(); }, onOk:function(v){ setWishTarget(c.id, parseWishAmount(v)); save(); render(); }});
+    });
     el.querySelector(".ownbtn").addEventListener("click", function(ev){ ev.stopPropagation();
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
     var p=el.querySelector(".plus"), m=el.querySelector(".minus");
@@ -17933,6 +18023,14 @@ label.acctsetrow { align-items:center; }
     out.wishlist=Object.assign({}, remote.wishlist||{}, local.wishlist||{});
     out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
     out.wishlistAt=Object.assign({}, remote.wishlistAt||{}, local.wishlistAt||{});   // this device's date wins a clash
+    out.wishPrio=Object.assign({}, plainObj(remote.wishPrio)?remote.wishPrio:{}, plainObj(local.wishPrio)?local.wishPrio:{});
+    // Buy prices and the budget are amounts in one currency (wishCur). When the two devices disagree on it, this
+    // device's amounts win whole and the other device's are dropped, so no amount is read in the wrong currency.
+    var lCur=(typeof local.wishCur==="string" && local.wishCur) ? local.wishCur : "", rCur=(typeof remote.wishCur==="string" && remote.wishCur) ? remote.wishCur : "";
+    var curClash=!!(lCur && rCur && lCur!==rCur);
+    out.wishTarget=Object.assign({}, (!curClash && plainObj(remote.wishTarget))?remote.wishTarget:{}, plainObj(local.wishTarget)?local.wishTarget:{});
+    if(lCur || rCur) out.wishCur=lCur||rCur; else delete out.wishCur;
+    if(+local.wishBudget>0) out.wishBudget=+local.wishBudget; else if(+remote.wishBudget>0 && !curClash) out.wishBudget=+remote.wishBudget; else delete out.wishBudget;
     // Trades sit beside decks. Union them by id, this device winning a clash, or the other device's
     // history is dropped the next time this one syncs. A draft with cards or a note stays here; an empty
     // draft takes the other device's trade in progress.
@@ -17962,7 +18060,7 @@ label.acctsetrow { align-items:center; }
     var al=mergeAlerts(local.alerts, remote.alerts); if(al) out.alerts=al; else delete out.alerts;
     // Anything a newer app keeps at the top of the state survives this one. The server's _acct is handled by
     // adoptRemote, and _local only ever comes from this device.
-    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local") out[k]=remote[k]; }
+    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local" && k!=="wishBudget" && k!=="wishCur") out[k]=remote[k]; }
     return out;
   }
   // Take the server's copy, or the merge of it with this device's. opts.merged: blob is already that union and
