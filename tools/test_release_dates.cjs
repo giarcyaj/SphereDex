@@ -30,6 +30,7 @@ function releaseSandbox(sealed, expansions) {
     SEALED: sealed,
     BROWSE_EXPANSIONS: expansions,
     RELEASE_OVERRIDES: {},
+    RO_KEY: 'palvault-release-dates',
     MONTHS, _MONIX: MONIX,
     Date, Math, isNaN, isFinite, Number, String, JSON,
     decodeEntities: (x) => String(x == null ? '' : x),
@@ -40,7 +41,8 @@ function releaseSandbox(sealed, expansions) {
   };
   vm.createContext(sb);
   vm.runInContext([
-    'monDateTime', 'releaseDayTime', 'sealKind', 'sealDate', 'sealPreRaw', 'asofMs', 'adoptServerDate',
+    'monDateTime', 'releaseDayTime', 'sealKind', 'sweepOwnsDisplayedDay', 'retireHeadlineDay',
+    'saveReleaseOverrides', 'loadReleaseOverrides', 'sealDate', 'sealPreRaw', 'asofMs', 'adoptServerDate',
     'releaseAlias', 'relNews', 'applyReleases', 'parseNewsDate', 'buildReleaseOverrides'
   ].map(appFunction).join('\n'), sb);
   return sb;
@@ -252,6 +254,108 @@ test('a feed that repeats the baked day keeps the sweep in charge of that day', 
   assert.equal(box.srcAt, '2026-11-06T03:13:14Z');
   sb.buildReleaseOverrides(headline);
   assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+  assert.equal(sb.sealDate(box), 'Jan 30, 2027');
+});
+
+test('a headline that arrives first cannot stay on screen once the sweep owns the day', () => {
+  const headline = [{ date: '2026-11-07', title: 'Eternal Ascent booster', summary: 'The booster release date is January 29, 2027. Preorder now.' }];
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  const box = () => sealed.filter((p) => p.id === 'box-bp03')[0];
+  sb.buildReleaseOverrides(headline);
+  sb.saveReleaseOverrides();
+  assert.equal(sb.sealDate(box()), 'Jan 29, 2027');
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 30, 2027', asOf: '2026-11-06T03:13:14.000Z' }
+    ]
+  });
+  assert.equal(box().date, 'Jan 30, 2027');
+  assert.equal(box().srv, true);
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+  assert.equal(JSON.parse(sb.lsGet('palvault-release-dates') || '{}')['box-bp03'], undefined);
+  // Reload with the stale headline still in storage. The owned day stays the one on screen.
+  sb.lsSet('palvault-release-dates', JSON.stringify({ 'box-bp03': { d: 'Jan 29, 2027', base: 'Jan 30, 2027' } }));
+  sb.RELEASE_OVERRIDES = {};
+  sb.loadReleaseOverrides();
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+  assert.equal(JSON.parse(sb.lsGet('palvault-release-dates') || '{}')['box-bp03'], undefined);
+  // A later news pass must not put the headline back, and a newer clock moves the displayed day.
+  sb.buildReleaseOverrides(headline);
+  assert.equal(sb.sealDate(box()), 'Jan 30, 2027');
+  sb.applyReleases({
+    version: 3,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Feb 6, 2027', asOf: '2026-11-06T08:00:00.000Z' }
+    ]
+  });
+  assert.equal(sb.sealDate(box()), 'Feb 6, 2027');
+  sb.RELEASE_OVERRIDES['box-bp03'] = 'Jan 29, 2027';
+  assert.equal(sb.sealDate(box()), 'Feb 6, 2027', 'an owned day stays on screen even if a headline key is put back');
+  sb.applyReleases({
+    version: 4,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 15, 2027', asOf: '2026-11-06T08:00:00.000Z' }
+    ]
+  });
+  assert.equal(box().date, 'Feb 6, 2027');
+  assert.equal(sb.sealDate(box()), 'Feb 6, 2027');
+});
+
+test('an empty day clock does not retire a headline, and stating the day then does', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  const box = () => sealed.filter((p) => p.id === 'box-bp03')[0];
+  sb.RELEASE_OVERRIDES['box-bp03'] = 'Jan 29, 2027';
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: '', asOf: '2026-11-06T08:00:00.000Z' }
+    ]
+  });
+  assert.equal(box().srv, undefined);
+  assert.equal(box().date, 'Jan 30, 2027');
+  assert.equal(sb.sealDate(box()), 'Jan 29, 2027');
+  sb.applyReleases({
+    version: 3,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: '', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  const fresh = () => sealed.filter((p) => p.id === 'box-fresh')[0];
+  sb.RELEASE_OVERRIDES['box-fresh'] = 'Mar 1, 2027';
+  assert.equal(sb.sealDate(fresh()), 'Mar 1, 2027');
+  sb.applyReleases({
+    version: 4,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: 'Apr 2, 2027', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  assert.equal(fresh().date, 'Apr 2, 2027');
+  assert.equal(fresh().srv, true);
+  assert.equal(sb.sealDate(fresh()), 'Apr 2, 2027');
+  assert.equal(sb.RELEASE_OVERRIDES['box-fresh'], undefined);
+});
+
+test('a product that is already out is not moved by the sweep or a headline', () => {
+  const sealed = baked();
+  const held = sealed.filter((p) => p.id === 'box-bp02')[0];
+  held.pre = false;
+  held.preRaw = false;
+  const sb = releaseSandbox(sealed, []);
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp02', set: 'Legends Awaken', name: 'Booster Box', code: 'BP02', date: 'Nov 2, 2026', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  sb.buildReleaseOverrides([{ date: '2026-11-07', title: 'Legends Awaken', summary: 'Legends Awaken release date is November 2, 2026. Now available.' }]);
+  assert.equal(held.date, 'Oct 30, 2026');
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp02'], undefined);
+  assert.equal(sb.sealDate(held), 'Oct 30, 2026');
 });
 
 test('a newer clock that repeats the day is stored and does not change the day', () => {
