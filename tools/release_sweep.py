@@ -12,8 +12,13 @@ site whose title announces a product (e.g. 'Booster Pack "Eternal Ascent" Preord
   4. everything is published to the backend (/api/admin/release-img + /api/admin/releases), which
      every app merges into its release timeline, Browse tiles and Sealed list at launch.
 
-Posts already processed with the same banner are skipped (the backend remembers them), so each
-announcement is processed once. Without BACKEND_ADMIN_KEY the tool skips cleanly.
+Posts already processed are skipped (the backend remembers them). A post is opened again when
+its text changed. A street day is replaced only by a newer absolute asOf, earlier or later on
+the calendar. asOf is WordPress modified_gmt, or date_gmt when modified_gmt is absent,
+normalized to UTC with a Z suffix. Site-local modified/date are not used. A post whose current
+text asserts no street day is not given that clock, so a later edit of an old preorder cannot
+restamp a cached day. The same URL without asOf is not a newer edit. Without
+BACKEND_ADMIN_KEY the tool skips cleanly. Merge the backend draft before this app draft.
 
 Usage:
   python tools/release_sweep.py                    # sweep + publish
@@ -26,6 +31,7 @@ from __future__ import annotations
 import argparse
 import base64
 import datetime as _dt
+import hashlib
 import html as _html
 import io
 import json
@@ -97,20 +103,153 @@ def find_code(*texts: str) -> str:
     return ""
 
 
+def _format_match(m: re.Match) -> str:
+    month = MONTHS.get(m.group(1)[:3].lower())
+    day, year = int(m.group(2)), int(m.group(3))
+    try:
+        _dt.date(year, month, day)
+    except (TypeError, ValueError):
+        return ""
+    return f"{SHORT[month]} {day}, {year}"
+
+
 def parse_date(text: str) -> str:
     """The release date in the feed's 'Jan 29, 2027' style: the first date after a release signal
     (on sale, release, available, ...), else the first date at all; '' when there is none."""
     found = []
     for m in DATE_RE.finditer(text or ""):
-        month = MONTHS.get(m.group(1)[:3].lower())
-        day, year = int(m.group(2)), int(m.group(3))
-        try:
-            _dt.date(year, month, day)
-        except (TypeError, ValueError):
+        formatted = _format_match(m)
+        if not formatted:
             continue
         signalled = bool(SIGNAL_RE.search((text or "")[max(0, m.start() - 40):m.start()]))
-        found.append((not signalled, m.start(), f"{SHORT[month]} {day}, {year}"))
+        found.append((not signalled, m.start(), formatted))
     return min(found)[2] if found else ""
+
+
+def product_family(ptype: str) -> str:
+    kind = (ptype or "").lower()
+    if "booster" in kind:
+        return "booster"
+    if "deck" in kind:
+        return "deck"
+    return ""
+
+
+def _window_family(window: str) -> str:
+    deck = bool(re.search(r"trial deck|starter deck", window, re.IGNORECASE))
+    booster = bool(re.search(r"booster", window, re.IGNORECASE))
+    if deck and not booster:
+        return "deck"
+    if booster and not deck:
+        return "booster"
+    return ""
+
+
+_REVISED_RE = re.compile(
+    r"\b(after|moved to|postponed to|rescheduled to|delayed to|corrected to|brought forward to)\b",
+    re.IGNORECASE)
+_SUPERSEDED_RE = re.compile(
+    r"\b(before|originally|previously|instead of|original date)\b",
+    re.IGNORECASE)
+
+
+def _region(window: str) -> str:
+    """'jp' or 'en' when the clause names one region, else ''."""
+    jp = re.search(r"\bjapanese\b|\bjp release\b", window or "", re.IGNORECASE) is not None
+    en = re.search(r"\benglish\b", window or "", re.IGNORECASE) is not None
+    if jp and not en:
+        return "jp"
+    if en and not jp:
+        return "en"
+    return ""
+
+
+def best_date(text: str, ptype: str = "") -> str:
+    """The street date that belongs to this product.
+
+    A delay notice states the old day first ('before' / 'originally') and the new day after.
+    A mixed announcement states a trial deck day and a booster day. The matching clause wins.
+    When nothing distinguishes the dates, the first signalled date stands, as parse_date did.
+    """
+    raw = text or ""
+    matches = [m for m in DATE_RE.finditer(raw) if _format_match(m)]
+    if not matches:
+        return ""
+    family = product_family(ptype)
+    anchors = [m.start() for m in re.finditer(re.escape(ptype), raw, re.IGNORECASE)] if ptype else []
+
+    def same_sentence(a: int, b: int) -> bool:
+        lo, hi = sorted((a, b))
+        return re.search(r"[.\n!?]", raw[lo:hi]) is None
+
+    def score(m: re.Match) -> int:
+        window = raw[max(0, m.start() - 160):min(len(raw), m.end() + 90)]
+        before = raw[max(0, m.start() - 70):m.start()]
+        value = 0
+        kind = _window_family(window)
+        if family and kind == family:
+            value += 5
+        elif family and kind and kind != family:
+            value -= 8
+        if anchors and any(same_sentence(m.start(), anchor) for anchor in anchors):
+            value += 8
+        if _REVISED_RE.search(before):
+            value += 6
+        if _SUPERSEDED_RE.search(before):
+            value -= 6
+        if _region(window) == "jp":
+            value -= 30  # this sweep is the English catalogue; a Japanese-only clause is not its date
+        if SIGNAL_RE.search(before):
+            value += 2
+        return value
+
+    if len(matches) == 1:
+        if _region(raw[max(0, matches[0].start() - 80):min(len(raw), matches[0].end() + 40)]) == "jp":
+            return ""
+        return _format_match(matches[0])
+
+    def role(m: re.Match) -> str:
+        """The marker closest to the date. 'corrected to March, instead of June' must not mark June as corrected."""
+        before = raw[max(0, m.start() - 80):m.start()]
+        revised = _REVISED_RE.search(before)
+        superseded = _SUPERSEDED_RE.search(before)
+        if revised and superseded:
+            return "revised" if revised.start() > superseded.start() else "superseded"
+        if revised:
+            return "revised"
+        if superseded:
+            return "superseded"
+        return ""
+
+    def fitting(pool: list[re.Match]) -> list[re.Match]:
+        kept = []
+        for m in pool:
+            kind = _window_family(raw[max(0, m.start() - 160):min(len(raw), m.end() + 90)])
+            if family and kind and kind != family:
+                continue
+            if _region(raw[max(0, m.start() - 80):min(len(raw), m.end() + 40)]) == "jp":
+                continue
+            kept.append(m)
+        return kept
+
+    revised = fitting([m for m in matches if role(m) == "revised"])
+    superseded = [m for m in matches if role(m) == "superseded"]
+    # The correction is the revised clause, or the date that is not the one being replaced.
+    # Last in the text, not the later calendar day: a brought-forward date is still the new one.
+    chosen_pool = revised
+    if not chosen_pool and superseded:
+        chosen_pool = fitting([m for m in matches if m not in superseded])
+    if chosen_pool:
+        return _format_match(max(chosen_pool, key=lambda m: m.start()))
+
+    ranked = sorted(matches, key=lambda m: (score(m), -m.start()), reverse=True)
+    best = ranked[0]
+    if family and score(best) < 0:
+        return ""
+    if _region(raw[max(0, best.start() - 80):min(len(raw), best.end() + 40)]) == "jp":
+        return ""
+    # Equal scores keep the earlier mention (score, then reversed start, so the first match wins ties).
+    return _format_match(best) or parse_date(raw)
 
 
 def is_past(date: str, today: _dt.date | None = None) -> bool:
@@ -246,11 +385,150 @@ class SieveReader:
 
 # ---- sweep -------------------------------------------------------------------------------------------
 
+# WordPress *_gmt is UTC with no suffix. asOf itself must carry Z or a numeric offset.
+# The backend stores UTC as YYYY-MM-DDTHH:mm:ss.sssZ and rejects a naive string.
+_WP_GMT = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?$")
+_ASOF = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2}|[+-]\d{4})$")
+_ASOF_FUTURE = _dt.timedelta(hours=24)
+
+
+def serialize_wp_gmt(raw: str) -> str:
+    """Turn a WordPress *_gmt value into an asOf. Naive in, Z appended. Not a valid asOf until then."""
+    text = (raw or "").strip()
+    if not text or not _WP_GMT.match(text):
+        return ""
+    stamped = text + "Z"
+    if len(stamped) > 40 or asof_utc(stamped, check_future=False) is None:
+        return ""
+    return stamped
+
+
+def asof_utc(value: str, now: _dt.datetime | None = None, *, check_future: bool = True) -> _dt.datetime | None:
+    """Absolute instant. Naive strings are rejected, including a raw *_gmt value. A stamp more
+    than 24 hours ahead of now is rejected, matching the backend."""
+    text = (value or "").strip()
+    if not text or len(text) > 40:
+        return None
+    match = _ASOF.match(text)
+    if not match:
+        return None
+    year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    hour, minute, second = int(match.group(4)), int(match.group(5)), int(match.group(6))
+    if month < 1 or month > 12 or day < 1 or hour > 23 or minute > 59 or second > 59:
+        return None
+    frac = (match.group(7) or ".")[1:]
+    micro = int((frac + "000000")[:6]) if frac else 0
+    try:
+        parsed = _dt.datetime(year, month, day, hour, minute, second, micro, tzinfo=_dt.timezone.utc)
+    except ValueError:
+        return None
+    if parsed.month != month or parsed.day != day:
+        return None
+    zone = match.group(8)
+    if zone != "Z":
+        sign = -1 if zone[0] == "-" else 1
+        digits = zone[1:].replace(":", "")
+        off = sign * (int(digits[:2]) * 60 + int(digits[2:])) 
+        parsed -= _dt.timedelta(minutes=off)
+    if check_future:
+        clock = now or _dt.datetime.now(_dt.timezone.utc)
+        if clock.tzinfo is None:
+            clock = clock.replace(tzinfo=_dt.timezone.utc)
+        if parsed > clock + _ASOF_FUTURE:
+            return None
+    return parsed
+
+
+def post_asof(post: dict, now: _dt.datetime | None = None) -> str:
+    """modified_gmt, or date_gmt only when modified_gmt is absent. Site-local fields are ignored.
+
+    The returned string has Z appended. A present but unusable modified_gmt does not fall through
+    to date_gmt. A stamp more than 24 hours in the future is not returned.
+    """
+    if str(post.get("modified_gmt") or "").strip():
+        raw = str(post.get("modified_gmt")).strip()
+    elif str(post.get("date_gmt") or "").strip():
+        raw = str(post.get("date_gmt")).strip()
+    else:
+        return ""
+    stamped = serialize_wp_gmt(raw)
+    if not stamped or asof_utc(stamped, now) is None:
+        return ""
+    return stamped
+
+
+def stored_asof(product: dict | None) -> str:
+    """The asOf string when it is already an absolute stamp. A naive string is not one."""
+    if not product:
+        return ""
+    text = str(product.get("asOf") or "").strip()
+    return text if asof_utc(text) is not None else ""
+
+
+def keeps_current(incoming_asof: str, product: dict | None) -> bool:
+    """True when this stamp must not replace the product's day.
+
+    A newer absolute asOf wins in either calendar direction. An equal or older stamp does not.
+    The first valid stamp may replace an unstamped day. A missing stamp does not replace a day,
+    including when the URL is the same. URL equality is not revision evidence.
+    """
+    if not product or not product.get("date"):
+        return False
+    inc = asof_utc(incoming_asof)
+    if not inc:
+        return True
+    cur = asof_utc(stored_asof(product))
+    if not cur:
+        return False
+    return inc <= cur
+
+
+def _should_revisit(post: dict, ptype: str, set_name: str, title: str, text: str,
+                    catalog: dict | None) -> bool:
+    """A seen post is worth reading again only when its current text asserts a different day
+    and that assertion has a newer stamp.
+
+    No asserted day means do not reopen it. A later edit that names no street day must not
+    inherit the catalogue's cached day. With no catalogue, a seen post stays seen.
+    """
+    if not _catalog_products(catalog):
+        return False
+    date = best_date(f"{title}\n{text}", ptype)
+    if not date:
+        return False
+    sample = products_for(ptype, set_name, "", date, "", "", None)[0]
+    resolved = resolve_row(sample, catalog)
+    current = _find_product(_catalog_products(catalog), resolved["id"])
+    if current is None:
+        return False
+    return not keeps_current(post_asof(post), current)
+
+
+def _product_window(text: str, set_name: str, ptype: str = "") -> str:
+    """Text around this product, so a trial deck code earlier in the post is not borrowed."""
+    raw = text or ""
+    if ptype and set_name:
+        typed = re.search(re.escape(ptype) + r".{0,120}" + re.escape(set_name), raw, re.IGNORECASE | re.DOTALL)
+        if typed:
+            return raw[max(0, typed.start() - 40):typed.end() + 80]
+    at = raw.lower().find((set_name or "").lower())
+    if at < 0:
+        return raw
+    return raw[max(0, at - 80):at + 180]
+
+
 def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get=http_get,
-          today: _dt.date | None = None) -> tuple[dict, dict[str, bytes]]:
-    """Payload {products, sets, posts} and images {key: webp bytes} for new announcement posts."""
-    payload: dict = {"products": [], "sets": {}, "posts": {}}
+          today: _dt.date | None = None, catalog: dict | None = None) -> tuple[dict, dict[str, bytes]]:
+    """Payload {products, sets, posts, retire} and images {key: webp bytes}.
+
+    `retire` names uncoded duplicate ids the catalogue still holds for a product this sweep
+    corrected. publish() does not send it: the live releases endpoint merges by id and has no
+    delete. The list is for a reviewed republish, not an automatic wipe.
+    """
+    payload: dict = {"products": [], "sets": {}, "posts": {}, "retire": []}
     images: dict[str, bytes] = {}
+    catalog = catalog or {"products": [], "sets": {}}
     for post in posts:
         title = strip_html(str((post.get("title") or {}).get("rendered") or ""))
         link = str(post.get("link") or "")
@@ -258,22 +536,28 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
         if not parsed or not link.startswith("https://"):
             continue
         ptype, set_name = parsed
-        image_url = featured_image(post)
-        if not force and seen.get(link) == image_url:
-            continue
         text = strip_html(str((post.get("content") or {}).get("rendered") or ""))
-        code = find_code(os.path.basename(image_url), title, text)
-        date, sieve_code = sieve.release(link, set_name)
-        code = code or sieve_code
+        image_url = featured_image(post)
+        stamp = announcement_stamp(image_url, title, text)
+        if not force and seen.get(link) == stamp:
+            continue
+        if not force and link in seen and not _should_revisit(post, ptype, set_name, title, text, catalog):
+            continue
+        text_date = best_date(f"{title}\n{text}", ptype)
+        sieve_date, sieve_code = sieve.release(link, set_name)
+        after_type = text[text.lower().find(ptype.lower()):] if ptype and ptype.lower() in text.lower() else ""
+        code = find_code(os.path.basename(image_url), title, after_type[:180], _product_window(text, set_name, ptype)) or sieve_code
+        # The post text is the announcement. Sieve only fills a date the text does not state.
+        date = text_date or sieve_date
         image_bytes = b""
         if image_url:
             try:
                 image_bytes = get(image_url, timeout=120)
             except (OSError, ValueError) as exc:
                 print(f"release-sweep: banner download failed for {link}: {exc}", file=sys.stderr)
-        if not date and image_bytes:
-            date = parse_date(ocr_text(image_bytes))
-        date = date or parse_date(f"{title} {text}")
+            if image_bytes and not date:
+                read = ocr_text(image_bytes)
+                date = best_date(read, ptype) or parse_date(read)
         base = (code or slug(set_name).upper().replace("-", "_"))[:40]
         banner_key = logo_key = ""
         if image_bytes:
@@ -289,23 +573,238 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                     images[logo_key] = banner_logo.webp_bytes(logo, 90)
             except Exception as exc:   # an unreadable banner still leaves the product and its date
                 print(f"release-sweep: banner processing failed for {link}: {exc}", file=sys.stderr)
-        rows = products_for(ptype, set_name, code, date, link, banner_key, today)
-        payload["products"].extend(rows)
-        base_set = rows[0]["set"]
-        entry = payload["sets"].setdefault(base_set, {"logo": "", "release": ""})
-        if logo_key:
-            entry["logo"] = logo_key
-        if date and (not entry["release"] or _sort_key(date) < _sort_key(entry["release"])):
-            entry["release"] = date
-        payload["posts"][link] = image_url
-        print(f"release-sweep: {title!r} -> {len(rows)} product(s), code={code or '?'}, date={date or '?'}, "
+        items = [{"ptype": ptype, "set_name": set_name, "date": date, "code": code, "banner": banner_key}]
+        items.extend({**extra, "banner": ""} for extra in _body_extras(text, (ptype, set_name)))
+        emitted = 0
+        for item in items:
+            # Stamp only a day this fetch actually asserts. A newer edit with no street day
+            # must not lend its clock to a cached date.
+            revision = post_asof(post) if item.get("date") else ""
+            rows = products_for(item["ptype"], item["set_name"], item["code"], item["date"], link,
+                                item["banner"], today)
+            for row in rows:
+                resolved = resolve_row(row, catalog)
+                if revision:
+                    resolved["asOf"] = revision
+                else:
+                    resolved.pop("asOf", None)
+                if not _merge_row(payload, resolved, catalog):
+                    continue
+                emitted += 1
+                base_set = resolved["set"]
+                entry = payload["sets"].setdefault(base_set, {"logo": "", "release": ""})
+                if logo_key and item["banner"]:
+                    entry["logo"] = logo_key
+                elif not entry["logo"]:
+                    stored = (catalog.get("sets") or {}).get(base_set) or {}
+                    entry["logo"] = stored.get("logo") or ""
+        if not emitted:
+            # Remember a post whose text stated a day we did not apply, so the next run does not
+            # read it again. An image-only date that failed to read is not remembered.
+            if text_date or sieve_date or (text and not image_url):
+                payload["posts"][link] = stamp
+            continue
+        payload["posts"][link] = stamp
+        print(f"release-sweep: {title!r} -> {emitted} product row(s), code={code or '?'}, date={date or '?'}, "
               f"logo={'yes' if logo_key else 'no'}")
+    for name in list(payload["sets"]):
+        release = backed_set_release(name, catalog, payload["products"])
+        if release:
+            payload["sets"][name]["release"] = release
+    payload["retire"] = alias_ids(catalog, payload["products"])
+    if payload["retire"]:
+        print("release-sweep: duplicate ids to retire after review (not sent by publish): "
+              + ", ".join(payload["retire"]))
     return payload, images
 
 
 def _sort_key(date: str) -> tuple:
-    m = DATE_RE.search(date)
-    return (int(m.group(3)), MONTHS[m.group(1)[:3].lower()], int(m.group(2))) if m else (9999, 0, 0)
+    m = DATE_RE.search(date or "")
+    if not m:
+        return (9999, 0, 0)
+    formatted = _format_match(m)
+    if not formatted:
+        return (9999, 0, 0)
+    return (int(m.group(3)), MONTHS[m.group(1)[:3].lower()], int(m.group(2)))
+
+
+def kind_of(name: str) -> str:
+    n = (name or "").lower()
+    if "box" in n:
+        return "box"
+    if "pack" in n:
+        return "pack"
+    if "deck" in n:
+        return "deck"
+    return "other"
+
+
+def code_in_id(pid: str) -> str:
+    m = re.search(r"(?:^|-)((?:bp|td|ss|pr)\d{2})$", pid or "", re.IGNORECASE)
+    return m.group(1).upper() if m else ""
+
+
+def announcement_stamp(image_url: str, title: str, text: str) -> str:
+    raw = "\n".join((image_url or "", title or "", text or ""))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
+
+
+def _catalog_products(catalog: dict | None) -> list[dict]:
+    if not isinstance(catalog, dict):
+        return []
+    products = catalog.get("products")
+    return [p for p in products if isinstance(p, dict) and p.get("id")] if isinstance(products, list) else []
+
+
+def _find_product(products: list[dict], pid: str) -> dict | None:
+    for row in products:
+        if row.get("id") == pid:
+            return row
+    return None
+
+
+def resolve_row(row: dict, catalog: dict | None) -> dict:
+    """Reuse the canonical id when this set and kind is already published under a product code.
+
+    A delay notice often names the booster and not the code. Emitting box-eternal-ascent beside
+    box-bp03 is how the duplicate tiles were created. Packs follow the coded box (pack-bp03).
+    """
+    products = _catalog_products(catalog)
+    code = (row.get("code") or "").upper()
+    if code:
+        return row
+    kind = kind_of(row.get("name") or "")
+    set_name = row.get("set") or ""
+    coded = [p for p in products if p.get("set") == set_name and kind_of(p.get("name") or "") == kind
+             and ((p.get("code") or "").upper() or code_in_id(p.get("id") or ""))]
+    if len(coded) == 1:
+        kept = coded[0]
+        return {**row, "id": kept["id"], "code": kept.get("code") or ""}
+    if kind == "pack":
+        boxes = [p for p in products if p.get("set") == set_name and kind_of(p.get("name") or "") == "box"
+                 and ((p.get("code") or "").upper() or code_in_id(p.get("id") or ""))]
+        if len(boxes) == 1:
+            key = ((boxes[0].get("code") or "") or code_in_id(boxes[0].get("id") or "")).lower()
+            match = _find_product(products, f"pack-{key}") if key else None
+            if match:
+                return {**row, "id": match["id"], "code": match.get("code") or ""}
+    return row
+
+
+def _is_alias(row: dict, products: list[dict]) -> bool:
+    """An uncoded row that duplicates a coded product of the same set and kind."""
+    if (row.get("code") or "").strip() or code_in_id(row.get("id") or ""):
+        return False
+    kind = kind_of(row.get("name") or "")
+    return any(p.get("id") != row.get("id") and p.get("set") == row.get("set")
+               and kind_of(p.get("name") or "") == kind
+               and ((p.get("code") or "").upper() or code_in_id(p.get("id") or ""))
+               for p in products)
+
+
+def alias_ids(catalog: dict | None, kept: list[dict]) -> list[str]:
+    products = _catalog_products(catalog)
+    kept_ids = {r.get("id") for r in kept}
+    sets = {r.get("set") for r in kept}
+    retired = []
+    for row in products:
+        if row.get("set") not in sets or row.get("id") in kept_ids:
+            continue
+        if _is_alias(row, products):
+            retired.append(row["id"])
+    return sorted(retired)
+
+
+def backed_set_release(set_name: str, catalog: dict | None, emitted: list[dict]) -> str:
+    """Earliest concrete street date among this set's real products.
+
+    Trial decks and boosters keep their own dates. The set date is the first of those, so a
+    booster postponement does not become the set date while an earlier trial deck is on file,
+    and a stale duplicate row does not pull the set date backwards.
+    """
+    products = [p for p in _catalog_products(catalog) if p.get("set") == set_name and not _is_alias(p, _catalog_products(catalog))]
+    by_id = {p["id"]: dict(p) for p in products}
+    for row in emitted:
+        if row.get("set") == set_name and row.get("id"):
+            by_id[row["id"]] = row
+    dates = [row.get("date") or "" for row in by_id.values() if row.get("date") and _sort_key(row.get("date") or "") != (9999, 0, 0)]
+    return min(dates, key=_sort_key) if dates else ""
+
+
+def _apply_stamp(existing: dict, row: dict) -> bool:
+    """Copy an asserted day when its stamp is newer. An empty date changes nothing."""
+    incoming = stored_asof(row)
+    if not row.get("date") or keeps_current(incoming, existing):
+        return False
+    changed = False
+    if existing.get("date") != row["date"]:
+        existing["date"] = row["date"]
+        existing["pre"] = row.get("pre", existing.get("pre"))
+        changed = True
+    if row.get("link") and existing.get("link") != row.get("link"):
+        existing["link"] = row["link"]
+        changed = True
+    if incoming and existing.get("asOf") != incoming:
+        existing["asOf"] = incoming
+        changed = True
+    if row.get("code") and not existing.get("code"):
+        existing["code"] = row["code"]
+        changed = True
+    if row.get("banner") and not existing.get("banner"):
+        existing["banner"] = row["banner"]
+        changed = True
+    return changed
+
+
+def _merge_row(payload: dict, row: dict, catalog: dict | None = None) -> bool:
+    """One id per product. A newer UTC stamp replaces the day. An empty date does not."""
+    incoming = stored_asof(row)
+    if incoming:
+        row["asOf"] = incoming
+    else:
+        row.pop("asOf", None)
+    for existing in payload["products"]:
+        if existing.get("id") != row.get("id"):
+            continue
+        return _apply_stamp(existing, row)
+    current = _find_product(_catalog_products(catalog), row.get("id") or "")
+    if not row.get("date"):
+        if current and current.get("date"):
+            return False
+        payload["products"].append(row)
+        return True
+    if current and _apply_stamp(dict(current), row) is False and keeps_current(incoming, current):
+        return False
+    if current and current.get("date") == row.get("date") and stored_asof(current) == incoming and (current.get("link") or "") == (row.get("link") or ""):
+        return False
+    payload["products"].append(row)
+    return True
+
+
+def _body_extras(text: str, title_item: tuple[str, str] | None) -> list[dict]:
+    """Other quoted products in the same post, each with its own nearby date and code.
+
+    Used for a mixed trial deck and booster announcement. A mention without its own code is
+    left out: a codeless extra becomes a second id for a product the app already tracks.
+    """
+    extras = []
+    seen = set()
+    if title_item:
+        seen.add((title_item[0].lower(), title_item[1].lower()))
+    for match in TITLE_RE.finditer(text or ""):
+        ptype = " ".join(w.capitalize() if w.islower() else w for w in match.group(1).split())
+        set_name = " ".join(match.group(2).split())
+        key = (ptype.lower(), set_name.lower())
+        if key in seen:
+            continue
+        window = (text or "")[max(0, match.start() - 80):match.end() + 180]
+        code = find_code(window)
+        date = best_date(window, ptype)
+        if not code or not date:
+            continue
+        seen.add(key)
+        extras.append({"ptype": ptype, "set_name": set_name, "date": date, "code": code})
+    return extras
 
 
 def backend_call(method: str, path: str, key: str, body: dict | None = None, base: str = BACKEND) -> dict:
@@ -316,13 +815,40 @@ def backend_call(method: str, path: str, key: str, body: dict | None = None, bas
         return json.loads(resp.read().decode("utf-8") or "{}")
 
 
+# The backend draft accepts these keys plus asOf. srcAt and retire are app/review fields and
+# are not sent. asOf is included only when it is a valid UTC instant and the row asserts a day.
+_POST_PRODUCT_KEYS = ("id", "set", "name", "sub", "code", "date", "pre", "banner", "box", "q", "link")
+
+
+def _posted_product(row: dict) -> dict:
+    posted = {key: row.get(key, "" if key != "pre" else False) for key in _POST_PRODUCT_KEYS}
+    stamp = stored_asof(row)
+    if stamp and posted.get("date"):
+        posted["asOf"] = stamp
+    return posted
+
+
 def publish(payload: dict, images: dict[str, bytes], key: str, base: str = BACKEND, call=backend_call) -> dict:
-    payload = {**payload, "img": {}}
+    body = {"products": [_posted_product(row) for row in (payload.get("products") or [])],
+            "sets": payload.get("sets") or {}, "posts": payload.get("posts") or {}, "img": {}}
     for img_key, data in images.items():
         res = call("PUT", f"/api/admin/release-img/{img_key}", key,
                    {"type": "image/webp", "data": base64.b64encode(data).decode("ascii")}, base)
-        payload["img"][img_key] = res["path"]
-    return call("POST", "/api/admin/releases", key, payload, base)
+        body["img"][img_key] = res["path"]
+    return call("POST", "/api/admin/releases", key, body, base)
+
+
+def fetch_catalog(get=http_get, base: str = BACKEND) -> dict:
+    """Public release list. No admin key. Empty when the feed cannot be read."""
+    try:
+        data = json.loads(get(base.rstrip("/") + "/api/releases"))
+    except (OSError, ValueError, TypeError):
+        return {"products": [], "sets": {}}
+    if not isinstance(data, dict):
+        return {"products": [], "sets": {}}
+    products = data.get("products") if isinstance(data.get("products"), list) else []
+    sets = data.get("sets") if isinstance(data.get("sets"), dict) else {}
+    return {"products": [p for p in products if isinstance(p, dict)], "sets": sets}
 
 
 def write_github_output(path: Path | None, status: str, products: int) -> None:
@@ -349,11 +875,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         seen = backend_call("GET", "/api/admin/releases", key, base=args.backend).get("posts", {}) if key else {}
         posts = fetch_posts()
+        catalog = fetch_catalog(base=args.backend)
     except (OSError, ValueError) as exc:
         print(f"release-sweep: fetch failed: {exc}", file=sys.stderr)
         write_github_output(args.github_output, "failed", 0)
         return 1
-    payload, images = sweep(posts, seen, force=args.force, sieve=SieveReader(args.sieve))
+    payload, images = sweep(posts, seen, force=args.force, sieve=SieveReader(args.sieve), catalog=catalog)
     count = len(payload["products"])
     if not count:
         print("release-sweep: no new product announcements")

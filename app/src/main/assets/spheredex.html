@@ -1871,6 +1871,19 @@ label.acctsetrow { align-items:center; }
   }
   .modeexport { margin:-6px 0 12px; display:flex; gap:8px; flex-wrap:wrap; }
   .modeexport[hidden] { display:none; }
+  .wishplan { margin:0 0 12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+  .wishplan[hidden] { display:none; }
+  .wishplan .wpbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .wishplan label { font-size:.82rem; color:var(--ink-soft); }
+  .wishplan input { width:7em; }
+  .wishplan .wprow { display:flex; gap:8px; align-items:center; padding:7px 0; border-top:1px solid var(--line); font-size:.85rem; }
+  .wishplan .wprow .wpn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wishplan .wprow.over { opacity:.55; }
+  .wishplan .wpsum { margin-top:8px; font-size:.85rem; color:var(--ink-soft); }
+  .wishrow { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .wprio, .wtarget { font-size:.7rem; padding:2px 8px; border-radius:999px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-soft); cursor:pointer; }
+  .wprio.p-must { color:var(--ink); border-color:var(--el-Fire,#e5533d); }
+  .wprio.p-someday { opacity:.7; }
   .deckbreak { max-width:640px; display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   .deckcurve, .deckkinds, .deckcolors { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
   .dbar, .dchip { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:10px; padding:6px 8px; min-width:44px; cursor:pointer; font:inherit; text-align:center; }
@@ -2086,6 +2099,15 @@ label.acctsetrow { align-items:center; }
   .ksrow.tot .ksn { font-family:var(--font-display); } .ksrow.tot .ksc { color:var(--accent-ink); }
 
   /* Set rewards */
+  .dailyguess { max-width:640px; padding:14px; border:1px solid var(--line,rgba(128,128,128,.3)); border-radius:14px; margin-bottom:6px; }
+  .dgstreak { font-size:.85rem; color:var(--ink-soft); margin:0 0 10px; }
+  .dgclues { margin:0 0 12px; padding:0; list-style:none; display:grid; gap:6px; }
+  .dgclues li { padding:8px 10px; border-radius:10px; background:rgba(128,128,128,.12); font-size:.9rem; }
+  .dgclues li b { display:block; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); }
+  .dgform { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .dgform input { flex:1 1 200px; min-width:0; font:inherit; padding:10px; border-radius:10px; border:1px solid rgba(128,128,128,.4); background:transparent; color:inherit; }
+  .dgmiss { font-size:.85rem; color:var(--ink-soft); margin:4px 0; }
+  .dgend { font-weight:600; margin:6px 0 0; }
   .rwintro { color:var(--ink-soft); font-size:.9rem; max-width:640px; margin:-4px 0 16px; }
   /* Sphere themes / app icon picker */
   .spherethemes { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; }
@@ -2949,6 +2971,9 @@ label.acctsetrow { align-items:center; }
     <div class="setspheres" id="rewardGrid"></div>
     <div class="rwcap" id="rewardCap"></div>
 
+    <h2 class="sech" style="margin-top:30px">Daily Pal guess</h2>
+    <p class="rwintro">One optional guess a day. A clue about a hidden card unlocks with each wrong guess, using SphereDex card data only. Win to keep a streak. Everything stays on this device.</p>
+    <div class="dailyguess" id="dailyGuess"></div>
     <h2 class="sech" style="margin-top:30px">App icon &amp; theme</h2>
     <p class="rwintro">Pal is available from the start. Higher themes unlock as your collection reaches milestones and remain available once earned, even when a new set adds more cards. Set one as your app icon and colour theme; the header orb becomes that Sphere and the app recolours to match. On Android the home-screen icon changes too.</p>
     <div class="spherethemes" id="sphereThemes"></div>
@@ -2970,6 +2995,7 @@ label.acctsetrow { align-items:center; }
   <button class="backbtn" type="button" id="setsBack">&lsaquo; Browse by set</button>
   <h2 class="sech modehead" id="colModeHead" hidden></h2>
   <div class="modeexport" id="wishExport" hidden><button class="btn sec" type="button" id="wishCsvBtn">Spreadsheet (CSV)</button><button class="btn sec" type="button" id="wishTcgBtn">Copy for TCGplayer</button><button class="btn sec" type="button" id="wishShareBtn">Share link</button></div>
+  <section class="wishplan" id="wishPlan" aria-label="Wishlist budget and Buy now" hidden></section>
   <div class="modeexport" id="extrasExport" hidden><button class="btn sec" type="button" id="extrasShareBtn">Share spares link</button></div>
   <div class="collectedbar" id="collectedBar" hidden>
     <span class="cbsub" id="collectedSub"></span>
@@ -4239,9 +4265,9 @@ label.acctsetrow { align-items:center; }
   // same number, and add the next version's 3 lines here so the *following* update is ready.
   var RELEASE_HIGHLIGHTS = {
     "2.4.8": [
-      "Your collection value beneath every set",
-      "Live listings in green and sold listings in blue",
-      "Owned quantities and graded card values included"
+      "Print your collection, share wants and spares, and track cards out for grading",
+      "Closest winning decks, built decks that hold their copies, and a place for each card",
+      "A Daily Pal guess, a wishlist budget, and live and sold value on every set"
     ],
     "1.10": [
       "Price alerts \u00b7 follow any card, get told when it moves the way you want",
@@ -4405,6 +4431,10 @@ label.acctsetrow { align-items:center; }
     if(!st.wishlist || typeof st.wishlist!=="object") st.wishlist={};
     if(!st.wishlistAt || typeof st.wishlistAt!=="object") st.wishlistAt={};
     if(!st.fav || typeof st.fav!=="object") st.fav={};
+    if(st.wishPrio!==undefined && !plainObj(st.wishPrio)) delete st.wishPrio;
+    if(st.wishTarget!==undefined && !plainObj(st.wishTarget)) delete st.wishTarget;
+    if(st.wishBudget!==undefined && !(+st.wishBudget>=0)) delete st.wishBudget;
+    if(st.wishCur!==undefined && typeof st.wishCur!=="string") delete st.wishCur;
     var cols=st.cols||[], col=null, i;
     for(i=0;i<cols.length;i++){ if(cols[i] && cols[i].id===st.active){ col=cols[i]; break; } }
     if(!col) col=cols[0]||null;
@@ -4424,10 +4454,55 @@ label.acctsetrow { align-items:center; }
   function isWished(id){ return !!(STATE.wishlist && STATE.wishlist[id]); }
   function wishlistAt(id){ return (STATE.wishlistAt && +STATE.wishlistAt[id]) || 0; }
   function toggleWish(id){
-    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; }
+    if(STATE.wishlist[id]){ delete STATE.wishlist[id]; delete STATE.wishlistAt[id]; if(STATE.wishPrio) delete STATE.wishPrio[id]; if(STATE.wishTarget){ delete STATE.wishTarget[id]; wishCurTidy(); } }
     else { STATE.wishlist[id]=true; STATE.wishlistAt[id]=Date.now(); }
   }
   function wishCount(){ return Object.keys(STATE.wishlist).length; }
+  function curCode(){ return (typeof CUR==="object" && CUR && CUR.code) || ""; }
+  // ---- WISHLIST PRIORITY BEGIN ----
+  // Each wishlist card can be tagged Must have, Want or Someday and given a "buy at or under" price, and the
+  // wishlist has one optional monthly budget. A card with no tag counts as Want. The Buy now list is every
+  // wished card whose current price is at or under its own price, Must haves first, with a running total.
+  var WISH_PRIOS=["must","want","someday"], WISH_PRIO_LABEL={must:"Must have",want:"Want",someday:"Someday"};
+  function wishPrio(id){ var p=STATE.wishPrio && STATE.wishPrio[id]; return WISH_PRIOS.indexOf(p)>=0 ? p : "want"; }
+  function setWishPrio(id, p){
+    if(!STATE.wishPrio || typeof STATE.wishPrio!=="object") STATE.wishPrio={};
+    if(p==="want" || WISH_PRIOS.indexOf(p)<0) delete STATE.wishPrio[id]; else STATE.wishPrio[id]=p;
+  }
+  function cycleWishPrio(id){ var n=WISH_PRIOS[(WISH_PRIOS.indexOf(wishPrio(id))+1)%WISH_PRIOS.length]; setWishPrio(id, n); return n; }
+  function wishTarget(id){ var v=STATE.wishTarget && wishCurOk() ? +STATE.wishTarget[id] : 0; return v>0 ? v : 0; }
+  // Buy prices and the budget are amounts in one currency. The code is kept with them, so after the currency
+  // picker changes they are not read as the same number in another currency (Buy now asks to set them again).
+  function wishCurOk(){ return !STATE.wishCur || STATE.wishCur===curCode(); }
+  function setWishTarget(id, v){
+    if(!STATE.wishTarget || typeof STATE.wishTarget!=="object") STATE.wishTarget={};
+    v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; delete STATE.wishBudget; } STATE.wishCur=curCode(); STATE.wishTarget[id]=Math.round(v*100)/100; } else { delete STATE.wishTarget[id]; wishCurTidy(); }
+  }
+  // With no buy price and no budget left there is no currency to remember.
+  function wishCurTidy(){ if(!Object.keys(STATE.wishTarget||{}).length && !(+STATE.wishBudget>0)) delete STATE.wishCur; }
+  // Reads a typed amount the way people write it: 12.50, 12,50 or 1,250.50. The last separator is the decimal
+  // point when it is followed by one or two digits, otherwise it is a thousands separator.
+  function parseWishAmount(txt){
+    var t=String(txt==null?"":txt).replace(/[^0-9.,]/g,""), m=t.match(/^(.*)[.,](\d{1,2})$/);
+    var n = m ? m[1].replace(/[.,]/g,"")+"."+m[2] : t.replace(/[.,]/g,"");
+    return n && +n>0 ? +n : 0;
+  }
+  function wishBudget(){ var v=wishCurOk() ? +STATE.wishBudget : 0; return v>0 ? v : 0; }
+  function setWishBudget(v){ v=+v; if(v>0){ if(!wishCurOk()){ STATE.wishTarget={}; } STATE.wishCur=curCode(); STATE.wishBudget=Math.round(v*100)/100; } else { delete STATE.wishBudget; wishCurTidy(); } }
+  function wishBuyNow(){
+    var rank={must:0,want:1,someday:2}, rows=[];
+    if(!wishCurOk()) return {rows:[], total:0, budget:0, left:null, stale:STATE.wishCur};
+    Object.keys(STATE.wishlist||{}).forEach(function(id){
+      var t=wishTarget(id), pr=+mktOf(id)||0;
+      if(t>0 && pr>0 && pr<=t) rows.push({id:id, prio:wishPrio(id), price:pr, target:t});
+    });
+    rows.sort(function(a,b){ return (rank[a.prio]-rank[b.prio]) || (a.price-b.price) || (a.id<b.id?-1:a.id>b.id?1:0); });
+    var budget=wishBudget(), run=0;
+    rows.forEach(function(r){ run+=r.price; r.cum=Math.round(run*100)/100; r.over=budget>0 && r.cum>budget; });
+    var total=Math.round(run*100)/100;
+    return {rows:rows, total:total, budget:budget, left:budget>0 ? Math.round((budget-total)*100)/100 : null};
+  }
+  // ---- WISHLIST PRIORITY END ----
   // Global favourites (starred standout cards), separate from owning or wishing.
   function isFav(id){ return !!(STATE.fav && STATE.fav[id]); }
   function toggleFav(id){ if(STATE.fav[id]) delete STATE.fav[id]; else STATE.fav[id]=true; }
@@ -4822,7 +4897,8 @@ label.acctsetrow { align-items:center; }
   // as though somebody had really sold a card for that.
   var PRICEMETA_SOLD={};
   // id -> where each book price came from, as the server reports it ("openwebninja"/"ebay" sold, "ebay-active",
-  // "tcgplayer", "palworld"), so Settings can say what the numbers on screen are made of.
+  // "tcgplayer", "palworld", or "fallback-fx:<market>" for a live price copied from another marketplace),
+  // so Settings can say what the numbers on screen are made of.
   var PRICESRC={}, PRICESRC_SOLD={};
   var PRICEASOF=0;    // ms timestamp the SERVER last refreshed the price book (its daily 1am cron), 0 if unknown
   var LIVE_ASOF=0, SOLD_ASOF=0;  // per-mode server refresh times (live = daily, sold = weekly) so the label names the right one
@@ -4897,8 +4973,19 @@ label.acctsetrow { align-items:center; }
   function implausiblePull(id, e){
     if(!(+e.pAt>0)) return false;
     return saneSold(id, Math.max(+e.sold||0, +e.mkt||0, +e.list||0), null)==null; }
-  // Server source name -> the kind of figure it is. "" when the book predates source tracking.
-  function srcKind(s){ return s==="tcgplayer"||s==="palworld"||s==="cardtrader" ? s : s==="ebay-active" ? "list" : s ? "sold" : ""; }
+  // A live price copied from another marketplace. The suffix is that marketplace ("de", "com", "co.uk").
+  function isFallbackSrc(s){ return typeof s==="string" && s.indexOf("fallback-fx:")===0; }
+  // Server source name -> the kind of figure it is. "" when the book predates source tracking, or the name
+  // is one this build does not recognise. Sold names are listed on purpose. A catch-all used to call every
+  // other string sold, which labelled a cross-market live estimate as a sale and would do the same to any
+  // future source. CardTrader stays its own kind: it is an asking price, not a sale.
+  function srcKind(s){
+    if(s==="tcgplayer"||s==="palworld"||s==="cardtrader") return s;
+    if(s==="ebay-active") return "list";
+    if(isFallbackSrc(s)) return "estimate";
+    if(s==="ebay"||s==="openwebninja") return "sold";
+    return "";
+  }
   // Best market unit price for a card, mode-aware (used by value sort, movers and reference display).
   function mktOf(id){ return unitOf(id); }
   // True when the price shown for a card is a USD->local conversion (Palworld fallback), not a native
@@ -4907,8 +4994,17 @@ label.acctsetrow { align-items:center; }
     return !!((mode||priceMode())==="sold" ? PRICEMETA_SOLD[id] : PRICEMETA[id]); }
   // Keep estimates honest in compact UI too: native prices name the observed market basis, while
   // converted fallbacks never masquerade as a direct listing or sold result.
+  // The source string on the book the active mode is reading. "" when that book has no source for the card.
+  function activePriceSrc(id, mode){
+    var sold=((mode||priceMode())==="sold");
+    var book=sold ? PRICESRC_SOLD : PRICESRC;
+    return (book && book[id]) || "";
+  }
   function marketPriceLabel(id, mode){
     if(isConverted(id, mode)) return "converted estimate";
+    // A fallback-fx row is a live price copied from another marketplace. It is not a sale, and it is not
+    // a listing observed in the market on screen. Old builds called every unrecognised source sold.
+    if(isFallbackSrc(activePriceSrc(id, mode))) return "estimated live";
     return (mode||priceMode())==="sold" ? "last sold" : "live listing";
   }
   // Binder value follows the collection price mode: last 5 sold (e.sold) or live listings (e.list). Synced to SETTINGS.priceMode.
@@ -5903,6 +5999,30 @@ label.acctsetrow { align-items:center; }
     }
     try{ renderCountAndStats(cards); }catch(e){ reportError(e, "count/stats"); }
   }
+  // The budget box and Buy now list at the top of the Wishlist.
+  var wishPlanOpen=false;
+  function renderWishPlan(){
+    var box=$("wishPlan"); if(!box) return;
+    if(!(colMode()==="wish" && wishCount()>0)){ box.hidden=true; return; }
+    box.hidden=false;
+    var bn=wishBuyNow(), h='<div class="wpbar"><label for="wishBudgetIn">Monthly budget</label><input id="wishBudgetIn" type="number" min="0" step="1" inputmode="decimal" placeholder="Optional" value="'+(bn.budget>0?esc(bn.budget):"")+'"><button class="btn sec" type="button" id="wishBuyBtn" aria-expanded="'+wishPlanOpen+'">Buy now ('+bn.rows.length+')</button></div>';
+    if(wishPlanOpen){
+      if(bn.stale) h+='<div class="wpsum">Your buy prices and budget were set in '+esc(bn.stale)+'. Set them again in this currency.</div>';
+      else if(!bn.rows.length) h+='<div class="wpsum">Nothing at or under your buy prices yet. Set a buy price on a wishlist card.</div>';
+      else {
+        bn.rows.forEach(function(r){ var c=cardById(r.id); h+='<div class="wprow'+(r.over?' over':'')+'"><span class="wpn">'+esc(c?c.name:r.id)+' <small>'+esc(WISH_PRIO_LABEL[r.prio])+'</small></span><span>'+esc(money(r.price))+'</span></div>'; });
+        h+='<div class="wpsum">Total '+esc(money(bn.total))+(bn.budget>0 ? ' of '+esc(money(bn.budget))+' budget · '+(bn.left>=0 ? esc(money(bn.left))+' left' : esc(money(-bn.left))+' over (dimmed cards are past the budget)') : '')+'</div>';
+      }
+    }
+    box.innerHTML=h;
+    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){
+      setWishBudget(parseWishAmount(bi.value)); save();
+      // The change event fires while the browser is still finishing blur. Replacing this box
+      // immediately removes the input mid blur and Chrome throws NotFoundError. Paint next turn.
+      setTimeout(function(){ renderWishPlan(); }, 0);
+    };
+    var bb=$("wishBuyBtn"); if(bb) bb.onclick=function(){ wishPlanOpen=!wishPlanOpen; renderWishPlan(); };
+  }
   // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
   // estimate says it covers only the cards shown.
   function wishCountText(shown, total, est){
@@ -5913,6 +6033,7 @@ label.acctsetrow { align-items:center; }
   function renderCountAndStats(cards){
     var m=colMode();
     var wb=$("whereBtn"); if(wb){ wb.hidden=!(m==="col" || m==="collected") || !whereGroups(activeCol().own||{}, CARDS).length; wb.onclick=openWhere; }
+    try{ renderWishPlan(); }catch(e){ reportError(e, "wish plan"); }
     if(m==="wish") $("countLine").textContent = wishCountText(cards.length, CARDS.filter(function(c){ return isWished(c.id); }).length, money(cards.reduce(function(a,c){ return a+(+mktOf(c.id)||0); },0)));
     else if(m==="fav") $("countLine").textContent = cards.length + (cards.length===1?" favourite":" favourites");
     else if(m==="graded") $("countLine").textContent = cards.length + (cards.length===1?" card with graded slabs":" cards with graded slabs");
@@ -6032,11 +6153,16 @@ label.acctsetrow { align-items:center; }
     if (c.atk!=="") costPow.push(icon('sword')+'<b>'+c.atk+'</b>');
     var val = cardValueMode(c.id);   // mode-aware, matches the portfolio/binder totals
     var refUnit = mktOf(c.id);
-    var conv = isConverted(c.id);   // "≈" marks a USD->local conversion (Palworld fallback)
+    var fbSrc=(typeof activePriceSrc==="function") ? activePriceSrc(c.id) : "";
+    var fb=typeof isFallbackSrc==="function" && isFallbackSrc(fbSrc);
+    var fx=fb && typeof pxFallbackFx==="function" && pxFallbackFx(fbSrc);
+    var conv = isConverted(c.id) || fx;   // "≈" marks a converted figure, Palworld USD or a cross-market rate
     var pmSold = priceMode()==="sold";
-    var pmDot = '<i class="pmdot'+(pmSold?' sold':'')+'" title="'+(pmSold?'Last sold price':'Live listing price')+'"></i>';   // green=live, blue=sold
-    var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+pmDot+(conv?'≈':'')+money(val)+'</span>'
-      : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
+    var pmTitle = fb ? "Estimated from another market" : (pmSold ? "Last sold price" : "Live listing price");
+    var pmDot = '<i class="pmdot'+(pmSold?' sold':'')+'" title="'+pmTitle+'"></i>';   // green=live mode, blue=sold mode
+    var valTitle = fb ? "Estimated from another market" : (conv ? "Value converted from USD" : "");
+    var priceTag = val>0 ? '<span class="val"'+(valTitle?' title="'+valTitle+'"':'')+'>'+pmDot+(conv?'≈':'')+money(val)+'</span>'
+      : (refUnit>0 ? '<span class="val ref" title="'+(fb?'Estimated from another market':(conv?'Converted from USD sold price':'Market price (not in your collection)'))+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var awayN = awayList(s).length;
@@ -6052,6 +6178,7 @@ label.acctsetrow { align-items:center; }
       '<div class="cbody">'+
         '<div class="cname">'+esc(c.name)+(dateTag? ' <small class="datetag" style="font-weight:400;opacity:.72">'+dateTag+'</small>':'')+'</div>'+
         (priceTag?'<div class="cstats">'+priceTag+'</div>':'')+
+        (wishMode && wished ? '<div class="wishrow"><button class="wprio p-'+wishPrio(c.id)+'" type="button" aria-label="Priority: '+WISH_PRIO_LABEL[wishPrio(c.id)]+'. Tap to change">'+WISH_PRIO_LABEL[wishPrio(c.id)]+'</button><button class="wtarget" type="button" aria-label="Buy at or under price">'+(wishTarget(c.id)>0 ? 'Buy at \u2264 '+esc(money(wishTarget(c.id))) : 'Set buy price')+'</button></div>' : '')+
       '</div>'+
       '<div class="cardfoot iconfoot">'+
         (owned
@@ -6061,6 +6188,12 @@ label.acctsetrow { align-items:center; }
       '</div>';
     var wb=el.querySelector(".wishbtn");
     if (wb) wb.addEventListener("click", function(ev){ ev.stopPropagation(); toggleWish(c.id); save(); render(); buildColSel(); });
+    var wpr=el.querySelector(".wprio");
+    if (wpr) wpr.addEventListener("click", function(ev){ ev.stopPropagation(); cycleWishPrio(c.id); save(); render(); });
+    var wtg=el.querySelector(".wtarget");
+    if (wtg) wtg.addEventListener("click", function(ev){ ev.stopPropagation();
+      openAsk({title:"Buy "+c.name+" at or under", message:"Enter a price. It shows in Buy now when the current price is at or under it.", value:wishTarget(c.id)>0?String(wishTarget(c.id)):"", okText:"Save", extraText:wishTarget(c.id)>0?"Remove price":"", onExtra:function(){ setWishTarget(c.id, 0); save(); render(); }, onOk:function(v){ setWishTarget(c.id, parseWishAmount(v)); save(); render(); }});
+    });
     el.querySelector(".ownbtn").addEventListener("click", function(ev){ ev.stopPropagation();
       if (has(s)) { openDetail(c); } else { addToChosen(c); } });
     var p=el.querySelector(".plus"), m=el.querySelector(".minus");
@@ -8027,9 +8160,9 @@ label.acctsetrow { align-items:center; }
       var why={}; if(!unitOfEntry(c.id, null, e, why) || !why.k) return;
       n[why.k]=(n[why.k]||0)+1; total++; });
     if(total){
-      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices", yours:"your own values" };
+      var SRC_LABEL={ sold:"eBay sold", list:"eBay listings", estimate:"estimated live", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices", yours:"your own values" };
       var SRC_HTML={ palworld:'<a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a>', cardtrader:ct };
-      h+='<br>Your cards: '+["sold","list","cardtrader","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
+      h+='<br>Your cards: '+["sold","list","estimate","cardtrader","tcgplayer","palworld","yours"].filter(function(k){ return n[k]; })
         .map(function(k){ return n[k]+' '+(SRC_HTML[k]||SRC_LABEL[k]); }).join(' · ')+'.';
     }
     return h+'</div>';
@@ -8178,8 +8311,11 @@ label.acctsetrow { align-items:center; }
     { id:"ss-vol1", set:"Sleeve & Card Set Vol. 1", name:"", sub:"75 sleeves · 10 cards", box:"BOX_SS01", banner:"BOX_BANNER_SS01", code:"SS01", q:"Palworld Sleeve Card Set Vol 1", nk:["Card Set Vol"], pre:true, date:"Oct 16, 2026" },
     { id:"td-ea-rg", set:"Eternal Ascent", name:"Trial Deck, Red · Green", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD03", code:"TD03", q:"Palworld Eternal Ascent Trial Deck Red Green", nk:["TD03","Red・Green"], pre:true, date:"Dec 18, 2026" },
     { id:"td-ea-bp", set:"Eternal Ascent", name:"Trial Deck, Blue · Purple", sub:"Starter deck", box:"", banner:"BOX_BANNER_TD04", code:"TD04", q:"Palworld Eternal Ascent Trial Deck Blue Purple", nk:["TD04","Blue・Purple"], pre:true, date:"Dec 18, 2026" },
-    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" },
-    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 29, 2027" }
+    // EN booster street date is 30 Jan 2027. srcAt is post-15 modified_gmt, already UTC, with Z.
+    // A feed row replaces this day only when its asOf is a newer absolute instant. The same URL
+    // without asOf is not a newer edit. Trial decks stay 18 Dec.
+    { id:"box-bp03", set:"Eternal Ascent", name:"Booster Box", sub:"12 packs", box:"", banner:"BOX_BANNER_BP03", code:"BP03", q:"Palworld Eternal Ascent Booster Box", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027", link:"https://en.palworld-official-cardgame.com/news/post-15", srcAt:"2026-11-06T03:13:14Z" },
+    { id:"pack-bp03", set:"Eternal Ascent", name:"Booster Pack", sub:"7 cards", box:"", banner:"BOX_BANNER_BP03", q:"Palworld Eternal Ascent Booster Pack", nk:["BP03","Eternal Ascent"], pre:true, date:"Jan 30, 2027", link:"https://en.palworld-official-cardgame.com/news/post-15", srcAt:"2026-11-06T03:13:14Z" }
   ];
   // ---- Auto release-date updates from the news feed ----
   // The backend refreshes the official news nightly; the app parses a concrete "Month D, YYYY" out of any
@@ -8195,8 +8331,15 @@ label.acctsetrow { align-items:center; }
   function loadReleaseOverrides(){
     var d=null; try{ d=JSON.parse(lsGet(RO_KEY)||"null"); }catch(e){}
     if(!d) return;
-    SEALED.forEach(function(p){ if(!sealPreRaw(p)) return; var r=d[p.id];
-      if(r && r.d && r.base===p.date) RELEASE_OVERRIDES[p.id]=r.d; });
+    var dirty=false;
+    SEALED.forEach(function(p){
+      if(!sealPreRaw(p)) return;
+      var r=d[p.id];
+      // A sweep owned day is the one on screen. Do not bring a headline back over it.
+      if(sweepOwnsDisplayedDay(p)){ if(r) dirty=true; return; }
+      if(r && r.d && r.base===p.date) RELEASE_OVERRIDES[p.id]=r.d;
+    });
+    if(dirty) saveReleaseOverrides();
   }
   function saveReleaseOverrides(){
     var out={}; SEALED.forEach(function(p){ if(!sealPreRaw(p)) return;
@@ -8206,8 +8349,16 @@ label.acctsetrow { align-items:center; }
   // ---- Release data from the news sweep ----
   // tools/release_sweep.py reads official announcement posts (banner text included) and publishes new
   // sealed products, dates, banners and set logos to /api/releases, so a new product or a moved date
-  // reaches this install without a build. Baked data wins where both exist, except a date for an
-  // upcoming product: the sweep's is newer. Images are served by the backend (/api/release-img/...).
+  // reaches this install without a build. Baked art and names win where both exist. A feed date
+  // replaces a baked one only when asOf is a timezone-bearing UTC instant newer than srcAt, earlier
+  // or later on the calendar. The same URL with no asOf is not a newer edit. A product with no
+  // srcAt still accepts an unstamped feed day, which is how older rows stay usable. A clock that
+  // arrives with no street day is stored and does not freeze that product: the same instant can
+  // fill the day later. Once a day is stated, the same instant cannot move it, and a feed that
+  // repeats the day keeps the clock so a headline cannot replace it. The day on screen is that
+  // owned day: a headline remembered earlier is retired, including after a reload. Images are
+  // served by the backend (/api/release-img/...). An uncoded duplicate of a product we already
+  // track by code is the same product: it is not added again, and it does not move the dated row.
   var REL_KEY = "palvault-releases";
   function storedReleases(){ try{ return JSON.parse(lsGet(REL_KEY)||"null"); }catch(e){ return null; } }
   // What the sweep CHANGED, kept so Home can say so on the next open. applyReleases already knows which
@@ -8224,6 +8375,67 @@ label.acctsetrow { align-items:center; }
     }catch(e){}
   }
   function sealKind(name){ var n=String(name||"").toLowerCase(); return /box/.test(n)?"box":/pack/.test(n)?"pack":/deck/.test(n)?"deck":"other"; }
+  // Absolute instant. Z or a numeric offset, at most 40 characters. A naive string is not a
+  // revision, including a raw WordPress *_gmt value. More than 24 hours ahead of now is not one.
+  // Date.UTC keeps the comparison off the device timezone, so .000Z and +09:00 of the same
+  // moment compare equal to the baked Z instant.
+  function asofMs(s){
+    var v=String(s||"").trim();
+    if(!v || v.length>40) return 0;
+    var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2}|[+-]\d{4})$/.exec(v);
+    if(!m) return 0;
+    var y=+m[1], mo=+m[2], d=+m[3], h=+m[4], mi=+m[5], se=+m[6];
+    if(mo<1||mo>12||d<1||d>31||h>23||mi>59||se>59) return 0;
+    var ms=0;
+    if(m[7]){ var frac=m[7].slice(1), scale=Math.min(frac.length,3); ms=+frac.slice(0,scale); while(scale<3){ ms*=10; scale++; } }
+    var probe=new Date(Date.UTC(y, mo-1, d));
+    if(probe.getUTCFullYear()!==y||probe.getUTCMonth()!==mo-1||probe.getUTCDate()!==d) return 0;
+    var utc=Date.UTC(y, mo-1, d, h, mi, se, ms);
+    if(isNaN(utc)) return 0;
+    var off=0;
+    if(m[8]!=="Z"){
+      var sign=m[8].charAt(0)==="-"?-1:1, digits=m[8].slice(1).replace(":","");
+      var hh=+digits.slice(0,2), mm=+digits.slice(2,4);
+      if(hh>23||mm>59) return 0;
+      off=sign*(hh*60+mm)*60000;
+    }
+    var instant=utc-off;
+    if(instant>Date.now()+24*60*60*1000) return 0;
+    return instant;
+  }
+  // Which street day to keep. A newer absolute asOf wins in either calendar direction. No asOf
+  // does not replace a stamped day. An unstamped product still accepts an unstamped feed day.
+  // A stored clock with no day yet does not freeze it: the same instant, or a newer one, can fill
+  // the day. An older instant cannot. Once a day is stated, an equal instant cannot move it.
+  function adoptServerDate(p, r){
+    if(!r || !r.date) return (p&&p.date)||"";
+    if(!p || !p.date){
+      var inc0=asofMs(r.asOf), cur0=asofMs(p&&p.srcAt);
+      if(cur0 && inc0 && inc0<cur0) return (p&&p.date)||"";
+      return r.date;
+    }
+    if(r.date===p.date) return p.date;
+    var inc=asofMs(r.asOf), cur=asofMs(p.srcAt);
+    if(!inc) return cur ? p.date : r.date;
+    if(!cur) return r.date;
+    return inc>cur ? r.date : p.date;
+  }
+  // A codeless sweep row for a set we already track under a product code. Packs often carry no code
+  // of their own; they follow the one coded box in that set (pack-bp03 beside box-bp03).
+  function releaseAlias(r){
+    if(!r || r.code) return null;
+    var kind=sealKind(r.name);
+    var coded=SEALED.filter(function(x){ return x.set===r.set && sealKind(x.name)===kind && x.code; });
+    if(coded.length===1) return coded[0];
+    if(kind==="pack"){
+      var box=SEALED.filter(function(x){ return x.set===r.set && sealKind(x.name)==="box" && x.code; });
+      if(box.length===1){
+        var pack=SEALED.filter(function(x){ return x.id==="pack-"+String(box[0].code).toLowerCase(); })[0];
+        if(pack) return pack;
+      }
+    }
+    return null;
+  }
   function applyReleases(pay){
     if(!pay || !pay.version) return false;
     var base=apiBase(), changed=false;
@@ -8232,23 +8444,71 @@ label.acctsetrow { align-items:center; }
     (pay.products||[]).forEach(function(r){
       if(!r || !r.id || !r.set) return;
       var p=SEALED.filter(function(x){ return x.id===r.id; })[0]
-        || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null);
+        || (r.code ? SEALED.filter(function(x){ return x.code===r.code && sealKind(x.name)===sealKind(r.name); })[0] : null)
+        || releaseAlias(r);
       if(p){
-        if(sealPreRaw(p) && r.date && p.date!==r.date){ p.date=r.date; p.srv=true; changed=true; relNews("date", p); }
+        // The alias is the same product already on the list. It must not add a second tile or
+        // drag the canonical date backwards.
+        var alias=p.id!==r.id && !r.code;
+        if(!alias && sealPreRaw(p)){
+          var inc=asofMs(r.asOf), cur=asofMs(p.srcAt);
+          if(!String(r.date||"").trim()){
+            // A clock with no day. Keep it when it is newer. Do not invent a day or mark the row
+            // server owned, so a later copy of this same instant can still fill the day.
+            if(inc && (!cur || inc>cur)){ p.srcAt=r.asOf; changed=true; }
+          } else {
+            var next=adoptServerDate(p, r);
+            if(next!==p.date){
+              p.date=next; if(inc){ p.srcAt=r.asOf; p.srv=true; retireHeadlineDay(p); } if(r.link) p.link=r.link; changed=true; relNews("date", p);
+            } else if(r.date===p.date && inc && (!cur || inc>=cur)){
+              // The feed repeats the day already shown. Keep a newer clock, and the sweep owns the
+              // day on screen, so a headline that arrived first cannot stay there.
+              if(!cur || inc>cur){ p.srcAt=r.asOf; changed=true; }
+              if(!p.srv){ p.srv=true; changed=true; }
+              if(retireHeadlineDay(p)) changed=true;
+            }
+          }
+        }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
       }
-      SEALED.push({ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
-        q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:true });
-      relNews("new", SEALED[SEALED.length-1]);
+      var born=asofMs(r.asOf);
+      var row={ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
+        q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:!!(String(r.date||"").trim() && born) };
+      if(born) row.srcAt=r.asOf;
+      SEALED.push(row);
+      if(row.srv) retireHeadlineDay(row);
+      relNews("new", row);
       changed=true;
     });
     Object.keys(pay.sets||{}).forEach(function(name){
       var s=pay.sets[name]||{}, x=BROWSE_EXPANSIONS.filter(function(b){ return b.name===name; })[0];
-      if(x){ if(!x.logo && s.logo){ x.logo=s.logo; changed=true; } return; }
+      if(x){
+        var touched=false;
+        // A new logo can fill an empty one. An equal replay cannot replace a logo that is already there.
+        if(!x.logo && s.logo){ x.logo=s.logo; touched=true; }
+        var sinc=asofMs(s.asOf), scur=asofMs(x.srcAt);
+        var have=x.release && x.release!=="Date TBA" && releaseDayTime(x.release);
+        var incoming=s.release && s.release!=="Date TBA" && releaseDayTime(s.release);
+        if(!incoming){
+          if(sinc && (!scur || sinc>scur)){ x.srcAt=s.asOf; touched=true; }
+        } else if(!have){
+          if(!(scur && sinc && sinc<scur)){ x.release=s.release; if(sinc) x.srcAt=s.asOf; touched=true; }
+        } else if(s.release!==x.release && sinc && scur && sinc>scur){
+          x.release=s.release; x.srcAt=s.asOf; touched=true;
+        } else if(s.release===x.release && sinc && (!scur || sinc>scur)){
+          x.srcAt=s.asOf; touched=true;
+        }
+        if(touched) changed=true;
+        return;
+      }
       // Only a set with a booster or trial deck is an expansion; a sleeve or card set announcement is not.
       var isSet=(pay.products||[]).some(function(r){ return r && r.set===name && /booster|trial deck/i.test(r.name||""); });
-      if(isSet){ BROWSE_EXPANSIONS.push({ name:name, upcoming:true, release:s.release||"Date TBA", logo:s.logo||"", srv:true }); changed=true; }
+      if(isSet){
+        var made={ name:name, upcoming:true, release:s.release||"Date TBA", logo:s.logo||"", srv:true };
+        if(asofMs(s.asOf)) made.srcAt=s.asOf;
+        BROWSE_EXPANSIONS.push(made); changed=true;
+      }
     });
     return changed;
   }
@@ -8354,7 +8614,22 @@ label.acctsetrow { align-items:center; }
   // Month names for sealShipped and parseNewsDate. applyReleased() runs at startup
   // just below, so the table is assigned before that call.
   var _MONIX={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-  function sealDate(p){ var o=p&&RELEASE_OVERRIDES[p.id]; return o||(p?p.date:""); }   // effective (news-overridden) date
+  // A stated day that already has an announcement clock is the day on screen. A later sweep
+  // flag is the same kind of ownership. A headline is only the displayed day when neither is set.
+  function sweepOwnsDisplayedDay(p){
+    return !!(p && String(p.date||"").trim() && (p.srv || String(p.srcAt||"").trim()));
+  }
+  function retireHeadlineDay(p){
+    if(!p || !p.id || !RELEASE_OVERRIDES[p.id]) return false;
+    delete RELEASE_OVERRIDES[p.id];
+    try{ saveReleaseOverrides(); }catch(e){}
+    return true;
+  }
+  function sealDate(p){
+    if(sweepOwnsDisplayedDay(p)) return p.date;
+    var o=p&&RELEASE_OVERRIDES[p.id];
+    return o||(p?p.date:"");
+  }
   // Has this product's release date passed? A vague "late Oct 2026" has no day, so it stays unknown and
   // the baked in pre flag keeps its say. sealDate is news aware, so a corrected date counts here too.
   function sealShipped(p){
@@ -8392,9 +8667,89 @@ label.acctsetrow { align-items:center; }
   // Need a concrete "Month D" (a day is required, so vague "late October" is ignored). The year is taken from
   // the text when present, else inferred from the NEWS ITEM's own publish date (a safe anchor) — feed summaries
   // are often truncated mid-date and drop the year. A release month well before the news month rolls to next year.
-  function parseNewsDate(text, newsIso){
-    var m=/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/i.exec(text||"");
-    if(!m) return null; var mo=_MONIX[m[1].toLowerCase()], day=+m[2], yr=m[3]?+m[3]:0;
+  function parseNewsDate(text, newsIso, product){
+    var src=String(text||"");
+    var re=/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/ig;
+    var all=[], found; while((found=re.exec(src))) all.push(found);
+    if(!all.length) return null;
+    // One date keeps the old rule: the first day in the item. Two dates need a choice, or a
+    // trial deck day stated first would move the booster, and a "before" day would hide the delay.
+    var m=all[0];
+    var name=String(product&&product.name||"").toLowerCase();
+    var fam=/booster/.test(name)?"booster":(/deck/.test(name)?"deck":"");
+    // One date that sits in a sentence about the other product is not this product's day.
+    // The trial deck post names the set and only December 18; that must not move the booster.
+    if(all.length===1 && fam){
+      var only=all[0];
+      var cut1=Math.max(src.lastIndexOf(".", only.index), src.lastIndexOf("!", only.index), src.lastIndexOf("?", only.index), src.lastIndexOf("\n", only.index));
+      var end1=src.length, marks1=[".","!","?","\n"];
+      for(var c1=0;c1<marks1.length;c1++){ var at1=src.indexOf(marks1[c1], only.index+only[0].length); if(at1>=0 && at1<end1) end1=at1; }
+      var sent1=src.slice(cut1+1, end1).toLowerCase();
+      var d1=/trial deck|starter deck/.test(sent1), b1=/booster/.test(sent1);
+      if(fam==="booster" && d1 && !b1) return null;
+      if(fam==="deck" && b1 && !d1) return null;
+    }
+    if(all.length>1){
+      function beforeOf(match){ return src.slice(Math.max(0,match.index-80), match.index).toLowerCase(); }
+      function kindOf(match){
+        var w=src.slice(Math.max(0,match.index-160), Math.min(src.length, match.index+match[0].length+90)).toLowerCase();
+        var deck=/trial deck|starter deck/.test(w), booster=/booster/.test(w);
+        return deck&&!booster?"deck":(booster&&!deck?"booster":"");
+      }
+      var revRe=/\b(after|moved to|postponed to|rescheduled to|delayed to|corrected to|brought forward to)\b/g;
+      var supRe=/\b(before|originally|previously|instead of|original date)\b/g;
+      function closestRole(before){
+        var rev=-1, sup=-1, m;
+        revRe.lastIndex=0; while((m=revRe.exec(before))) rev=m.index;
+        supRe.lastIndex=0; while((m=supRe.exec(before))) sup=m.index;
+        if(rev<0 && sup<0) return "";
+        if(rev>=0 && (sup<0 || rev>sup)) return "revised";
+        return "superseded";
+      }
+      var revised=[], old=false;
+      for(var r=0;r<all.length;r++){
+        var role=closestRole(beforeOf(all[r]));
+        if(role==="superseded") old=true;
+        if(role==="revised") revised.push(all[r]);
+      }
+      if(old && revised.length){
+        var fit=revised.filter(function(match){ var k=kindOf(match); return !(fam && k && k!==fam); });
+        if(fit.length){
+          m=fit[0];
+          for(var f=1;f<fit.length;f++){ if(fit[f].index>m.index) m=fit[f]; }
+          var moR=_MONIX[m[1].toLowerCase()], dayR=+m[2], yrR=m[3]?+m[3]:0;
+          if(moR==null||dayR<1||dayR>31) return null;
+          if(!yrR){ var nyR=/(20\d{2})-(\d{2})/.exec(newsIso||"");
+            if(nyR){ yrR=+nyR[1]; if(moR < (+nyR[2]-1)-1) yrR+=1; } else { yrR=new Date().getFullYear(); } }
+          return MONTHS[moR]+" "+dayR+", "+yrR;
+        }
+      }
+      function score(match){
+        var w=src.slice(Math.max(0,match.index-160), Math.min(src.length, match.index+match[0].length+90)).toLowerCase();
+        var before=src.slice(Math.max(0,match.index-70), match.index).toLowerCase();
+        var s=0, deck=/trial deck|starter deck/.test(w), booster=/booster/.test(w);
+        if(fam==="booster"){ if(booster&&!deck) s+=5; else if(deck&&!booster) s-=8; }
+        if(fam==="deck"){ if(deck&&!booster) s+=5; else if(booster&&!deck) s-=8; }
+        // The date's own sentence, so a short post that mentions both products does not
+        // let the first day win just because both names fit in one wide window.
+        var cut=Math.max(src.lastIndexOf(".", match.index), src.lastIndexOf("!", match.index), src.lastIndexOf("?", match.index), src.lastIndexOf("\n", match.index));
+        var end=src.length, marks=[".","!","?","\n"];
+        for(var c=0;c<marks.length;c++){ var at=src.indexOf(marks[c], match.index+match[0].length); if(at>=0 && at<end) end=at; }
+        var sentence=src.slice(cut+1, end).toLowerCase();
+        var sDeck=/trial deck|starter deck/.test(sentence), sBoost=/booster/.test(sentence);
+        if(fam==="booster"){ if(sBoost&&!sDeck) s+=8; else if(sDeck&&!sBoost) s-=8; }
+        if(fam==="deck"){ if(sDeck&&!sBoost) s+=8; else if(sBoost&&!sDeck) s-=8; }
+        if(/\b(after|moved to|postponed to|rescheduled to|delayed to|corrected to|brought forward to)\b/.test(before)) s+=6;
+        if(/\b(before|originally|previously|instead of|original date)\b/.test(before)) s-=6;
+        var nk=(product&&product.nk)||[];
+        for(var n=0;n<nk.length;n++){ if(nk[n] && w.indexOf(String(nk[n]).toLowerCase())>=0){ s+=2; break; } }
+        return s;
+      }
+      var bestS=score(all[0]);
+      for(var i=1;i<all.length;i++){ var sc=score(all[i]); if(sc>bestS){ m=all[i]; bestS=sc; } }
+      if(fam && bestS<0) return null;
+    }
+    var mo=_MONIX[m[1].toLowerCase()], day=+m[2], yr=m[3]?+m[3]:0;
     if(mo==null||day<1||day>31) return null;
     if(!yr){ var ny=/(20\d{2})-(\d{2})/.exec(newsIso||"");
       if(ny){ yr=+ny[1]; if(mo < (+ny[2]-1)-1) yr+=1; } else { yr=new Date().getFullYear(); } }
@@ -8407,10 +8762,15 @@ label.acctsetrow { align-items:center; }
   // Match each upcoming product to the NEWEST news item that names it AND signals a release, then adopt its date.
   function buildReleaseOverrides(items){
     if(!items||!items.length) return false;
-    var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|pre-?order|reprint)/i;
+    var SIGNAL=/(release date|on sale|will ship|ships|shipping|scheduled to ship|now available|available|launch|go on sale|out on|in stores|pre-?order|reprint)/i;
     var changed=false;
     // A date from the release sweep was read from the announcement itself; a headline match is vaguer.
-    SEALED.forEach(function(p){ if(!sealPreRaw(p) || (p.srv && p.date)) return;
+    SEALED.forEach(function(p){
+      if(!sealPreRaw(p)) return;
+      if(sweepOwnsDisplayedDay(p)){
+        if(RELEASE_OVERRIDES[p.id]){ delete RELEASE_OVERRIDES[p.id]; changed=true; }
+        return;
+      }
       // Once a product is out, only news published BEFORE its release day may move the date. A later "out now"
       // story or tournament post cannot turn an owned box back into a pre order, but a delay announced in time
       // still counts on a phone that first sees it after the day. The day is the later of the build's date and
@@ -8422,7 +8782,7 @@ label.acctsetrow { align-items:center; }
         var text=decodeEntities((it.title||"")+" "+(it.summary||"")), lc=text.toLowerCase();
         if(!keys.some(function(k){ return lc.indexOf(String(k).toLowerCase())>=0; })) continue;
         if(!SIGNAL.test(text)) continue;
-        var d=parseNewsDate(text, it.date); if(!d) continue;
+        var d=parseNewsDate(text, it.date, p); if(!d) continue;
         if(RELEASE_OVERRIDES[p.id]!==d){ RELEASE_OVERRIDES[p.id]=d; changed=true; } break;   // newest match wins
       }
     });
@@ -9126,9 +9486,22 @@ label.acctsetrow { align-items:center; }
       return;
     }
     var behind=n? (" · "+n+" card"+(n===1?"":"s")+" older than 2 days") : "";
-    el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind)
+    // The same "N estimated" the last sold line adds. The server's liveCoverage.filled is the count of
+    // cross-market copies; the rows already in the book are that count when an older reply has no field.
+    // Zero either way until those rows exist, so this line is unchanged on an older backend.
+    var filled=liveEstimateCount();
+    el.textContent = LIVE_ASOF ? ("Live listings updated "+relTime(LIVE_ASOF)+behind
+                          + (filled? (" · "+filled+" estimated"):""))
                           : (PRICEASOF ? ("Prices updated "+relTime(PRICEASOF)+behind)
                                        : "Prices not loaded yet"); }
+  function liveEstimateCount(){
+    if(LIVE_COV && LIVE_COV.filled!=null) return +LIVE_COV.filled||0;
+    var n=0, id;
+    for(id in PRICESRC){
+      if(Object.prototype.hasOwnProperty.call(PRICESRC,id) && srcKind(PRICESRC[id])==="estimate") n++;
+    }
+    return n;
+  }
   // One card's market. e.sold = avg of last 5 sold, e.list = live-listings market,
   // e.mkt = headline (sold preferred, else listings).
   //   both=false (default, used by the quick on-open refresh): one value via the ladder
@@ -9467,7 +9840,21 @@ label.acctsetrow { align-items:center; }
   // figure names them here rather than only in a list a tap away.
   // Provider names only. The series are already named by the key above, so repeating "live listings from
   // eBay live listings" would just read badly.
-  var PX_SRC_NAME={ sold:"eBay", list:"eBay", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices" };
+  var PX_SRC_NAME={ sold:"eBay", list:"eBay", estimate:"estimated live", tcgplayer:"TCGplayer", cardtrader:"CardTrader (EU asking prices)", palworld:"Palworld Prices" };
+  // The marketplace a fallback-fx row was copied from. "" when this source is not one of those rows.
+  function pxFallbackSite(s){
+    if(!isFallbackSrc(s)) return "";
+    var reg=s.slice(12);
+    var site={com:"eBay.com","co.uk":"eBay.co.uk",de:"eBay.de","com.au":"eBay.com.au",ca:"eBay.ca",fr:"eBay.fr",it:"eBay.it",es:"eBay.es"};
+    return (reg && site[reg]) || "another eBay market";
+  }
+  // True only when the copy actually changed currency. A euro market filled from another euro market
+  // is the same money, so Exchange Rate API is not credited for it.
+  function pxFallbackFx(s){
+    if(!isFallbackSrc(s)) return false;
+    var from=REGION_CUR[s.slice(12)], view=REGION_CUR[ebayReg()];
+    return !!(from && view && from!==view);
+  }
   // Plain names stay in pxSourceLine (the tests and the sentence read them as text). The link is added
   // when the line is drawn, because Palworld Prices' terms ask for a link on the page their data is shown.
   function linkPriceSources(html){
@@ -9476,17 +9863,29 @@ label.acctsetrow { align-items:center; }
       .replace("CardTrader (EU asking prices)", '<a href="https://www.cardtrader.com" target="_blank" rel="noopener">CardTrader</a> (EU asking prices)');
   }
   function pxSourceLine(id){
-    var live=PX_SRC_NAME[srcKind(PRICESRC[id])]||"", sold=PX_SRC_NAME[srcKind(PRICESRC_SOLD[id])]||"";
+    var liveSrc=PRICESRC[id]||"", soldSrc=PRICESRC_SOLD[id]||"";
+    var liveFb=pxFallbackSite(liveSrc), soldFb=pxFallbackSite(soldSrc);
+    var live=liveFb?"":(PX_SRC_NAME[srcKind(liveSrc)]||""), sold=soldFb?"":(PX_SRC_NAME[srcKind(soldSrc)]||"");
     var text="";
     if(live && sold && live===sold) text="Live listings and last sold from "+live+".";
     else {
       var bits=[];
       if(live) bits.push("Live listings from "+live);
       if(sold) bits.push("Last sold from "+sold);
-      if(!bits.length) return "";
-      text=bits.join(". ")+".";
+      if(bits.length) text=bits.join(". ")+".";
     }
-    if(isConverted(id,"live") || isConverted(id,"sold")) text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
+    // A converted Palworld or TCGplayer figure is still a US dollar baseline. A fallback row is not:
+    // it names the marketplace it was copied from, and credits the rate provider only when the
+    // currencies differed. No named source and no fallback still claims nothing, same as before.
+    if(text && ((isConverted(id,"live") && !isFallbackSrc(liveSrc)) || (isConverted(id,"sold") && !isFallbackSrc(soldSrc))))
+      text+=" Some figures are converted from US dollars, rates by Exchange Rate API.";
+    var sites=[];
+    if(liveFb) sites.push(liveFb);
+    if(soldFb && sites.indexOf(soldFb)<0) sites.push(soldFb);
+    if(sites.length){
+      var fx=pxFallbackFx(liveSrc)||pxFallbackFx(soldSrc);
+      text+=(text?" ":"")+"Some figures are an estimate from "+sites.join(" and ")+(fx?", rates by Exchange Rate API.":".");
+    }
     return text;
   }
   // Colours follow the app's one rule for prices: live listings are --up (green), last sold is --azure
@@ -11620,7 +12019,7 @@ label.acctsetrow { align-items:center; }
       if(missingGoal==="pal" && ownedH) row.classList.add("collected");
       var deckOn = playerToolsOn() && !!(activeDeck() && activeDeck().cards && activeDeck().cards[c.id]);
       var deckBtn = playerToolsOn() ? '<button class="missact '+(deckOn?"on":"")+'" type="button" aria-label="'+(deckOn?"In deck · open deck":"Add to deck")+'" title="'+(deckOn?"In deck · open deck":"Add to deck")+'">'+icon("layers")+'</button>' : '';
-      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+(tag==="COLLECTED"?" collected":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button>'+deckBtn+'</div></div>';
+      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+(tag==="COLLECTED"?" collected":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+((isConverted(c.id)||(typeof pxFallbackFx==="function"&&typeof activePriceSrc==="function"&&pxFallbackFx(activePriceSrc(c.id))))?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button>'+deckBtn+'</div></div>';
       row.querySelector("img").onclick=function(){ openDetail(c); }; row.querySelector(".mn").onclick=function(){ openDetail(c); };
       var acts=row.querySelectorAll(".missact"); var collBtn=acts[0], wish=acts[1], deckAdd=acts[2];
       if(collBtn) collBtn.onclick=function(){
@@ -14113,6 +14512,94 @@ label.acctsetrow { align-items:center; }
     var vs = $("paldexViewSel");
     if(vs) vs.onchange=function(){ paldexView=vs.value; try{ localStorage.setItem("palvault-paldex-view", paldexView); }catch(e){} renderPaldex(); };
   })();
+  /* Daily Pal guess. One hidden card a day, the same for everyone on the same date, picked from SphereDex card data
+     alone (no card art is shown or altered). A clue unlocks with each wrong guess. The logic is plain functions of
+     their inputs so the guard suite can run them. State lives on the device, not in the collection. */
+  var DAILY_MAX_GUESSES=6;
+  function dailyHash(str){ var h=2166136261; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
+  function dailyMask(text, name){
+    var out=String(text||"");
+    String(name||"").split(/[^A-Za-z0-9À-ɏ]+/).forEach(function(w){
+      if(w.length<3) return;
+      out=out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi"),"___");
+    });
+    return out;
+  }
+  function dailyClues(c){
+    var out=[], st=SETS[c.set];
+    if(st && st.name) out.push({label:"Set", text:st.name});
+    out.push({label:"Colour and type", text:c.color+" "+c.kind+(c.sub?", "+c.sub:"")});
+    var nums=[]; if(c.cost!=null && c.cost!=="") nums.push("Cost "+c.cost); if(c.power) nums.push("Power "+c.power);
+    if(nums.length) out.push({label:"Numbers", text:nums.join(", ")});
+    if(c.els && c.els.length) out.push({label:"Element", text:c.els.join(", ")});
+    var extra=[]; if(c.apt && c.apt.length) extra.push("Work: "+c.apt.join(", ")); if(c.keywords && c.keywords.length) extra.push("Keywords: "+c.keywords.join(", "));
+    if(extra.length) out.push({label:"Abilities", text:extra.join(". ")});
+    var rules=dailyMask(c.rulesEn||"", c.nameEn||c.name).trim();
+    if(rules) out.push({label:"Rules text", text:rules.length>160?rules.slice(0,157)+"...":rules});
+    return out;
+  }
+  // One entry per card number, preferring the base printing, in a fixed order so every device agrees.
+  function dailyPool(cards){
+    var seen={}; cards.forEach(function(c){ var b=c.base; if(!seen[b] || (seen[b].special && !c.special)) seen[b]=c; });
+    // A name shared by several card numbers (every Soul is just "Soul") would make the answer a free guess, so only uniquely named cards play.
+    var uses={}; Object.keys(seen).forEach(function(k){ var n=fold(seen[k].nameEn||seen[k].name); uses[n]=(uses[n]||0)+1; });
+    return Object.keys(seen).sort().map(function(k){ return seen[k]; }).filter(function(c){ return c.kind!=="Soul" && uses[fold(c.nameEn||c.name)]===1 && dailyClues(c).length>=3; });
+  }
+  function dailyAnswer(cards, day){ var pool=dailyPool(cards); return pool.length ? pool[dailyHash("spheredex-daily-"+day)%pool.length] : null; }
+  // Card titles use an en dash ("Suzaku – Hellfire Wings"); a typed hyphen or em dash must count as the same name.
+  function dailyNorm(str){ return fold(str).replace(/[\u2010-\u2015\u2212]/g,"-").replace(/\s+/g," ").trim(); }
+  function dailyCorrect(answer, guess){ return !!answer && dailyNorm(guess)===dailyNorm(answer.nameEn||answer.name); }
+  function dailyKnownName(cards, guess){ var g=dailyNorm(guess); return !!g && cards.some(function(c){ return dailyNorm(c.nameEn||c.name)===g; }); }
+  // Streak bookkeeping, applied once when a day's game ends. A missed day or a loss starts the streak again.
+  function dailyFinish(stats, day, won){
+    var s={ streak:+(stats&&stats.streak)||0, best:+(stats&&stats.best)||0, wins:+(stats&&stats.wins)||0, played:+(stats&&stats.played)||0, last:(stats&&stats.last)||"" };
+    if(s.last===day) return s;
+    s.played++;
+    if(won){ s.streak=(s.last===dayKeyAdd(day,-1)?s.streak:0)+1; s.wins++; if(s.streak>s.best) s.best=s.streak; }
+    else s.streak=0;
+    s.last=day; return s;
+  }
+  function dailyLiveStreak(stats, day){ return (stats && stats.last && (stats.last===day || stats.last===dayKeyAdd(day,-1))) ? (+stats.streak||0) : 0; }
+  function dailyStats(){ try{ var r=JSON.parse(lsGet("palvault-daily-stats")||"null"); return r&&typeof r==="object"?r:{}; }catch(e){ return {}; } }
+  function dailyGame(day){ try{ var r=JSON.parse(lsGet("palvault-daily")||"null"); if(r && r.day===day && Array.isArray(r.guesses)) return r; }catch(e){} return {day:day, guesses:[], over:false, won:false}; }
+  function renderDailyGuess(){
+    var host=$("dailyGuess"); if(!host) return;
+    var day=todayKey(), g=dailyGame(day), ans=g.answer ? cardById(g.answer) : null;
+    // The day's card is chosen once and kept with the game, so a catalogue update part way through cannot swap it.
+    if(!ans){ ans=dailyAnswer(CARDS, day); if(ans){ g.answer=ans.id; lsSet("palvault-daily", JSON.stringify(g)); } }
+    if(!ans){ host.innerHTML='<p class="dgmiss">No card list to play with yet.</p>'; return; }
+    var clues=dailyClues(ans), shown=Math.min(clues.length, g.over?clues.length:g.guesses.length+1), stats=dailyStats();
+    var h='<p class="dgstreak">Streak '+dailyLiveStreak(stats,day)+' · Best '+(+stats.best||0)+' · Won '+(+stats.wins||0)+'</p><ol class="dgclues">';
+    for(var i=0;i<shown;i++) h+='<li><b>'+esc(clues[i].label)+'</b>'+esc(clues[i].text)+'</li>';
+    h+='</ol>';
+    if(g.over){
+      h+='<p class="dgend">'+(g.won?'Correct. ':'Not this time. ')+'Today’s card: '+esc(ans.nameEn||ans.name)+' ('+esc(ans.id)+')</p><p class="dgmiss">A new card arrives tomorrow.</p>';
+    } else {
+      h+='<form class="dgform" id="dailyForm" autocomplete="off"><input id="dailyInput" list="dailyNames" placeholder="Type a card name" aria-label="Your guess"><button class="btn" type="submit">Guess</button></form><datalist id="dailyNames"></datalist><p class="dgmiss">Guess '+(g.guesses.length+1)+' of '+DAILY_MAX_GUESSES+'</p>';
+    }
+    if(g.guesses.length) h+='<p class="dgmiss">Tried: '+g.guesses.map(esc).join(", ")+'</p>';
+    host.innerHTML=h;
+    var dl=$("dailyNames");
+    if(dl){ var seen={}, opts=""; CARDS.forEach(function(c){ var n=c.nameEn||c.name; if(!seen[n]){ seen[n]=1; opts+='<option value="'+esc(n)+'"></option>'; } }); dl.innerHTML=opts; }
+    var form=$("dailyForm");
+    if(form) form.onsubmit=function(ev){
+      ev.preventDefault();
+      if(todayKey()!==day){ renderDailyGuess(); toast("A new card is ready"); return; }   // left open past midnight
+      var v=($("dailyInput").value||"").trim();
+      if(!dailyKnownName(CARDS, v)){ toast("Pick a card name from the list"); return; }
+      var gg=dailyGame(day);
+      if(gg.over) return;
+      gg.guesses.push(v);
+      var won=dailyCorrect(ans, v);
+      if(won || gg.guesses.length>=DAILY_MAX_GUESSES){
+        gg.over=true; gg.won=won;
+        lsSet("palvault-daily-stats", JSON.stringify(dailyFinish(dailyStats(), day, won)));
+      }
+      lsSet("palvault-daily", JSON.stringify(gg));
+      renderDailyGuess();
+      try{ renderAchievements(); }catch(e){}
+    };
+  }
   function renderRewards(){
     var host=$("rewardGrid"); if(!host) return;
     var col=activeCol(), earned=(col.setSpheres||{}), done=0;
@@ -14134,6 +14621,7 @@ label.acctsetrow { align-items:center; }
       cap.className=done===SET_SPHERE_TRACKS.length?"rwcap gold":"rwcap";
       cap.innerHTML=(done===SET_SPHERE_TRACKS.length?icon('starf')+" Every current Set Sphere earned. Master collector.":done+" of "+SET_SPHERE_TRACKS.length+" Set Spheres earned.");
     }
+    renderDailyGuess();
     renderSphereThemes();
     renderAchievements();
   }
@@ -14212,7 +14700,8 @@ label.acctsetrow { align-items:center; }
       {name:"Cattiva Effigy",how:"Add a card to your wishlist",ok:wishCount()>=1, icon:"effigyCattiva", eff:"var(--el-Neutral)"},
       {name:"Lunaris Effigy",how:"Earn a Set Sphere",ok:completed>=1, icon:"effigyLunaris", eff:"#a0e0e8"},
       {name:"Relaxaurus Effigy",how:"Earn every available Set Sphere",ok:completed>=SET_SPHERE_TRACKS.length&&SET_SPHERE_TRACKS.length>0, icon:"effigyRelaxaurus", eff:"#4ec07a"},
-      {name:"Yakumo Effigy",how:"Own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"var(--el-Dark)"}
+      {name:"Yakumo Effigy",how:"Own 10 sealed products",ok:sealedOwned>=10, icon:"effigyYakumo", eff:"var(--el-Dark)"},
+      {name:"Daily Pal Guess",how:"Win 3 daily guesses",ok:(+dailyStats().wins||0)>=3, icon:"effigy", eff:"#5aa8d6"}
     ];
     host.innerHTML=badges.map(function(b){
       var fig='<div class="effigy-figure"><span class="effigy-glow"></span>'+effigyImg(b.icon)+'</div>';
@@ -15153,7 +15642,11 @@ label.acctsetrow { align-items:center; }
 
     $("homeWishlist").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' card'+(wishCount()===1?'':'s')+'</div></div><div class="hcvalue">'+wish.remaining+'<small>to acquire</small></div></div>'+homeCards(wish.items.length?wish.items:CARDS.filter(function(c){ return isWished(c.id); }), 0)+'<div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
     var moveText=marketMoveCount?(marketMove>=0?'+':'−')+money(Math.abs(marketMove))+' today':'Awaiting market movement';
-    var estimateCount=CARDS.filter(function(c){ return has(o(c.id))&&isConverted(c.id); }).length;
+    var estimateCount=CARDS.filter(function(c){
+      if(!has(o(c.id))) return false;
+      if(isConverted(c.id)) return true;
+      return typeof isFallbackSrc==="function" && typeof activePriceSrc==="function" && isFallbackSrc(activePriceSrc(c.id));
+    }).length;
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
     var marketDetail=marketBasis+(estimateCount?" · "+estimateCount+" estimated":" · native market data");
     try{ if(trackPaidOn()){ var spent=collectionCostBasis(); if(spent.copies){ var cg=spent.gain; marketDetail+=" · "+(cg>0.005?"+":(cg<-0.005?"−":""))+money(Math.abs(cg))+" vs cost"; } } }catch(e){}
@@ -17831,6 +18324,14 @@ label.acctsetrow { align-items:center; }
     out.wishlist=Object.assign({}, remote.wishlist||{}, local.wishlist||{});
     out.fav=Object.assign({}, remote.fav||{}, local.fav||{});
     out.wishlistAt=Object.assign({}, remote.wishlistAt||{}, local.wishlistAt||{});   // this device's date wins a clash
+    out.wishPrio=Object.assign({}, plainObj(remote.wishPrio)?remote.wishPrio:{}, plainObj(local.wishPrio)?local.wishPrio:{});
+    // Buy prices and the budget are amounts in one currency (wishCur). When the two devices disagree on it, this
+    // device's amounts win whole and the other device's are dropped, so no amount is read in the wrong currency.
+    var lCur=(typeof local.wishCur==="string" && local.wishCur) ? local.wishCur : "", rCur=(typeof remote.wishCur==="string" && remote.wishCur) ? remote.wishCur : "";
+    var curClash=!!(lCur && rCur && lCur!==rCur);
+    out.wishTarget=Object.assign({}, (!curClash && plainObj(remote.wishTarget))?remote.wishTarget:{}, plainObj(local.wishTarget)?local.wishTarget:{});
+    if(lCur || rCur) out.wishCur=lCur||rCur; else delete out.wishCur;
+    if(+local.wishBudget>0) out.wishBudget=+local.wishBudget; else if(+remote.wishBudget>0 && !curClash) out.wishBudget=+remote.wishBudget; else delete out.wishBudget;
     // Trades sit beside decks. Union them by id, this device winning a clash, or the other device's
     // history is dropped the next time this one syncs. A draft with cards or a note stays here; an empty
     // draft takes the other device's trade in progress.
@@ -17860,7 +18361,7 @@ label.acctsetrow { align-items:center; }
     var al=mergeAlerts(local.alerts, remote.alerts); if(al) out.alerts=al; else delete out.alerts;
     // Anything a newer app keeps at the top of the state survives this one. The server's _acct is handled by
     // adoptRemote, and _local only ever comes from this device.
-    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local") out[k]=remote[k]; }
+    for(k in remote){ if(hasOwn(remote, k) && !hasOwn(out, k) && k!=="_acct" && k!=="_local" && k!=="wishBudget" && k!=="wishCur") out[k]=remote[k]; }
     return out;
   }
   // Take the server's copy, or the merge of it with this device's. opts.merged: blob is already that union and

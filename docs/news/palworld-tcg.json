@@ -1,6 +1,111 @@
 {
-  "updated_at": "2026-11-04T07:00:00Z",
+  "updated_at": "2026-11-07T07:10:00Z",
   "items": [
+    {
+      "title": "Producer Kitanaya's Cup deck revealed",
+      "url": "https://x.com/PalworldOCG/status/2118942133986210087",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:42:27Z",
+      "category": "tournament",
+      "summary": "Official Japanese account posts the deck list that producer Kitanaya played at the Kitanaya Cup.",
+      "image": "https://pbs.twimg.com/media/HWf-oaZaYAEHdxh.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118942133986210087"
+    },
+    {
+      "title": "Kitanaya Cup wrap up: a second cup is planned",
+      "url": "https://x.com/PalworldOCG/status/2118942116923752601",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:42:23Z",
+      "category": "tournament",
+      "summary": "The organisers thank attendees and say a second Kitanaya Cup is planned, with more news to come.",
+      "image": "https://pbs.twimg.com/media/HWf-nSGaAAA1xKR.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118942116923752601"
+    },
+    {
+      "title": "Kitanaya Cup results: Bakura goes undefeated",
+      "url": "https://x.com/PalworldOCG/status/2118934862451396681",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-07T05:13:33Z",
+      "category": "tournament",
+      "summary": "Results are out for the Kitanaya Cup, where the player Bakura finished with a perfect win record.",
+      "image": "https://pbs.twimg.com/media/HWf4BlybAAA0MSe.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118934862451396681"
+    },
+    {
+      "title": "Masters League 26/27 kicks off this weekend",
+      "url": "https://x.com/PalworldOCG_EN/status/2118652111013761032",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-11-06T10:30:00Z",
+      "category": "tournament",
+      "summary": "The English account reminds players to read the Tournament Overview and rules before their opening round at the first Masters League event this weekend.",
+      "image": "https://pbs.twimg.com/media/HWbzk_3aMAAVpgw.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2118652111013761032"
+    },
+    {
+      "title": "Christmas Snowdown 2026 offers a Chillet and Chillet Ignis promo",
+      "url": "https://x.com/PalworldOCG_EN/status/2118560174789267484",
+      "source": "x",
+      "source_name": "@PalworldOCG_EN",
+      "published_at": "2026-11-06T04:24:41Z",
+      "category": "tournament",
+      "summary": "December's Christmas Snowdown event gives every participant a Chillet and Chillet Ignis promo card. Signing up opens on Bushi Navi.",
+      "image": "https://pbs.twimg.com/media/HWajP7bbcAAAWdV.jpg",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-en-status-2118560174789267484"
+    },
+    {
+      "id": "en-palworld-official-cardgame-com-news-post-14",
+      "title": "Bushiroad English Conference Autumn 2026: trial decks, Eternal Ascent, support app and events",
+      "url": "https://en.palworld-official-cardgame.com/news/post-14",
+      "source": "news",
+      "source_name": "Palworld Official Card Game",
+      "published_at": "2026-11-06T04:17:04Z",
+      "category": "official",
+      "summary": "The official site recaps the autumn conference: Trial Decks TD03 (Red/Green) and TD04 (Blue/Purple) arrive 18 December, Booster Pack Eternal Ascent (100 card types, new Rank Up ability) is set for 30 January 2027, a Legends Awaken release tournament runs in November with an ESOUL-017 promo, an official support app is coming soon, and Masters League 26/27 starts this month.",
+      "unconfirmed": false,
+      "image": "https://en.palworld-official-cardgame.com/wordpress/wp-content/uploads/2026/11/04152539/1920x1080_06.png"
+    },
+    {
+      "id": "en-palworld-official-cardgame-com-news-post-15",
+      "title": "Eternal Ascent release date moves to 30 January 2027",
+      "url": "https://en.palworld-official-cardgame.com/news/post-15",
+      "source": "news",
+      "source_name": "Palworld Official Card Game",
+      "published_at": "2026-11-06",
+      "category": "release",
+      "summary": "Bushiroad says Booster Pack Eternal Ascent will be slightly delayed from 29 January to Saturday 30 January 2027, citing work to improve manufacturing and quality control. The notice does not mention preorders.",
+      "unconfirmed": false
+    },
+    {
+      "title": "SSP Orserk (Thunderclap Roar) card reveal",
+      "url": "https://x.com/PalworldOCG/status/2118161377986818544",
+      "source": "x",
+      "source_name": "@PalworldOCG",
+      "published_at": "2026-11-05T02:00:00Z",
+      "category": "reveal",
+      "summary": "Official Japanese account shows the SSP version of Orserk, Thunderclap Roar, from the Legends Awaken booster pack.",
+      "unconfirmed": false,
+      "id": "x-com-palworldocg-status-2118161377986818544"
+    },
+    {
+      "title": "Reddit buyers compare Legends Awaken booster box prices",
+      "url": "https://www.reddit.com/r/PalworldTCG/comments/1xnv888/palworld_legends_awaken_booster_box_3899_from/",
+      "source": "reddit",
+      "source_name": "r/PalworldTCG",
+      "published_at": "2026-11-04T18:05:00Z",
+      "category": "pricing",
+      "summary": "A thread on a $38.99 Legends Awaken booster box deal. Commenters report online prices around $45 to $50 and local stores at $50 to $75, and some expect prices to keep falling.",
+      "unconfirmed": false,
+      "id": "www-reddit-com-r-palworldtcg-comments-1xnv888-palworld-legends-awaken-booster-box-3899-from"
+    },
     {
       "title": "Bushiroad TCG November and December release schedule revealed",
       "url": "https://x.com/PalworldOCG/status/2117844290130890852",
