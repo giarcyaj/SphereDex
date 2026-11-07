@@ -188,6 +188,10 @@ jobs:
         run: node tools/test_grading_submissions.cjs
       - name: Daily Pal guess
         run: node tools/test_daily_guess.cjs
+      - name: Wishlist priorities and budget
+        run: node tools/test_wish_priority.cjs
+      - name: Release announcement clocks
+        run: node tools/test_release_dates.cjs
       - name: Deck owned only guard
         run: node tools/test_deck_owned_only.cjs
 
