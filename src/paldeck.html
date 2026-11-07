@@ -4994,8 +4994,17 @@ label.acctsetrow { align-items:center; }
     return !!((mode||priceMode())==="sold" ? PRICEMETA_SOLD[id] : PRICEMETA[id]); }
   // Keep estimates honest in compact UI too: native prices name the observed market basis, while
   // converted fallbacks never masquerade as a direct listing or sold result.
+  // The source string on the book the active mode is reading. "" when that book has no source for the card.
+  function activePriceSrc(id, mode){
+    var sold=((mode||priceMode())==="sold");
+    var book=sold ? PRICESRC_SOLD : PRICESRC;
+    return (book && book[id]) || "";
+  }
   function marketPriceLabel(id, mode){
     if(isConverted(id, mode)) return "converted estimate";
+    // A fallback-fx row is a live price copied from another marketplace. It is not a sale, and it is not
+    // a listing observed in the market on screen. Old builds called every unrecognised source sold.
+    if(isFallbackSrc(activePriceSrc(id, mode))) return "estimated live";
     return (mode||priceMode())==="sold" ? "last sold" : "live listing";
   }
   // Binder value follows the collection price mode: last 5 sold (e.sold) or live listings (e.list). Synced to SETTINGS.priceMode.
@@ -6139,11 +6148,16 @@ label.acctsetrow { align-items:center; }
     if (c.atk!=="") costPow.push(icon('sword')+'<b>'+c.atk+'</b>');
     var val = cardValueMode(c.id);   // mode-aware, matches the portfolio/binder totals
     var refUnit = mktOf(c.id);
-    var conv = isConverted(c.id);   // "≈" marks a USD->local conversion (Palworld fallback)
+    var fbSrc=(typeof activePriceSrc==="function") ? activePriceSrc(c.id) : "";
+    var fb=typeof isFallbackSrc==="function" && isFallbackSrc(fbSrc);
+    var fx=fb && typeof pxFallbackFx==="function" && pxFallbackFx(fbSrc);
+    var conv = isConverted(c.id) || fx;   // "≈" marks a converted figure, Palworld USD or a cross-market rate
     var pmSold = priceMode()==="sold";
-    var pmDot = '<i class="pmdot'+(pmSold?' sold':'')+'" title="'+(pmSold?'Last sold price':'Live listing price')+'"></i>';   // green=live, blue=sold
-    var priceTag = val>0 ? '<span class="val"'+(conv?' title="Value converted from USD"':'')+'>'+pmDot+(conv?'≈':'')+money(val)+'</span>'
-      : (refUnit>0 ? '<span class="val ref" title="'+(conv?'Converted from USD sold price':'Market price (not in your collection)')+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
+    var pmTitle = fb ? "Estimated from another market" : (pmSold ? "Last sold price" : "Live listing price");
+    var pmDot = '<i class="pmdot'+(pmSold?' sold':'')+'" title="'+pmTitle+'"></i>';   // green=live mode, blue=sold mode
+    var valTitle = fb ? "Estimated from another market" : (conv ? "Value converted from USD" : "");
+    var priceTag = val>0 ? '<span class="val"'+(valTitle?' title="'+valTitle+'"':'')+'>'+pmDot+(conv?'≈':'')+money(val)+'</span>'
+      : (refUnit>0 ? '<span class="val ref" title="'+(fb?'Estimated from another market':(conv?'Converted from USD sold price':'Market price (not in your collection)'))+'">'+pmDot+(conv?'≈':'')+money(refUnit)+'</span>' : '');
     var statsInner = (costPow.join('<span style="opacity:.4">·</span>')||'<span>&nbsp;</span>') + priceTag;
     var gbadge = (s.graded&&s.graded.length) ? '<span class="gradedbadge" title="Graded copies">◈ '+s.graded.length+' graded</span>' : '';
     var awayN = awayList(s).length;
@@ -11922,7 +11936,7 @@ label.acctsetrow { align-items:center; }
       if(missingGoal==="pal" && ownedH) row.classList.add("collected");
       var deckOn = playerToolsOn() && !!(activeDeck() && activeDeck().cards && activeDeck().cards[c.id]);
       var deckBtn = playerToolsOn() ? '<button class="missact '+(deckOn?"on":"")+'" type="button" aria-label="'+(deckOn?"In deck · open deck":"Add to deck")+'" title="'+(deckOn?"In deck · open deck":"Add to deck")+'">'+icon("layers")+'</button>' : '';
-      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+(tag==="COLLECTED"?" collected":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+(isConverted(c.id)?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button>'+deckBtn+'</div></div>';
+      row.innerHTML='<img src="'+imgSrc(c)+'" alt="'+esc(c.name)+'"><div><div class="mn">'+esc(c.name)+'</div><div class="mm">'+esc(c.id)+' · '+esc(c.rare||c.kind)+'</div><div class="mtags"><span class="mtag '+(wished?"wished":"")+(tag==="COLLECTED"?" collected":"")+'">'+esc(tag)+'</span></div></div><div class="missingside"><div class="missingprice priceui">'+((isConverted(c.id)||(typeof pxFallbackFx==="function"&&typeof activePriceSrc==="function"&&pxFallbackFx(activePriceSrc(c.id))))?'≈':'')+money(mktOf(c.id))+'<small>'+esc(marketPriceLabel(c.id))+'</small></div><div class="missactions"><button class="missact '+(ownedH?"on":"")+'" type="button" aria-label="'+(ownedH?"Collected · open":"Add to collection")+'" title="'+(ownedH?"Collected · open":"Add to collection")+'">'+icon(ownedH?"check":"plus")+'</button><button class="missact '+(wished?"on":"")+'" type="button" aria-label="'+(wished?"Remove from wishlist":"Add to wishlist")+'" title="'+(wished?"Wishlist":"Add to wishlist")+'">'+icon(wished?"starf":"star")+'</button>'+deckBtn+'</div></div>';
       row.querySelector("img").onclick=function(){ openDetail(c); }; row.querySelector(".mn").onclick=function(){ openDetail(c); };
       var acts=row.querySelectorAll(".missact"); var collBtn=acts[0], wish=acts[1], deckAdd=acts[2];
       if(collBtn) collBtn.onclick=function(){
@@ -15545,7 +15559,11 @@ label.acctsetrow { align-items:center; }
 
     $("homeWishlist").innerHTML='<div class="hctop"><div><div class="hclabel">'+icon('heart')+'Wishlist</div><div class="hcname">'+wishCount()+' card'+(wishCount()===1?'':'s')+'</div></div><div class="hcvalue">'+wish.remaining+'<small>to acquire</small></div></div>'+homeCards(wish.items.length?wish.items:CARDS.filter(function(c){ return isWished(c.id); }), 0)+'<div class="hcfoot"><span>'+esc(wishSignals.join(' · ')||'Your saved cards')+'</span><button class="homeaction" type="button">View wishlist</button></div>';
     var moveText=marketMoveCount?(marketMove>=0?'+':'−')+money(Math.abs(marketMove))+' today':'Awaiting market movement';
-    var estimateCount=CARDS.filter(function(c){ return has(o(c.id))&&isConverted(c.id); }).length;
+    var estimateCount=CARDS.filter(function(c){
+      if(!has(o(c.id))) return false;
+      if(isConverted(c.id)) return true;
+      return typeof isFallbackSrc==="function" && typeof activePriceSrc==="function" && isFallbackSrc(activePriceSrc(c.id));
+    }).length;
     var marketBasis=priceMode()==="sold"?"last sold":"live listings";
     var marketDetail=marketBasis+(estimateCount?" · "+estimateCount+" estimated":" · native market data");
     try{ if(trackPaidOn()){ var spent=collectionCostBasis(); if(spent.copies){ var cg=spent.gain; marketDetail+=" · "+(cg>0.005?"+":(cg<-0.005?"−":""))+money(Math.abs(cg))+" vs cost"; } } }catch(e){}

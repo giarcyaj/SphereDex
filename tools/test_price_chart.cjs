@@ -277,10 +277,31 @@ test('a cross-market live copy names that marketplace, and credits a rate only w
   sandbox.ebayReg = () => 'de';
 });
 
+test('a compact price label calls a fallback row estimated live, not a native listing or a sale', () => {
+  const sb = vm.createContext({
+    priceMode: () => 'live',
+    isConverted: () => false,
+    PRICESRC: { 'EBP01-002': 'fallback-fx:com' },
+    PRICESRC_SOLD: { 'EBP01-002': 'openwebninja' },
+    ebayReg: () => 'de',
+  });
+  vm.runInContext(['isFallbackSrc', 'activePriceSrc', 'marketPriceLabel', 'pxFallbackFx'].map(appFunction).join('\n'), sb);
+  vm.runInContext(appConstant('REGION_CUR'), sb);
+  assert.equal(sb.marketPriceLabel('EBP01-002'), 'estimated live');
+  assert.equal(sb.marketPriceLabel('EBP01-002', 'sold'), 'last sold', 'a real sold source stays last sold');
+  sb.PRICESRC_SOLD['EBP01-002'] = 'fallback-fx:com';
+  assert.equal(sb.marketPriceLabel('EBP01-002', 'sold'), 'estimated live', 'a copied live row is not called a sale');
+  sb.PRICESRC['EBP01-002'] = 'ebay-active';
+  assert.equal(sb.marketPriceLabel('EBP01-002'), 'live listing');
+  assert.match(source, /isFallbackSrc\(activePriceSrc\(c\.id\)\)/);
+  assert.equal(/[-–—]/.test(sb.marketPriceLabel('EBP01-002', 'sold')), false);
+});
+
 test('source kinds name a live estimate explicitly and do not call an unknown source sold', () => {
   assert.equal(sandbox.srcKind('ebay-active'), 'list');
   assert.equal(sandbox.srcKind('tcgplayer'), 'tcgplayer');
   assert.equal(sandbox.srcKind('palworld'), 'palworld');
+  assert.equal(sandbox.srcKind('cardtrader'), 'cardtrader');
   assert.equal(sandbox.srcKind('ebay'), 'sold');
   assert.equal(sandbox.srcKind('openwebninja'), 'sold');
   assert.equal(sandbox.srcKind(''), '');
