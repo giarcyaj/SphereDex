@@ -145,6 +145,23 @@ test('a stale earlier sweep date and an uncoded duplicate do not move the baked 
   assert.equal(expansions[0].release, 'Dec 18, 2026', 'an existing expansion keeps its first street date');
 });
 
+test('an equal asOf replay does not replace an existing set logo or street day', () => {
+  const sealed = baked();
+  const expansions = [{ name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: 'LOGO_BP03' }];
+  const sb = releaseSandbox(sealed, expansions);
+  const changed = sb.applyReleases({
+    version: 9,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 29, 2027', asOf: '2026-11-06T03:13:14.000Z', link: 'https://en.palworld-official-cardgame.com/news/post-15' }
+    ],
+    sets: { 'Eternal Ascent': { logo: 'LOGO_OTHER', release: 'Jan 29, 2027' } }
+  });
+  assert.equal(changed, false);
+  assert.equal(sealed.filter((p) => p.id === 'box-bp03')[0].date, 'Jan 30, 2027');
+  assert.equal(expansions[0].logo, 'LOGO_BP03');
+  assert.equal(expansions[0].release, 'Dec 18, 2026');
+});
+
 test('a newer announcement moves the day in either direction, and an older source does not', () => {
   const sealed = baked();
   const sb = releaseSandbox(sealed, [{ name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: '' }]);
@@ -213,6 +230,135 @@ test('the same URL without asOf cannot roll back a stamped day, and a stamped ed
   assert.ok(sealed.some((p) => p.id === 'box-newset' && p.date === 'Mar 1, 2027'));
   assert.equal(sb.BROWSE_EXPANSIONS.filter((x) => x.name === 'Eternal Ascent')[0].release, 'Dec 18, 2026');
   assert.equal(sb.BROWSE_EXPANSIONS.filter((x) => x.name === 'Brand New')[0].release, 'Mar 1, 2027');
+});
+
+test('a feed that repeats the baked day keeps the sweep in charge of that day', () => {
+  const headline = [{ date: '2026-11-07', title: 'Eternal Ascent booster', summary: 'The booster release date is January 29, 2027. Preorder now.' }];
+  const open = releaseSandbox(baked(), []);
+  open.buildReleaseOverrides(headline);
+  assert.equal(open.RELEASE_OVERRIDES['box-bp03'], 'Jan 29, 2027');
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  const changed = sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 30, 2027', asOf: '2026-11-06T03:13:14.000Z' }
+    ]
+  });
+  const box = sealed.filter((p) => p.id === 'box-bp03')[0];
+  assert.equal(changed, true);
+  assert.equal(box.date, 'Jan 30, 2027');
+  assert.equal(box.srv, true);
+  assert.equal(box.srcAt, '2026-11-06T03:13:14Z');
+  sb.buildReleaseOverrides(headline);
+  assert.equal(sb.RELEASE_OVERRIDES['box-bp03'], undefined);
+});
+
+test('a newer clock that repeats the day is stored and does not change the day', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-bp03', set: 'Eternal Ascent', name: 'Booster Box', code: 'BP03', date: 'Jan 30, 2027', asOf: '2026-11-06T08:00:00.000Z' }
+    ]
+  });
+  const box = sealed.filter((p) => p.id === 'box-bp03')[0];
+  assert.equal(box.date, 'Jan 30, 2027');
+  assert.equal(box.srcAt, '2026-11-06T08:00:00.000Z');
+  assert.equal(box.srv, true);
+});
+
+test('an empty day clock does not freeze the product, and the same instant can fill the day', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: '', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  const fresh = sealed.filter((p) => p.id === 'box-fresh')[0];
+  assert.equal(fresh.date, '');
+  assert.equal(fresh.srcAt, '2026-11-08T00:00:00.000Z');
+  assert.equal(fresh.srv, false);
+  sb.applyReleases({
+    version: 3,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: 'Mar 1, 2027', asOf: '2026-11-07T00:00:00.000Z' }
+    ]
+  });
+  assert.equal(fresh.date, '', 'an older instant cannot fill a day after a newer empty clock');
+  sb.applyReleases({
+    version: 4,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: 'Apr 2, 2027', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  assert.equal(fresh.date, 'Apr 2, 2027');
+  sb.applyReleases({
+    version: 5,
+    products: [
+      { id: 'box-fresh', set: 'Fresh Set', name: 'Booster Box', code: 'BP10', date: 'Apr 9, 2027', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  assert.equal(fresh.date, 'Apr 2, 2027');
+});
+
+test('a new product keeps the clock it arrived with', () => {
+  const sealed = baked();
+  const sb = releaseSandbox(sealed, []);
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-clocked', set: 'Clocked', name: 'Booster Box', code: 'BP12', date: 'Jun 1, 2027', asOf: '2026-11-08T00:00:00.000Z' }
+    ]
+  });
+  const row = sealed.filter((p) => p.id === 'box-clocked')[0];
+  assert.equal(row.srcAt, '2026-11-08T00:00:00.000Z');
+  assert.equal(row.srv, true);
+  sb.applyReleases({
+    version: 3,
+    products: [
+      { id: 'box-clocked', set: 'Clocked', name: 'Booster Box', code: 'BP12', date: 'Jun 8, 2027', asOf: '2026-11-07T00:00:00.000Z' }
+    ]
+  });
+  assert.equal(row.date, 'Jun 1, 2027');
+});
+
+test('an empty set clock can be filled by the same instant, and a stated day and logo stay', () => {
+  const expansions = [
+    { name: 'Eternal Ascent', upcoming: true, release: 'Dec 18, 2026', logo: 'LOGO_BP03' },
+    { name: 'Unstamped', upcoming: true, release: 'Date TBA', logo: '' }
+  ];
+  const sb = releaseSandbox(baked(), expansions);
+  sb.applyReleases({
+    version: 2,
+    products: [
+      { id: 'box-unstamped', set: 'Unstamped', name: 'Booster Box', code: 'BP11', date: '', asOf: '2026-11-08T00:00:00.000Z' }
+    ],
+    sets: {
+      'Eternal Ascent': { logo: 'LOGO_OTHER', release: 'Jan 29, 2027', asOf: '2026-11-06T03:13:14.000Z' },
+      'Unstamped': { logo: 'LOGO_NEW', release: '', asOf: '2026-11-08T00:00:00.000Z' }
+    }
+  });
+  assert.equal(expansions[0].release, 'Dec 18, 2026');
+  assert.equal(expansions[0].logo, 'LOGO_BP03');
+  assert.equal(expansions[1].release, 'Date TBA');
+  assert.equal(expansions[1].srcAt, '2026-11-08T00:00:00.000Z');
+  assert.equal(expansions[1].logo, 'LOGO_NEW');
+  sb.applyReleases({
+    version: 3,
+    sets: { 'Unstamped': { release: 'Apr 1, 2027', asOf: '2026-11-07T00:00:00.000Z', logo: 'LOGO_NEWER' } }
+  });
+  assert.equal(expansions[1].release, 'Date TBA');
+  assert.equal(expansions[1].logo, 'LOGO_NEW');
+  sb.applyReleases({
+    version: 4,
+    sets: { 'Unstamped': { release: 'May 1, 2027', asOf: '2026-11-08T00:00:00.000Z', logo: 'LOGO_NEWER' } }
+  });
+  assert.equal(expansions[1].release, 'May 1, 2027');
+  assert.equal(expansions[1].logo, 'LOGO_NEW');
 });
 
 test('an unstamped legacy product still accepts an unstamped feed day', () => {

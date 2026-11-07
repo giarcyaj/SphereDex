@@ -6015,7 +6015,12 @@ label.acctsetrow { align-items:center; }
       }
     }
     box.innerHTML=h;
-    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){ setWishBudget(parseWishAmount(bi.value)); save(); renderWishPlan(); };
+    var bi=$("wishBudgetIn"); if(bi) bi.onchange=function(){
+      setWishBudget(parseWishAmount(bi.value)); save();
+      // The change event fires while the browser is still finishing blur. Replacing this box
+      // immediately removes the input mid blur and Chrome throws NotFoundError. Paint next turn.
+      setTimeout(function(){ renderWishPlan(); }, 0);
+    };
     var bb=$("wishBuyBtn"); if(bb) bb.onclick=function(){ wishPlanOpen=!wishPlanOpen; renderWishPlan(); };
   }
   // Wishlist count line. While a search or filter hides part of the wishlist it reads "4 of 8", and the
@@ -8340,7 +8345,10 @@ label.acctsetrow { align-items:center; }
   // reaches this install without a build. Baked art and names win where both exist. A feed date
   // replaces a baked one only when asOf is a timezone-bearing UTC instant newer than srcAt, earlier
   // or later on the calendar. The same URL with no asOf is not a newer edit. A product with no
-  // srcAt still accepts an unstamped feed day, which is how older rows stay usable. Images are
+  // srcAt still accepts an unstamped feed day, which is how older rows stay usable. A clock that
+  // arrives with no street day is stored and does not freeze that product: the same instant can
+  // fill the day later. Once a day is stated, the same instant cannot move it, and a feed that
+  // repeats the day keeps the clock so a headline cannot replace it. Images are
   // served by the backend (/api/release-img/...). An uncoded duplicate of a product we already
   // track by code is the same product: it is not added again, and it does not move the dated row.
   var REL_KEY = "palvault-releases";
@@ -8389,9 +8397,15 @@ label.acctsetrow { align-items:center; }
   }
   // Which street day to keep. A newer absolute asOf wins in either calendar direction. No asOf
   // does not replace a stamped day. An unstamped product still accepts an unstamped feed day.
+  // A stored clock with no day yet does not freeze it: the same instant, or a newer one, can fill
+  // the day. An older instant cannot. Once a day is stated, an equal instant cannot move it.
   function adoptServerDate(p, r){
     if(!r || !r.date) return (p&&p.date)||"";
-    if(!p || !p.date) return r.date;
+    if(!p || !p.date){
+      var inc0=asofMs(r.asOf), cur0=asofMs(p&&p.srcAt);
+      if(cur0 && inc0 && inc0<cur0) return (p&&p.date)||"";
+      return r.date;
+    }
     if(r.date===p.date) return p.date;
     var inc=asofMs(r.asOf), cur=asofMs(p.srcAt);
     if(!inc) return cur ? p.date : r.date;
@@ -8428,24 +8442,63 @@ label.acctsetrow { align-items:center; }
         // The alias is the same product already on the list. It must not add a second tile or
         // drag the canonical date backwards.
         var alias=p.id!==r.id && !r.code;
-        if(!alias && sealPreRaw(p) && r.date){
-          var next=adoptServerDate(p, r);
-          if(next!==p.date){ p.date=next; if(asofMs(r.asOf)) p.srcAt=r.asOf; if(r.link) p.link=r.link; p.srv=true; changed=true; relNews("date", p); }
+        if(!alias && sealPreRaw(p)){
+          var inc=asofMs(r.asOf), cur=asofMs(p.srcAt);
+          if(!String(r.date||"").trim()){
+            // A clock with no day. Keep it when it is newer. Do not invent a day or mark the row
+            // server owned, so a later copy of this same instant can still fill the day.
+            if(inc && (!cur || inc>cur)){ p.srcAt=r.asOf; changed=true; }
+          } else {
+            var next=adoptServerDate(p, r);
+            if(next!==p.date){
+              p.date=next; if(inc){ p.srcAt=r.asOf; p.srv=true; } if(r.link) p.link=r.link; changed=true; relNews("date", p);
+            } else if(r.date===p.date && inc && (!cur || inc>=cur)){
+              // The feed repeats the day already shown. Keep a newer clock, and remember that the
+              // sweep owns this day so a vaguer headline cannot replace it.
+              if(!cur || inc>cur){ p.srcAt=r.asOf; changed=true; }
+              if(!p.srv){ p.srv=true; changed=true; }
+            }
+          }
         }
         if(!p.banner && r.banner){ p.banner=r.banner; changed=true; }
         return;
       }
-      SEALED.push({ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
-        q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:true });
-      relNews("new", SEALED[SEALED.length-1]);
+      var born=asofMs(r.asOf);
+      var row={ id:r.id, set:r.set, name:r.name||"", sub:r.sub||"", box:r.box||"", banner:r.banner||"", code:r.code||"",
+        q:r.q||("Palworld "+r.set+" "+(r.name||"")), nk:[r.set], pre:r.pre!==false, date:r.date||"", srv:!!(String(r.date||"").trim() && born) };
+      if(born) row.srcAt=r.asOf;
+      SEALED.push(row);
+      relNews("new", row);
       changed=true;
     });
     Object.keys(pay.sets||{}).forEach(function(name){
       var s=pay.sets[name]||{}, x=BROWSE_EXPANSIONS.filter(function(b){ return b.name===name; })[0];
-      if(x){ if(!x.logo && s.logo){ x.logo=s.logo; changed=true; } return; }
+      if(x){
+        var touched=false;
+        // A new logo can fill an empty one. An equal replay cannot replace a logo that is already there.
+        if(!x.logo && s.logo){ x.logo=s.logo; touched=true; }
+        var sinc=asofMs(s.asOf), scur=asofMs(x.srcAt);
+        var have=x.release && x.release!=="Date TBA" && releaseDayTime(x.release);
+        var incoming=s.release && s.release!=="Date TBA" && releaseDayTime(s.release);
+        if(!incoming){
+          if(sinc && (!scur || sinc>scur)){ x.srcAt=s.asOf; touched=true; }
+        } else if(!have){
+          if(!(scur && sinc && sinc<scur)){ x.release=s.release; if(sinc) x.srcAt=s.asOf; touched=true; }
+        } else if(s.release!==x.release && sinc && scur && sinc>scur){
+          x.release=s.release; x.srcAt=s.asOf; touched=true;
+        } else if(s.release===x.release && sinc && (!scur || sinc>scur)){
+          x.srcAt=s.asOf; touched=true;
+        }
+        if(touched) changed=true;
+        return;
+      }
       // Only a set with a booster or trial deck is an expansion; a sleeve or card set announcement is not.
       var isSet=(pay.products||[]).some(function(r){ return r && r.set===name && /booster|trial deck/i.test(r.name||""); });
-      if(isSet){ BROWSE_EXPANSIONS.push({ name:name, upcoming:true, release:s.release||"Date TBA", logo:s.logo||"", srv:true }); changed=true; }
+      if(isSet){
+        var made={ name:name, upcoming:true, release:s.release||"Date TBA", logo:s.logo||"", srv:true };
+        if(asofMs(s.asOf)) made.srcAt=s.asOf;
+        BROWSE_EXPANSIONS.push(made); changed=true;
+      }
     });
     return changed;
   }
