@@ -34,6 +34,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.google.android.play.core.review.ReviewManagerFactory
 
 /**
  * The app is the full SphereDex web tracker (bundled in assets) running full-screen in a WebView.
@@ -103,6 +104,10 @@ class MainActivity : ComponentActivity() {
                     "window.SDScanAdd && window.SDScanAdd.apply(null, ${args.toString()})", null
                 )
             }
+            // The camera is gone. A delivered card opens the check sheet; a cancel is the user leaving.
+            // true/false are literals, so this needs no quoting. The page decides whether a review is due.
+            val delivered = res.resultCode == RESULT_OK && !number.isNullOrEmpty()
+            web.evaluateJavascript("window.SDScanClosed && window.SDScanClosed($delivered)", null)
         }
 
     // Export "Save as" state (window.AndroidFiles.save). The text stays in this field, never in an Intent
@@ -279,6 +284,7 @@ class MainActivity : ComponentActivity() {
             addJavascriptInterface(IconBridge(), "AndroidIcon")
             addJavascriptInterface(PushBridge(), "AndroidPush")
             addJavascriptInterface(FileBridge(), "AndroidFiles")
+            addJavascriptInterface(ReviewBridge(), "AndroidReview")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -536,6 +542,62 @@ class MainActivity : ComponentActivity() {
                 catch (_: Exception) { clearSave(); fileDone(false) }
             }
             return true
+        }
+    }
+
+    // One Play review flow at a time. The web layer also throttles; this only stops a double tap
+    // from stacking two dialogs if both calls land before the first sheet closes.
+    private var reviewBusy = false
+
+    /** Play's in-app review sheet. Failure is silent: the API often declines to show anything,
+     *  and a missing Play Store is not an error the page can usefully report. */
+    private fun launchInAppReview() {
+        if (reviewBusy || isFinishing || isDestroyed) return
+        reviewBusy = true
+        val manager = ReviewManagerFactory.create(this)
+        manager.requestReviewFlow().addOnCompleteListener { task ->
+            if (isFinishing || isDestroyed || !task.isSuccessful) {
+                reviewBusy = false
+                return@addOnCompleteListener
+            }
+            val info = task.result
+            if (info == null) {
+                reviewBusy = false
+                return@addOnCompleteListener
+            }
+            try {
+                manager.launchReviewFlow(this, info).addOnCompleteListener { reviewBusy = false }
+            } catch (_: Exception) {
+                reviewBusy = false
+            }
+        }
+    }
+
+    /** The Settings row. market:// opens the Play app; a device without it gets the https listing.
+     *  This is not the in-app review API: a button has to open a page, not maybe show a dialog. */
+    private fun openPlayListing() {
+        val id = packageName
+        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$id"))
+        val webListing = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$id"))
+        try {
+            startActivity(market)
+        } catch (_: ActivityNotFoundException) {
+            try { startActivity(webListing) } catch (_: Exception) {}
+        } catch (_: Exception) {
+            try { startActivity(webListing) } catch (_: Exception) {}
+        }
+    }
+
+    /** Exposed to the web app as window.AndroidReview. requestReview() is the store sheet.
+     *  openListing() is the Settings row. Both no-op from the page's point of view if Play declines. */
+    inner class ReviewBridge {
+        @JavascriptInterface
+        fun requestReview() {
+            runOnUiThread { try { launchInAppReview() } catch (_: Exception) {} }
+        }
+        @JavascriptInterface
+        fun openListing() {
+            runOnUiThread { try { openPlayListing() } catch (_: Exception) {} }
         }
     }
 
