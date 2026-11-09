@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import UserNotifications
+import StoreKit
 
 /// Hosts the bundled SphereDex web app in a WKWebView and wires the native bridge.
 ///
@@ -36,12 +37,17 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             getPrefs: function () { return ""; }
         };
         window.IOSFile = { save: function(name, mime, text){ try { window.webkit.messageHandlers.sdfile.postMessage({name:String(name||""), mime:String(mime||""), text:String(text==null?"":text)}); return true; } catch(e){ return false; } } };
+        window.AndroidReview = {
+            requestReview: function () { try { window.webkit.messageHandlers.sdreview.postMessage('request'); } catch (e) {} },
+            openListing: function () { try { window.webkit.messageHandlers.sdreview.postMessage('listing'); } catch (e) {} }
+        };
         window.IS_IOS = true;
         """
         controller.addUserScript(WKUserScript(source: bridge, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         controller.add(self, name: "sdscan")
         controller.add(self, name: "sdpush")
         controller.add(self, name: "sdfile")
+        controller.add(self, name: "sdreview")
 
         let config = WKWebViewConfiguration()
         config.userContentController = controller
@@ -94,6 +100,13 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             shareTextFile(message.body)
             return
         }
+        // Store review. "listing" is the Settings row (the write-review page). Anything else asks
+        // StoreKit for its own sheet, which the system may decline to show.
+        if message.name == "sdreview" {
+            if (message.body as? String) == "listing" { openWriteReview() }
+            else { requestStoreReview() }
+            return
+        }
         guard message.name == "sdscan" else { return }
         // Read the scan prefs the web Settings exposes (default mode + whether to show the on-camera
         // toggle), then present the camera. Falls back to sensible defaults if the bridge isn't there.
@@ -117,8 +130,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                     // ended on, so the next card in a continuous run opens in it (SDScanPrefs reads it back).
                     let safeMode = (usedMode == "code") ? "code" : "full"
                     self.webView.evaluateJavaScript("window.SDScanMode && window.SDScanMode('\(safeMode)')", completionHandler: nil)
-                    guard let outcome = outcome else { return }
-                    self.deliverScan(outcome)
+                    if let outcome = outcome {
+                        self.deliverScan(outcome)
+                    }
+                    // The camera is gone. true opens the check sheet; false is the user leaving it.
+                    let delivered = outcome != nil ? "true" : "false"
+                    self.webView.evaluateJavaScript("window.SDScanClosed && window.SDScanClosed(\(delivered))", completionHandler: nil)
                 }
                 scanner.modalPresentationStyle = .fullScreen
                 self.present(scanner, animated: true)
@@ -152,6 +169,30 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         let lowConf = outcome.lowConfidence ? "true" : "false"
         let js = "window.SDScanAdd && window.SDScanAdd(\(jsString(outcome.number)), \(outcome.edition), \(gradedJS), \(lowConf))"
         webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    // MARK: - Store review
+
+    /// StoreKit's own rating sheet. iOS 15 is still supported, so the older controller covers it;
+    /// iOS 16 and later use AppStore.requestReview. The system decides whether anything appears.
+    private func requestStoreReview() {
+        let scene = view.window?.windowScene
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+        guard let scene = scene else { return }
+        if #available(iOS 16.0, *) {
+            AppStore.requestReview(in: scene)
+        } else {
+            SKStoreReviewController.requestReview(in: scene)
+        }
+    }
+
+    /// Settings row. A direct write-review page, not the in-app sheet: a button that might do
+    /// nothing would look broken, and Apple asks for this link when the person chooses to rate.
+    private func openWriteReview() {
+        guard let url = URL(string: "https://apps.apple.com/app/id6804377686?action=write-review") else { return }
+        UIApplication.shared.open(url)
     }
 
     // MARK: - File export (IOSFile.save -> share sheet)

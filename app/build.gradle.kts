@@ -78,4 +78,10 @@ dependencies {
     // Inert until app/google-services.json is added; the code guards every FCM call until then.
     implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
     implementation("com.google.firebase:firebase-messaging")
+
+    // Play's own in-app review sheet (window.AndroidReview). No extra permission. The library
+    // shows Google's dialog and does not hand SphereDex the rating. The Settings row does not
+    // use this; it opens the Play listing, because a button that might do nothing reads as broken.
+    implementation("com.google.android.play:review:2.0.2")
+    implementation("com.google.android.play:review-ktx:2.0.2")
 }

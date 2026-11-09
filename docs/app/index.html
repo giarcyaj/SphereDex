@@ -3472,6 +3472,10 @@ label.acctsetrow { align-items:center; }
       </div>
 
       <div class="setcat">About</div>
+      <div class="setrow" id="rateSetRow" hidden>
+        <div class="setinfo"><div class="stitle">Rate SphereDex</div><div class="sdesc">Opens the store page so you can leave a rating.</div></div>
+        <div style="display:flex;flex:0 0 auto"><button class="btn sec" id="setRate" type="button">Rate</button></div>
+      </div>
       <div class="setrow">
         <div class="setinfo"><div class="stitle">Privacy policy</div><div class="sdesc">What SphereDex stores, what it sends and who handles it.</div></div>
         <div style="display:flex;flex:0 0 auto"><a class="btn sec" href="https://spheredex.app/privacy.html" target="_blank" rel="noopener" style="text-decoration:none">Read policy</a></div>
@@ -4380,6 +4384,100 @@ label.acctsetrow { align-items:center; }
   function isIosApp(){ return !!window.IS_IOS; }
   // "" on the web, which has no store: there the newest build is simply the next load.
   function storeUrl(){ return isIosApp() ? STORE_IOS : (isAndroidApp() ? STORE_ANDROID : ""); }
+  // Store review. Both shells expose window.AndroidReview (Android JavascriptInterface, iOS shim).
+  // requestReview() asks the store for its own rating sheet. openListing() is the Settings row, a
+  // direct store page, because a button that might do nothing reads as broken and both stores ban a
+  // "are you enjoying this?" step that only forwards the happy answers. The web build has neither
+  // method and every function here returns without doing anything.
+  // The sheet is asked for after a real success: the 10th scan the person kept, or a collection
+  // milestone from 25 cards up. Never on the first launch, never when a scan is cancelled, and at
+  // most once per 90 days. The stores cap how often the sheet actually appears on top of that.
+  var REVIEW_KEY="palvault-review", REVIEW_GAP=90*24*60*60*1000, REVIEW_SCANS=10;
+  var reviewOwed=false, reviewHold=false, reviewMile=false;
+  function nativeReview(){
+    try{
+      var b=window.AndroidReview;
+      if(b && typeof b.requestReview==="function" && typeof b.openListing==="function") return b;
+    }catch(e){}
+    return null;
+  }
+  function reviewRec(){
+    var o={sessions:0,scans:0,asked:0,mileDue:0};
+    try{
+      var d=JSON.parse(lsGet(REVIEW_KEY)||"null");
+      if(d && typeof d==="object"){ o.sessions=+d.sessions||0; o.scans=+d.scans||0; o.asked=+d.asked||0; o.mileDue=+d.mileDue||0; }
+    }catch(e){}
+    return o;
+  }
+  function reviewSave(o){ try{ lsSet(REVIEW_KEY, JSON.stringify({sessions:o.sessions|0, scans:o.scans|0, asked:+o.asked||0, mileDue:o.mileDue?1:0})); }catch(e){} }
+  function reviewGates(o){
+    if(!o) o=reviewRec();
+    if(!nativeReview()) return false;
+    if((+o.sessions||0)<2) return false;
+    if((+o.asked||0) && (Date.now()-(+o.asked))<REVIEW_GAP) return false;
+    return true;
+  }
+  function reviewNoteLaunch(){
+    if(!nativeReview()) return;
+    var o=reviewRec(); o.sessions=(+o.sessions||0)+1; reviewSave(o);
+  }
+  function reviewAsk(o){
+    if(!reviewGates(o)) return false;
+    o.asked=Date.now(); reviewSave(o); reviewOwed=false; reviewMile=false;
+    try{ nativeReview().requestReview(); }catch(e){ return false; }
+    return true;
+  }
+  function reviewUiBusy(){
+    try{
+      var s=$("scanScrim"), r=$("scanReviewScrim");
+      if(s && !s.hidden) return true;
+      if(r && !r.hidden) return true;
+    }catch(e){}
+    return false;
+  }
+  function reviewLoopOn(){
+    try{ return SETTINGS.scanLoop!==false && !!(window.AndroidScan && typeof window.AndroidScan.scan==="function"); }catch(e){ return false; }
+  }
+  // Ask only once the check sheet and the camera are both out of the way.
+  function reviewQuiet(){
+    if(reviewHold || reviewUiBusy()) return;
+    if(!reviewOwed) return;
+    var o=reviewRec(), scans=(+o.scans||0)>=REVIEW_SCANS, mile=!!reviewMile;
+    if(!scans && !mile){ reviewOwed=false; reviewMile=false; return; }
+    reviewAsk(o);
+  }
+  function reviewNoteScans(n){
+    if(!nativeReview()) return;
+    n=+n||0; if(n<1) return;
+    var o=reviewRec(); o.scans=(+o.scans||0)+n; reviewSave(o);
+    if((+o.scans||0)<REVIEW_SCANS || !reviewGates(o)) return;
+    reviewOwed=true;
+    if(reviewHold || reviewUiBusy()) return;
+    reviewQuiet();
+  }
+  // 25, 50, 75, 100, 150 match the effigy milestones past the very first card. Crossing one is a
+  // success. The first card is not: that is still the opening minute of the app.
+  function reviewWatchOwned(before){
+    if(!nativeReview()) return;
+    var after=0, marks=[25,50,75,100,150], i, crossed=false, o=reviewRec();
+    try{ after=collectionMilestoneCount(); }catch(e){ return; }
+    before=+before||0;
+    for(i=0;i<marks.length;i++){ if(before<marks[i] && after>=marks[i]){ crossed=true; break; } }
+    // Reaching one on the first launch is remembered and asked on a later success, not now.
+    if(crossed && (+o.sessions||0)<2){ o.mileDue=1; reviewSave(o); return; }
+    if(!crossed && !o.mileDue) return;
+    if(!reviewGates(o)) return;
+    if(o.mileDue){ o.mileDue=0; reviewSave(o); }
+    reviewMile=true; reviewOwed=true; reviewQuiet();
+  }
+  function openStoreListing(){ var b=nativeReview(); if(!b) return; try{ b.openListing(); }catch(e){} }
+  // The camera activity finished. A delivered card is about to open the check sheet, so this is not
+  // the moment. A close with nothing delivered is the person leaving the camera after earlier successes.
+  window.SDScanClosed=function(delivered){
+    reviewHold=false;
+    if(delivered) return;
+    try{ reviewQuiet(); }catch(e){}
+  };
   // The roadmap's version history, anchored at one release. docs/roadmap.html gives every version block
   // an id of this shape, so 2.2 lands on the v2.2 list instead of the top of the page.
   var ROADMAP_URL = "https://spheredex.app/roadmap";
@@ -14710,12 +14808,13 @@ label.acctsetrow { align-items:center; }
     }).join("");
     var shareBtn=host.querySelector('[data-act="share"]');
     if(shareBtn) shareBtn.onclick=function(){ shareSphereDex(); };
-    // A rating is worth asking for on its own terms, well away from anything it could unlock. Only the
-    // store builds have a store to rate in, so the web app says nothing.
+    // A direct store link, shown to everyone on a store build. Not a question, and not the in app
+    // sheet: both stores ban asking whether someone is enjoying the app and only sending the happy
+    // answers onward. The web app has no store, so it says nothing. Nothing here is unlocked by rating.
     var cap=$("rateCap");
     if(cap){
       var su=""; try{ su=storeUrl(); }catch(e){}
-      cap.innerHTML = su ? 'Enjoying SphereDex? <a href="'+esc(su)+'" target="_blank" rel="noopener" style="color:var(--accent-ink)">Rate it on the '+(isIosApp()?'App Store':'Play Store')+' \u2197</a> so other collectors can find it.' : '';
+      cap.innerHTML = su ? '<a href="'+esc(su)+'" target="_blank" rel="noopener" style="color:var(--accent-ink)">Rate SphereDex on the '+(isIosApp()?'App Store':'Play Store')+' \u2197</a>' : '';
     }
   }
   // openSet chooses the set as well as its product (a product pick alone is ignored by setFilterCodes) and
@@ -16573,6 +16672,7 @@ label.acctsetrow { align-items:center; }
   }
   // prep (optional) runs on the entry before the single save + render (the scanner sets edition + prices there).
   function addToCollection(colId, cardId, prep, edition){
+    var ownedBefore=0; try{ ownedBefore=collectionMilestoneCount(); }catch(e){}
     var col=STATE.cols.filter(function(x){return x.id===colId;})[0]; if(!col) return;
     var card=byNumberIdx[(cardId||"").toUpperCase()]||null;
     if(card && canEdition(card) && (edition===undefined || edition===null || String(edition)==="unknown")){
@@ -16602,6 +16702,7 @@ label.acctsetrow { align-items:center; }
     }catch(_e){}
     try{ if(typeof renderPaldex==="function") renderPaldex(); }catch(_){}
     try{ if(typeof renderHome==="function") renderHome(); }catch(_){}
+    try{ reviewWatchOwned(ownedBefore); }catch(e){}
   }
   // ---- Rich scan confirmation: card image → Wishlist/Collection → Raw/Graded → which collection.
   var scanScrim=$("scanScrim");
@@ -16761,7 +16862,7 @@ label.acctsetrow { align-items:center; }
       host.appendChild(row);
     });
   }
-  function closeScanReview(){ if(scanReviewScrim) scanReviewScrim.hidden=true; }
+  function closeScanReview(){ if(scanReviewScrim) scanReviewScrim.hidden=true; try{ reviewQuiet(); }catch(e){} }
   function openScanReview(){ if(!scanReviewScrim) return; fillScanReviewCol(); renderScanReview(); scanReviewScrim.hidden=false; openOverlay(closeScanReview); }
   function refreshScanSessionUI(){
     var ssEl=$("scanSess"), review=$("scanReviewBtn"), photo=$("qMultiReview");
@@ -17859,9 +17960,10 @@ label.acctsetrow { align-items:center; }
     scanScrim.hidden=false;
     if(!_scWas) openOverlay(closeScanModal);
   }
-  function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; scanBusy=false; clearTimeout(scanGpTimer); scanGpTimer=null; }
+  function closeScanModal(){ if(scanScrim){ scanScrim.hidden=true; } scanState.card=null; scanBusy=false; clearTimeout(scanGpTimer); scanGpTimer=null; try{ reviewQuiet(); }catch(e){} }
   // Continuous scanning: after Add/Cancel, reopen the native camera so the user can scan the next card.
-  function scanContinue(){ try{ if(SETTINGS.scanLoop!==false && window.AndroidScan && typeof window.AndroidScan.scan==="function") setTimeout(function(){ window.AndroidScan.scan(); },120); }catch(e){} }
+  // reviewHold is set before the sheet closes, so a rating sheet never opens on top of the camera.
+  function scanContinue(){ try{ if(reviewLoopOn()){ reviewHold=true; setTimeout(function(){ window.AndroidScan.scan(); },120); } }catch(e){} }
   (function(){
     if(!scanScrim) return;
     $("scanDest").addEventListener("click", function(e){ var b=e.target.closest(".seg"); if(!b)return; scanState.dest=b.getAttribute("data-dest"); paintScan(); scanPriceRow(scanState.card); scanOwnedRow(scanState.card); });
@@ -17878,7 +17980,7 @@ label.acctsetrow { align-items:center; }
     // that closes that window lives beside scanState, and is cleared when the sheet opens and closes: as a
     // local here it was set once and never cleared, so from the second card of a session onwards Add and
     // Cancel silently did nothing and the sheet looked frozen.
-    $("scanCancel").onclick=function(){ if(scanBusy) return; scanBusy=true; dismissOverlay(); scanContinue(); };
+    $("scanCancel").onclick=function(){ if(scanBusy) return; scanBusy=true; if(reviewLoopOn()) reviewHold=true; dismissOverlay(); scanContinue(); };
     var scanReviewBtn=$("scanReviewBtn"); if(scanReviewBtn) scanReviewBtn.onclick=function(){ openScanReview(); };
     var sw=$("scanWrong"); if(sw) sw.onclick=function(){ var vs=$("scanVariants"); if(vs) vs.hidden=!vs.hidden; };
     var si=$("scanImg"); if(si){ si.onclick=function(){ if(scanState.card) openLightbox(scanState.card); }; si.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(scanState.card) openLightbox(scanState.card); } }; }
@@ -17887,9 +17989,11 @@ label.acctsetrow { align-items:center; }
     $("scanConfirm").onclick=function(){
       if(scanBusy) return; scanBusy=true;
       var card=scanState.card; if(!card){ dismissOverlay(); return; }
+      var noted=false;
       if(scanState.dest==="wishlist"){
         var wasWished=!!STATE.wishlist[card.id];
         STATE.wishlist[card.id]=true; save(); render(); recordScan({id:card.id,dest:"wishlist",wasWished:wasWished,value:0});
+        noted=true;
         toast(card.name+" → Wishlist");
       } else {
         var colId=$("scanColSel").value;
@@ -17898,6 +18002,7 @@ label.acctsetrow { align-items:center; }
         var slabId="";
         if(scanState.type==="graded"){
           var col=scanColById(colId);
+          var ownedBefore=0; try{ ownedBefore=collectionMilestoneCount(); }catch(e){}
           if(col){
             var e=col.own[card.id]; if(!e){ e=col.own[card.id]={qty:0,wish:false,cond:"Near Mint",notes:"",mkt:0,last:0,avg:0,graded:[]}; }
             if(!e.graded) e.graded=[];
@@ -17911,17 +18016,21 @@ label.acctsetrow { align-items:center; }
             scanLinkPrices(rec, colId, e);
             e.graded.push(gobj); added=gobj.value;
             save(); render();
+            try{ reviewWatchOwned(ownedBefore); }catch(e){}
+            noted=true;
             toast(card.name+" · "+gr+" "+gd+(ed==="2"?" · 2nd Ed":(ed==="jp"?" · Japanese":""))+" → "+colName(colId));
           }
         } else {
           var te=null;
           addToCollection(colId, card.id, function(x){ te=x; scanLinkPrices(rec, colId, x); var scanPaid=paidNumber(($("scanPaid")||{}).value); if(scanPaid!=null && trackPaidOn()){ if(!x.paidRaw || typeof x.paidRaw!=="object") x.paidRaw={}; x.paidRaw[rawEditionKey(ed)]=scanPaid; } },ed);
           if(te) added=unitOfEntry(card.id, null, te);
+          noted=true;
           toast(card.name+(ed==="2"?" · 2nd Ed":(ed==="jp"?" · Japanese":""))+" → "+colName(colId));
         }
         scanRefreshPages();
         recordScan({id:card.id,colId:colId,dest:"collection",type:scanState.type,edition:rawEditionKey(ed),slabId:slabId,qty:1,value:(+added||0)});
       }
+      if(noted){ if(reviewLoopOn()) reviewHold=true; try{ reviewNoteScans(1); }catch(e){} }
       dismissOverlay(); scanContinue();
     };
     var reviewClose=$("scanReviewClose"), reviewDone=$("scanReviewDone");
@@ -17938,9 +18047,11 @@ label.acctsetrow { align-items:center; }
         var colId=(sel&&sel.value) || ((typeof activeCol==="function" && activeCol()) ? activeCol().id : "");
         var n=SCAN_REVIEW.commit(colId);
         if(n && typeof toast==="function") toast(n===1 ? "Added 1 card" : "Added "+n+" cards");
+        if(n){ try{ reviewNoteScans(n); }catch(e){} }
         return;
       }
       dismissOverlay();
+      try{ reviewQuiet(); }catch(e){}
     };
     if(scanReviewScrim){
       scanReviewScrim.addEventListener("click",function(e){ if(e.target===scanReviewScrim) dismissOverlay(); });
@@ -18120,6 +18231,9 @@ label.acctsetrow { align-items:center; }
     an.onchange=function(){ SETTINGS.displayName=an.value.trim(); saveSettings(); paintLogin(); };
     var th=$("setThemeSel"); if(th){ th.value=SETTINGS.theme||"system"; th.onchange=function(){ SETTINGS.theme=th.value; saveSettings(); applyTheme(); }; }
     var ts=$("setTextSize"); if(ts){ ts.value=String(+SETTINGS.textScale||1); ts.onchange=function(){ SETTINGS.textScale=+ts.value||1; saveSettings(); applyTextScale(); }; }
+    var rr=$("rateSetRow"); if(rr) rr.hidden=!nativeReview();
+    var rb=$("setRate"); if(rb) rb.onclick=function(){ openStoreListing(); };
+    try{ reviewNoteLaunch(); }catch(e){}
     var ex=$("setExport"); if(ex) ex.onclick=function(){ openFileIO("export"); };
     var im=$("setImport"); if(im) im.onclick=function(){ openFileIO("import"); };
     buildQuickMenuSettings();
