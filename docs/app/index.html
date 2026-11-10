@@ -2627,6 +2627,9 @@ label.acctsetrow { align-items:center; }
   .ctopic.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
   .ctmsg{ width:100%; min-height:130px; background:var(--surface); border:1.5px solid var(--line-strong); border-radius:14px; padding:13px 15px; color:var(--ink); font-family:inherit; font-size:1rem; box-sizing:border-box; resize:vertical; margin-top:6px; }
   .ctmsg:focus{ outline:none; border-color:var(--accent); }
+  /* Where it is reuses the message look, but the 130px floor is for the contact box.
+     On a text input that floor drew a one line location as a tall empty panel. */
+  input.ctmsg{ min-height:0; height:auto; resize:none; }
   .ctstatus{ margin-top:12px; font-size:.9rem; font-weight:600; }
   .ctstatus.ok{ color:var(--accent-ink); } .ctstatus.bad{ color:var(--el-Fire); }
 
