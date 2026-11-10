@@ -2570,6 +2570,10 @@ label.acctsetrow { align-items:center; }
   .meditor > .dsec{ margin:2px 0 0; }
   .meditor > .ctmsg{ margin-top:0; }
   .setnav{ display:flex; justify-content:space-between; align-items:stretch; margin-top:12px; margin-bottom:60px; }
+  /* The 60px keeps the last row clear of the floating dock. On a chase card the second hand
+     panel is that last row, so the set walk must not keep the gap above the panel. */
+  .meditor > .setnav:not(:last-child){ margin-bottom:0; }
+  .meditor > .chasecheck{ margin:0 0 60px; }
   .setpos{ margin:14px 0 0; font-size:.78rem; color:var(--ink-faint); text-align:center; overflow-wrap:anywhere; }
   .setpos + .setnav{ margin-top:6px; }
   .setpos + .setpos{ margin-top:2px; }
@@ -2591,6 +2595,11 @@ label.acctsetrow { align-items:center; }
      .mmain for the float and for these, so the two agree. */
   .pxtrend:not([hidden]) ~ .kv,
   .pxtrend:not([hidden]) ~ .promonote{ margin-right:calc(clamp(120px,40%,158px) + 18px); }
+  /* Three buttons need roughly this much. The strip beside the chart on a phone is narrower,
+     so the row drops under the chart instead of collapsing into it. min() keeps a 320px sheet
+     from overflowing when the plain 260px floor would. */
+  .mmain > .bubrow{ min-width:260px; margin-top:12px; }
+  .mmain > .bubrow{ min-width:min(100%, 260px); }
   .pxspark{ display:block; width:100%; height:42px; margin-bottom:7px; }
   .pxdelta{ display:flex; justify-content:center; align-items:baseline; gap:5px; font-family:var(--font-display); font-weight:750;
     font-size:.95rem; line-height:1.1; overflow-wrap:anywhere; }
@@ -6442,8 +6451,10 @@ label.acctsetrow { align-items:center; }
       dateAddedHtml+
       deckUseLine(c)+
       promoContext(c)+
-      chaseCheckHtml(c)+
-      '<div class="meditor">'+
+      // The action row and the price tiles stay outside .meditor. That block clears the floated
+      // card and price chart, which held the buttons below the chart and left the column beside
+      // it empty. Out here a row uses that column when it is wide enough, and drops under the
+      // chart on a phone. The second hand panel stays at the bottom of .meditor.
       // ---- Collection action bubbles ----
       '<div class="bubrow">'+
         '<button class="bub" id="bubColl" type="button" aria-expanded="false"></button>'+
@@ -6503,6 +6514,7 @@ label.acctsetrow { align-items:center; }
         '<h3 class="dsec" style="margin:12px 0 0">Graded price guide</h3>'+
         '<div class="gradeguide" id="gradeGuide"></div>'+
       '</div>'+
+      '<div class="meditor">'+
       // Card value and the price alert together, directly under the tiles the value comes from. Both are
       // priceui, so collector mode hides the row whole. The alert button is native push only, and on the
       // web the value simply takes the full width. Sits after the glance panels so an open panel stays
@@ -6526,6 +6538,9 @@ label.acctsetrow { align-items:center; }
       // Save closes the sheet on its own now that the value has moved up to the prices.
       '<div class="msave"><div class="mfoot"><button class="btn primary" id="fSave">Save</button></div></div>'+
       setNavHTML(c)+
+      // Last on the sheet. Up with the facts it is a bordered block beside the floated price
+      // chart, so the box ran across the chart and left a gap above the action buttons.
+      chaseCheckHtml(c)+
       '</div>';
     wireKeywordNotes($("mMain"));
     var viewSphere=$("viewSetSphere"); if(viewSphere&&setTrack){ viewSphere.onclick=function(){ dismissOverlay(); openSetSphere(setTrack.id,false); }; }
