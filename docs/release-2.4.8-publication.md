@@ -1,21 +1,21 @@
 # SphereDex 2.4.8 publication runbook
 
-Owner sequence for the carousel artwork and the worker note map. This file does not deploy, merge, or change cron, store gates, or version selection code.
+Both production stores offer 2.4.8, so this repository ships the live carousel banner. This file does not deploy the worker, change cron, store gates, or version selection code.
 
-The bundled 2.4.8 art and notes correction is **not in this repository**. `src/index.ts` is not in SphereDex. `https://github.com/giarcyaj/spheredex-backend` did not resolve for this checkout (`git ls-remote` returned repository not found, and the GitHub API returned 404). No unfamiliar backend checkout was added. Nothing below has been deployed.
+The bundled 2.4.8 notes correction is **not in this repository**. `src/index.ts` is not in SphereDex. `https://github.com/giarcyaj/spheredex-backend` did not resolve for this checkout (`git ls-remote` returned repository not found, and the GitHub API returned 404). No unfamiliar backend checkout was added. Nothing below has been deployed.
 
-## What draft PR 102 actually contains
+## Banner that ships
 
-[PR 102](https://github.com/giarcyaj/SphereDex/pull/102) is a draft. Its committed banner, `docs/app/img/UPDATE_2_4_8.webp`, is the review file. The caption on those bytes is **UPDATE PREVIEW**.
+[PR 102](https://github.com/giarcyaj/SphereDex/pull/102) commits the **LIVE IN THE APP** banner. `RELEASE_ART["2.4.8"]` is `img/UPDATE_2_4_8.webp`. `tools/rebuild.py` mirrors `docs/app/img/UPDATE_2_4_8.webp` into the Android and iOS image folders. The public URL is `https://spheredex.app/app/img/UPDATE_2_4_8.webp`.
 
 | Role | Path | sha256 |
 |---|---|---|
-| Review bytes in PR 102, mirrored into the app image folders | `docs/app/img/UPDATE_2_4_8.webp` | `c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f` |
-| Held launch bytes, not wired into the app | `release-notes/held/UPDATE_2_4_8.webp` | `997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332` |
+| Live banner that ships, mirrored into the app image folders | `docs/app/img/UPDATE_2_4_8.webp` | `997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332` |
+| Preview bytes, not in the tree | (not shipped) | `c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f` |
 
-Do not publish the preview file as the live banner. Before any client is told to load `https://spheredex.app/app/img/UPDATE_2_4_8.webp`, replace those bytes with the held file, whose caption is **LIVE IN THE APP**.
+The preview caption was **UPDATE PREVIEW**. Those bytes are not the file at `https://spheredex.app/app/img/UPDATE_2_4_8.webp`.
 
-The three lines already in the app, and the only notes this correction may write for 2.4.8, are in `src/paldeck.html` on `bf69db46a1b363019a3a400b4459dc7b12b07e9e` at lines 4266–4271:
+The three lines already in the app, and the only notes this correction may write for 2.4.8, are in `src/paldeck.html` at lines 4279–4283:
 
 - Print your collection, share wants and spares, and track cards out for grading
 - Closest winning decks, built decks that hold their copies, and a place for each card
@@ -56,12 +56,12 @@ Do not change cron, env vars, or metadata as part of reading them.
 3. Read `store_live:ios` and `store_live:android` versions and timestamps. Then check the live App Store and Play listings independently. `released` is not that check. Account for a one-sided fallback, a retained higher version, and an env floor.
 4. Read `release:announced` and the `release_announced_app`, `release_announce_failed`, and `release_announce_seeded` logs. Do not reset them and do not retry a send from this runbook.
 
-## Publication sequence once both stores are independently on 2.4.8
+## Publication sequence
 
-Start only after the current production App Store listing and the current production Play listing both offer 2.4.8. Do not start from `released` alone.
+The current production App Store listing and the current production Play listing both offer 2.4.8. The image steps are done in this repository. The worker steps stay in the backend repository. Do not start the worker edit from `released` alone.
 
-1. Stage the held file, not the PR 102 preview bytes, at `https://spheredex.app/app/img/UPDATE_2_4_8.webp`.
-2. Fetch that URL and match the bytes to sha256 `997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332`.
+1. The live file is committed at `docs/app/img/UPDATE_2_4_8.webp`, and `tools/rebuild.py` copies it into the Android and iOS image folders. After this merges, `https://spheredex.app/app/img/UPDATE_2_4_8.webp` is that file.
+2. That file matches sha256 `997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332`. The preview sha256 `c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f` is not in those folders.
 3. In the backend repository, replace only the existing `2.4.8` entries. Do not add a second `2.4.8` key. Do not change the `2.4.7` art or notes. Do not edit cron, `releasedVersion`, `latestForPlatform`, or env bindings.
 
 Notes replacement:
@@ -81,6 +81,6 @@ Art replacement:
 ```
 
 4. After an authorized deploy of that reviewed source, request `/api/version` without a `v` parameter for `ios`, `android`, and `web`. A `v` parameter writes counters. A response without `v` may be cached for an hour. Expect the three lines above and the new art URL only when that platform's latest is 2.4.8. Then open the installed app and confirm an old build loads the https image, and a build that contains `RELEASE_ART["2.4.8"]` uses its bundled file.
-5. Check the App Store and Play listings again. `released` in the JSON is not a substitute for those two listings.
+5. The App Store and Play listings already offer 2.4.8. `released` in the JSON is not a substitute for those two listings.
 
-This repository change does not perform steps 1–5.
+This repository change performs the image steps. It does not edit the worker.

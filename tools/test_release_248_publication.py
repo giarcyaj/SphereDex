@@ -1,9 +1,10 @@
 """The 2.4.8 publication runbook must keep the deployed-worker evidence and the store gate.
 
 It must not treat the worker `released` field as fresh proof that both production stores
-are on 2.4.8, and it must not tell the owner to ship the UPDATE PREVIEW bytes.
+are on 2.4.8. The banner that ships is the LIVE IN THE APP file.
 """
 
+import hashlib
 import unittest
 from pathlib import Path
 
@@ -14,6 +15,13 @@ HIGHLIGHTS = (
     "Print your collection, share wants and spares, and track cards out for grading",
     "Closest winning decks, built decks that hold their copies, and a place for each card",
     "A Daily Pal guess, a wishlist budget, and live and sold value on every set",
+)
+LIVE_SHA = "997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332"
+PREVIEW_SHA = "c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f"
+SHIPPED = (
+    ROOT / "docs" / "app" / "img" / "UPDATE_2_4_8.webp",
+    ROOT / "app" / "src" / "main" / "assets" / "img" / "UPDATE_2_4_8.webp",
+    ROOT / "ios" / "SphereDex" / "SphereDex" / "Resources" / "img" / "UPDATE_2_4_8.webp",
 )
 
 
@@ -45,13 +53,23 @@ class Release248PublicationRunbook(unittest.TestCase):
         self.assertIn("current production App Store listing and the current production Play listing", self.text)
         self.assertNotIn("released alone proves", self.text)
 
-    def test_preview_bytes_are_not_the_launch_file(self):
-        self.assertIn("UPDATE PREVIEW", self.text)
+    def test_shipped_banner_is_the_live_file(self):
         self.assertIn("LIVE IN THE APP", self.text)
-        self.assertIn("c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f", self.text)
-        self.assertIn("997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332", self.text)
+        self.assertIn("UPDATE PREVIEW", self.text)
+        self.assertIn(LIVE_SHA, self.text)
+        self.assertIn(PREVIEW_SHA, self.text)
         self.assertIn("https://spheredex.app/app/img/UPDATE_2_4_8.webp", self.text)
-        self.assertIn("Do not publish the preview file as the live banner.", self.text)
+        self.assertIn('`RELEASE_ART["2.4.8"]` is `img/UPDATE_2_4_8.webp`', self.text)
+        self.assertNotIn("Do not publish the preview file as the live banner.", self.text)
+        self.assertNotIn("release-notes/held/UPDATE_2_4_8.webp", self.text)
+        self.assertFalse((ROOT / "release-notes" / "held" / "UPDATE_2_4_8.webp").exists())
+        digests = []
+        for path in SHIPPED:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            digests.append(digest)
+            self.assertEqual(digest, LIVE_SHA, str(path))
+            self.assertNotEqual(digest, PREVIEW_SHA, str(path))
+        self.assertEqual(len(set(digests)), 1)
 
     def test_notes_fix_is_the_three_app_lines_and_is_not_applied_here(self):
         for line in HIGHLIGHTS:

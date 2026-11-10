@@ -14,23 +14,20 @@ Run from the repo root:
 
     python tools/make_release_banner.py 2.4.8 \\
         "Print your whole collection" "Share wants and spares" "Find your closest winning decks" \\
+        --caption "LIVE IN THE APP" \\
         --row "Print your collection|With prices, or without" \\
         --row "Find your cards|Grouped by where you keep them" \\
         --row "Share wants and spares|Prices only if you choose" \\
         --row "Closest winning decks|Built decks hold their copies" \\
         --row "Track grading|Log the grade when it returns"
 
-That writes the review banner docs/app/img/UPDATE_2_4_8.webp (caption "UPDATE PREVIEW", so the
-file does not claim the release is already live) and a PNG at tmp/banner-2.4.8.png.
-tools/rebuild.py mirrors docs/app/img into the Android and iOS bundles.
+That writes docs/app/img/UPDATE_2_4_8.webp and a PNG at tmp/banner-2.4.8.png.
+tools/rebuild.py mirrors docs/app/img into the Android and iOS bundles. "LIVE IN THE APP" is
+the caption that ships. The default caption is "UPDATE PREVIEW", for a draft render. For 2.4.8
+the committed file in docs/app/img is the live banner.
 
-The launch caption is a separate file and is not mirrored:
-
-    python tools/make_release_banner.py 2.4.8 ...same highlights and rows... \\
-        --caption "LIVE IN THE APP" --held
-
-That writes release-notes/held/UPDATE_2_4_8.webp. Hold it until both production stores offer
-this version, then replace the review webp with it before the carousel is allowed to announce it.
+--held writes a side copy under release-notes/held instead of the app image folder. The copies
+that ship are docs/app/img and the Android and iOS mirrors.
 """
 
 import argparse
@@ -243,9 +240,9 @@ def parse_args(argv):
     parser.add_argument("--row", action="append", default=[], metavar="TITLE|SUBTITLE",
                         help="One panel row. Repeat for five, title and subtitle split on the first |.")
     parser.add_argument("--caption", default="UPDATE PREVIEW",
-                        help="Right-hand caption. The review default does not say the release is live.")
+                        help="Right-hand caption. LIVE IN THE APP is the caption that ships.")
     parser.add_argument("--held", action="store_true",
-                        help="Write the launch file under release-notes/held instead of docs/app/img.")
+                        help="Write under release-notes/held instead of docs/app/img. The app image folder is what ships.")
     parser.add_argument("--out-webp", default=None)
     parser.add_argument("--out-png", default=None)
     args = parser.parse_args(argv)

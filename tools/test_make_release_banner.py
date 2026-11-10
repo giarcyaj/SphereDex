@@ -3,6 +3,7 @@ and refuses copy that would ship a dash or a missing glyph. Rendering needs Noto
 machine; the source checks run without it."""
 
 import contextlib
+import hashlib
 import io
 import tempfile
 import unittest
@@ -31,6 +32,15 @@ HIGHLIGHTS = [
     "Share wants and spares",
     "Find your closest winning decks",
 ]
+
+
+LIVE_SHA = "997f7832c868e7eb8c0dfc65fec78425015ff1d0a7eb0e4b5fd598af0becf332"
+PREVIEW_SHA = "c6a1578beb7a01599692f2f2fd21cf3c2b388c76eaeca3d9c139d75a4f0ceb7f"
+SHIPPED = (
+    ROOT / "docs" / "app" / "img" / "UPDATE_2_4_8.webp",
+    ROOT / "app" / "src" / "main" / "assets" / "img" / "UPDATE_2_4_8.webp",
+    ROOT / "ios" / "SphereDex" / "SphereDex" / "Resources" / "img" / "UPDATE_2_4_8.webp",
+)
 
 
 def argv_for(caption, webp, png):
@@ -74,6 +84,19 @@ class BannerSourceTests(unittest.TestCase):
         # The three lines already written for 2.4.8 stay the app's highlights.
         self.assertIn("Print your collection, share wants and spares, and track cards out for grading", source)
         self.assertEqual(source.count('"2.4.8": ['), 1)
+        self.assertEqual(source.count('var APP_VERSION = "2.4.8"'), 1)
+
+
+class ShippedBannerTests(unittest.TestCase):
+    def test_shipped_copies_are_the_live_banner(self):
+        digests = []
+        for path in SHIPPED:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            digests.append(digest)
+            self.assertEqual(digest, LIVE_SHA, str(path))
+            self.assertNotEqual(digest, PREVIEW_SHA, str(path))
+        self.assertEqual(len(set(digests)), 1)
+        self.assertFalse((ROOT / "release-notes" / "held" / "UPDATE_2_4_8.webp").exists())
 
 
 @unittest.skipIf(banner is None, "banner generator import failed: %s" % _IMPORT_ERROR)
