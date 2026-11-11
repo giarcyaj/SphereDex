@@ -4,8 +4,13 @@
 The official site renders each deck with JavaScript. An event page holds one
 <div class="drm-recipe-root" data-recipe-id="N"> per deck, and the page script
 (deck-recipe-manager/assets/deckrecipe-front.js) fetches each one as JSON from
+the host that page names in DRM_FRONT (manageApiBase + endpoint). The Japanese
+and English sites keep separate recipe ids, so a Japanese page is never read
+from the English host. A page with no config falls back to
   https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=N
-This script does the same, so every card count comes straight from that JSON.
+Every card count comes straight from that JSON. A Japanese card code is stored
+as the English catalogue code of the same print (BP01-025 is written EBP01-025):
+the leading E only, never a different number.
 
 Usage
   python tools/fetch_tournament_decks.py PAGE_URL [--held-date YYYY-MM-DD --held-date-source URL]
@@ -35,6 +40,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -93,17 +99,96 @@ def parse_title(page):
 
 
 def parse_published(page):
-    """The article date shown above the title, as YYYY-MM-DD ("Oct. 5, 2026" -> "2026-10-05")."""
+    """The article date shown above the title, as YYYY-MM-DD.
+
+    English pages print "Oct. 5, 2026". Japanese pages print "2026.10.05".
+    """
     m = re.search(r'c-single-content__heading-date">\s*([^<]+?)\s*</p>', page)
     if not m:
         return ""
-    d = re.match(r"([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})$", m.group(1).strip())
-    if not d:
+    text = m.group(1).strip()
+    d = re.match(r"([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})$", text)
+    if d:
+        month = MONTHS.get(d.group(1).lower()[:3])
+        if not month:
+            return ""
+        return "%s-%02d-%02d" % (d.group(3), month, int(d.group(2)))
+    n = re.match(r"(\d{4})[./-](\d{1,2})[./-](\d{1,2})$", text)
+    if not n:
         return ""
-    month = MONTHS.get(d.group(1).lower()[:3])
-    if not month:
+    year, month, day = int(n.group(1)), int(n.group(2)), int(n.group(3))
+    if not (1 <= month <= 12 and 1 <= day <= 31):
         return ""
-    return "%s-%02d-%02d" % (d.group(3), month, int(d.group(2)))
+    return "%04d-%02d-%02d" % (year, month, day)
+
+
+def parse_drm_front(page):
+    """The page's DRM_FRONT object, or {} when it is missing or unreadable."""
+    marker = "var DRM_FRONT = "
+    i = page.find(marker)
+    if i < 0:
+        return {}
+    j = page.find("{", i)
+    if j < 0:
+        return {}
+    depth = 0
+    in_str = False
+    esc = False
+    for k in range(j, len(page)):
+        ch = page[k]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    cfg = json.loads(page[j:k + 1])
+                except json.JSONDecodeError:
+                    return {}
+                return cfg if isinstance(cfg, dict) else {}
+    return {}
+
+
+def detail_url_template(page):
+    """Format string for this page's recipe JSON, with {id} for the recipe id.
+
+    A page without DRM_FRONT, including the saved fixtures, keeps the English
+    endpoint. A manageApiBase on any other host is ignored.
+    """
+    cfg = parse_drm_front(page)
+    base = str(cfg.get("manageApiBase") or "").strip().rstrip("/")
+    endpoint = str(cfg.get("endpoint") or "").strip().strip("/")
+    parts = urllib.parse.urlparse(base)
+    host = (parts.hostname or "").lower()
+    official = host == "palworld-official-cardgame.com" or host.endswith(".palworld-official-cardgame.com")
+    if parts.scheme == "https" and official and endpoint == "deckrecipe/detail":
+        return base + "/" + endpoint + "?id={id}"
+    return DETAIL_URL
+
+
+def catalogue_number(number, source_url=""):
+    """Card number to store.
+
+    Japanese recipe JSON prints the Japanese code (BP01-025, PR-004S). The card
+    table and the English recipe JSON use the same print with a leading E.
+    Only that E is added, and only for a Japanese official host, so a count or
+    a parallel suffix is never rewritten and an English page is stored as printed.
+    """
+    n = str(number or "").strip().upper()
+    host = (urllib.parse.urlparse(source_url or "").hostname or "").lower()
+    if host == "palworld-official-cardgame.com" and re.match(r"^(?:BP|TD|SS|PR|SOUL)(?=[-0-9])", n):
+        return "E" + n
+    return n
 
 
 def zone_of(card_type):
@@ -111,16 +196,17 @@ def zone_of(card_type):
     return ZONES.get(t, t or "unknown")
 
 
-def deck_from_detail(payload, recipe_id):
+def deck_from_detail(payload, recipe_id, source_url=""):
     """One deck from the recipe JSON, or (None, reason) when it has no usable card list."""
     if not isinstance(payload, dict) or not payload.get("success") or not isinstance(payload.get("deck"), dict):
         return None, "recipe JSON did not report success"
     deck = payload["deck"]
+    url = source_url or DETAIL_URL.format(id=int(recipe_id))
     cards = []
     for row in payload.get("details") or []:
         if not isinstance(row, dict):
             continue
-        number = str(row.get("card_number") or "").strip().upper()
+        number = catalogue_number(row.get("card_number"), url)
         try:
             count = int(row.get("num"))
         except (TypeError, ValueError):
@@ -138,7 +224,7 @@ def deck_from_detail(payload, recipe_id):
     if code:
         out["deck_code"] = code
     out["source_id"] = int(recipe_id)
-    out["source_url"] = DETAIL_URL.format(id=int(recipe_id))
+    out["source_url"] = url
     out["cards"] = cards
     return out, ""
 
@@ -190,16 +276,17 @@ def build_event(page_url, page, get_json, held_date="", held_source="", saved=No
     """
     title = parse_title(page)
     published = parse_published(page)
+    template = detail_url_template(page)
     saved = saved or {}
     decks, skipped = [], []
     for rid in parse_recipe_ids(page):
-        url = DETAIL_URL.format(id=rid)
+        url = template.format(id=rid)
         try:
             payload = get_json(url)
         except Exception as e:
             payload, deck, why = None, None, "fetch failed: %s" % e
         else:
-            deck, why = deck_from_detail(payload, rid)
+            deck, why = deck_from_detail(payload, rid, url)
         if deck is None:
             info = payload.get("deck") if isinstance(payload, dict) and isinstance(payload.get("deck"), dict) else {}
             old = saved.get(rid)
