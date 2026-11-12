@@ -447,14 +447,52 @@ def _read_page(get, url: str) -> str:
     return bytes(data).decode("utf-8", "replace")
 
 
+def _catalog_trusted(catalog: dict | None) -> bool:
+    """A fixture with no ok flag is trusted. ok False means the feed could not be read.
+
+    An unread feed is not an empty catalogue. Treating it as empty would publish rows
+    the backend already holds.
+    """
+    if not isinstance(catalog, dict):
+        return False
+    if "ok" not in catalog:
+        return True
+    return catalog.get("ok") is True
+
+
+def product_page_asof(get, page_url: str) -> str:
+    """modified_gmt of the product itself, not of the news post that linked it.
+
+    The WordPress product record is the clock for a date read off that page. The news
+    post's modified_gmt is a different edit and must not be borrowed.
+    """
+    parts = urllib.parse.urlparse(page_url or "")
+    slug = parts.path.rstrip("/").rsplit("/", 1)[-1].lower()
+    if not slug or parts.scheme not in ("http", "https") or not parts.netloc:
+        return ""
+    api = f"{parts.scheme}://{parts.netloc}/wp-json/wp/v2/cpt_products?slug={urllib.parse.quote(slug)}"
+    raw = _read_page(get, api)
+    if not raw or not raw.lstrip().startswith(("{", "[")):
+        return ""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return ""
+    row = data[0] if isinstance(data, list) and data else None
+    if not isinstance(row, dict):
+        return ""
+    return post_asof(row)
+
+
 def _linked_row_eligible(row: dict, catalog: dict | None, today: _dt.date | None) -> bool:
     """A product reached only because a post linked its page.
 
     A row already on file is handed to the merge, which leaves it when the street day matches.
     A day before today, for an id the catalogue does not have, is a back catalogue mention
-    (a sales post linking BP01), not a new release.
+    (a sales post linking BP01), not a new release. An unread catalogue does not count as
+    'not on file'.
     """
-    if not row.get("date"):
+    if not row.get("date") or not _catalog_trusted(catalog):
         return False
     if _find_product(_catalog_products(catalog), row.get("id") or ""):
         return True
@@ -806,20 +844,35 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                 info = parse_product_page(page, url)
                 if not info:
                     continue
-                items.append({**info, "banner": "", "linked": True})
+                items.append({**info, "banner": "", "linked": True, "page_asof": product_page_asof(get, url)})
             if items:
                 code, date = items[0]["code"], items[0]["date"]
         emitted = 0
         for item in items:
             # Stamp only a day this fetch actually asserts. A newer edit with no street day
             # must not lend its clock to a cached date.
-            revision = post_asof(post) if item.get("date") else ""
+            # A quoted announcement is stamped with the news post. A date taken from a
+            # product page is stamped with that page's own modified_gmt. The referring
+            # post's clock is used only to introduce a row the catalogue does not have yet.
+            # Lending it to a page that still shows an old day is how a later recap would
+            # undo a delay notice.
             rows = products_for(item["ptype"], item["set_name"], item["code"], item["date"], link,
                                 item["banner"], today)
             for row in rows:
                 resolved = resolve_row(row, catalog)
                 if item.get("linked") and not _linked_row_eligible(resolved, catalog, today):
                     continue
+                if item.get("linked"):
+                    on_file = _find_product(_catalog_products(catalog), resolved.get("id") or "")
+                    page_asof = item.get("page_asof") or ""
+                    if page_asof:
+                        revision = page_asof
+                    elif on_file and on_file.get("date"):
+                        revision = ""
+                    else:
+                        revision = post_asof(post) if item.get("date") else ""
+                else:
+                    revision = post_asof(post) if item.get("date") else ""
                 if revision:
                     resolved["asOf"] = revision
                 else:
@@ -1138,16 +1191,20 @@ def publish(payload: dict, images: dict[str, bytes], key: str, base: str = BACKE
 
 
 def fetch_catalog(get=http_get, base: str = BACKEND) -> dict:
-    """Public release list. No admin key. Empty when the feed cannot be read."""
+    """Public release list. No admin key.
+
+    ok is False when the feed cannot be read. That is not an empty catalogue: publishing
+    against an empty list would create a second copy of every linked product.
+    """
     try:
         data = json.loads(get(base.rstrip("/") + "/api/releases"))
     except (OSError, ValueError, TypeError):
-        return {"products": [], "sets": {}}
+        return {"products": [], "sets": {}, "ok": False}
     if not isinstance(data, dict):
-        return {"products": [], "sets": {}}
+        return {"products": [], "sets": {}, "ok": False}
     products = data.get("products") if isinstance(data.get("products"), list) else []
     sets = data.get("sets") if isinstance(data.get("sets"), dict) else {}
-    return {"products": [p for p in products if isinstance(p, dict)], "sets": sets}
+    return {"products": [p for p in products if isinstance(p, dict)], "sets": sets, "ok": True}
 
 
 def write_github_output(path: Path | None, status: str, products: int) -> None:
@@ -1177,6 +1234,10 @@ def main(argv: list[str] | None = None) -> int:
         catalog = fetch_catalog(base=args.backend)
     except (OSError, ValueError) as exc:
         print(f"release-sweep: fetch failed: {exc}", file=sys.stderr)
+        write_github_output(args.github_output, "failed", 0)
+        return 1
+    if catalog.get("ok") is False:
+        print("release-sweep: catalogue could not be read - not publishing", file=sys.stderr)
         write_github_output(args.github_output, "failed", 0)
         return 1
     payload, images = sweep(posts, seen, force=args.force, sieve=SieveReader(args.sieve), catalog=catalog)

@@ -678,6 +678,41 @@ class ProductPageTests(unittest.TestCase):
             today=TODAY_LIVE, catalog=LIVE_NOW)
         self.assertEqual(payload["products"], [])
 
+    def test_an_unread_catalogue_does_not_republish_linked_products(self):
+        def down(url, *args, **kwargs):
+            raise OSError("catalogue down")
+        unread = rs.fetch_catalog(get=down)
+        self.assertFalse(unread["ok"])
+        payload, _ = rs.sweep([self.post14, self.post7], {}, force=False, sieve=FakeSieve(),
+                              get=page_getter(self.pages), today=TODAY_LIVE, catalog=unread)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_recap_does_not_put_the_news_clock_on_an_old_page_date(self):
+        # post-14 was edited later than the delay notice. Its product page still says the
+        # old booster day. That page date must not ride the recap's newer modified_gmt.
+        pages = dict(self.pages)
+        pages["bp03"] = self.pages["bp03"].replace("January 30, 2027", "January 29, 2027")
+        payload, _ = rs.sweep([self.post14], {}, force=False, sieve=FakeSieve(),
+                              get=page_getter(pages), today=TODAY_LIVE, catalog=LIVE_NOW)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_product_page_correction_uses_the_page_clock(self):
+        pages = dict(self.pages)
+        pages["td03"] = self.pages["td03"].replace("December 18, 2026", "December 20, 2026")
+
+        def get(url, *args, **kwargs):
+            if "cpt_products?slug=td03" in url or "cpt_products?slug=TD03" in url:
+                return b'[{"modified_gmt": "2026-11-12T00:00:00"}]'
+            return page_getter(pages)(url)
+
+        payload, _ = rs.sweep([self.post7], {}, force=False, sieve=FakeSieve(), get=get,
+                              today=TODAY_LIVE, catalog=LIVE_NOW)
+        rows = [p for p in payload["products"] if p["id"] == "td-ea-rg"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["date"], "Dec 20, 2026")
+        self.assertEqual(rows[0]["asOf"], "2026-11-12T00:00:00Z")
+        self.assertNotIn("td-ea-bp", [p["id"] for p in payload["products"]])
+
     def test_a_seen_post_is_reread_when_its_product_page_changes(self):
         first, _ = rs.sweep([self.post7], {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
                             today=TODAY_LIVE, catalog={"products": [], "sets": {}})
