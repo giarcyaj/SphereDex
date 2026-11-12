@@ -3,6 +3,7 @@ import datetime as dt
 import importlib.util
 import json
 import unittest
+from pathlib import Path
 
 _dt = dt
 
@@ -164,8 +165,9 @@ class PostponeTests(unittest.TestCase):
         by_id = {p["id"]: p for p in payload["products"]}
         self.assertEqual(by_id["box-bp03"]["date"], "Jan 30, 2027")
         self.assertEqual(by_id["pack-bp03"]["date"], "Jan 30, 2027")
-        self.assertEqual(by_id["td-td03"]["date"], "Dec 18, 2026")
-        self.assertNotEqual(by_id["box-bp03"]["date"], by_id["td-td03"]["date"])
+        self.assertEqual(by_id["td-ea-rg"]["date"], "Dec 18, 2026")
+        self.assertNotIn("td-td03", by_id)
+        self.assertNotEqual(by_id["box-bp03"]["date"], by_id["td-ea-rg"]["date"])
         self.assertEqual(payload["sets"]["Eternal Ascent"]["release"], "Dec 18, 2026",
                          "the set date is the first product, and it is not copied onto the booster")
 
@@ -337,6 +339,48 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual({p["id"]: p["date"] for p in payload["products"]},
                          {"box-bp99": "Mar 2, 2027", "pack-bp99": "Mar 2, 2027"})
 
+    def test_a_same_day_confirmation_blocks_an_older_conflicting_announcement(self):
+        # January 30 is stored at November 1. A November 10 post confirms January 30.
+        # A November 6 post, processed after that, still says January 29. The older
+        # post must not win just because the confirmation did not republish the day.
+        catalog = {"products": [
+            {"id": "box-bp99", "set": "Sample Set", "name": "Booster Box", "code": "BP99",
+             "date": "Jan 30, 2027", "link": "https://example.test/stored", "asOf": "2026-11-01T00:00:00Z"},
+            {"id": "pack-bp99", "set": "Sample Set", "name": "Booster Pack", "code": "",
+             "date": "Jan 30, 2027", "link": "https://example.test/stored", "asOf": "2026-11-01T00:00:00Z"},
+        ], "sets": {}}
+        confirm = post('Booster Pack "Sample Set" still on sale January 30, 2027',
+                       "https://example.test/confirm", content="On sale January 30, 2027.",
+                       modified_gmt="2026-11-10T00:00:00")
+        older = post('Booster Pack "Sample Set" note',
+                     "https://example.test/older", content="On sale January 29, 2027.",
+                     modified_gmt="2026-11-06T00:00:00")
+        payload, _ = rs.sweep([confirm, older], {}, force=False, sieve=FakeSieve(), get=lambda *a, **k: b"",
+                              today=TODAY, catalog=catalog)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_same_day_confirmation_updates_the_clock_on_a_row_already_in_the_payload(self):
+        catalog = {"products": [
+            {"id": "box-bp99", "set": "Sample Set", "name": "Booster Box", "code": "BP99",
+             "date": "Jan 29, 2027", "link": "https://example.test/stored", "asOf": "2026-10-01T00:00:00Z"},
+            {"id": "pack-bp99", "set": "Sample Set", "name": "Booster Pack", "code": "",
+             "date": "Jan 29, 2027", "link": "https://example.test/stored", "asOf": "2026-10-01T00:00:00Z"},
+        ], "sets": {}}
+        moved = post('Booster Pack "Sample Set" moved',
+                     "https://example.test/moved", content="On sale January 30, 2027.",
+                     modified_gmt="2026-11-01T00:00:00")
+        confirm = post('Booster Pack "Sample Set" confirmed',
+                       "https://example.test/confirm", content="On sale January 30, 2027.",
+                       modified_gmt="2026-11-10T00:00:00")
+        older = post('Booster Pack "Sample Set" note',
+                     "https://example.test/older", content="On sale January 29, 2027.",
+                     modified_gmt="2026-11-06T00:00:00")
+        payload, _ = rs.sweep([moved, confirm, older], {}, force=False, sieve=FakeSieve(),
+                              get=lambda *a, **k: b"", today=TODAY, catalog=catalog)
+        self.assertEqual({p["id"]: p["date"] for p in payload["products"]},
+                         {"box-bp99": "Jan 30, 2027", "pack-bp99": "Jan 30, 2027"})
+        self.assertTrue(all(p.get("asOf") == "2026-11-10T00:00:00Z" for p in payload["products"]))
+
     def test_replaying_the_unchanged_original_does_not_undo_the_correction(self):
         original = post('Booster Pack "Sample Set" Preorders Now Available!',
                         "https://example.test/old", content="On sale June 20, 2027",
@@ -454,6 +498,237 @@ class BannerLogoTests(unittest.TestCase):
     def test_key_visual_banner_yields_no_logo(self):
         import banner_logo
         self.assertIsNone(banner_logo.cut_logo(self.banner(key_visual=True)))
+
+
+FIXTURES = Path(__file__).parent / "fixtures" / "releases"
+TODAY_LIVE = dt.date(2026, 11, 12)
+
+
+def load_json(name):
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def load_html(name):
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
+def page_getter(pages):
+    """pages: slug -> html. Image URLs and anything else return empty bytes."""
+    def get(url, *args, **kwargs):
+        slug = url.rstrip("/").rsplit("/", 1)[-1].lower()
+        html = pages.get(slug)
+        if html is None:
+            return b""
+        return html.encode("utf-8")
+    return get
+
+
+# The public /api/releases catalogue after backend PR 37 (12 Nov 2026).
+LIVE_NOW = {
+    "products": [
+        {"id": "box-bp03", "set": "Eternal Ascent", "name": "Booster Box", "sub": "", "code": "BP03",
+         "date": "Jan 30, 2027", "pre": True, "banner": "REL_BANNER_BP03", "box": "",
+         "q": "Palworld Eternal Ascent Booster Box",
+         "link": "https://en.palworld-official-cardgame.com/news/post-15",
+         "asOf": "2026-11-06T03:13:14.000Z"},
+        {"id": "pack-bp03", "set": "Eternal Ascent", "name": "Booster Pack", "sub": "", "code": "",
+         "date": "Jan 30, 2027", "pre": True, "banner": "REL_BANNER_BP03", "box": "",
+         "q": "Palworld Eternal Ascent Booster Pack",
+         "link": "https://en.palworld-official-cardgame.com/news/post-15",
+         "asOf": "2026-11-06T03:13:14.000Z"},
+        {"id": "box-eternal-ascent", "set": "Eternal Ascent", "name": "Booster Box", "sub": "", "code": "",
+         "date": "Jan 29, 2027", "pre": True, "banner": "REL_BANNER_ETERNAL_ASCENT", "box": "",
+         "q": "Palworld Eternal Ascent Booster Box",
+         "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "pack-eternal-ascent", "set": "Eternal Ascent", "name": "Booster Pack", "sub": "", "code": "",
+         "date": "Jan 29, 2027", "pre": True, "banner": "REL_BANNER_ETERNAL_ASCENT", "box": "",
+         "q": "Palworld Eternal Ascent Booster Pack",
+         "link": "https://en.palworld-official-cardgame.com/news/post-10"},
+        {"id": "td-ea-rg", "set": "Eternal Ascent", "name": "Trial Deck, Red \u00b7 Green", "sub": "Starter deck",
+         "code": "TD03", "date": "Dec 18, 2026", "pre": True, "banner": "", "box": "",
+         "q": "Palworld Eternal Ascent Trial Deck Red Green",
+         "link": "https://en.palworld-official-cardgame.com/news/post-7",
+         "asOf": "2026-09-24T10:50:36.000Z"},
+        {"id": "td-ea-bp", "set": "Eternal Ascent", "name": "Trial Deck, Blue \u00b7 Purple", "sub": "Starter deck",
+         "code": "TD04", "date": "Dec 18, 2026", "pre": True, "banner": "", "box": "",
+         "q": "Palworld Eternal Ascent Trial Deck Blue Purple",
+         "link": "https://en.palworld-official-cardgame.com/news/post-7",
+         "asOf": "2026-09-24T10:50:36.000Z"},
+    ],
+    "sets": {"Eternal Ascent": {"logo": "REL_LOGO_BP03", "release": "Jan 30, 2027"}},
+}
+
+
+class ProductPageTests(unittest.TestCase):
+    """Saved copies of the real TD03/TD04 posts and product pages (fetched 2026-11-12)."""
+
+    def setUp(self):
+        self.post7 = load_json("en-post-7.json")
+        self.post14 = load_json("en-post-14.json")
+        self.pages = {
+            "td03": load_html("en-product-td03.html"),
+            "td04": load_html("en-product-td04.html"),
+            "bp03": load_html("en-product-bp03.html"),
+            "bp01": load_html("en-product-bp01.html"),
+            "bp02": load_html("en-product-bp02.html"),
+            "ss01": load_html("en-product-ss01.html"),
+            "special-set-zoes-strategy": load_html("en-product-zoe.html"),
+        }
+
+    def test_the_english_headlines_are_not_quoted_product_titles(self):
+        # This is why the old gate never opened the posts.
+        self.assertIsNone(rs.parse_title(rs.strip_html(self.post7["title"]["rendered"])))
+        self.assertIsNone(rs.parse_title(rs.strip_html(self.post14["title"]["rendered"])))
+        self.assertEqual(
+            rs.product_page_urls(self.post7["content"]["rendered"], self.post7["link"]),
+            ["https://en.palworld-official-cardgame.com/products/TD03",
+             "https://en.palworld-official-cardgame.com/products/TD04"])
+        linked = rs.product_page_urls(self.post14["content"]["rendered"], self.post14["link"])
+        self.assertIn("https://en.palworld-official-cardgame.com/products/td03", linked)
+        self.assertIn("https://en.palworld-official-cardgame.com/products/td04", linked)
+        self.assertTrue(all("/events/" not in url for url in linked))
+
+    def test_product_pages_name_the_decks_and_ignore_the_page_date(self):
+        td03 = rs.parse_product_page(self.pages["td03"], "https://en.palworld-official-cardgame.com/products/td03")
+        td04 = rs.parse_product_page(self.pages["td04"], "https://en.palworld-official-cardgame.com/products/td04")
+        self.assertEqual(td03["date"], "Dec 18, 2026", "Aug 19 is when the page was posted, not the street day")
+        self.assertEqual((td03["ptype"], td03["code"]), ("Trial Deck", "TD03"))
+        self.assertEqual((td04["ptype"], td04["code"]), ("Trial Deck", "TD04"))
+        self.assertIn("Red", td03["set_name"])
+        self.assertIn("Blue", td04["set_name"])
+        ja = rs.parse_product_page(
+            load_html("ja-product-td03.html"),
+            "https://palworld-official-cardgame.com/products/td03")
+        self.assertEqual(ja["ptype"], "Trial Deck")
+        self.assertEqual(ja["code"], "TD03")
+        self.assertEqual(ja["date"], "Dec 18, 2026")
+        self.assertEqual(rs.split_colours(ja["set_name"]), ("Eternal Ascent", ["Red", "Green"]))
+        self.assertEqual(
+            rs.parse_title('ブースターパック第3弾「果てなき飛翔」'),
+            ("Booster Pack", "Eternal Ascent"))
+
+    def test_unquoted_posts_map_to_the_published_deck_ids(self):
+        catalog = {"products": [p for p in LIVE_NOW["products"] if not str(p["id"]).startswith("td-")],
+                   "sets": LIVE_NOW["sets"]}
+        sieve = FakeSieve()
+        payload, _ = rs.sweep([self.post7], {}, force=False, sieve=sieve, get=page_getter(self.pages),
+                              today=TODAY_LIVE, catalog=catalog)
+        self.assertEqual(sieve.calls, [], "a product page already states the day")
+        by_id = {p["id"]: p for p in payload["products"]}
+        self.assertEqual(list(by_id), ["td-ea-rg", "td-ea-bp"])
+        rg, bp = by_id["td-ea-rg"], by_id["td-ea-bp"]
+        self.assertEqual(rg["name"], "Trial Deck, Red \u00b7 Green")
+        self.assertEqual(bp["name"], "Trial Deck, Blue \u00b7 Purple")
+        self.assertEqual(rg["set"], "Eternal Ascent")
+        self.assertEqual(bp["set"], "Eternal Ascent")
+        self.assertEqual(rg["sub"], "Starter deck")
+        self.assertEqual(bp["sub"], "Starter deck")
+        self.assertEqual(rg["code"], "TD03")
+        self.assertEqual(bp["code"], "TD04")
+        self.assertEqual(rg["date"], "Dec 18, 2026")
+        self.assertEqual(bp["date"], "Dec 18, 2026")
+        self.assertTrue(rg["pre"] and bp["pre"])
+        self.assertEqual(rg["q"], "Palworld Eternal Ascent Trial Deck Red Green")
+        self.assertEqual(bp["q"], "Palworld Eternal Ascent Trial Deck Blue Purple")
+        self.assertEqual(rg["link"], self.post7["link"])
+        self.assertEqual(bp["link"], self.post7["link"])
+        self.assertEqual(rg["asOf"], "2026-09-24T10:50:36Z")
+        self.assertEqual(rg["banner"], "")
+        self.assertEqual(rg["box"], "")
+        self.assertNotIn("td-td03", by_id)
+        self.assertNotIn("td-td04", by_id)
+        self.assertNotIn("box-bp03", by_id)
+        self.assertNotIn("box-eternal-ascent", by_id)
+        self.assertNotIn("pack-eternal-ascent", by_id)
+        self.assertEqual(payload["retire"], [])
+        # The conference recap links the same pages and maps to the same ids.
+        again, _ = rs.sweep([self.post14], {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
+                            today=TODAY_LIVE, catalog=catalog)
+        self.assertEqual([p["id"] for p in again["products"]], ["td-ea-rg", "td-ea-bp"])
+        self.assertTrue(all(p["date"] == "Dec 18, 2026" for p in again["products"]))
+        self.assertNotIn("box-bp03", [p["id"] for p in again["products"]])
+
+    def test_rows_already_on_file_are_not_duplicated_or_overwritten(self):
+        posts = [self.post14, self.post7, load_json("en-post-13.json")]
+        before = json.dumps(LIVE_NOW)
+        payload, _ = rs.sweep(posts, {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
+                              today=TODAY_LIVE, catalog=LIVE_NOW)
+        self.assertEqual(payload["products"], [])
+        self.assertEqual(payload["retire"], [])
+        self.assertEqual(json.dumps(LIVE_NOW), before)
+        again, _ = rs.sweep(posts, payload["posts"], force=False, sieve=FakeSieve(),
+                            get=page_getter(self.pages), today=TODAY_LIVE, catalog=LIVE_NOW)
+        self.assertEqual(again["products"], [])
+
+    def test_event_posts_and_the_zoe_page_are_ignored(self):
+        zoe_url = "https://en.palworld-official-cardgame.com/products/special-set-zoes-strategy"
+        self.assertIsNone(rs.parse_product_page(self.pages["special-set-zoes-strategy"], zoe_url))
+        self.assertIsNone(rs.parse_product_page(
+            '<title>Special Set "Zoe\'s Strategy" | PRODUCTS</title><p>Release Date: December 1, 2026</p>',
+            zoe_url))
+        event = post(
+            "Masters League 26/27 kicks off",
+            "https://en.palworld-official-cardgame.com/news/post-masters",
+            content='<a href="/events/masters-league">Masters League 26/27</a>'
+                    f'<a href="{zoe_url}">Special Set</a>',
+            modified_gmt="2026-11-10T01:33:24")
+        payload, _ = rs.sweep(
+            [load_json("ja-post-masters.json"), event],
+            {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
+            today=TODAY_LIVE, catalog=LIVE_NOW)
+        self.assertEqual(payload["products"], [])
+
+    def test_an_unread_catalogue_does_not_republish_linked_products(self):
+        def down(url, *args, **kwargs):
+            raise OSError("catalogue down")
+        unread = rs.fetch_catalog(get=down)
+        self.assertFalse(unread["ok"])
+        payload, _ = rs.sweep([self.post14, self.post7], {}, force=False, sieve=FakeSieve(),
+                              get=page_getter(self.pages), today=TODAY_LIVE, catalog=unread)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_recap_does_not_put_the_news_clock_on_an_old_page_date(self):
+        # post-14 was edited later than the delay notice. Its product page still says the
+        # old booster day. That page date must not ride the recap's newer modified_gmt.
+        pages = dict(self.pages)
+        pages["bp03"] = self.pages["bp03"].replace("January 30, 2027", "January 29, 2027")
+        payload, _ = rs.sweep([self.post14], {}, force=False, sieve=FakeSieve(),
+                              get=page_getter(pages), today=TODAY_LIVE, catalog=LIVE_NOW)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_product_page_correction_uses_the_page_clock(self):
+        pages = dict(self.pages)
+        pages["td03"] = self.pages["td03"].replace("December 18, 2026", "December 20, 2026")
+
+        def get(url, *args, **kwargs):
+            if "cpt_products?slug=td03" in url or "cpt_products?slug=TD03" in url:
+                return b'[{"modified_gmt": "2026-11-12T00:00:00"}]'
+            return page_getter(pages)(url)
+
+        payload, _ = rs.sweep([self.post7], {}, force=False, sieve=FakeSieve(), get=get,
+                              today=TODAY_LIVE, catalog=LIVE_NOW)
+        rows = [p for p in payload["products"] if p["id"] == "td-ea-rg"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["date"], "Dec 20, 2026")
+        self.assertEqual(rows[0]["asOf"], "2026-11-12T00:00:00Z")
+        self.assertNotIn("td-ea-bp", [p["id"] for p in payload["products"]])
+
+    def test_a_seen_post_is_reread_when_its_product_page_changes(self):
+        first, _ = rs.sweep([self.post7], {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
+                            today=TODAY_LIVE, catalog={"products": [], "sets": {}})
+        self.assertEqual(first["products"][0]["date"], "Dec 18, 2026")
+        changed = dict(self.pages)
+        changed["td03"] = self.pages["td03"].replace("December 18, 2026", "December 20, 2026")
+        changed["td04"] = self.pages["td04"].replace("December 18, 2026", "December 20, 2026")
+        second, _ = rs.sweep([self.post7], first["posts"], force=False, sieve=FakeSieve(),
+                             get=page_getter(changed), today=TODAY_LIVE, catalog={"products": [], "sets": {}})
+        self.assertEqual({p["id"]: p["date"] for p in second["products"]},
+                         {"td-ea-rg": "Dec 20, 2026", "td-ea-bp": "Dec 20, 2026"})
+
+    def test_a_sales_post_does_not_readd_the_back_catalogue(self):
+        payload, _ = rs.sweep([load_json("en-post-13.json")], {}, force=False, sieve=FakeSieve(),
+                              get=page_getter(self.pages), today=TODAY_LIVE, catalog={"products": [], "sets": {}})
+        self.assertEqual(payload["products"], [])
 
 
 if __name__ == "__main__":
