@@ -24,7 +24,9 @@ box-eternal-ascent and pack-eternal-ascent are not rewritten. Japanese news post
 catalogue: the Japanese site is a separate feed, and a Japanese delay notice is not applied here.
 
 Posts already processed are skipped (the backend remembers them). A post is opened again when
-its text changed. A street day is replaced only by a newer absolute asOf, earlier or later on
+its text changed. A post that was only a link to a product page is read again anyway, because
+the product page can change while the news post does not. A street day is replaced only by a
+newer absolute asOf, earlier or later on
 the calendar. asOf is WordPress modified_gmt, or date_gmt when modified_gmt is absent,
 normalized to UTC with a Z suffix. Site-local modified/date are not used. A post whose current
 text asserts no street day is not given that clock, so a later edit of an old preorder cannot
@@ -729,6 +731,7 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
     """
     payload: dict = {"products": [], "sets": {}, "posts": {}, "retire": []}
     images: dict[str, bytes] = {}
+    clocks: dict[str, str] = {}
     catalog = catalog or {"products": [], "sets": {}}
     for post in posts:
         title = strip_html(str((post.get("title") or {}).get("rendered") or ""))
@@ -745,9 +748,12 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
             continue
         image_url = featured_image(post)
         stamp = announcement_stamp(image_url, title, text)
-        if not force and seen.get(link) == stamp:
+        # A matching news stamp means the post text is unchanged. It does not mean a linked
+        # product page is unchanged: /products/td03 can be corrected on its own, so those
+        # pages are read again even when the referring post is already remembered.
+        if not force and seen.get(link) == stamp and not page_urls:
             continue
-        if parsed and not force and link in seen and not _should_revisit(post, parsed[0], parsed[1], title, text, catalog):
+        if parsed and not force and link in seen and seen.get(link) != stamp and not _should_revisit(post, parsed[0], parsed[1], title, text, catalog):
             continue
         linked_checked = False
         fetch_ok = True
@@ -818,7 +824,7 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                     resolved["asOf"] = revision
                 else:
                     resolved.pop("asOf", None)
-                if not _merge_row(payload, resolved, catalog):
+                if not _merge_row(payload, resolved, catalog, clocks):
                     continue
                 emitted += 1
                 base_set = resolved["set"]
@@ -1010,8 +1016,35 @@ def _apply_stamp(existing: dict, row: dict) -> bool:
     return changed
 
 
-def _merge_row(payload: dict, row: dict, catalog: dict | None = None) -> bool:
-    """One id per product. A newer UTC stamp replaces the day. An empty date does not."""
+def _remember_clock(clocks: dict[str, str] | None, pid: str, stamp: str) -> None:
+    """Newest asOf seen for this id. A same-day confirmation still counts, so an older
+    announcement later in the sweep cannot replace the day."""
+    if clocks is None or not pid or asof_utc(stamp) is None:
+        return
+    previous = clocks.get(pid) or ""
+    if asof_utc(previous) is None or asof_utc(stamp) > asof_utc(previous):
+        clocks[pid] = stamp
+
+
+def _with_clock(product: dict | None, clocks: dict[str, str] | None) -> dict | None:
+    if not product or not clocks:
+        return product
+    stamp = clocks.get(product.get("id") or "") or ""
+    if asof_utc(stamp) is None:
+        return product
+    current = stored_asof(product)
+    if asof_utc(current) is not None and asof_utc(stamp) <= asof_utc(current):
+        return product
+    return {**product, "asOf": stamp}
+
+
+def _merge_row(payload: dict, row: dict, catalog: dict | None = None, clocks: dict[str, str] | None = None) -> bool:
+    """One id per product. A newer UTC stamp replaces the day. An empty date does not.
+
+    The same street day is not published again: the link, the banner and the stored row stay.
+    A newer stamp for that same day is kept only as the clock later posts in this sweep are
+    judged against, so an older conflicting announcement cannot overwrite it.
+    """
     incoming = stored_asof(row)
     if incoming:
         row["asOf"] = incoming
@@ -1021,22 +1054,29 @@ def _merge_row(payload: dict, row: dict, catalog: dict | None = None) -> bool:
         if existing.get("id") != row.get("id"):
             continue
         if row.get("date") and existing.get("date") == row.get("date"):
+            if incoming and (asof_utc(stored_asof(existing)) is None or asof_utc(incoming) > asof_utc(stored_asof(existing))):
+                existing["asOf"] = incoming
+                _remember_clock(clocks, existing.get("id") or "", incoming)
             return False
         return _apply_stamp(existing, row)
-    current = _find_product(_catalog_products(catalog), row.get("id") or "")
-    # The same street day is already published. Do not rewrite the link, the banner or asOf.
+    current = _with_clock(_find_product(_catalog_products(catalog), row.get("id") or ""), clocks)
+    # The same street day is already published. Do not rewrite the link, the banner or the row.
     if current and row.get("date") and current.get("date") == row.get("date"):
+        if incoming and (asof_utc(stored_asof(current)) is None or asof_utc(incoming) > asof_utc(stored_asof(current))):
+            _remember_clock(clocks, current.get("id") or "", incoming)
         return False
     if not row.get("date"):
         if current and current.get("date"):
             return False
         payload["products"].append(row)
+        _remember_clock(clocks, row.get("id") or "", stored_asof(row))
         return True
     if current and _apply_stamp(dict(current), row) is False and keeps_current(incoming, current):
         return False
     if current and current.get("date") == row.get("date") and stored_asof(current) == incoming and (current.get("link") or "") == (row.get("link") or ""):
         return False
     payload["products"].append(row)
+    _remember_clock(clocks, row.get("id") or "", stored_asof(row))
     return True
 
 

@@ -339,6 +339,48 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual({p["id"]: p["date"] for p in payload["products"]},
                          {"box-bp99": "Mar 2, 2027", "pack-bp99": "Mar 2, 2027"})
 
+    def test_a_same_day_confirmation_blocks_an_older_conflicting_announcement(self):
+        # January 30 is stored at November 1. A November 10 post confirms January 30.
+        # A November 6 post, processed after that, still says January 29. The older
+        # post must not win just because the confirmation did not republish the day.
+        catalog = {"products": [
+            {"id": "box-bp99", "set": "Sample Set", "name": "Booster Box", "code": "BP99",
+             "date": "Jan 30, 2027", "link": "https://example.test/stored", "asOf": "2026-11-01T00:00:00Z"},
+            {"id": "pack-bp99", "set": "Sample Set", "name": "Booster Pack", "code": "",
+             "date": "Jan 30, 2027", "link": "https://example.test/stored", "asOf": "2026-11-01T00:00:00Z"},
+        ], "sets": {}}
+        confirm = post('Booster Pack "Sample Set" still on sale January 30, 2027',
+                       "https://example.test/confirm", content="On sale January 30, 2027.",
+                       modified_gmt="2026-11-10T00:00:00")
+        older = post('Booster Pack "Sample Set" note',
+                     "https://example.test/older", content="On sale January 29, 2027.",
+                     modified_gmt="2026-11-06T00:00:00")
+        payload, _ = rs.sweep([confirm, older], {}, force=False, sieve=FakeSieve(), get=lambda *a, **k: b"",
+                              today=TODAY, catalog=catalog)
+        self.assertEqual(payload["products"], [])
+
+    def test_a_same_day_confirmation_updates_the_clock_on_a_row_already_in_the_payload(self):
+        catalog = {"products": [
+            {"id": "box-bp99", "set": "Sample Set", "name": "Booster Box", "code": "BP99",
+             "date": "Jan 29, 2027", "link": "https://example.test/stored", "asOf": "2026-10-01T00:00:00Z"},
+            {"id": "pack-bp99", "set": "Sample Set", "name": "Booster Pack", "code": "",
+             "date": "Jan 29, 2027", "link": "https://example.test/stored", "asOf": "2026-10-01T00:00:00Z"},
+        ], "sets": {}}
+        moved = post('Booster Pack "Sample Set" moved',
+                     "https://example.test/moved", content="On sale January 30, 2027.",
+                     modified_gmt="2026-11-01T00:00:00")
+        confirm = post('Booster Pack "Sample Set" confirmed',
+                       "https://example.test/confirm", content="On sale January 30, 2027.",
+                       modified_gmt="2026-11-10T00:00:00")
+        older = post('Booster Pack "Sample Set" note',
+                     "https://example.test/older", content="On sale January 29, 2027.",
+                     modified_gmt="2026-11-06T00:00:00")
+        payload, _ = rs.sweep([moved, confirm, older], {}, force=False, sieve=FakeSieve(),
+                              get=lambda *a, **k: b"", today=TODAY, catalog=catalog)
+        self.assertEqual({p["id"]: p["date"] for p in payload["products"]},
+                         {"box-bp99": "Jan 30, 2027", "pack-bp99": "Jan 30, 2027"})
+        self.assertTrue(all(p.get("asOf") == "2026-11-10T00:00:00Z" for p in payload["products"]))
+
     def test_replaying_the_unchanged_original_does_not_undo_the_correction(self):
         original = post('Booster Pack "Sample Set" Preorders Now Available!',
                         "https://example.test/old", content="On sale June 20, 2027",
@@ -635,6 +677,18 @@ class ProductPageTests(unittest.TestCase):
             {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
             today=TODAY_LIVE, catalog=LIVE_NOW)
         self.assertEqual(payload["products"], [])
+
+    def test_a_seen_post_is_reread_when_its_product_page_changes(self):
+        first, _ = rs.sweep([self.post7], {}, force=False, sieve=FakeSieve(), get=page_getter(self.pages),
+                            today=TODAY_LIVE, catalog={"products": [], "sets": {}})
+        self.assertEqual(first["products"][0]["date"], "Dec 18, 2026")
+        changed = dict(self.pages)
+        changed["td03"] = self.pages["td03"].replace("December 18, 2026", "December 20, 2026")
+        changed["td04"] = self.pages["td04"].replace("December 18, 2026", "December 20, 2026")
+        second, _ = rs.sweep([self.post7], first["posts"], force=False, sieve=FakeSieve(),
+                             get=page_getter(changed), today=TODAY_LIVE, catalog={"products": [], "sets": {}})
+        self.assertEqual({p["id"]: p["date"] for p in second["products"]},
+                         {"td-ea-rg": "Dec 20, 2026", "td-ea-bp": "Dec 20, 2026"})
 
     def test_a_sales_post_does_not_readd_the_back_catalogue(self):
         payload, _ = rs.sweep([load_json("en-post-13.json")], {}, force=False, sieve=FakeSieve(),
