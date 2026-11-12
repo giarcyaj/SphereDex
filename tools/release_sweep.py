@@ -1,16 +1,27 @@
 """Turn official product announcements into app release data (logos, banners, dates, products).
 
 Part of the news sweep (.github/workflows/sieve-refresh.yml). For each recent post on the official
-site whose title announces a product (e.g. 'Booster Pack "Eternal Ascent" Preorders Now Available!'):
+English site:
 
-  1. product type and set name come from the title, the product code from the banner's file name
-     (BP03-ordersheet-banner-template.png -> BP03) or the post text;
-  2. the release date comes from Tesseract OCR of the banner, then the post text - announcement
-     dates are often printed only in the banner (--sieve adds a paid Sieve read of the page first);
-  3. the banner becomes a timeline thumbnail and, when it is the plain announcement template, the
+  1. a quoted title still announces the product (Booster Pack "Eternal Ascent" ...). The product
+     code comes from the banner file name (BP03-ordersheet-banner-template.png -> BP03) or the text;
+  2. a post whose title is not quoted that way is still opened when it links to an official product
+     page (/products/td03, /products/td04). The page, not the headline, supplies the type, set, code
+     and street date. Trial decks, booster packs and sleeve and card sets are read in English or
+     Japanese. Event pages are not: Zoe's Strategy is a special set sold at events, and a Masters
+     League post is not a sealed product;
+  3. a linked product page takes its street day from the labelled Release Date. That label
+     beats the line that only dates the page. A quoted announcement still takes its day from
+     the post text, then Tesseract OCR of the banner (--sieve adds a paid Sieve read first);
+  4. the banner becomes a timeline thumbnail and, when it is the plain announcement template, the
      set logo is cut out of it (tools/banner_logo.py);
-  4. everything is published to the backend (/api/admin/release-img + /api/admin/releases), which
+  5. everything is published to the backend (/api/admin/release-img + /api/admin/releases), which
      every app merges into its release timeline, Browse tiles and Sealed list at launch.
+
+A product the catalogue already stores under the same id and the same street day is not published
+again. That keeps td-ea-rg, td-ea-bp, box-bp03 and pack-bp03 in place. The uncoded duplicates
+box-eternal-ascent and pack-eternal-ascent are not rewritten. Japanese news posts are not this
+catalogue: the Japanese site is a separate feed, and a Japanese delay notice is not applied here.
 
 Posts already processed are skipped (the backend remembers them). A post is opened again when
 its text changed. A street day is replaced only by a newer absolute asOf, earlier or later on
@@ -42,6 +53,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -58,9 +70,60 @@ DATE_RE = re.compile(
     r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(20\d{2})\b",
     re.IGNORECASE)
 SIGNAL_RE = re.compile(r"on\s*sale|release|launch|available|ships?|arriv", re.IGNORECASE)
-TYPES = r"Booster\s+Pack|Booster\s+Box|Trial\s+Deck|Starter\s+Deck|Sleeve\s*(?:&|and)\s*Card\s+Set|Card\s+Set|Premium\s+\w+(?:\s+\w+)?|Special\s+\w+(?:\s+\w+)?"
-TITLE_RE = re.compile(r"(" + TYPES + r")\s*[\"“”]([^\"“”]{2,60})[\"“”]", re.IGNORECASE)
+_EN_TYPES = (
+    r"Booster\s+Pack|Booster\s+Box|Trial\s+Deck|Starter\s+Deck|"
+    r"Sleeve\s*(?:&|and)\s*Card\s+Set|Card\s+Set|Premium\s+\w+(?:\s+\w+)?|Special\s+\w+(?:\s+\w+)?"
+)
+_JA_TYPES = r"ブースターパック|ブースターボックス|トライアルデッキ|スターターデッキ|スリーブ\s*[&＆]\s*カードセット"
+TYPES = _EN_TYPES + "|" + _JA_TYPES
+# Japanese product titles quote with 「」 and put 第3弾 between the type and the set name.
+_QUOTED = "[\"“”「」『』]"
+TITLE_RE = re.compile(
+    "(" + TYPES + ")"
+    "(?:[ \t\u3000]*第\\s*\\d+\\s*弾)?"
+    "[ \t\u3000]*" + _QUOTED + "([^\"“”「」『』]{2,80})" + _QUOTED,
+    re.IGNORECASE)
 CODE_RE = re.compile(r"(?<![A-Z0-9])E?((?:BP|TD|SS|PR)\d{2})(?!\d)", re.IGNORECASE)
+# The app and backend PR 37 already publish these ids. products_for would otherwise mint td-td03
+# beside td-ea-rg. Colour initials are the published id; the code stays on the row.
+CANONICAL_PRODUCT_IDS = {
+    ("TD03", "deck"): "td-ea-rg",
+    ("TD04", "deck"): "td-ea-bp",
+}
+_TYPE_EN = {
+    "トライアルデッキ": "Trial Deck",
+    "スターターデッキ": "Starter Deck",
+    "ブースターパック": "Booster Pack",
+    "ブースターボックス": "Booster Box",
+    "スリーブ&カードセット": "Sleeve & Card Set",
+    "スリーブ＆カードセット": "Sleeve & Card Set",
+}
+_SET_EN = (
+    ("パルパゴスの夜明け", "Dawn of Palpagos"),
+    ("目覚めし伝説", "Legends Awaken"),
+    ("果てなき飛翔", "Eternal Ascent"),
+)
+_COLOUR_EN = {
+    "レッド": "Red", "ブルー": "Blue", "グリーン": "Green",
+    "パープル": "Purple", "イエロー": "Yellow", "カラーレス": "Colorless",
+}
+_EVENT_PAGE = re.compile(
+    r"special\s*set|masters\s*league|マスターズリーグ|開催記念|tournament",
+    re.IGNORECASE)
+_UNQUOTED_SEALED = re.compile(
+    r"^(Sleeve\s*(?:&|and)\s*Card\s+Set|スリーブ\s*[&＆]\s*カードセット)\s+(.+)$",
+    re.IGNORECASE)
+_RELEASE_LABEL = re.compile(
+    r"Release Date:\s*([A-Za-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+20\d{2})",
+    re.IGNORECASE)
+_JA_RELEASE = re.compile(r"発売日\s*(20\d{2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日")
+_OFFICIAL_HOSTS = {
+    "en.palworld-official-cardgame.com",
+    "palworld-official-cardgame.com",
+    "www.palworld-official-cardgame.com",
+}
+# The bare official host is the Japanese site. en. is the English catalogue this sweep publishes.
+_JA_NEWS_HOSTS = {"palworld-official-cardgame.com", "www.palworld-official-cardgame.com"}
 COLOURS = ("red", "blue", "green", "purple", "yellow", "colorless")
 
 SIEVE_SCHEMA = {
@@ -86,13 +149,33 @@ def strip_html(fragment: str) -> str:
     return re.sub(r"\s+", " ", _html.unescape(text)).strip()
 
 
+def _english_type(raw: str) -> str:
+    compact = re.sub(r"\s+", "", raw or "").replace("＆", "&")
+    if compact in _TYPE_EN:
+        return _TYPE_EN[compact]
+    return " ".join(w.capitalize() if w.islower() else w for w in (raw or "").split())
+
+
+def _english_set(name: str) -> str:
+    text = name or ""
+    for ja, en in _SET_EN:
+        text = text.replace(ja, en)
+    for ja, en in _COLOUR_EN.items():
+        text = text.replace(ja, en)
+    return " ".join(text.split())
+
+
 def parse_title(title: str) -> tuple[str, str] | None:
-    """('Booster Pack', 'Eternal Ascent') from an announcement title, or None."""
-    m = TITLE_RE.search(_html.unescape(title or ""))
-    if not m:
+    """('Booster Pack', 'Eternal Ascent') from an announcement title, or None.
+
+    English quotes and Japanese 「」 both count. The type has to be one of the sealed
+    product words. A headline with no quotes (the English trial deck posts) is None:
+    the product page is what names those.
+    """
+    match = TITLE_RE.search(_html.unescape(title or ""))
+    if not match:
         return None
-    ptype = " ".join(w.capitalize() if w.islower() else w for w in m.group(1).split())
-    return ptype, " ".join(m.group(2).split())
+    return _english_type(match.group(1)), _english_set(match.group(2))
 
 
 def find_code(*texts: str) -> str:
@@ -263,9 +346,127 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")[:40]
 
 
+def _is_sealed_type(ptype: str) -> bool:
+    """Booster packs, trial decks and sleeve and card sets. Not a special set or a promo kit."""
+    kind = (ptype or "").lower()
+    if "special" in kind or "premium" in kind:
+        return False
+    return "booster" in kind or "deck" in kind or "sleeve" in kind or kind == "card set"
+
+
+def _is_event_source(title: str, url: str) -> bool:
+    """Zoe's Strategy and Masters League pages are events, even when they carry a date."""
+    return _EVENT_PAGE.search(f"{title}\n{url}") is not None
+
+
+def page_title(html: str) -> str:
+    match = re.search(r"<title>(.*?)</title>", html or "", re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    return strip_html(match.group(1)).split("|")[0].strip()
+
+
+def product_release_date(text: str) -> str:
+    """The labelled street date. The line that dates the page itself is not the street date."""
+    labeled = _RELEASE_LABEL.search(text or "")
+    if labeled:
+        return parse_date(labeled.group(1))
+    ja = _JA_RELEASE.search(text or "")
+    if not ja:
+        return ""
+    year, month, day = int(ja.group(1)), int(ja.group(2)), int(ja.group(3))
+    try:
+        _dt.date(year, month, day)
+    except ValueError:
+        return ""
+    return f"{SHORT[month]} {day}, {year}"
+
+
+def parse_product_page(page: str, url: str) -> dict | None:
+    """Sealed product facts from an official product page.
+
+    None for accessories, for a special set sold at events, and for a page that does not
+    label a street date. The code is the page slug (td03 -> TD03).
+    """
+    title = page_title(page)
+    if not title or _is_event_source(title, url):
+        return None
+    parsed = parse_title(title)
+    if not parsed:
+        plain = _UNQUOTED_SEALED.match(title)
+        if plain:
+            parsed = (_english_type(plain.group(1)), _english_set(plain.group(2)))
+    if not parsed or not _is_sealed_type(parsed[0]):
+        return None
+    code = find_code(urllib.parse.urlparse(url).path, title)
+    date = product_release_date(strip_html(page))
+    if not code or not date:
+        return None
+    return {"ptype": parsed[0], "set_name": parsed[1], "code": code, "date": date}
+
+
+def product_page_urls(html: str, post_link: str) -> list[str]:
+    """Official product-page links in a news post. /events/ links are not product pages."""
+    if not post_link:
+        return []
+    post_host = urllib.parse.urlparse(post_link).netloc.lower()
+    found: list[str] = []
+    for match in re.finditer(r"""href=["']([^"']+)["']""", html or "", re.IGNORECASE):
+        href = _html.unescape(match.group(1)).strip()
+        absolute = urllib.parse.urljoin(post_link, href)
+        parts = urllib.parse.urlparse(absolute)
+        host = parts.netloc.lower()
+        if host not in _OFFICIAL_HOSTS and host != post_host:
+            continue
+        if "/products/" not in parts.path:
+            continue
+        url = f"{parts.scheme}://{parts.netloc}{parts.path}".rstrip("/")
+        if url not in found:
+            found.append(url)
+    return found
+
+
+def _japanese_news_post(link: str) -> bool:
+    """Japanese site news is not an English catalogue update. Product pages are read either way."""
+    return urllib.parse.urlparse(link or "").netloc.lower() in _JA_NEWS_HOSTS
+
+
+def _read_page(get, url: str) -> str:
+    try:
+        data = get(url, timeout=60)
+    except TypeError:
+        data = get(url)
+    except (OSError, ValueError):
+        return ""
+    if isinstance(data, str):
+        return data
+    if not data:
+        return ""
+    return bytes(data).decode("utf-8", "replace")
+
+
+def _linked_row_eligible(row: dict, catalog: dict | None, today: _dt.date | None) -> bool:
+    """A product reached only because a post linked its page.
+
+    A row already on file is handed to the merge, which leaves it when the street day matches.
+    A day before today, for an id the catalogue does not have, is a back catalogue mention
+    (a sales post linking BP01), not a new release.
+    """
+    if not row.get("date"):
+        return False
+    if _find_product(_catalog_products(catalog), row.get("id") or ""):
+        return True
+    day = (today or _dt.date.today()) - _dt.timedelta(days=1)
+    return not is_past(row["date"], day)
+
+
 def split_colours(set_name: str) -> tuple[str, list[str]]:
-    """'Eternal Ascent Red·Green' -> ('Eternal Ascent', ['Red', 'Green'])."""
-    words = re.split(r"[\s·/,&\-]+", set_name)
+    """'Eternal Ascent Red·Green' -> ('Eternal Ascent', ['Red', 'Green']).
+
+    The official pages use the katakana middle dot ・ between colours. The app's own
+    name uses ·. Both split here.
+    """
+    words = re.split(r"[\s·・･/,&\-]+", set_name)
     colours = []
     while words and words[-1].lower() in COLOURS:
         colours.insert(0, words.pop().capitalize())
@@ -532,49 +733,76 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
     for post in posts:
         title = strip_html(str((post.get("title") or {}).get("rendered") or ""))
         link = str(post.get("link") or "")
-        parsed = parse_title(title)
-        if not parsed or not link.startswith("https://"):
+        raw_html = str((post.get("content") or {}).get("rendered") or "")
+        text = strip_html(raw_html)
+        if not link.startswith("https://") or _japanese_news_post(link):
             continue
-        ptype, set_name = parsed
-        text = strip_html(str((post.get("content") or {}).get("rendered") or ""))
+        parsed = parse_title(title)
+        # A quoted title is the announcement. Anything else is opened only for the product
+        # pages it links, which is how the unquoted trial deck posts are read.
+        page_urls = [] if parsed else product_page_urls(raw_html, link)
+        if not parsed and not page_urls:
+            continue
         image_url = featured_image(post)
         stamp = announcement_stamp(image_url, title, text)
         if not force and seen.get(link) == stamp:
             continue
-        if not force and link in seen and not _should_revisit(post, ptype, set_name, title, text, catalog):
+        if parsed and not force and link in seen and not _should_revisit(post, parsed[0], parsed[1], title, text, catalog):
             continue
-        text_date = best_date(f"{title}\n{text}", ptype)
-        sieve_date, sieve_code = sieve.release(link, set_name)
-        after_type = text[text.lower().find(ptype.lower()):] if ptype and ptype.lower() in text.lower() else ""
-        code = find_code(os.path.basename(image_url), title, after_type[:180], _product_window(text, set_name, ptype)) or sieve_code
-        # The post text is the announcement. Sieve only fills a date the text does not state.
-        date = text_date or sieve_date
-        image_bytes = b""
-        if image_url:
-            try:
-                image_bytes = get(image_url, timeout=120)
-            except (OSError, ValueError) as exc:
-                print(f"release-sweep: banner download failed for {link}: {exc}", file=sys.stderr)
-            if image_bytes and not date:
-                read = ocr_text(image_bytes)
-                date = best_date(read, ptype) or parse_date(read)
-        base = (code or slug(set_name).upper().replace("-", "_"))[:40]
-        banner_key = logo_key = ""
-        if image_bytes:
-            try:
-                import banner_logo   # numpy + Pillow: installed by the sweep workflow, not the test job
-                from PIL import Image
-                im = Image.open(io.BytesIO(image_bytes))
-                banner_key = f"REL_BANNER_{base}"
-                images[banner_key] = banner_logo.webp_bytes(banner_logo.banner_thumb(im), 82)
-                logo = banner_logo.cut_logo(im)
-                if logo is not None:
-                    logo_key = f"REL_LOGO_{base}"
-                    images[logo_key] = banner_logo.webp_bytes(logo, 90)
-            except Exception as exc:   # an unreadable banner still leaves the product and its date
-                print(f"release-sweep: banner processing failed for {link}: {exc}", file=sys.stderr)
-        items = [{"ptype": ptype, "set_name": set_name, "date": date, "code": code, "banner": banner_key}]
-        items.extend({**extra, "banner": ""} for extra in _body_extras(text, (ptype, set_name)))
+        linked_checked = False
+        fetch_ok = True
+        logo_key = ""
+        if parsed:
+            ptype, set_name = parsed
+            text_date = best_date(f"{title}\n{text}", ptype)
+            sieve_date, sieve_code = sieve.release(link, set_name)
+            after_type = text[text.lower().find(ptype.lower()):] if ptype and ptype.lower() in text.lower() else ""
+            code = find_code(os.path.basename(image_url), title, after_type[:180], _product_window(text, set_name, ptype)) or sieve_code
+            # The post text is the announcement. Sieve only fills a date the text does not state.
+            date = text_date or sieve_date
+            image_bytes = b""
+            if image_url:
+                try:
+                    image_bytes = get(image_url, timeout=120)
+                except (OSError, ValueError) as exc:
+                    print(f"release-sweep: banner download failed for {link}: {exc}", file=sys.stderr)
+                if image_bytes and not date:
+                    read = ocr_text(image_bytes)
+                    date = best_date(read, ptype) or parse_date(read)
+            base = (code or slug(set_name).upper().replace("-", "_"))[:40]
+            banner_key = ""
+            if image_bytes:
+                try:
+                    import banner_logo   # numpy + Pillow: installed by the sweep workflow, not the test job
+                    from PIL import Image
+                    im = Image.open(io.BytesIO(image_bytes))
+                    banner_key = f"REL_BANNER_{base}"
+                    images[banner_key] = banner_logo.webp_bytes(banner_logo.banner_thumb(im), 82)
+                    logo = banner_logo.cut_logo(im)
+                    if logo is not None:
+                        logo_key = f"REL_LOGO_{base}"
+                        images[logo_key] = banner_logo.webp_bytes(logo, 90)
+                except Exception as exc:   # an unreadable banner still leaves the product and its date
+                    print(f"release-sweep: banner processing failed for {link}: {exc}", file=sys.stderr)
+            items = [{"ptype": ptype, "set_name": set_name, "date": date, "code": code, "banner": banner_key, "linked": False}]
+            items.extend({**extra, "banner": "", "linked": False} for extra in _body_extras(text, (ptype, set_name)))
+        else:
+            linked_checked = True
+            text_date = sieve_date = ""
+            code = date = ""
+            items = []
+            for url in page_urls:
+                page = _read_page(get, url)
+                if not page:
+                    fetch_ok = False
+                    print(f"release-sweep: product page unreadable for {link}: {url}", file=sys.stderr)
+                    continue
+                info = parse_product_page(page, url)
+                if not info:
+                    continue
+                items.append({**info, "banner": "", "linked": True})
+            if items:
+                code, date = items[0]["code"], items[0]["date"]
         emitted = 0
         for item in items:
             # Stamp only a day this fetch actually asserts. A newer edit with no street day
@@ -584,6 +812,8 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                                 item["banner"], today)
             for row in rows:
                 resolved = resolve_row(row, catalog)
+                if item.get("linked") and not _linked_row_eligible(resolved, catalog, today):
+                    continue
                 if revision:
                     resolved["asOf"] = revision
                 else:
@@ -593,18 +823,18 @@ def sweep(posts: list[dict], seen: dict, *, force: bool, sieve: SieveReader, get
                 emitted += 1
                 base_set = resolved["set"]
                 entry = payload["sets"].setdefault(base_set, {"logo": "", "release": ""})
-                if logo_key and item["banner"]:
+                if logo_key and item.get("banner"):
                     entry["logo"] = logo_key
                 elif not entry["logo"]:
                     stored = (catalog.get("sets") or {}).get(base_set) or {}
                     entry["logo"] = stored.get("logo") or ""
+        # A linked page that failed to download is not remembered, so the next run tries it.
+        # A post whose sealed products are already on file is remembered, so it is not opened again.
+        remember = fetch_ok and (emitted or text_date or sieve_date or (text and not image_url) or linked_checked)
+        if remember:
+            payload["posts"][link] = stamp
         if not emitted:
-            # Remember a post whose text stated a day we did not apply, so the next run does not
-            # read it again. An image-only date that failed to read is not remembered.
-            if text_date or sieve_date or (text and not image_url):
-                payload["posts"][link] = stamp
             continue
-        payload["posts"][link] = stamp
         print(f"release-sweep: {title!r} -> {emitted} product row(s), code={code or '?'}, date={date or '?'}, "
               f"logo={'yes' if logo_key else 'no'}")
     for name in list(payload["sets"]):
@@ -663,17 +893,36 @@ def _find_product(products: list[dict], pid: str) -> dict | None:
     return None
 
 
+def _prefer_known_id(row: dict, code: str, kind: str, matches: list[dict]) -> dict:
+    """One catalogue row for this code and kind, or the id the app already publishes."""
+    canonical = CANONICAL_PRODUCT_IDS.get((code, kind))
+    chosen = matches
+    if canonical and len(matches) != 1:
+        preferred = [p for p in matches if p.get("id") == canonical]
+        if len(preferred) == 1:
+            chosen = preferred
+    if len(chosen) == 1:
+        kept = chosen[0]
+        return {**row, "id": kept["id"], "code": kept.get("code") or row.get("code") or ""}
+    if canonical:
+        return {**row, "id": canonical}
+    return row
+
+
 def resolve_row(row: dict, catalog: dict | None) -> dict:
     """Reuse the canonical id when this set and kind is already published under a product code.
 
     A delay notice often names the booster and not the code. Emitting box-eternal-ascent beside
     box-bp03 is how the duplicate tiles were created. Packs follow the coded box (pack-bp03).
+    A coded trial deck follows the same rule: TD03 is td-ea-rg, not a second id td-td03.
     """
     products = _catalog_products(catalog)
     code = (row.get("code") or "").upper()
-    if code:
-        return row
     kind = kind_of(row.get("name") or "")
+    if code:
+        same = [p for p in products if kind_of(p.get("name") or "") == kind
+                and ((p.get("code") or "").upper() == code or code_in_id(p.get("id") or "") == code)]
+        return _prefer_known_id(row, code, kind, same)
     set_name = row.get("set") or ""
     coded = [p for p in products if p.get("set") == set_name and kind_of(p.get("name") or "") == kind
              and ((p.get("code") or "").upper() or code_in_id(p.get("id") or ""))]
@@ -703,12 +952,17 @@ def _is_alias(row: dict, products: list[dict]) -> bool:
 
 
 def alias_ids(catalog: dict | None, kept: list[dict]) -> list[str]:
+    """Uncoded duplicates of a product this sweep actually published.
+
+    A trial deck must not list box-eternal-ascent for retirement. Those booster rows are a
+    separate duplicate, and this sweep does not rewrite them.
+    """
     products = _catalog_products(catalog)
     kept_ids = {r.get("id") for r in kept}
-    sets = {r.get("set") for r in kept}
+    emitted = {(r.get("set"), kind_of(r.get("name") or "")) for r in kept}
     retired = []
     for row in products:
-        if row.get("set") not in sets or row.get("id") in kept_ids:
+        if (row.get("set"), kind_of(row.get("name") or "")) not in emitted or row.get("id") in kept_ids:
             continue
         if _is_alias(row, products):
             retired.append(row["id"])
@@ -766,8 +1020,13 @@ def _merge_row(payload: dict, row: dict, catalog: dict | None = None) -> bool:
     for existing in payload["products"]:
         if existing.get("id") != row.get("id"):
             continue
+        if row.get("date") and existing.get("date") == row.get("date"):
+            return False
         return _apply_stamp(existing, row)
     current = _find_product(_catalog_products(catalog), row.get("id") or "")
+    # The same street day is already published. Do not rewrite the link, the banner or asOf.
+    if current and row.get("date") and current.get("date") == row.get("date"):
+        return False
     if not row.get("date"):
         if current and current.get("date"):
             return False
@@ -792,8 +1051,8 @@ def _body_extras(text: str, title_item: tuple[str, str] | None) -> list[dict]:
     if title_item:
         seen.add((title_item[0].lower(), title_item[1].lower()))
     for match in TITLE_RE.finditer(text or ""):
-        ptype = " ".join(w.capitalize() if w.islower() else w for w in match.group(1).split())
-        set_name = " ".join(match.group(2).split())
+        ptype = _english_type(match.group(1))
+        set_name = _english_set(match.group(2))
         key = (ptype.lower(), set_name.lower())
         if key in seen:
             continue
