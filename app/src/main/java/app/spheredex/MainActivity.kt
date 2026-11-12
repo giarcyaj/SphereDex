@@ -14,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Base64
 import android.view.ViewGroup
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
@@ -279,6 +280,7 @@ class MainActivity : ComponentActivity() {
             addJavascriptInterface(IconBridge(), "AndroidIcon")
             addJavascriptInterface(PushBridge(), "AndroidPush")
             addJavascriptInterface(FileBridge(), "AndroidFiles")
+            addJavascriptInterface(AssetBridge(), "AndroidAssets")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -536,6 +538,36 @@ class MainActivity : ComponentActivity() {
                 catch (_: Exception) { clearSave(); fileDone(false) }
             }
             return true
+        }
+    }
+
+    // Photo scan reads pixels from bundled card art. A file:// image taints the canvas, so the
+    // page asks for the bytes and decodes a blob. Only img/<file> inside this app's assets:
+    // no other path, and not a general file or network read.
+    private fun bundledImageAsset(path: String?): String? {
+        val clean = path?.trim() ?: return null
+        if (!clean.startsWith("img/")) return null
+        val file = clean.substring(4)
+        if (file.isEmpty() || file.contains('/') || file.contains('\\') || file.contains("..")) return null
+        if (!Regex("^[A-Za-z0-9._-]+$").matches(file)) return null
+        val ext = file.substringAfterLast('.', "").lowercase()
+        if (ext != "jpg" && ext != "jpeg" && ext != "png" && ext != "webp" && ext != "gif") return null
+        return "img/$file"
+    }
+
+    /** Exposed to the web app as window.AndroidAssets. read() returns base64, or "" if refused. */
+    inner class AssetBridge {
+        @JavascriptInterface
+        fun read(path: String?): String {
+            val rel = bundledImageAsset(path) ?: return ""
+            return try {
+                assets.open(rel).use { input ->
+                    val bytes = input.readBytes()
+                    if (bytes.size > 2 * 1024 * 1024) "" else Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
+            } catch (_: Exception) {
+                ""
+            }
         }
     }
 
