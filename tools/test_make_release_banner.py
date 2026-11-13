@@ -84,7 +84,7 @@ class BannerSourceTests(unittest.TestCase):
         # The three lines already written for 2.4.8 stay the app's highlights.
         self.assertIn("Print your collection, share wants and spares, and track cards out for grading", source)
         self.assertEqual(source.count('"2.4.8": ['), 1)
-        self.assertEqual(source.count('var APP_VERSION = "2.4.8"'), 1)
+        self.assertEqual(source.count('var APP_VERSION = "2.4.9"'), 1)
 
 
 class ShippedBannerTests(unittest.TestCase):
