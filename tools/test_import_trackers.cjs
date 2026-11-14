@@ -185,12 +185,13 @@ test('a Language column files Japanese and Chinese copies in those editions', ()
 });
 
 test('unknown numbers are reported as unmatched with the raw number and a reason', () => {
+  // SOUL-010 is ESOUL-010 now. SOUL-012 is still absent, so it stays the unknown Soul example.
   const res = A.parseCsvCollection(csv([
     'Number,Qty',
     'BP01-045,1',
     'BP02-199,1',
     'BP03-001,2',
-    'SOUL-010,1',
+    'SOUL-012,1',
     'Lamball,1',
     ',1',
     'BP01-046,lots'
@@ -199,7 +200,7 @@ test('unknown numbers are reported as unmatched with the raw number and a reason
   assert.deepEqual(plain(res.unmatched), [
     { row: 3, raw: 'BP02-199', reason: 'Not in SphereDex yet' },
     { row: 4, raw: 'BP03-001', reason: 'Not in SphereDex yet' },
-    { row: 5, raw: 'SOUL-010', reason: 'Not in SphereDex yet' },
+    { row: 5, raw: 'SOUL-012', reason: 'Not in SphereDex yet' },
     { row: 6, raw: 'Lamball', reason: 'Not a card number' },
     { row: 7, raw: '', reason: 'No card number' },
     { row: 8, raw: 'BP01-046', reason: 'Quantity “lots” not readable' }
