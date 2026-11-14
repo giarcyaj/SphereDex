@@ -119,17 +119,20 @@ function boot(opts) {
     get() { return this._src; },
   });
   const reads = [];
+  const assets = {};
   const bridge = opts.bridge === undefined ? function (p) {
+    if (this !== assets) throw new Error("Java bridge method can't be invoked on a non-injected object");
     reads.push(p);
     return bundledImageAsset(p) === 'img/ok.jpg' ? PNG_B64 : '';
   } : opts.bridge;
+  if (bridge) assets.read = bridge;
   let blobs = 0;
   const URLImpl = function URLImpl(u, base) { return new URL(u, base); };
   URLImpl.createObjectURL = function () { blobs++; return 'blob:mock-' + blobs; };
   URLImpl.revokeObjectURL = function () {};
   const sandbox = {
     location: location,
-    window: { AndroidAssets: bridge ? { read: bridge } : undefined },
+    window: { AndroidAssets: bridge ? assets : undefined },
     URL: URLImpl,
     atob: atob,
     Blob: Blob,
@@ -415,7 +418,7 @@ test('browser: file image taints, blob read returns the pixel, CORS failure is n
   fs.writeFileSync(path.join(dir, 'img', 'pixel.png'), Buffer.from(PNG_B64, 'base64'));
   const fileHtml = '<!doctype html><meta charset="utf-8"><pre id="out">pending</pre><script>\n'
     + 'const B64=' + JSON.stringify(PNG_B64) + ';\n'
-    + 'window.AndroidAssets={read:function(p){return p==="img/pixel.png"?B64:"";}};\n'
+    + 'window.AndroidAssets={read:function(p){ if(this!==window.AndroidAssets) throw new Error("Java bridge method can\'t be invoked on a non-injected object"); return p==="img/pixel.png"?B64:""; }};\n'
     + 'var MULTI_SCAN={describe:function(data){return {r:data[0],g:data[1],b:data[2],a:data[3]};}};\n'
     + fns + '\n'
     + '(async function(){\n'

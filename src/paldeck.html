@@ -17532,9 +17532,11 @@ label.acctsetrow { align-items:center; }
         try{ proto=String(location.protocol||""); }catch(e){}
         if(/^blob:/i.test(src) || /^data:/i.test(src)){ fromURL(src, false); return; }
         if(proto==="file:"){
-          var read=window.AndroidAssets && window.AndroidAssets.read;
+          var assets=window.AndroidAssets;
           var b64="";
-          if(typeof read==="function"){ try{ b64=String(read(src)||""); }catch(e){ b64=""; } }
+          // Keep the injected object as the receiver. Android rejects a detached call
+          // and would otherwise skip every bundled picture.
+          if(assets && typeof assets.read==="function"){ try{ b64=String(assets.read(src)||""); }catch(e){ b64=""; } }
           if(!b64){ finish(null); return; }
           try{
             var bin=atob(b64), bytes=new Uint8Array(bin.length), i;
