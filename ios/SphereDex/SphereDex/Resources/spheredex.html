@@ -17507,26 +17507,80 @@ label.acctsetrow { align-items:center; }
         });
       });
     }
+    // Bundled art is a relative img/ path. On https that is same-origin and can be drawn.
+    // On the Android asset shell the document is file:///android_asset/spheredex.html and the
+    // picture is a different file URL. The image still loads, then getImageData throws
+    // "The canvas has been tainted by cross-origin data" and the whole match index rejects.
+    // location.origin is "file://" for both, so an origin compare does not catch it.
+    // crossOrigin="anonymous" does not either: a file response has no CORS header, and the
+    // image fails to load. fetch() of a file URL fails the same way. Read the bytes through
+    // the scoped asset bridge and decode a blob URL, which is same-origin with this page.
     function loadImg(src){
       return new Promise(function(resolve){
-        var img=new Image();
-        img.onload=function(){ resolve(img); };
-        img.onerror=function(){ resolve(null); };
-        img.src=src;
+        function finish(img){ resolve(img||null); }
+        function fromURL(url, revoke){
+          var img=new Image();
+          img.onload=function(){ if(revoke) URL.revokeObjectURL(url); finish(img); };
+          img.onerror=function(){ if(revoke) URL.revokeObjectURL(url); finish(null); };
+          img.src=url;
+        }
+        function fromBlob(blob){
+          try{ fromURL(URL.createObjectURL(blob), true); }
+          catch(e){ finish(null); }
+        }
+        var proto="";
+        try{ proto=String(location.protocol||""); }catch(e){}
+        if(/^blob:/i.test(src) || /^data:/i.test(src)){ fromURL(src, false); return; }
+        if(proto==="file:"){
+          var assets=window.AndroidAssets;
+          var b64="";
+          // Keep the injected object as the receiver. Android rejects a detached call
+          // and would otherwise skip every bundled picture.
+          if(assets && typeof assets.read==="function"){ try{ b64=String(assets.read(src)||""); }catch(e){ b64=""; } }
+          if(!b64){ finish(null); return; }
+          try{
+            var bin=atob(b64), bytes=new Uint8Array(bin.length), i;
+            for(i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i)&255;
+            var ext=String(src).split(".").pop().toLowerCase();
+            var mime=ext==="png"?"image/png":ext==="webp"?"image/webp":ext==="gif"?"image/gif":"image/jpeg";
+            fromBlob(new Blob([bytes], {type:mime}));
+          }catch(e){ finish(null); }
+          return;
+        }
+        var same=false;
+        try{ same=new URL(src, location.href).origin===location.origin; }catch(e){ same=false; }
+        var fallback=(proto==="http:" || proto==="https:" || proto==="spheredex:") && same;
+        if(typeof fetch==="function"){
+          fetch(src).then(function(r){
+            if(!r || !r.ok) throw new Error("read");
+            return r.blob();
+          }).then(fromBlob).catch(function(){
+            if(fallback) fromURL(src, false); else finish(null);
+          });
+          return;
+        }
+        if(fallback) fromURL(src, false); else finish(null);
       });
     }
     function describeElement(img){
-      var nw=img.naturalWidth||img.width, nh=img.naturalHeight||img.height;
-      if(!nw || !nh) return null;
-      var w=48, h=Math.max(16, Math.round(w * nh / nw));
-      if(h>96){ h=96; w=Math.max(16, Math.round(h * nw / nh)); }
-      var canvas=document.createElement("canvas");
-      canvas.width=w; canvas.height=h;
-      var g=canvas.getContext("2d", {willReadFrequently:true});
-      if(!g) return null;
-      g.drawImage(img, 0, 0, w, h);
-      var data=g.getImageData(0, 0, w, h);
-      return MULTI_SCAN.describe(data.data, w, h, false);
+      try{
+        var nw=img.naturalWidth||img.width, nh=img.naturalHeight||img.height;
+        if(!nw || !nh) return null;
+        var w=48, h=Math.max(16, Math.round(w * nh / nw));
+        if(h>96){ h=96; w=Math.max(16, Math.round(h * nw / nh)); }
+        var canvas=document.createElement("canvas");
+        canvas.width=w; canvas.height=h;
+        var g=canvas.getContext("2d", {willReadFrequently:true});
+        if(!g) return null;
+        g.drawImage(img, 0, 0, w, h);
+        var data=g.getImageData(0, 0, w, h);
+        return MULTI_SCAN.describe(data.data, w, h, false);
+      }catch(e){
+        // One unreadable picture is left out of the index. A SecurityError used to reject
+        // the whole build (and was reported as an unhandled promise). Other failures still throw.
+        if(e && (e.name==="SecurityError" || /tainted by cross-origin data/i.test(String(e.message||e)))) return null;
+        throw e;
+      }
     }
     function buildIndex(onProgress){
       var list=cardsForIndex();
