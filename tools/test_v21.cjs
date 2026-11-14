@@ -177,12 +177,16 @@ test('verified card text covers the cached set and does not invent the missing s
     if (!row) { unknown += copies; unknownIds.push(base); return; }
     if (row.text) withText += copies; else empty += copies;
   });
-  assert.equal(printings.length, 294);
+  assert.equal(printings.length, 298);
   assert.equal(withText, 262);
   assert.equal(empty, 29);
-  assert.equal(unknown, 3);
+  assert.equal(unknown, 7);
   assert.equal(withText + empty + unknown, printings.length);
-  assert.deepEqual(unknownIds.sort(), ['ESOUL-014', 'ESOUL-015', 'ESOUL-016']);
+  // ESOUL-009, ESOUL-010, ESOUL-017 and ESOUL-018 are on the official list with empty text.
+  // They stay out of the cached rules file, the same way ESOUL-014 to ESOUL-016 do.
+  assert.deepEqual(unknownIds.sort(), [
+    'ESOUL-009', 'ESOUL-010', 'ESOUL-014', 'ESOUL-015', 'ESOUL-016', 'ESOUL-017', 'ESOUL-018'
+  ]);
   assert.equal(Object.keys(textData.cards).length, bases.length - unknownIds.length);
 });
 
