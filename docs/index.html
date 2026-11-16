@@ -26,6 +26,7 @@
 <script>(function(r){if('IntersectionObserver' in window&&matchMedia('screen and (prefers-reduced-motion: no-preference)').matches){r.classList.add('rv');setTimeout(function(){if(!window.sdMotion)r.classList.remove('rv')},3000)}})(document.documentElement)</script>
 <link rel="preload" href="fonts/chakra-petch-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/baloo2-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="img/cards/EBP01-001SSP.webp" type="image/webp">
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
   /* ---- Palworld HUD identity, matched to the app (dark, committed) ---- */
@@ -37,32 +38,38 @@
     --gold:#ffb020; --gold-ink:#ffcf5e; --gold-deep:#b8791a;
     --up:#37c86a; --down:#e8514a; --purple:#9e50d2;
     --edge:rgba(120,220,240,.10);
-    --shadow:24px 34px 70px -34px rgba(0,6,12,.85);
+    --lift:0 18px 42px -26px rgba(0,6,12,.9);
     --font-disp:"Chakra Petch","Bahnschrift",ui-sans-serif,system-ui,sans-serif;
     --font-brand:"Baloo 2",var(--font-disp);
     --font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     --wrap:1080px;
+    --ease:cubic-bezier(.16,1,.3,1);
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:82px}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:82px;
+    color-scheme:dark;scrollbar-color:var(--line-strong) var(--bg);scrollbar-width:thin}
   body{
     margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
     line-height:1.55; -webkit-font-smoothing:antialiased;
-    background-image:
-      radial-gradient(1100px 620px at 78% -8%, rgba(18,227,245,.10), transparent 60%),
-      radial-gradient(900px 560px at 8% 6%, rgba(255,176,32,.07), transparent 55%);
+    background-image:radial-gradient(1200px 700px at 88% -12%, rgba(18,227,245,.10), transparent 62%);
     background-attachment:fixed;
   }
-  a{color:var(--accent-ink);text-decoration:none}
-  a:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:9px}
+  /* browser surfaces: the parts we did not draw still carry the design */
+  ::selection{background:rgba(18,227,245,.3);color:#fff}
+  ::-webkit-scrollbar{width:12px;height:12px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:99px;border:3px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:#2b7c8a}
+  a{color:var(--accent-ink);text-decoration:none;text-underline-offset:3px}
+  a:where(:not([class])):hover{text-decoration:underline}
+  a:focus-visible,.btn:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:9px}
   .wrap{max-width:var(--wrap);margin:0 auto;padding:0 22px}
-  .eyebrow{font-family:var(--font-disp);font-weight:600;letter-spacing:.22em;text-transform:uppercase;
-    font-size:.74rem;color:var(--accent-ink)}
   h1,h2,h3{font-family:var(--font-disp);font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
   p{margin:0}
   .muted{color:var(--ink-soft)}
   .faint{color:var(--ink-faint)}
-  .gico{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .gico{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
   /* ---- top nav ---- */
   .nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);
@@ -75,23 +82,21 @@
   .navlinks a{color:var(--ink-soft);font-family:var(--font-disp);font-weight:600;font-size:.92rem;-webkit-tap-highlight-color:transparent;user-select:none}
   .navlinks a:hover{color:var(--ink)}
   .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-disp);font-weight:700;
-    border-radius:13px;padding:12px 18px;border:1.5px solid var(--line-strong);color:var(--ink);
+    border-radius:12px;padding:12px 18px;border:1.5px solid var(--line-strong);color:var(--ink);
     background:var(--surface);cursor:pointer;transition:.15s;white-space:nowrap;font-size:.95rem}
   .btn:hover{border-color:var(--accent);color:#fff;transform:translateY(-1px)}
-  .btn.primary{background:linear-gradient(180deg,#18e9fb,#0bbfd0);color:#04222a;border-color:transparent;
-    box-shadow:0 12px 30px -12px rgba(18,227,245,.6)}
-  .btn.primary:hover{color:#04222a;filter:brightness(1.05)}
-  /* official app store / google play badges */
+  .btn.primary{background:#0bbfd0 linear-gradient(180deg,#18e9fb,#0bbfd0);color:#04222a;border-color:transparent}
+  .btn.primary:hover{color:#04222a;filter:brightness(1.06)}
   /* unified store buttons — web app / App Store / Google Play, all the same size + design */
   .storebtn{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1 1 0;min-width:0;padding:11px 12px;
-    border-radius:13px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--ink);
+    border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);color:var(--ink);
     cursor:pointer;transition:transform .15s,border-color .15s,color .15s;box-shadow:inset 0 1px 0 var(--edge)}
   .storebtn:hover{border-color:var(--accent);color:#fff;transform:translateY(-1px)}
   .storebtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .storebtn svg{width:26px;height:26px;flex:none}
   .storebtn.apple svg{width:30px;height:30px}  /* Apple glyph reads smaller in its box; size it up to match Play */
   .storebtn .t{display:flex;flex-direction:column;line-height:1.12;text-align:left;font-family:var(--font-disp);font-weight:500}
-  .storebtn .t .s{font-size:.62rem;letter-spacing:.03em;color:var(--ink-faint);font-weight:600}
+  .storebtn .t .s{font-size:.7rem;letter-spacing:.03em;color:var(--ink-faint);font-weight:600}
   .storebtn .t .b{font-size:1rem;font-weight:700;white-space:nowrap}
   .storebtn:hover .t .s{color:var(--ink-soft)}
   @media(max-width:520px){ .cta{flex-direction:column;gap:10px} .storebtn{width:100%;flex:1 1 auto;justify-content:flex-start;padding:12px 16px;gap:12px} .storebtn svg{width:24px;height:24px} .storebtn.apple svg{width:27px;height:27px} }
@@ -110,124 +115,115 @@
   @media(max-width:430px){ .navstores{display:none} .nav .wrap{gap:8px} }
   @media(max-width:359px){ .nav .brand{font-size:1.15rem;gap:8px} .nav .brand .sph{width:28px;height:28px} .navlinks .btn{padding:8px 12px;font-size:.88rem} }
 
-  /* ---- hero ---- */
-  .hero{padding:66px 0 30px;position:relative;overflow:hidden}
-  .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center}
-  .hero h1{font-size:clamp(2.6rem,6.2vw,5.25rem);letter-spacing:-.01em;margin:14px 0 0}
-  .hero h1 .hl{color:var(--accent-ink)}
-  .hero .sub{margin-top:20px;font-size:1.16rem;max-width:33ch;color:var(--ink-soft)}
+  /* ---- hero: the page opens on a real binder page, not a drawing of one ---- */
+  .hero{padding:62px 0 34px;position:relative}
+  .hero .wrap{display:grid;grid-template-columns:minmax(0,1.14fr) minmax(0,1fr);gap:46px;align-items:center}
+  .hero h1{font-size:clamp(2.5rem,5vw,4.2rem);letter-spacing:-.015em;margin:0}
+  .hero .sub{margin-top:20px;font-size:1.12rem;max-width:40ch;color:var(--ink-soft)}
   .cta{display:flex;flex-wrap:nowrap;gap:11px;margin-top:30px}
-  .cta .btn{padding:14px 22px;font-size:1.02rem}
-  @media(max-width:860px){ .hero .wrap{grid-template-columns:1fr;gap:34px} .hero{padding:44px 0 20px} .hero .sub{max-width:none} }
+  @media(max-width:860px){ .hero .wrap{grid-template-columns:1fr;gap:38px} .hero{padding:40px 0 22px} .hero .sub{max-width:none} }
 
-  /* ---- phone mockup (crafted app chrome, on-brand) ---- */
-  .phone{justify-self:center;width:min(340px,86vw);border-radius:34px;padding:12px;
-    background:linear-gradient(160deg,#1c3946,#0b1a23);border:1px solid var(--line-strong);
-    box-shadow:var(--shadow), inset 0 1px 0 var(--edge)}
-  .screen{border-radius:24px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
-  .sc-top{display:flex;align-items:center;gap:9px;padding:14px 15px 8px}
-  .sc-top .sph{width:26px;height:26px}
-  .sc-brand{font-family:var(--font-brand);font-weight:800;font-size:1.05rem}
-  .panel{margin:9px 12px;padding:13px;border-radius:15px;background:var(--surface);
-    border:1px solid var(--line);box-shadow:inset 0 1px 0 var(--edge)}
-  .panel.gold{border-color:rgba(255,176,32,.32)}
-  .lab{font-family:var(--font-disp);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-    font-size:.6rem;color:var(--accent-ink);display:flex;align-items:center;gap:7px}
-  .lab::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--line-strong),transparent)}
-  .big{font-family:var(--font-disp);font-weight:700;font-size:2.5rem;line-height:1;margin:8px 0 2px}
-  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-  .tile{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:9px 11px}
-  .tile .n{font-family:var(--font-disp);font-weight:700;font-size:1.15rem}
-  .tile .k{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--font-disp);font-weight:600}
-  .xp{height:7px;border-radius:99px;background:var(--surface-2);margin-top:11px;overflow:hidden;border:1px solid var(--line)}
-  .xp>i{display:block;height:100%;width:38%;background:linear-gradient(90deg,var(--accent),#0bbfd0)}
-  .mvr{display:flex;align-items:center;gap:9px;margin-top:9px}
-  .mvr .art{width:34px;height:47px;border-radius:6px;flex:none;object-fit:cover;
-    border:1px solid var(--line-strong);background:var(--surface-2)}
-  .mvr .nm{font-family:var(--font-disp);font-weight:600;font-size:.78rem}
-  .mvr .sub{font-size:.62rem;color:var(--ink-faint)}
-  .pct{margin-left:auto;font-family:var(--font-disp);font-weight:800;font-size:.86rem}
-  .pct.up{color:var(--up)} .pct.down{color:var(--down)}
+  /* the binder: real cards, in the app's own collected / missing treatment */
+  .binder{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .bcard{position:relative;aspect-ratio:400/559;border-radius:7px;overflow:hidden;
+    background:var(--surface-2);border:1px solid var(--line);isolation:isolate}
+  .bcard img{display:block;width:100%;height:100%;object-fit:cover;
+    filter:grayscale(0) brightness(1) contrast(1)}
+  /* exactly the app's "fade on" rendering for a card you do not own yet */
+  .bcard.miss img{filter:grayscale(1) brightness(.28) contrast(1.05)}
+  .bcard.miss{border-style:dashed;border-color:var(--line-strong)}
+  .readout{display:flex;align-items:center;gap:12px;margin-top:14px;
+    font-family:var(--font-disp);font-weight:600;font-size:.82rem;color:var(--ink-soft)}
+  .readout .bar{flex:1;height:3px;border-radius:99px;background:var(--surface);overflow:hidden}
+  .readout .bar>i{display:block;height:100%;width:38%;background:linear-gradient(90deg,var(--accent),#0bbfd0)}
+  .readout .pc{color:var(--accent-ink);font-weight:700}
+  @media(max-width:860px){ .binder{max-width:470px;margin-inline:auto} .readout{max-width:470px;margin-inline:auto} }
+  @media(max-width:430px){ .binder{gap:7px} }
 
-  /* ---- feature sections ---- */
-  section.block{padding:56px 0;border-top:1px solid var(--line)}
-  .lead{max-width:640px;margin-bottom:34px}
-  .lead h2,.split h2,.final h2{font-size:clamp(1.9rem,4vw,2.9rem);margin-top:10px}
-  .lead p{margin-top:12px;font-size:1.08rem;color:var(--ink-soft)}
-  .grid{display:grid;gap:18px}
-  .cols-3{grid-template-columns:repeat(3,1fr)}
-  @media(max-width:900px){ .cols-3{grid-template-columns:1fr 1fr} }
-  @media(max-width:620px){ .cols-3{grid-template-columns:1fr} }
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;
-    box-shadow:inset 0 1px 0 var(--edge);transition:transform .16s,border-color .16s}
-  .card:hover{border-color:var(--line-strong)}
-  @media(hover:hover){.card:hover{transform:translateY(-2px)}}
-  .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;
-    color:var(--accent-ink);background:linear-gradient(160deg,rgba(18,227,245,.16),rgba(18,227,245,.04));border:1px solid var(--line-strong)}
-  .card.g .ic{color:var(--gold-ink);background:linear-gradient(160deg,rgba(255,176,32,.18),rgba(255,176,32,.04));border-color:rgba(255,176,32,.32)}
-  .card h3{font-size:1.18rem;margin-bottom:7px}
-  .card p{color:var(--ink-soft);font-size:.97rem}
-  .split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-  @media(max-width:860px){ .split{grid-template-columns:1fr;gap:26px} }
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  /* ---- sections ---- */
+  section.block{padding:62px 0;border-top:1px solid var(--line)}
+  h2{font-size:clamp(1.9rem,4vw,2.8rem);letter-spacing:-.01em}
+
+  /* the capability ledger: one instrument panel of rules, not six floating cards */
+  .ledger{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:50px;align-items:start}
+  .lhead p{margin-top:14px;font-size:1.06rem;color:var(--ink-soft);max-width:38ch}
+  .lrow{padding:21px 0;border-top:1px solid var(--line)}
+  .lrow:first-child{padding-top:0;border-top:0}
+  .lrow h3{display:flex;align-items:center;gap:11px;font-size:1.13rem;color:var(--ink)}
+  .lrow h3 svg{color:var(--accent-ink)}
+  .lrow.g h3 svg{color:var(--gold-ink)}
+  .lrow p{margin-top:8px;color:var(--ink-soft);font-size:.97rem;max-width:62ch}
+  @media(min-width:861px){ .lhead{position:sticky;top:96px} }
+  @media(max-width:860px){ .ledger{grid-template-columns:1fr;gap:30px} .lhead p{max-width:62ch} }
+
+  /* ---- evidence panels: committed to a defined edge, not a diffuse halo ---- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
+  @media(max-width:860px){ .split{grid-template-columns:1fr;gap:28px} }
+  .lede{margin-top:14px;font-size:1.06rem;color:var(--ink-soft);max-width:60ch}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
   .chip{font-family:var(--font-disp);font-weight:600;font-size:.82rem;color:var(--ink-soft);
     background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:6px 13px}
 
-  /* price + local demos */
-  .demo{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+  .demo{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:18px}
+  .demo .cap{font-family:var(--font-disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    font-size:.68rem;color:var(--ink-faint);display:flex;align-items:center;gap:9px;margin-bottom:13px}
+  .demo .cap::after{content:"";height:1px;flex:1;background:var(--line)}
   .ptiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-  .pt{background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:12px;text-align:center}
-  .pt.on{border-color:var(--accent);box-shadow:0 0 0 1px rgba(18,227,245,.25) inset}
-  .pt .k{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--font-disp);font-weight:600}
-  .pt .v{font-family:var(--font-disp);font-weight:700;font-size:1.3rem;margin-top:5px}
+  .pt{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .pt.on{border-color:var(--accent);background:rgba(18,227,245,.07)}
+  /* the selected tile carries a cyan tint, so its label is tinted from that hue, not left neutral grey */
+  .pt.on .k{color:#8fb0bd}
+  .pt .k{font-size:.69rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--font-disp);font-weight:600}
+  .pt .v{font-family:var(--font-disp);font-weight:700;font-size:1.3rem;margin-top:5px;font-variant-numeric:tabular-nums}
   @media(max-width:620px){ .pt .v{font-size:1.05rem} }
-  .soldrow{display:flex;justify-content:space-between;font-family:var(--font-disp);font-weight:500;font-size:.92rem;
-    padding:7px 2px;border-bottom:1px dashed var(--line)}
-  .soldrow a{color:var(--accent-ink)}
-  .qtiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .qt{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--accent);
-    border-radius:11px;padding:12px 13px;display:flex;align-items:center;gap:11px}
-  .qt svg{width:22px;height:22px;flex:none;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .qt .n{font-family:var(--font-disp);font-weight:700}
-  .qt .k{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--font-disp);font-weight:600}
+  .soldrow{display:flex;justify-content:space-between;gap:12px;font-family:var(--font-disp);font-weight:500;font-size:.92rem;
+    padding:12px 4px;border-bottom:1px solid var(--line)}
+  .soldrow:last-child{border-bottom:0}
+  .soldrow a{color:var(--accent-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .soldrow a:hover{color:#fff}
 
-  /* ---- final CTA ---- */
-  .final{padding:70px 0;text-align:center;border-top:1px solid var(--line);
-    background:radial-gradient(700px 320px at 50% 0%,rgba(18,227,245,.10),transparent 70%)}
-  .final .cta{justify-content:center}
+  /* four facts as one quadrant readout: a defined edge with internal rules, no stack of boxes */
+  .facts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;
+    border:1px solid var(--line-strong);border-radius:16px;overflow:hidden;background:var(--surface)}
+  .facts li{display:flex;align-items:center;gap:12px;padding:17px 18px;min-width:0}
+  .facts li:nth-child(odd){border-right:1px solid var(--line)}
+  .facts li:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .facts svg{width:21px;height:21px;flex:none;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .facts b{display:block;font-family:var(--font-disp);font-weight:700;font-size:1rem}
+  .facts i{display:block;font-style:normal;font-size:.69rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-faint);font-family:var(--font-disp);font-weight:600;margin-top:2px}
+  @media(max-width:430px){ .facts{grid-template-columns:1fr} .facts li:nth-child(odd){border-right:0} .facts li:not(:last-child){border-bottom:1px solid var(--line)} }
+
+  /* ---- closing band ---- */
+  .final{padding:66px 0;border-top:1px solid var(--line)}
+  .final .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:center}
+  .final p{margin-top:14px;font-size:1.08rem;color:var(--ink-soft);max-width:44ch}
+  .final .cta{margin-top:0;flex-direction:column;gap:10px}
+  .final .storebtn{justify-content:flex-start;padding:13px 17px;gap:13px}
+  @media(max-width:860px){ .final .wrap{grid-template-columns:1fr;gap:26px} .final p{max-width:none} }
+
   .foot{border-top:1px solid var(--line);padding:30px 0 46px;color:var(--ink-soft);font-size:.86rem}
-  .foot .soc{display:inline-flex;align-items:center;vertical-align:-3px;opacity:.82;transition:opacity .15s ease}.foot .soc:hover,.foot .soc:focus-visible{opacity:1}.foot .soc svg{display:block}.foot .soc+.soc{margin-left:9px}.foot .wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+  .foot .soc{display:inline-flex;align-items:center;vertical-align:-3px;opacity:.9;transition:opacity .15s ease}.foot .soc:hover,.foot .soc:focus-visible{opacity:1}.foot .soc svg{display:block}.foot .soc+.soc{margin-left:9px}.foot .wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
   .foot a{color:var(--ink-soft)}
+  .foot a:hover{color:var(--ink)}
   .disc{order:2;flex:1 1 100%;max-width:none;line-height:1.5}
-  /* ---- landing motion: one shot, gated by html.rv (set in <head>), off for reduced motion ---- */
-  @keyframes sd-rise{from{opacity:0;translate:0 14px}}
-  @keyframes sd-row{from{opacity:0;translate:-8px 0}}
-  @keyframes sd-fill{from{transform:scaleX(0)}}
-  @keyframes sd-wobble{15%{transform:rotate(-12deg)}35%{transform:rotate(9deg)}55%{transform:rotate(-5deg)}75%{transform:rotate(2deg)}}
-  @keyframes sd-lock{from{opacity:0;transform:scale(1.15)}60%{opacity:.9;transform:none}to{opacity:0;transform:none}}
-  @keyframes sd-ring{from{opacity:.6;transform:none}to{opacity:0;transform:scale(1.06,1.22)}}
+
+  /* ---- one authored moment: a card you do not own is scanned in, and the count moves ---- */
   @media screen and (prefers-reduced-motion:no-preference){
-    html.rv{--ease:cubic-bezier(.16,1,.3,1)}
-    html.rv .phone:not(.in) .panel,html.rv .lead:not(.in),html.rv #features .card:not(.in),html.rv .demo:not(.in){opacity:0}
-    html.rv .phone.in .panel{animation:sd-rise .6s var(--ease) backwards}
-    html.rv .phone.in .panel+.panel{animation-delay:.12s}
-    html.rv .phone.in .xp>i{transform-origin:0 50%;animation:sd-fill 1s cubic-bezier(.33,1,.68,1) .35s backwards}
-    html.rv .phone.in .mvr{animation:sd-row .5s var(--ease) .5s backwards}
-    html.rv .phone.in .mvr+.mvr{animation-delay:.58s}
-    html.rv .lead.in,html.rv #features .card.in,html.rv .demo.in{animation:sd-rise .6s var(--ease) var(--d,0s) backwards}
-    html.rv #features .card.in:first-child .sph{transform-origin:50% 50%;animation:sd-wobble .9s ease-in-out .7s}
-    html.rv .demo.in .soldrow,html.rv .demo.in .qt{animation:sd-row .5s var(--ease) .3s backwards}
-    html.rv .demo.in .soldrow:nth-child(2),html.rv .demo.in .qt:nth-child(2){animation-delay:.36s}
-    html.rv .demo.in .soldrow:nth-child(3),html.rv .demo.in .qt:nth-child(3){animation-delay:.42s}
-    html.rv .demo.in .qt:nth-child(4){animation-delay:.48s}
-    html.rv .pt.on,html.rv .final .storebtn{position:relative}
-    html.rv .pt.on::after,html.rv .final .storebtn::after{content:"";position:absolute;pointer-events:none;opacity:0;border:1.5px solid var(--accent)}
-    html.rv .pt.on::after{inset:-4px;border-radius:16px}
-    html.rv .final .storebtn::after{inset:-2px;border-radius:15px}
-    html.rv .demo.in .pt.on::after{animation:sd-lock .8s var(--ease) .5s}
-    html.rv .final .cta.in .storebtn::after{animation:sd-ring .8s var(--ease) .15s}
-    html.rv .final .cta.in .storebtn:nth-child(2)::after{animation-delay:.25s}
-    html.rv .final .cta.in .storebtn:nth-child(3)::after{animation-delay:.35s}
+    html.rv .bcard.scan img{filter:grayscale(1) brightness(.28) contrast(1.05)}
+    html.rv .bcard.scan{border-style:dashed;border-color:var(--line-strong)}
+    html.rv .bcard.scan::after{content:"";position:absolute;inset:-40% 0 auto;height:40%;z-index:2;opacity:0;
+      background:linear-gradient(180deg,transparent,rgba(18,227,245,.55),transparent)}
+    html.rv .bcard.scan.got img{filter:grayscale(0) brightness(1) contrast(1);transition:filter .85s var(--ease) .32s}
+    html.rv .bcard.scan.got{border-style:solid;border-color:var(--accent);
+      transition:border-color .85s var(--ease) .32s,border-style 0s .32s}
+    html.rv .bcard.scan.got::after{animation:sd-sweep 1.05s cubic-bezier(.4,0,.5,1) forwards}
+  }
+  @keyframes sd-sweep{
+    0%{opacity:0;transform:translateY(0)}
+    12%{opacity:1}
+    78%{opacity:1}
+    100%{opacity:0;transform:translateY(350%)}
   }
   @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
@@ -243,10 +239,11 @@
     <circle cx="38" cy="10" r="2.4" fill="#ffcf5e"/>
     <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5fe6f4"/><stop offset="1" stop-color="#ffb020"/></linearGradient>
   </symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></symbol>
   <symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 15l4-5 3 3 5-7"/></symbol>
   <symbol id="ic-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.2 2-4 .3 1.2 1 2 2 2 .6-2.6-1-4.4-1-7z"/></symbol>
   <symbol id="ic-box" viewBox="0 0 24 24"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></symbol>
-  <symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.6 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+  <symbol id="ic-scan" viewBox="0 0 24 24"><path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/><circle cx="12" cy="12" r="3.2"/></symbol>
   <symbol id="ic-rank" viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></symbol>
   <symbol id="ic-off" viewBox="0 0 24 24"><path d="M2 8.5C5 6 9 4.7 12 4.7s7 1.3 10 3.8"/><path d="M5.5 12c3.6-2.6 9.4-2.6 13 0"/><path d="M9 15.5c1.8-1.3 4.2-1.3 6 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/><path d="M3 3l18 18"/></symbol>
   <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
@@ -274,8 +271,7 @@
 
 <header class="hero"><div class="wrap">
   <div>
-    <span class="eyebrow">Palworld TCG collection tracker</span>
-    <h1>Track, value, and <span class="hl">complete</span> your Palworld TCG set.</h1>
+    <h1>Track, value, and complete your Palworld TCG set.</h1>
     <p class="sub">Every card, real market prices, and the movers that matter. Free, no account, works offline, and you can switch prices off for a clean collection with no numbers.</p>
     <div class="cta">
       <a class="storebtn" href="app/"><svg aria-hidden="true"><use href="#ic-globe"/></svg><span class="t"><span class="s">Open the</span><span class="b">Web app</span></span></a>
@@ -284,72 +280,75 @@
     </div>
   </div>
 
-  <!-- crafted app-home mockup -->
-  <div class="phone"><div class="screen">
-    <div class="sc-top"><svg class="sph" aria-hidden="true"><use href="#sph"/></svg><span class="sc-brand">SphereDex</span></div>
-    <div class="panel gold">
-      <div class="lab">Collection</div>
-      <div class="big">38%</div>
-      <div class="faint" style="font-size:.62rem;letter-spacing:.08em;text-transform:uppercase">of all cards · every set</div>
-      <div class="tiles">
-        <div class="tile"><div class="n">104 / 275</div><div class="k">Cards</div></div>
-        <div class="tile"><div class="n">0 / 1</div><div class="k">Sets</div></div>
-        <div class="tile"><div class="n">&pound;412</div><div class="k">Binder value</div></div>
-        <div class="tile"><div class="n">&pound;96</div><div class="k">Sealed value</div></div>
-      </div>
-      <div class="xp"><i></i></div>
+  <!-- a real binder page: cards you own in full colour, cards you are missing in the app's own faded rendering -->
+  <div>
+    <div class="binder" role="img" aria-label="A binder page of Dawn of Palpagos cards. Nine are collected and shown in full colour, three are still missing and shown faded.">
+      <div class="bcard"><img src="img/cards/EBP01-001SSP.webp" width="280" height="391" alt="" fetchpriority="high"></div>
+      <div class="bcard"><img src="img/cards/EBP01-049.webp" width="280" height="391" alt=""></div>
+      <div class="bcard miss"><img src="img/cards/EBP01-061.webp" width="280" height="391" alt=""></div>
+      <div class="bcard"><img src="img/cards/EBP01-005SR.webp" width="280" height="391" alt=""></div>
+      <div class="bcard"><img src="img/cards/EBP01-002OSR.webp" width="280" height="391" alt=""></div>
+      <div class="bcard scan"><img src="img/cards/EBP01-025SSP.webp" width="280" height="391" alt=""></div>
+      <div class="bcard"><img src="img/cards/EBP01-044.webp" width="280" height="391" alt=""></div>
+      <div class="bcard miss"><img src="img/cards/EBP01-023OSR.webp" width="280" height="391" alt=""></div>
+      <div class="bcard"><img src="img/cards/EBP01-027OSR.webp" width="280" height="391" alt="" loading="lazy"></div>
+      <div class="bcard"><img src="img/cards/EBP01-012.webp" width="280" height="391" alt="" loading="lazy"></div>
+      <div class="bcard miss"><img src="img/cards/EBP01-033.webp" width="280" height="391" alt="" loading="lazy"></div>
+      <div class="bcard"><img src="img/cards/EBP01-072.webp" width="280" height="391" alt="" loading="lazy"></div>
     </div>
-    <div class="panel">
-      <div class="lab">Biggest movers</div>
-      <div class="mvr"><img class="art" src="app/img/EBP01-049.jpg" alt="Lyleen, Blessing of the Goddess" loading="lazy"><span style="display:block"><span class="nm" style="display:block">Lyleen, Blessing</span><span class="sub">EBP01-049 &middot; &pound;16.50</span></span><span class="pct up">&#9650; 32%</span></div>
-      <div class="mvr"><img class="art" src="app/img/EBP01-027OSR.jpg" alt="Jormuntide alternate art" loading="lazy"><span style="display:block"><span class="nm" style="display:block">Jormuntide OSR</span><span class="sub">EBP01-027 &middot; &pound;20.50</span></span><span class="pct down">&#9660; 36%</span></div>
-    </div>
-  </div></div>
+    <p class="readout"><span class="num" id="rcount">104</span>&nbsp;/&nbsp;<span class="num">275</span> collected<span class="bar" aria-hidden="true"><i></i></span><span class="pc num">38%</span></p>
+  </div>
 </div></header>
 
 <main>
 <section class="block" id="features"><div class="wrap">
-  <div class="lead">
-    <span class="eyebrow">Everything in one binder</span>
-    <h2>Built for collectors, not spreadsheets.</h2>
-    <p>From your first Foxparks to the last chase card, SphereDex keeps the whole set organised, valued, and easy to complete.</p>
-  </div>
-  <div class="grid cols-3">
-    <div class="card"><div class="ic" aria-hidden="true"><svg class="sph" style="width:24px;height:24px"><use href="#sph"/></svg></div>
-      <h3>Every card, every set</h3>
-      <p>Every card across the Dawn of Palpagos booster, both trial decks, and the event promos, with new sets added as they release. Browse by set with real set art, track base cards and their variants, and watch your completion climb.</p></div>
-    <div class="card"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-star"/></svg></div>
-      <h3>Scan, wishlist &amp; graded</h3>
-      <p>In the iPhone and Android apps, point your camera at a card and SphereDex recognises it, so adding cards takes seconds. Keep a wishlist, mark favourites, log graded slabs (PSA, BGS, CGC and more), add notes, run multiple collections, or import a CSV.</p></div>
-    <div class="card g"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-rank"/></svg></div>
-      <h3>Power up your spheres</h3>
-      <p>Completion is a game. Fill sets, chase parallels, and climb the sphere ranks as your binder grows toward 100 percent.</p></div>
-    <div class="card"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-chart"/></svg></div>
-      <h3>Real market values</h3>
-      <p>Want the numbers too? See what your cards are actually worth: value your collection by the last 5 eBay sold prices or the current live listings, your choice, in your own currency, and watch the total move over time. Backed by eBay, <a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a> and <a href="https://www.cardtrader.com" target="_blank" rel="noopener">CardTrader</a> (EU asking prices).</p></div>
-    <div class="card"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-flame"/></svg></div>
-      <h3>Biggest movers</h3>
-      <p>The day's biggest risers and fallers across your collection or the whole set, so you always know what is heating up and what is cooling off.</p></div>
-    <div class="card g"><div class="ic" aria-hidden="true"><svg class="gico"><use href="#ic-box"/></svg></div>
-      <h3>Sealed products</h3>
-      <p>Track booster boxes, packs, and trial decks, follow preorders for upcoming sets, and jump straight to buy links from eBay, Amazon, and trusted regional stockists.</p></div>
+  <div class="ledger">
+    <div class="lhead">
+      <h2>Built for collectors, not spreadsheets.</h2>
+      <p>From your first Foxparks to the last chase card, SphereDex keeps the whole set organised, valued, and easy to complete.</p>
+    </div>
+    <div>
+      <article class="lrow">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-grid"/></svg>Every card, every set</h3>
+        <p>Every card across the Dawn of Palpagos booster, both trial decks, and the event promos, with new sets added as they release. Browse by set with real set art, track base cards and their variants, and watch your completion climb.</p>
+      </article>
+      <article class="lrow">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-scan"/></svg>Scan, wishlist &amp; graded</h3>
+        <p>In the iPhone and Android apps, point your camera at a card and SphereDex recognises it, so adding cards takes seconds. Keep a wishlist, mark favourites, log graded slabs (PSA, BGS, CGC and more), add notes, run multiple collections, or import a CSV.</p>
+      </article>
+      <article class="lrow g">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-rank"/></svg>Power up your spheres</h3>
+        <p>Completion is a game. Fill sets, chase parallels, and climb the sphere ranks as your binder grows toward 100 percent.</p>
+      </article>
+      <article class="lrow">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-chart"/></svg>Real market values</h3>
+        <p>Want the numbers too? See what your cards are actually worth: value your collection by the last 5 eBay sold prices or the current live listings, your choice, in your own currency, and watch the total move over time. Backed by eBay, <a href="https://palworldprices.com" target="_blank" rel="noopener">Palworld Prices</a> and <a href="https://www.cardtrader.com" target="_blank" rel="noopener">CardTrader</a> (EU asking prices).</p>
+      </article>
+      <article class="lrow">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-flame"/></svg>Biggest movers</h3>
+        <p>The day's biggest risers and fallers across your collection or the whole set, so you always know what is heating up and what is cooling off.</p>
+      </article>
+      <article class="lrow g">
+        <h3><svg class="gico" aria-hidden="true"><use href="#ic-box"/></svg>Sealed products</h3>
+        <p>Track booster boxes, packs, and trial decks, follow preorders for upcoming sets, and jump straight to buy links from eBay, Amazon, and trusted regional stockists.</p>
+      </article>
+    </div>
   </div>
 </div></section>
 
 <section class="block" id="prices"><div class="wrap">
   <div class="split">
     <div>
-      <span class="eyebrow">Prices you can trust</span>
       <h2>Know what it is worth, before you buy or trade.</h2>
-      <p class="muted" style="margin-top:12px;font-size:1.08rem">Open any card for the real numbers: the average of its last five sold prices, the recent sales behind that figure with links to each listing, and the current live asks, in the market you choose. Live prices refresh every day, and sold prices refresh when you open the app or tap refresh. And they are completely optional: switch prices off any time for a clean collection with no numbers.</p>
+      <p class="lede">Open any card for the real numbers: the average of its last five sold prices, the recent sales behind that figure with links to each listing, and the current live asks, in the market you choose. Live prices refresh every day, and sold prices refresh when you open the app or tap refresh. And they are completely optional: switch prices off any time for a clean collection with no numbers.</p>
       <div class="chips">
-        <span class="chip">&pound; GBP</span><span class="chip">$ USD</span><span class="chip">&euro; EUR</span>
-        <span class="chip">&yen; JPY</span><span class="chip">CA$</span><span class="chip">A$</span>
+        <span class="chip num">&pound; GBP</span><span class="chip num">$ USD</span><span class="chip num">&euro; EUR</span>
+        <span class="chip num">&yen; JPY</span><span class="chip num">CA$</span><span class="chip num">A$</span>
         <span class="chip">Exact variants</span><span class="chip">Sold + live listings</span><span class="chip">Value over time</span>
       </div>
     </div>
     <div class="demo">
-      <div class="lab" style="margin-bottom:12px">Jormuntide Ignis &middot; EBP01-001</div>
+      <p class="cap">Jormuntide Ignis &middot; EBP01-001</p>
       <div class="ptiles">
         <div class="pt on"><div class="k">Last 5 sold</div><div class="v">&pound;10.03</div></div>
         <div class="pt"><div class="k">Live listings</div><div class="v">&pound;9.53</div></div>
@@ -366,29 +365,26 @@
 
 <section class="block"><div class="wrap">
   <div class="split">
-    <div class="demo" style="order:2">
-      <div class="lab" style="margin-bottom:12px">Yours, everywhere</div>
-      <div class="qtiles">
-        <div class="qt"><svg><use href="#ic-off"/></svg><span><span class="n">Offline</span><br><span class="k">Works with no signal</span></span></div>
-        <div class="qt"><svg><use href="#ic-lock"/></svg><span><span class="n">Private</span><br><span class="k">Saved on your device</span></span></div>
-        <div class="qt"><svg><use href="#ic-free"/></svg><span><span class="n">Free</span><br><span class="k">No ads, no paywalls</span></span></div>
-        <div class="qt"><svg><use href="#ic-sync"/></svg><span><span class="n">Sync</span><br><span class="k">Optional cloud backup</span></span></div>
-      </div>
-    </div>
-    <div style="order:1">
-      <span class="eyebrow">On your device</span>
+    <div>
       <h2>Your collection, in your pocket.</h2>
-      <p class="muted" style="margin-top:12px;font-size:1.08rem">SphereDex saves everything on your device, so it is fast and works with no signal. No account needed to get started, and no ads. Want a backup across devices? Turn on optional cloud sync, or export your collection to a file any time.</p>
-      <div class="cta"><a class="btn primary" href="app/">Try it in your browser</a></div>
+      <p class="lede">SphereDex saves everything on your device, so it is fast and works with no signal. No account needed to get started, and no ads. Want a backup across devices? Turn on optional cloud sync, or export your collection to a file any time.</p>
+      <div class="cta" style="margin-top:24px"><a class="btn primary" href="app/">Try it in your browser</a></div>
     </div>
+    <ul class="facts">
+      <li><svg aria-hidden="true"><use href="#ic-off"/></svg><span><b>Offline</b><i>Works with no signal</i></span></li>
+      <li><svg aria-hidden="true"><use href="#ic-lock"/></svg><span><b>Private</b><i>Saved on your device</i></span></li>
+      <li><svg aria-hidden="true"><use href="#ic-free"/></svg><span><b>Free</b><i>No ads, no paywalls</i></span></li>
+      <li><svg aria-hidden="true"><use href="#ic-sync"/></svg><span><b>Sync</b><i>Optional cloud backup</i></span></li>
+    </ul>
   </div>
 </div></section>
 </main>
 
 <section class="final" id="get"><div class="wrap">
-  <span class="eyebrow">Start today</span>
-  <h2 style="margin-top:12px">Start your Palpagos collection.</h2>
-  <p class="muted" style="max-width:46ch;margin:14px auto 0;font-size:1.1rem">Open it in your browser right now, or download it on the App Store or Google Play.</p>
+  <div>
+    <h2>Start your Palpagos collection.</h2>
+    <p>Open it in your browser right now, or download it on the App Store or Google Play.</p>
+  </div>
   <div class="cta">
     <a class="storebtn" href="app/"><svg aria-hidden="true"><use href="#ic-globe"/></svg><span class="t"><span class="s">Open the</span><span class="b">Web app</span></span></a>
     <a class="storebtn apple" href="https://apps.apple.com/app/spheredex/id6804377686" aria-label="Download SphereDex on the App Store"><svg aria-hidden="true"><use href="#ic-apple"/></svg><span class="t"><span class="s">Download on the</span><span class="b">App Store</span></span></a>
@@ -403,35 +399,28 @@
 </div></footer>
 
 <script>
+/* One authored moment: the card you were missing gets scanned in, and the count follows it. */
 (function(){
   var r=document.documentElement;
   if(!r.classList.contains('rv'))return;
   window.sdMotion=1;
-  function count(el){
-    var txt=el&&el.textContent,end=parseInt(txt,10),suf,t0;
-    if(!end)return;
-    suf=txt.replace(/^\d+/,'');
-    el.textContent='0'+suf;
-    requestAnimationFrame(function step(now){
-      var p=Math.min(1,Math.max(0,(now-(t0=t0||now)-350)/1000));
-      el.textContent=p<1?Math.round(end*(1-Math.pow(1-p,3)))+suf:txt;
-      if(p<1)requestAnimationFrame(step);
-    });
-  }
   try{
-    var ph=document.querySelector('.hero .phone'),cta=document.querySelector('.final .cta');
+    var card=document.querySelector('.bcard.scan'),
+        count=document.getElementById('rcount');
+    if(!card)return;
     var io=new IntersectionObserver(function(es){
-      es.filter(function(e){return e.isIntersecting&&e.intersectionRatio>=(e.target===cta?.9:e.target===ph?.3:0)})
-        .sort(function(a,b){return a.boundingClientRect.top-b.boundingClientRect.top||a.boundingClientRect.left-b.boundingClientRect.left})
-        .forEach(function(e,i){
-          var t=e.target;
-          t.style.setProperty('--d',Math.min(i,3)*70+'ms');
-          t.classList.add('in');
-          io.unobserve(t);
-          if(t===ph)count(t.querySelector('.big'));
-        });
-    },{rootMargin:'0px 0px -8% 0px',threshold:[0,.3,.9]});
-    document.querySelectorAll('.hero .phone,.lead,#features .card,.demo,.final .cta').forEach(function(el){io.observe(el)});
+      for(var i=0;i<es.length;i++){
+        if(!es[i].isIntersecting||es[i].intersectionRatio<.5)continue;
+        io.disconnect();
+        setTimeout(function(){
+          card.classList.add('got');
+          if(count)setTimeout(function(){count.textContent='104'},900);
+        },620);
+        return;
+      }
+    },{threshold:[0,.5]});
+    if(count)count.textContent='103';
+    io.observe(card);
   }catch(err){r.classList.remove('rv')}
 })();
 </script>
