@@ -419,7 +419,9 @@
   .valueguess .tbtn { margin:2px 0; padding:6px 12px; font-size:.76rem; }
   .valueguess .vgbody { padding:4px 7px 8px 0; }
   .valueguess .vghelp { margin:2px 0 10px; }
-  .valueguess .vggrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  /* Bottom aligned, so a rarity whose name wraps to two or three lines in a narrow column still leaves
+     its box in line with the others. Rows of equal length labels look exactly as they always did. */
+  .valueguess .vggrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; align-items:end; }
   .valueguess .vggrid .field { min-width:0; } .valueguess .vggrid label { font-size:.76rem; } .valueguess .vggrid input { width:100%; min-width:0; }
   .valueguess .vgtotal { margin:12px 0 10px; font-size:1rem; color:var(--ink); }
   /* Printable deck list: a plain black on white sheet, the same on screen (for a screenshot) and on paper. */
@@ -2078,14 +2080,14 @@ label.acctsetrow { align-items:center; }
 
   /* rarity key */
   .keygrid { display:flex; flex-direction:column; gap:8px; max-width:680px; }
-  .keyrow { width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; display:grid; grid-template-columns:auto 1fr auto; gap:3px 12px; align-items:center; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:11px 14px; transition:border-color .14s, transform .14s, background .14s; }
+  .keyrow { width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; display:grid; grid-template-columns:auto 1fr auto; gap:3px 10px; align-items:center; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; padding:11px 14px; transition:border-color .14s, transform .14s, background .14s; }
   .keyrow:hover { border-color:var(--accent); transform:translateX(2px); background:color-mix(in srgb,var(--accent) 6%,var(--surface)); }
   .keyrow:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .kgo { color:var(--ink-faint); font-weight:700; margin-left:7px; opacity:0; transition:opacity .14s; }
   .keyrow:hover .kgo { opacity:1; color:var(--accent-ink); }
   .keygem { width:16px; height:16px; border-radius:4px; transform:rotate(45deg); flex:none; box-shadow:0 0 0 1.5px rgba(0,0,0,.18) inset; }
   .keyrow .kn { font-size:.9rem; } .keyrow .kn b { font-family:var(--font-mono); }
-  .ktag { font-size:.56rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); padding:1px 6px; border-radius:20px; margin-left:5px; }
+  .ktag { font-size:.56rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); background:color-mix(in srgb,var(--accent) 14%,transparent); padding:1px 6px; border-radius:20px; margin-right:7px; }
   .ktag.var { color:var(--el-Dark); background:color-mix(in srgb,var(--el-Dark) 18%,transparent); }
   .keyrow .kc { font-family:var(--font-mono); color:var(--ink-faint); font-size:.8rem; }
   .keyrow .kd { grid-column:2 / -1; font-size:.8rem; color:var(--ink-soft); }
@@ -4170,7 +4172,7 @@ label.acctsetrow { align-items:center; }
   var COLORS = ["Red","Blue","Green","Purple","Colorless"];
   var KINDS = ["Pal","Structure","Gear","Event","Soul"];
   var RARES = ["PR","TD","C","U","R","RR","SR","OSR","SP","SSP","TSR","TSP","SSS"];
-  var RARE_NAME = {C:"Common",U:"Uncommon",R:"Rare",RR:"Double Rare",SR:"Super Rare",SP:"Super Parallel",SSP:"Super Special",OSR:"Alt Art (OSR)",TD:"Trial Deck",TSR:"Trial Super Rare",TSP:"Trial Special",PR:"Promo",SSS:"Soul"};
+  var RARE_NAME = {C:"Common",U:"Uncommon",R:"Rare",RR:"Double Rare",SR:"Super Rare",SP:"Super Parallel",SSP:"Super Special",OSR:"Alt Art (OSR)",TD:"Trial Deck",TSR:"Trial Deck Super Rare",TSP:"Trial Deck Super Parallel",PR:"Promo",SSS:"Soul"};
   var RARE_ORDER = {}; RARES.forEach(function(r,i){ RARE_ORDER[r]=i; });
   var BASE_RARE = {C:1,U:1,R:1,RR:1,TD:1,PR:1};
   var GRADERS = ["PSA","BGS","CGC","SGC","HGA","GMA","ACE","TAG","Other"];
@@ -7516,11 +7518,16 @@ label.acctsetrow { align-items:center; }
   // printings share that id and are told apart by edition. Other trackers print the number without the "E"
   // (BP01-001, SOUL-001) and the parallel after a separator (BP01-001-OSR) or in a column of its own.
   var IMPORT_PARALLELS={SR:1, OSR:1, SP:1, SSP:1, TSR:1, TSP:1, S:1};
-  // Rarity and variant words that mean the regular printing. SphereDex's own export writes RARE_NAME words.
+  // Rarity and variant words that mean the regular printing.
   var IMPORT_BASE_WORDS={C:1, U:1, R:1, RR:1, TD:1, PR:1, SSS:1, COMMON:1, UNCOMMON:1, RARE:1, "DOUBLE RARE":1, "TRIAL DECK":1,
     PROMO:1, SOUL:1, NORMAL:1, BASE:1, REGULAR:1, STANDARD:1, NONE:1, NO:1, N:1, FALSE:1, "NON FOIL":1, NONFOIL:1, "NON HOLO":1};
-  var IMPORT_PARALLEL_WORDS={"SUPER RARE":"SR", "SPECIAL":"SP", "SUPER SPECIAL":"SSP", "ALT ART":"OSR", "ALTERNATE ART":"OSR",
-    "TRIAL SUPER RARE":"TSR", "TRIAL SPECIAL":"TSP"};
+  // Words that name a parallel. SphereDex's own export writes RARE_NAME words into its Rarity column, so this
+  // keeps every word a past version wrote as well as the current one: drop an old spelling and a file exported
+  // before that rename imports those cards as the wrong printing, or is rejected outright.
+  var IMPORT_PARALLEL_WORDS={"SUPER RARE":"SR", "SUPER PARALLEL":"SP", "SUPER SPECIAL":"SSP", "ALT ART":"OSR", "ALTERNATE ART":"OSR",
+    "TRIAL DECK SUPER RARE":"TSR", "TRIAL DECK SUPER PARALLEL":"TSP",
+    // Older SphereDex exports, before SP/TSR/TSP took their official names. Keep these.
+    "SPECIAL":"SP", "TRIAL SUPER RARE":"TSR", "TRIAL SPECIAL":"TSP"};
   var IMPORT_LANGS={en:"en", eng:"en", english:"en", "英語":"en", "英文":"en",
     jp:"jp", ja:"jp", jpn:"jp", japanese:"jp", "日本語":"jp", "日文":"jp",
     cn:"cn", zh:"cn", chi:"cn", zho:"cn", chs:"cn", chinese:"cn", "简体中文":"cn", "中文":"cn", "简中":"cn"};
@@ -13872,9 +13879,9 @@ label.acctsetrow { align-items:center; }
   // ---- Rarity key ----
   var RARE_DESC = {
     C:"Base commons.", U:"Base uncommons.", R:"Base rares.", RR:"Top base rarity (holo).",
-    SR:"Foil parallel of a base card.", SP:"Special treatment parallel.", SSP:"Premium alt treatment parallel.",
+    SR:"Foil parallel of a base card.", SP:"Premium treatment parallel.", SSP:"Premium alt treatment parallel.",
     OSR:"Alternate full art chase card.",
-    TD:"Fixed cards inside a Trial Deck.", TSR:"Foil chase from a Trial Deck.", TSP:"Special Trial Deck parallel.",
+    TD:"Fixed cards inside a Trial Deck.", TSR:"Foil chase from a Trial Deck.", TSP:"Premium parallel from a Trial Deck.",
     PR:"Event / campaign promo.", SSS:"Soul token card."
   };
   function renderKey(){
@@ -13885,9 +13892,9 @@ label.acctsetrow { align-items:center; }
     var kr=$("keyRarity"); if(kr){ kr.innerHTML=RARES.filter(function(r){return counts[r]>0;}).map(function(r){
       return '<button class="keyrow" type="button" data-r="'+r+'" title="Show only '+esc(RARE_NAME[r])+' cards">'+
         '<span class="keygem" style="background:var(--r-'+r+')"></span>'+
-        '<div class="kn"><b>'+r+'</b> · '+esc(RARE_NAME[r])+(BASE_RARE[r]?' <span class="ktag">base</span>':' <span class="ktag var">variant</span>')+'</div>'+
+        '<div class="kn"><b>'+r+'</b> · '+esc(RARE_NAME[r])+'</div>'+
         '<div class="kc">'+counts[r]+'<span class="kgo">›</span></div>'+
-        '<div class="kd">'+esc(RARE_DESC[r]||'')+'</div>'+
+        '<div class="kd">'+(BASE_RARE[r]?'<span class="ktag">base</span>':'<span class="ktag var">variant</span>')+esc(RARE_DESC[r]||'')+'</div>'+
       '</button>';
     }).join("");
       Array.prototype.forEach.call(kr.querySelectorAll(".keyrow"), function(b){
