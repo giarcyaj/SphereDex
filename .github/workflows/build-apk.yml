@@ -1,13 +1,14 @@
 name: Build Android APK
 
 # Builds a debug APK in the cloud so you never need Android Studio or a local SDK.
-# Runs on every push to main, and can be started by hand from the Actions tab.
+# Runs on every push to main, on pull requests, and by hand from the Actions tab.
 # Gated by the Tests workflow: the build job needs its tests job, so a failing carousel,
 # scan-review, editions or pipeline guard (or an unbuilt bundle) blocks the APK.
 
 on:
   push:
     branches: [ main ]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -39,20 +40,38 @@ jobs:
           # has, so sdkmanager exits 1 (same fix as release.yml).
           packages: 'platform-tools'
 
-      # This project ships without a Gradle wrapper, so install Gradle 8.7 directly.
-      - name: Set up Gradle 8.7
+      # Matches gradle/wrapper/gradle-wrapper.properties so the no-wrapper fallback
+      # below builds with the same Gradle the wrapper uses.
+      - name: Set up Gradle 9.9.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: '9.9.1'
 
+      # Sieve is opt-in server tooling. Fork and Dependabot pull requests do not receive
+      # these secrets, so skip the check there and still build the debug APK. Pushes to
+      # main, manual runs, and same-repo pull requests keep the verification.
       - name: Install Infisical CLI
+        id: infisical
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
         run: |
+          if [ -z "$INFISICAL_CLIENT_ID" ] || [ -z "$INFISICAL_CLIENT_SECRET" ]; then
+            echo "Infisical credentials are not available for this run. Skipping Sieve verification."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
           curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash
           sudo apt-get update && sudo apt-get install -y infisical
 
       - name: Verify Infisical secrets (SIEVE_API_KEY)
+        if: steps.infisical.outputs.available == 'true'
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
         run: |
-          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${{ secrets.INFISICAL_CLIENT_ID }} --client-secret=${{ secrets.INFISICAL_CLIENT_SECRET }} --silent --plain)
+          export INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id="$INFISICAL_CLIENT_ID" --client-secret="$INFISICAL_CLIENT_SECRET" --silent --plain)
           infisical run --projectId=9f3ed16d-7a03-4b16-9bcd-6f9709350b4e --env=dev -- python tools/sieve_run.py doctor
 
       # Write the Firebase config for push. If the secret isn't set, the build still succeeds -

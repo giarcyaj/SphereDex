@@ -12,6 +12,8 @@ app/google-services.json
 local.properties
 .gradle/
 app/build/
+# Gradle 9 writes the root problems report here. Same category as app/build/.
+/build/
 
 # Android Studio project state (same category as .gradle/): JDK names, Gradle
 # migrations, device-streaming sessions and run configs are per-machine, and CI
