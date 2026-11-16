@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<!-- The Ko-fi featured card for a SphereDex release. Filled in by tools/make_kofi_card.py, which
+     replaces __VERSION__, __ROWS__ and __BULLET_PX__ and renders this at 1200x630 scale 2.
+     The fonts are the repo's own Chakra Petch, loaded off disk: a webfont fetched over the network
+     would fall back to a generic sans without saying so if the render host had no connection. -->
+<style>
+@font-face{font-family:'Chakra Petch';font-weight:500;src:url(../docs/fonts/chakra-petch-500.woff2) format('woff2')}
+@font-face{font-family:'Chakra Petch';font-weight:600;src:url(../docs/fonts/chakra-petch-600.woff2) format('woff2')}
+@font-face{font-family:'Chakra Petch';font-weight:700;src:url(../docs/fonts/chakra-petch-700.woff2) format('woff2')}
+:root{--night:#08151f;--ink:#eef6fa;--soft:#a8bcc8;--faint:#7c95a3;--line:#143b45;--strong:#1d5560;
+      --cyan:#12e3f5;--gold:#ffb020;--green:#37c86a;--purple:#b77be0;--red:#ff7b72;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--night);font-family:'Chakra Petch',sans-serif;-webkit-font-smoothing:antialiased}
+.canvas{width:1200px;height:630px;position:relative;overflow:hidden;background:var(--night);color:var(--ink)}
+.grid{position:absolute;inset:0;opacity:.10;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:60px 60px}
+.bloomA{position:absolute;right:-180px;top:-240px;width:760px;height:620px;border-radius:50%;
+  background:rgba(18,227,245,.16);filter:blur(130px)}
+.bloomB{position:absolute;left:-220px;bottom:-280px;width:660px;height:560px;border-radius:50%;
+  background:rgba(255,176,32,.12);filter:blur(140px)}
+.ghost{position:absolute;right:28px;bottom:-116px;font-size:420px;line-height:.8;letter-spacing:-.045em;
+  font-weight:700;color:var(--cyan);opacity:.10;font-variant-numeric:tabular-nums}
+.pad{position:absolute;inset:0;padding:52px 70px 46px;display:flex;flex-direction:column;z-index:10}
+.head{display:flex;align-items:center;gap:22px}
+.name{font-size:46px;font-weight:700;letter-spacing:-.01em;line-height:1}
+.sub{font-size:19px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-top:7px}
+.pill{display:inline-flex;align-self:flex-start;margin-top:26px;font-size:22px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);border:2px solid rgba(18,227,245,.55);
+  background:rgba(18,227,245,.10);border-radius:999px;padding:9px 24px}
+.title{font-size:78px;font-weight:700;letter-spacing:-.035em;line-height:1;margin-top:14px}
+.feats{margin-top:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:22px}
+.row{display:flex;align-items:center;gap:19px}
+.dot{width:13px;height:13px;border-radius:50%;flex:none}
+.row span{font-size:__BULLET_PX__px;font-weight:500;letter-spacing:-.005em;line-height:1.1;white-space:nowrap}
+.foot{border-top:1px solid var(--line);padding-top:16px;display:flex;align-items:baseline;
+  justify-content:space-between;gap:24px}
+.site{font-size:27px;font-weight:600;color:var(--cyan);letter-spacing:.01em}
+.credit{font-size:19px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+</style></head><body>
+<div class="canvas">
+  <div class="grid"></div><div class="bloomA"></div><div class="bloomB"></div>
+  <div class="ghost">__VERSION__</div>
+  <div class="pad">
+    <div class="head">
+      <div><div class="name">SphereDex</div><div class="sub">TCG collection tracker</div></div>
+    </div>
+    <span class="pill">Version __VERSION__</span>
+    <div class="title">Update __VERSION__</div>
+    <div class="feats">
+__ROWS__
+    </div>
+    <div class="foot">
+      <span class="site">spheredex.app</span>
+      <span class="credit">Fan made tracker &middot; Cards &copy; Pocketpair / Bushiroad</span>
+    </div>
+  </div>
+</div></body></html>

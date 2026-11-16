@@ -68,7 +68,7 @@ test('the SCAN_REVIEW API seam stays intact', () => {
   const a = app();
   assert.deepEqual(
     Object.keys(a.window.SCAN_REVIEW).sort(),
-    ['close', 'moveVariant', 'open', 'record', 'refresh', 'render', 'reset', 'restore', 'session', 'total'].sort()
+    ['assign', 'blocked', 'close', 'commit', 'drop', 'moveVariant', 'open', 'record', 'refresh', 'render', 'reset', 'restore', 'session', 'stage', 'total'].sort()
   );
 });
 
@@ -280,6 +280,72 @@ test('renderScanReview shows the empty state when nothing waits', () => {
   const a = app();
   a.api.render();
   assert.equal(a.list.children.length, 0);
+});
+
+function withCards(a) {
+  const c1 = card('EBP01-001', 'Lamball');
+  const c2 = card('EBP01-002', 'Cremis');
+  a.sandbox.CARDS = [c1, c2];
+  a.sandbox.byNumberIdx = { 'EBP01-001': c1, 'EBP01-002': c2 };
+  return a;
+}
+
+test('a photo of several cards keeps an unmatched row until it is picked or removed', () => {
+  const a = withCards(app());
+  a.api.stage([
+    { id: '', thumb: 'data:crop', lowConf: false },
+    { id: 'EBP01-001', lowConf: true, thumb: 'data:ok' },
+  ]);
+  assert.equal(a.api.blocked(), true, 'an unmatched card blocks add');
+  a.api.render();
+  const rows = a.list.children;
+  assert.equal(rows.length, 2, 'unmatched cards are not dropped');
+  assert.match(rows[0]._html, /Unmatched/);
+  assert.match(rows[0]._html, /Name or number/);
+  assert.match(rows[1]._html, /Lamball/);
+  assert.match(rows[1]._html, /check this match/);
+  rows[0].querySelector('[data-action="drop"]').onclick();
+  assert.equal(a.api.session.pending.length, 1);
+  assert.equal(a.api.blocked(), false);
+  a.api.stage([{ id: '', thumb: 'data:crop' }]);
+  a.api.assign(0, 'EBP01-002');
+  assert.equal(a.api.session.pending[0].id, 'EBP01-002');
+  assert.equal(a.api.blocked(), false);
+});
+
+test('committing a reviewed photo adds each picked card and clears the pending list', () => {
+  const added = [];
+  const a = withCards(app({
+    defaultEditionFor: () => '1',
+    addToCollection(colId, id){ added.push({ colId, id }); a.col.own[id] = { qty: 1 }; },
+  }));
+  a.api.stage([{ id: 'EBP01-001', lowConf: false }, { id: 'EBP01-002', lowConf: true }]);
+  assert.equal(a.api.commit('test'), 2);
+  assert.deepEqual(added, [{ colId: 'test', id: 'EBP01-001' }, { colId: 'test', id: 'EBP01-002' }]);
+  assert.equal(a.api.session.pending.length, 0);
+  assert.equal(a.api.session.count, 2);
+  assert.equal(a.api.session.items[0].dest, 'collection');
+  assert.equal(a.api.session.items[0].type, 'raw');
+});
+
+test('commit refuses to add while an unmatched card is still in the list', () => {
+  const a = app({
+    defaultEditionFor: () => null,
+    addToCollection(){ throw new Error('should not add'); },
+  });
+  a.api.stage([{ id: 'EBP01-001' }, { id: '' }]);
+  assert.equal(a.api.commit('test'), 0);
+  assert.equal(a.api.session.count, 0);
+  assert.equal(a.api.session.pending.length, 2);
+});
+
+test('reset clears a staged photo as well as the added tally', () => {
+  const a = app();
+  a.api.stage([{ id: 'EBP01-001' }]);
+  a.api.record({ id: 'EBP01-002', colId: 'test', dest: 'collection', type: 'raw', qty: 1, edition: '1', value: 1 });
+  a.api.reset();
+  assert.equal(a.api.session.pending.length, 0);
+  assert.equal(a.api.session.count, 0);
 });
 
 test('refresh hides the session pill and review button when the session is empty', () => {

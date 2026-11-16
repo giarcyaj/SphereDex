@@ -81,6 +81,17 @@ class BinderStore(private val context: Context) {
             .maxByOrNull { it.key.length }
             ?.value
     }
+
+    /** resolve() for a printed number that may come off a Japanese card, which drops the leading E
+     *  (BP01-001 for EBP01-001). The number as read is tried first; one with no leading E that does not
+     *  resolve is tried with an E added. An E number is never reinterpreted. The flag is true when the E
+     *  had to be added, i.e. the scan came off a Japanese print. Mirrors iOS CardResolver.resolveScan. */
+    fun resolveScan(scanned: String): Pair<Card, Boolean>? {
+        resolve(scanned)?.let { return it to false }
+        val s = normalizeNum(scanned)
+        if (s.isEmpty() || s.startsWith("E")) return null
+        return resolve("E$s")?.let { it to true }
+    }
     // ---- name matching (full-card scan) ----
     // The printed card NAME is large and clear even when the collector number is too small to OCR, so
     // matching the recognised text against card names is far more reliable than perceptual image hashing.

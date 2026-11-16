@@ -17,6 +17,7 @@ back to `.env`, so wrapping the command is the entire change.
 | `SIEVE_API_KEY` | `tools/sieve.py`, `tools/sieve_run.py` | `android/.env` (gitignored) |
 | `SIEVE_BASE_URL` | `tools/sieve.py` | unset — defaults to the production host |
 | `X_BEARER_TOKEN` | `tools/fetch_x_posts.py` (Sieve refresh workflow) | Infisical `dev` only — see [X API token](#x-api-token) |
+| `XAI_API_KEY` | nothing (no longer used) | can be deleted from Infisical `dev` — see [xAI API key (no longer used)](#xai-api-key-no-longer-used) |
 | `X_USER_ID` | `tools/fetch_x_posts.py` | optional, Infisical `dev` — not secret, saves a lookup call per run |
 | `KEYSTORE_*`, `KEY_ALIAS`, `GOOGLE_SERVICES_JSON_BASE64` | `.github/workflows/*.yml` | GitHub's encrypted repo secrets, never a file |
 
@@ -155,9 +156,12 @@ through `infisical run`, and the tool skips cleanly (the run still publishes off
 news) until the token exists.
 
 1. Create an app in the X developer console (<https://console.x.com>) and generate its
-   **Bearer Token** (app-only auth; read access is enough). The API is billed per use:
-   the workflow reads at most 10 posts twice a day, plus one username lookup per run
-   unless `X_USER_ID` is set.
+   **Bearer Token** (app-only auth; read access is enough). The API is billed per use.
+   The workflow runs every 4 hours and keeps a cursor between runs: about once a day it
+   reads the newest 10 posts of each account, and every other run asks only for posts
+   newer than the last one seen, so the only repeat reads are that daily full read. Each
+   account's user id is looked up once and then remembered in that cursor (`X_USER_ID`
+   skips the lookup for @PalworldOCG_EN entirely).
 2. In Infisical, open the project's **Development** environment and add
    `X_BEARER_TOKEN` with that value. Paste it into Infisical directly; never put it in
    `.env`, a workflow file or a GitHub secret.
@@ -171,6 +175,19 @@ infisical run --env=dev -- python tools/fetch_x_posts.py --root stage/sieve-x-ch
 ```
 
 Rotate the token from the developer console if it ever reaches a log or a file.
+
+## xAI API key (no longer used)
+
+Nothing in this repo reads `XAI_API_KEY` or `XAI_MODEL` any more. `tools/fetch_x_posts.py`
+still follows both official accounts, but it now stages @PalworldOCG's posts in their
+original Japanese, and translating them into English is the backend's job (Cloudflare
+Workers AI, reading the official card, Pal and set names from `docs/news/ja-glossary.json`,
+which `tools/build_ja_glossary.py` builds). The old `tools/translate_posts.py` and its
+translation cache step in the Sieve refresh workflow are gone.
+
+If `XAI_API_KEY` (or `XAI_MODEL`) is still in the project's **Development** environment in
+Infisical, delete it there: nothing will notice it has gone. If the key was never revoked,
+revoke it in the xAI console as well, so a copy that leaked anywhere stops working.
 
 ## CI, staging and production
 

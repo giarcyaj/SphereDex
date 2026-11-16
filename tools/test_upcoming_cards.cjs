@@ -147,7 +147,12 @@ test('the sheet shows a revealed name and source, and never invents one', functi
   assert.match(anubis, /href="https:\/\/x\.com\/PalworldOCG_EN\/status\/2103423638800339279"/);
   assert.match(anubis, />Source</);
   assert.match(anubis, />Official reveal</);
-  const orserk = ctx.upcomingSheetHtml('Orserk', ctx.upcomingMatch('Orserk', false, entries, now));
+  // Orserk as the feed stood before its card was named on 29 Sep: only the illustration reveal. Built from
+  // the feed rather than read straight off it, because every new reveal would otherwise break this case.
+  const early = published();
+  early.entries = early.entries.filter(function(e) { return !(e.pal === 'Orserk' && e.card_name); });
+  const earlyEntries = ctx.upcomingNormalise(early).entries;
+  const orserk = ctx.upcomingSheetHtml('Orserk', ctx.upcomingMatch('Orserk', false, earlyEntries, now));
   assert.equal(orserk.includes('upname'), false);
   assert.equal(orserk.includes('upnum'), false);
   assert.match(orserk, /href="https:\/\/x\.com\/PalworldOCG_EN\/status\/2093503912149950892"/);
@@ -232,8 +237,8 @@ test('a bad live payload leaves the bundled copy in place', async function() {
 
 test('Eternal Ascent lists the booster and both trial decks', function() {
   assert.match(source, /code:"EBP03", name:"Booster Box"/);
-  assert.match(source, /id:"box-bp03"[^}]*date:"Jan 29, 2027"/);
-  assert.match(source, /id:"pack-bp03"[^}]*date:"Jan 29, 2027"/);
+  assert.match(source, /id:"box-bp03"[^}]*date:"Jan 30, 2027"/);
+  assert.match(source, /id:"pack-bp03"[^}]*date:"Jan 30, 2027"/);
   assert.match(source, /id:"td-ea-rg"[^}]*nk:\["TD03","Red・Green"\][^}]*date:"Dec 18, 2026"/);
   assert.match(source, /id:"td-ea-bp"[^}]*nk:\["TD04","Blue・Purple"\][^}]*date:"Dec 18, 2026"/);
   assert.match(source, /id="upScrim"/);

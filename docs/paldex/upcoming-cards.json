@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-28T10:49:15Z",
+  "updated_at": "2026-10-21T21:28:00Z",
   "entries": [
     {
       "pal": "Jetragon",
@@ -230,6 +230,256 @@
       "card_number": "SS01-001",
       "source_url": "https://x.com/PalworldOCG_EN/status/2104496345927332076",
       "revealed_at": "2026-09-28T09:00:03Z"
+    },
+    {
+      "pal": "Orserk",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Orserk – Thunderclap Roar",
+      "card_number": "EBP02-001",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2104753031913062618",
+      "revealed_at": "2026-09-29T02:00:01Z"
+    },
+    {
+      "pal": "Flambelle",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Flambelle – Feverish Tears",
+      "card_number": "EBP02-007",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2104753031913062618",
+      "revealed_at": "2026-09-29T02:00:01Z"
+    },
+    {
+      "pal": "Foxcicle",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Foxcicle – Aurora Hymn",
+      "card_number": "EBP02-026",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2105115418776002628",
+      "revealed_at": "2026-09-30T02:00:01Z"
+    },
+    {
+      "pal": "Jolthog Cryst",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Jolthog Cryst – Midwinter Awakening",
+      "card_number": "EBP02-029",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2105115418776002628",
+      "revealed_at": "2026-09-30T02:00:01Z"
+    },
+    {
+      "pal": "Bristla",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Bristla – Regal Gaze",
+      "card_number": "EBP02-051",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2105477803244228934",
+      "revealed_at": "2026-10-01T02:00:00Z"
+    },
+    {
+      "pal": "Beegarde",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Beegarde – Faithful Honor",
+      "card_number": "EBP02-055",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2105477803244228934",
+      "revealed_at": "2026-10-01T02:00:00Z"
+    },
+    {
+      "pal": "Faleris",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Faleris – Marcus' Soaring Wings",
+      "card_number": "EBP02-003",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2105840194419364339",
+      "revealed_at": "2026-10-02T02:00:01Z"
+    },
+    {
+      "pal": "Relaxaurus Lux",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Relaxaurus Lux – Party Time",
+      "card_number": "EBP02-010",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2106202576467165196",
+      "revealed_at": "2026-10-03T02:00:00Z"
+    },
+    {
+      "pal": "Foxparks",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Foxparks – Breathing Practice",
+      "card_number": "EBP02-013",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2106202576467165196",
+      "revealed_at": "2026-10-03T02:00:00Z"
+    },
+    {
+      "pal": "Eikthyrdeer",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Eikthyrdeer – Warden of the Woods",
+      "card_number": "EBP02-099",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2106564969664004482",
+      "revealed_at": "2026-10-04T02:00:01Z"
+    },
+    {
+      "pal": "Mau",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Mau – Greed Beckons",
+      "card_number": "EBP02-080",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2107652128122810688",
+      "revealed_at": "2026-10-07T02:00:00Z"
+    },
+    {
+      "pal": "Sibelyx",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Sibelyx – Silken Spinner",
+      "card_number": "EBP02-028",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2107652128122810688",
+      "revealed_at": "2026-10-07T02:00:00Z"
+    },
+    {
+      "pal": "Lifmunk",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Lifmunk – Hidden Power",
+      "card_number": "EBP02-056",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2108019245854703970",
+      "revealed_at": "2026-10-08T02:18:47Z"
+    },
+    {
+      "pal": "Sweepa",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Sweepa – Record Breaker",
+      "card_number": "EBP02-027",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2109101685054579155",
+      "revealed_at": "2026-10-11T02:00:01Z"
+    },
+    {
+      "pal": "Swee",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Swee – Hibernating Together",
+      "card_number": "EBP02-034",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2109101685054579155",
+      "revealed_at": "2026-10-11T02:00:01Z"
+    },
+    {
+      "pal": "Daedream",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Daedream – Blissful Dreams",
+      "card_number": "EBP02-082",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2109464070680416290",
+      "revealed_at": "2026-10-12T02:00:01Z"
+    },
+    {
+      "pal": "Chillet Ignis",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Chillet Ignis – Ember-Clad Dragon",
+      "card_number": "EBP02-004",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2109826458185040061",
+      "revealed_at": "2026-10-13T02:00:00Z"
+    },
+    {
+      "pal": "Arsox",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Arsox – Blazing Fury",
+      "card_number": "EBP02-009",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2109826458185040061",
+      "revealed_at": "2026-10-13T02:00:00Z"
+    },
+    {
+      "pal": "Pengullet",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Pengullet – Locked and Loaded",
+      "card_number": "EBP02-033",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2110188847837610367",
+      "revealed_at": "2026-10-14T02:00:01Z"
+    },
+    {
+      "pal": "Nox",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Nox – One-Way Ticket",
+      "card_number": "EBP02-079",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
+      "revealed_at": "2026-10-19T02:00:00Z"
+    },
+    {
+      "pal": "Tombat",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Tombat – Resonance of Shadows",
+      "card_number": "EBP02-075",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112000783244009490",
+      "revealed_at": "2026-10-19T02:00:00Z"
+    },
+    {
+      "pal": "Shroomer Noct",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Shroomer Noct – Spores of the Void",
+      "card_number": "EBP02-077",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2111638397685215466",
+      "revealed_at": "2026-10-18T02:00:01Z"
+    },
+    {
+      "pal": "Quivern Botan",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Quivern Botan – Meadow's Grace",
+      "card_number": "EBP02-054",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2111276012453401079",
+      "revealed_at": "2026-10-17T02:00:01Z"
+    },
+    {
+      "pal": "Mammorest",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Mammorest – Gaia Crusher",
+      "card_number": "EBP02-050",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2110679809831645670",
+      "revealed_at": "2026-10-15T10:30:55Z"
+    },
+    {
+      "pal": "Katress Ignis",
+      "set": "Legends Awaken",
+      "set_code": "EBP02",
+      "release_date": "2026-10-30",
+      "card_name": "Katress Ignis – Scathing Counter",
+      "card_number": "EBP02-002",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2112363170366955716",
+      "revealed_at": "2026-10-20T02:00:00Z"
     }
   ]
 }

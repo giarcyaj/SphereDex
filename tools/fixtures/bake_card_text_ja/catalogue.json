@@ -1,0 +1,13 @@
+{
+  "readme": "A small English catalogue for tools/test_bake_card_text_ja.py. Lamball and Chikipi share every printed number and field, as the real ones do, so only the number or another card can tell them apart.",
+  "cards": [
+    {"number": "EBP01-001", "name": "Lamball", "cost": "2", "power": "200", "attack": "1", "color": "Green", "type": "Neutral", "aptitude": "Farming"},
+    {"number": "EBP01-010", "name": "Chikipi", "cost": "2", "power": "200", "attack": "1", "color": "Green", "type": "Neutral", "aptitude": "Farming"},
+    {"number": "EBP01-099", "name": "Unprinted Pal", "cost": "9", "power": "9999", "attack": "5", "color": "Red", "type": "Fire", "aptitude": "Kindling"},
+    {"number": "ETD02-023", "name": "Cattiva", "cost": "2", "power": "200", "attack": "1", "color": "Red", "type": "Neutral", "aptitude": "Mining"},
+    {"number": "EPR-001", "name": "Lamball", "cost": "2", "power": "200", "attack": "1", "color": "Green", "type": "Neutral", "aptitude": "Farming"},
+    {"number": "EPR-002", "name": "Flambelle", "cost": "3", "power": "400", "attack": "1", "color": "Red", "type": "Fire", "aptitude": "Kindling"},
+    {"number": "EPR-018", "name": "Lamball", "cost": "2", "power": "200", "attack": "1", "color": "Green", "type": "Neutral", "aptitude": "Farming"},
+    {"number": "ESOUL-001", "name": "Soul", "cost": "", "power": "", "attack": "", "color": "Colorless", "type": "", "aptitude": ""}
+  ]
+}

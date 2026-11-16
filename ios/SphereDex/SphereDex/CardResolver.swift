@@ -114,4 +114,16 @@ final class CardResolver {
         }
         return best?.value
     }
+
+    /// resolve() for a printed number that may come off a Japanese card, which drops the leading E
+    /// (BP01-001 for EBP01-001). The number as read is tried first; one with no leading E that does not
+    /// resolve is tried with an E added. An E number is never reinterpreted. `japanese` is true when the E
+    /// had to be added, i.e. the scan came off a Japanese print. Mirrors Android BinderStore.resolveScan.
+    func resolveScan(_ scanned: String) -> (number: String, japanese: Bool)? {
+        if let hit = resolve(scanned) { return (hit, false) }
+        let s = normalize(scanned)
+        if s.isEmpty || s.hasPrefix("E") { return nil }
+        if let hit = resolve("E" + s) { return (hit, true) }
+        return nil
+    }
 }

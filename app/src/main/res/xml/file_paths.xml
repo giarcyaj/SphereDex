@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the one folder the camera writes a scan photo into. Nothing else in the app is shared. -->
+<paths>
+    <cache-path name="capture" path="capture/" />
+</paths>

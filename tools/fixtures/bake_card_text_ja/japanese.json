@@ -1,0 +1,11 @@
+[
+  {"card_number": "BP01-001", "card_name": "モコロン", "cost": "2", "power": "200", "attack": "1", "color": "緑", "type": "無", "aptitude": "牧場", "text": "モコロンの効果"},
+  {"card_number": "BP01-010", "card_name": "クルリス", "cost": "2", "power": "200", "attack": "1", "color": "緑", "type": "無", "aptitude": "牧場", "text": "クルリスの効果"},
+  {"card_number": "TD02-023", "card_name": "ニャンバット", "cost": "2", "power": "200", "attack": "1", "color": "赤", "type": "無", "aptitude": "採掘", "text": "ニャンバットの効果"},
+  {"card_number": "PR-001", "card_name": "フランベル", "cost": "3", "power": "400", "attack": "1", "color": "赤", "type": "炎", "aptitude": "火起こし", "text": "フランベルの効果"},
+  {"card_number": "PR-002", "card_name": "別のカード", "cost": "5", "power": "700", "attack": "2", "color": "青", "type": "水", "aptitude": "水やり", "text": "別の効果"},
+  {"card_number": "PR-017", "card_name": "モコロン", "cost": "2", "power": "200", "attack": "1", "color": "緑", "type": "無", "aptitude": "牧場", "text": "モコロンの効果"},
+  {"card_number": "PR-018", "card_name": "クルリス", "cost": "2", "power": "200", "attack": "1", "color": "緑", "type": "無", "aptitude": "牧場", "text": "クルリスの効果"},
+  {"card_number": "PR-019", "card_name": "ニャンバット", "cost": "2", "power": "200", "attack": "1", "color": "赤", "type": "無", "aptitude": "採掘", "text": "ニャンバットの効果"},
+  {"card_number": "SOUL-001", "card_name": "ソウル", "cost": "", "power": "", "attack": "", "color": "", "type": "", "aptitude": ""}
+]

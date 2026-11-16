@@ -49,7 +49,14 @@ function loadApp(opts) {
     $: function(id) { return el(id); },
     lsGet: function(k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
     lsSet: function(k, v) { store[k] = String(v); },
-    fetch: opts.fetch || function() { return Promise.reject(new Error('offline')); }
+    fetch: opts.fetch || function() { return Promise.reject(new Error('offline')); },
+    // The Wishlist helpers live outside the block. These rows name no catalog card, so the plain link is all
+    // newsRowHtml would draw, and there is no button to wire.
+    newsCardFor: function() { return null; },
+    newsRowHtml: function(href, inner) {
+      return '<a class="newsitem" href="' + sandbox.esc(href) + '" target="_blank" rel="noopener">' + inner + '</a>';
+    },
+    wireNewsWish: function() {}
   };
   vm.createContext(sandbox);
   vm.runInContext(block, sandbox);

@@ -1,0 +1,110 @@
+name: Publish cards and announce a set
+
+# A build carries its cards inside it, so a set added today reaches nobody who has not updated. The
+# backend can serve the cards instead: every app asks on launch whether there is a catalogue newer than
+# the one it was built with, merges what comes back, prices it and says "N new cards added to your app".
+# This is the button that publishes that catalogue, and then tells people it is there.
+#
+# Run it in two passes on purpose:
+#   1. announce = false. The cards go out. Open the app on a phone that has NOT updated and watch them
+#      arrive, which is a better test than any test notification.
+#   2. announce = true, with the set name. Only now does the notification go to everyone, and by then it
+#      is true for them.
+# Sending first would have a few hundred people tap through to nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Catalogue version to publish. Must match CATALOGUE_VERSION in src/paldeck.html."
+        required: true
+        default: "3"
+      announce:
+        description: "Also send the New sets notification to every opted in device"
+        type: boolean
+        default: false
+      set_name:
+        description: "Set name for that notification, e.g. Sleeve & Card Set Vol. 1"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      BACKEND: https://spheredex-backend.craigjayedit.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: The admin key has to be here, or nothing below can run
+        env:
+          KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::BACKEND_ADMIN_KEY is not set on this repository"; exit 1; }
+          echo "admin key present (${#KEY} characters)"
+
+      - name: The version must match the one this build bakes in
+        run: |
+          baked=$(grep -oE 'var CATALOGUE_VERSION = [0-9]+' src/paldeck.html | grep -oE '[0-9]+')
+          echo "CATALOGUE_VERSION in the app is $baked, publishing ${{ inputs.version }}"
+          [ "$baked" = "${{ inputs.version }}" ] || {
+            echo "::error::The app bakes $baked. Publishing a different number would either hide the cards from old builds or hand them to builds that already have them."
+            exit 1
+          }
+
+      - name: Build the payload from the app's own card table
+        run: |
+          python tools/catalogue.py --all --version ${{ inputs.version }} --out payload.json
+          python - <<'PY'
+          import json
+          d = json.load(open("payload.json", encoding="utf-8"))
+          print("rows", len(d["rows"]), "art urls", len(d["img"]), "sets", ",".join(d["setOrder"]))
+          assert d["rows"], "no rows"
+          assert len(d["img"]) == len(d["rows"]), "every row needs its art, or old builds draw blank tiles"
+          PY
+
+      - name: Publish it
+        env:
+          KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          code=$(curl -s -o response.json -w '%{http_code}' -X POST "$BACKEND/api/admin/catalogue" \
+            -H "X-Admin-Key: $KEY" -H "Content-Type: application/json" --data-binary @payload.json)
+          cat response.json; echo
+          [ "$code" = "200" ] || { echo "::error::publish returned HTTP $code"; exit 1; }
+
+      - name: Check an older build would now be offered the cards
+        run: |
+          prev=$(( ${{ inputs.version }} - 1 ))
+          served=$(curl -s "$BACKEND/api/catalogue?have=$prev")
+          echo "$served" | head -c 200; echo
+          echo "$served" | grep -q '"rows"' || { echo "::error::an app on version $prev was told it is up to date"; exit 1; }
+
+      - name: Tell people about it
+        if: ${{ inputs.announce == true }}
+        env:
+          KEY: ${{ secrets.BACKEND_ADMIN_KEY }}
+        run: |
+          name='${{ inputs.set_name }}'
+          [ -n "$name" ] || { echo "::error::announce needs a set name, it goes in the notification"; exit 1; }
+          code=$(curl -s -o announce.json -w '%{http_code}' -X POST "$BACKEND/api/admin/announce-set" \
+            -H "X-Admin-Key: $KEY" -H "Content-Type: application/json" \
+            --data "$(python -c 'import json,sys; print(json.dumps({"name": sys.argv[1]}))' "$name")")
+          cat announce.json; echo
+          [ "$code" = "200" ] || { echo "::error::announce returned HTTP $code"; exit 1; }
+
+      - name: Say what happened
+        run: |
+          echo "### Cards published" >> $GITHUB_STEP_SUMMARY
+          echo "Catalogue version ${{ inputs.version }} is live. Every app picks it up on its next launch." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.announce }}" = "true" ]; then
+            echo "The New sets notification went out for ${{ inputs.set_name }}." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No notification was sent. Run this again with announce ticked once you have seen the cards arrive." >> $GITHUB_STEP_SUMMARY
+          fi

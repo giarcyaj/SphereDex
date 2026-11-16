@@ -1,0 +1,55 @@
+{
+  "updated_at": "2026-10-09T10:45:00Z",
+  "products": [
+    {
+      "id": "box-bp02",
+      "edition": "en",
+      "box": "https://spheredex.app/sealed/img/BOX_EBP02.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/media-kit",
+      "official": true
+    },
+    {
+      "id": "box-bp03",
+      "edition": "en",
+      "banner": "https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/products/bp03",
+      "official": true
+    },
+    {
+      "id": "box-ebp01-2e",
+      "edition": "en",
+      "box": "https://spheredex.app/sealed/img/BOX_BANNER_EBP01_2E.webp",
+      "source_url": "https://x.com/PalworldOCG_EN/status/2095723842740314301",
+      "official": true
+    },
+    {
+      "id": "pack-bp02",
+      "edition": "en",
+      "box": "https://spheredex.app/sealed/img/PACK_EBP02.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/media-kit",
+      "official": true
+    },
+    {
+      "id": "pack-bp03",
+      "edition": "en",
+      "banner": "https://spheredex.app/sealed/img/BOX_BANNER_BP03.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/products/bp03",
+      "official": true
+    },
+    {
+      "id": "ss-vol1",
+      "edition": "en",
+      "box": "https://spheredex.app/sealed/img/BOX_SS01.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/news/post-13",
+      "official": true,
+      "replace": true
+    },
+    {
+      "id": "td-ea-bp",
+      "edition": "en",
+      "banner": "https://spheredex.app/sealed/img/BOX_BANNER_TD04.webp",
+      "source_url": "https://en.palworld-official-cardgame.com/products/td04",
+      "official": true
+    }
+  ]
+}

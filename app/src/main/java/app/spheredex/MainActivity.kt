@@ -3,6 +3,7 @@ package app.spheredex
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
@@ -13,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Base64
 import android.view.ViewGroup
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
@@ -31,6 +33,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -55,7 +58,22 @@ class MainActivity : ComponentActivity() {
     // Android 13+ notification permission. Result ignored: if declined, the user can still opt in
     // later from system settings, and the app works fully without it.
     private val notifPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { reportNotificationsAllowed() }
+
+    /** Whether the phone lets SphereDex show notifications at all: the Android 13 permission, the app's own
+     *  switch in system settings, and the one channel every alert uses. */
+    private fun notificationsAllowed(): Boolean = try {
+        val nm = NotificationManagerCompat.from(this)
+        nm.areNotificationsEnabled() && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            nm.getNotificationChannel(Push.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE)
+    } catch (_: Exception) { true }
+
+    /** Tell the page, so a switch that says on is not quietly blocked by the phone. Sent once the page has
+     *  loaded and on every resume, because the person changes it in system settings, outside the app. */
+    private fun reportNotificationsAllowed() {
+        if (!pageLoaded) return
+        web.evaluateJavascript("window.SDNotifPerm && window.SDNotifPerm(${notificationsAllowed()})", null)
+    }
 
     /** Push the current safe-area insets into the web app as CSS variables (--sat/--sab/--sal/--sar). */
     private fun applyInsets() { insetJs?.let { js -> web.evaluateJavascript(js, null) } }
@@ -113,6 +131,29 @@ class MainActivity : ComponentActivity() {
             override fun createIntent(context: Context, input: Array<String>): Intent =
                 super.createIntent(context, input).addCategory(Intent.CATEGORY_OPENABLE)
         }) { uri -> deliverChosen(if (uri != null) arrayOf(uri) else null) }
+
+    /**
+     * Where the camera writes, while a capture is in flight. onShowFileChooser used to send EVERY file
+     * input to the document picker, so an input carrying capture="environment" opened a file browser and
+     * the camera never ran: the photo scan's "Take photo" button could not take a photo on Android, only
+     * pick one already on the device. iOS honours capture by itself.
+     */
+    private var pendingCapture: Uri? = null
+
+    private val takePhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+            val shot = pendingCapture
+            pendingCapture = null
+            deliverChosen(if (ok && shot != null) arrayOf(shot) else null)
+        }
+
+    /** A content:// uri the camera app may write to, or null when that is not possible. */
+    private fun newCaptureUri(): Uri? = try {
+        val dir = java.io.File(cacheDir, "capture").apply { mkdirs() }
+        dir.listFiles()?.forEach { runCatching { it.delete() } }   // one shot at a time, never hoard photos
+        val file = java.io.File(dir, "scan-" + SystemClock.uptimeMillis() + ".jpg")
+        androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+    } catch (_: Exception) { null }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -173,6 +214,7 @@ class MainActivity : ComponentActivity() {
                     applyInsets()
                     pageLoaded = true
                     applyPendingPushUrl()   // a notification tapped before the page loaded
+                    reportNotificationsAllowed()
                 }
             }
             // Make window.prompt/confirm/alert work (WebView blocks them by default),
@@ -219,6 +261,16 @@ class MainActivity : ComponentActivity() {
                 override fun onShowFileChooser(v: WebView?, callback: ValueCallback<Array<Uri>>?, params: WebChromeClient.FileChooserParams?): Boolean {
                     deliverChosen(null)   // resolve a stale request before taking the new one
                     fileCallback = callback
+                    // An input that asks for the camera gets the camera. If that cannot be set up, or no
+                    // camera app answers, fall through to the picker rather than leaving the button dead.
+                    if (params?.isCaptureEnabled == true) {
+                        val shot = newCaptureUri()
+                        if (shot != null) {
+                            pendingCapture = shot
+                            try { takePhotoLauncher.launch(shot); return true }
+                            catch (_: Exception) { pendingCapture = null }
+                        }
+                    }
                     try { openDocLauncher.launch(chooserMimes(params?.acceptTypes)) }
                     catch (_: Exception) { deliverChosen(null) }
                     return true
@@ -228,6 +280,7 @@ class MainActivity : ComponentActivity() {
             addJavascriptInterface(IconBridge(), "AndroidIcon")
             addJavascriptInterface(PushBridge(), "AndroidPush")
             addJavascriptInterface(FileBridge(), "AndroidFiles")
+            addJavascriptInterface(AssetBridge(), "AndroidAssets")
             loadUrl("file:///android_asset/spheredex.html")
         }
         setContentView(web)
@@ -288,8 +341,19 @@ class MainActivity : ComponentActivity() {
         // are harmless without it, and fetchAndRegister no-ops while Firebase has no default app.
         Push.ensureChannel(this)
         askNotificationPermission()
-        Push.fetchAndRegister(this)
+        // Through the resume throttle, not straight to fetchAndRegister: onResume runs right after this on
+        // every cold start, and with the throttle still at 0 it posted the same registration a second time.
+        Push.refreshOnResume(this)
         handleDeepLink(intent)   // launched by tapping a notification (cold start)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Say again which market and which products this device wants alerts for. The send that goes out
+        // when a switch is flipped is best effort, so one made with no signal leaves the server acting on
+        // the old answer; this is the way back. Throttled inside Push to once every 15 minutes.
+        Push.refreshOnResume(this)
+        reportNotificationsAllowed()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -355,8 +419,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (out.isEmpty()) return arrayOf("*/*")
-        out.add("text/*")
-        out.add("application/octet-stream")
+        // text/* and octet-stream are here for the collection import, where a .csv or .json often arrives
+        // with the wrong type. A photo input must not pull them in, or the picker lists text files.
+        if (out.none { it.startsWith("image/") }) {
+            out.add("text/*")
+            out.add("application/octet-stream")
+        }
         return out.toTypedArray()
     }
 
@@ -470,6 +538,36 @@ class MainActivity : ComponentActivity() {
                 catch (_: Exception) { clearSave(); fileDone(false) }
             }
             return true
+        }
+    }
+
+    // Photo scan reads pixels from bundled card art. A file:// image taints the canvas, so the
+    // page asks for the bytes and decodes a blob. Only img/<file> inside this app's assets:
+    // no other path, and not a general file or network read.
+    private fun bundledImageAsset(path: String?): String? {
+        val clean = path?.trim() ?: return null
+        if (!clean.startsWith("img/")) return null
+        val file = clean.substring(4)
+        if (file.isEmpty() || file.contains('/') || file.contains('\\') || file.contains("..")) return null
+        if (!Regex("^[A-Za-z0-9._-]+$").matches(file)) return null
+        val ext = file.substringAfterLast('.', "").lowercase()
+        if (ext != "jpg" && ext != "jpeg" && ext != "png" && ext != "webp" && ext != "gif") return null
+        return "img/$file"
+    }
+
+    /** Exposed to the web app as window.AndroidAssets. read() returns base64, or "" if refused. */
+    inner class AssetBridge {
+        @JavascriptInterface
+        fun read(path: String?): String {
+            val rel = bundledImageAsset(path) ?: return ""
+            return try {
+                assets.open(rel).use { input ->
+                    val bytes = input.readBytes()
+                    if (bytes.size > 2 * 1024 * 1024) "" else Base64.encodeToString(bytes, Base64.NO_WRAP)
+                }
+            } catch (_: Exception) {
+                ""
+            }
         }
     }
 

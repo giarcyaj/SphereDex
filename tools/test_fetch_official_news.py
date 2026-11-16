@@ -41,7 +41,21 @@ class PickRowTests(unittest.TestCase):
             "summary": "Booster Pack \u201cEternal Ascent\u201d Preorders Now Available! excerpt",
             "link": f"{SITE}/news/post-10",
             "image": f"{UPLOADS}/banner-large.png",
+            "published": "2026-09-11T10:00:37Z",
         })
+
+    def test_published_is_date_gmt_with_a_zone_and_absent_without_one(self):
+        self.assertEqual(fon.published_instant({"date_gmt": "2026-10-07T06:30:00"}), "2026-10-07T06:30:00Z")
+        self.assertEqual(fon.published_instant({"date_gmt": "2026-10-07T06:30:00Z"}), "2026-10-07T06:30:00Z")
+        # Only date_gmt is trusted: "date" is the site's local time, and guessing its zone would be wrong.
+        no_gmt = wp_post(11, "Local time only")
+        del no_gmt["date_gmt"]
+        self.assertNotIn("published", fon.pick_row(no_gmt))
+        self.assertEqual(fon.pick_row(no_gmt)["date"], "Sep 11, 2026")
+        for junk in ("", "0000-00-00T00:00:00", "soon"):
+            post = wp_post(12, "Draft")
+            post["date_gmt"] = junk
+            self.assertNotIn("published", fon.pick_row(post), junk)
 
     def test_image_prefers_a_light_generated_size_then_the_original(self):
         self.assertEqual(fon.featured_image(wp_post(1, "a", featured=media(sizes=("medium_large", "medium")))),
@@ -90,6 +104,7 @@ class StageAndCliTests(unittest.TestCase):
         self.assertEqual(counts["x"], 0)
         self.assertEqual({item["source"] for item in feed}, {"official"})
         self.assertEqual(feed[0]["image"], f"{UPLOADS}/banner-large.png")
+        self.assertEqual([item["published"] for item in feed], ["2026-09-11T10:00:37Z"] * 2)
 
     def test_offline_run_stages_and_reports_ok(self):
         payload = Path(self.tmp.name) / "posts.json"

@@ -1,0 +1,6 @@
+{
+  "readme": "One extra English card the printed numbers cannot place: three Japanese promos share its cost, power and strike, and its colour and aptitude were never confirmed on another card, so nothing narrows it.",
+  "cards": [
+    {"number": "EPR-021", "name": "Depresso", "cost": "2", "power": "200", "attack": "1", "color": "Blue", "type": "Neutral", "aptitude": "Gathering"}
+  ]
+}

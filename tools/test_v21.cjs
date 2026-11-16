@@ -177,9 +177,9 @@ test('verified card text covers the cached set and does not invent the missing s
     if (!row) { unknown += copies; unknownIds.push(base); return; }
     if (row.text) withText += copies; else empty += copies;
   });
-  assert.equal(printings.length, 277);
-  assert.equal(withText, 248);
-  assert.equal(empty, 26);
+  assert.equal(printings.length, 294);
+  assert.equal(withText, 262);
+  assert.equal(empty, 29);
   assert.equal(unknown, 3);
   assert.equal(withText + empty + unknown, printings.length);
   assert.deepEqual(unknownIds.sort(), ['ESOUL-014', 'ESOUL-015', 'ESOUL-016']);
@@ -212,11 +212,14 @@ function paidApp() {
     sealUnit: () => 20
   };
   const names = [
-    'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'setRawCounts', 'changeRaw',
-    'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'collectionCsv',
-    'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis'
+    'rawCount', 'rawEditionKey', 'rawEditionLabel', 'rawCounts', 'rawKnownTotal', 'setRawCounts', 'changeRaw',
+    'csvNum', 'paidNumber', 'csvPaid', 'csvCell', 'csvEdition', 'csvText', 'collectionCsv',
+    'parseCsvRows', 'csvUnguard', 'parseCsvCollection', 'collectionCostBasis',
+    'importOwn', 'importHeaderKey', 'importRoles', 'importSplitNumber', 'importParallel', 'importLang', 'importQty', 'importCardId',
+    'copyNoteClean', 'copyNotesList', 'setCopyNotes', 'addCopyNote', 'removeCopyNote', 'copyNoteLabel', 'copyNoteCsvCell', 'copyNoteFromCsv'
   ];
-  const code = names.map(appFunction).join('\n') + '\n' + ['CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS'].map(appConstant).join('\n');
+  const code = names.map(appFunction).join('\n') + '\n' + ['RAW_KNOWN', 'CSV_HEADER', 'CSV_NUMCOL', 'CARD_CONDS',
+    'IMPORT_PARALLELS', 'IMPORT_BASE_WORDS', 'IMPORT_PARALLEL_WORDS', 'IMPORT_LANGS', 'IMPORT_LANG_QUALIFIERS', 'IMPORT_COLS'].map(appConstant).join('\n');
   vm.runInContext(code, vm.createContext(sandbox));
   sandbox.col = col;
   sandbox.box = box;
@@ -325,57 +328,119 @@ test('cost basis ignores copies with no paid amount and keeps an explicit zero',
   assert.equal(none.collectionCostBasis().cost, 0);
 });
 
-test('the home catch-up is only what this person missed since their last visit', () => {
+// The Home catch-up card. awayRows() reads a lot of app state, so the sandbox stubs the DATA and keeps
+// the REAL date helpers, which is exactly where this went wrong once: upcomingIso returns a timestamp,
+// not a string, and feeding it back through Date.parse silently dropped every reveal.
+function awaySandbox(over) {
   const box = {};
   vm.createContext(box);
-  vm.runInContext(['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
-  const H = 60 * 60 * 1000;
+  vm.runInContext(['awayRows', 'sealDayKnown', 'monDateTime', 'upcomingIso', 'verNum', 'palKey']
+    .map(appFunction).join('\n'), box);
   const opened = 1_700_000_000_000;
-  const back = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 18 * H,
-    addedSince: 3, addedThisWeek: 5, lastTotal: 270, total: 277,
-    appVersion: '2.0', latestVersion: '2.0', updateNotes: ['A more useful Home']
-  });
-  assert.equal(back.show, true);
-  assert.equal(back.title, '3 cards added since your last visit');
-  assert.match(back.meta, /18 hours since your last visit/);
-  assert.match(back.meta, /5 added this week/);
-  assert.equal(back.bullets.includes('A more useful Home'), false);
-  assert.equal(back.bullets.some((b) => b.indexOf('7 new card') === 0), true);
+  Object.assign(box, {
+    APP_OPENED_AT: opened,
+    PREVIOUS_VISIT: opened - 8 * 24 * 60 * 60 * 1000,
+    SEALED: [],
+    RELNEWS_KEY: 'palvault-release-news',
+    lsGet: () => '[]',
+    _upcomingEntries: [],
+    CARDS: [],
+    SETTINGS: { mode: 'trader' },
+    PRICEBOOK: {},
+    PRICEPREV: {},
+    isWished: () => false,
+    has: () => false,
+    o: (id) => ({ id: id }),
+    isConverted: () => false,
+    sealDate: (p) => p.date,
+    esc: (v) => String(v),
+    money: (n) => '\u00a3' + Number(n).toFixed(2),
+    APP_VERSION: '2.1',
+    _latestAppVersion: '2.1',
+  }, over || {});
+  return box;
+}
 
-  assert.equal(box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 10 * 60 * 1000,
-    addedSince: 0, addedThisWeek: 4, lastTotal: 277, total: 277
-  }).show, false, 'a short return does not repeat cards already seen last visit');
+test('the away card reports what happened in the world, not what you did yourself', () => {
+  const opened = 1_700_000_000_000, DAY = 24 * 60 * 60 * 1000;
+  const at = (t) => new Date(t).toISOString().replace(/\.\d+Z$/, 'Z');
 
-  assert.equal(box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: 0,
-    addedSince: 0, addedThisWeek: 4, lastTotal: 0, total: 277
-  }).show, false, 'the first open has nothing missed, and the whole catalogue is not new');
+  // A first open on this device has nothing to be away from.
+  assert.equal(awaySandbox({ PREVIOUS_VISIT: 0 }).awayRows().length, 0);
 
-  const fresh = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 20 * 60 * 1000,
-    addedSince: 1, addedThisWeek: 1, lastTotal: 277, total: 277
-  });
-  assert.equal(fresh.title, '1 card added since your last visit');
-  assert.match(fresh.meta, /20 minutes since your last visit/);
-  assert.equal(fresh.meta.includes('1 hour'), false);
+  // A quiet week says nothing rather than padding the card.
+  assert.equal(awaySandbox().awayRows().length, 0);
 
-  const days = box.missedUpdate({
-    now: opened, openedAt: opened, previousVisit: opened - 50 * H,
-    addedSince: 0, addedThisWeek: 0, lastTotal: 270, total: 274,
-    appVersion: '2.0', latestVersion: '2.1', updateNotes: ['Deck tools when you choose Play']
-  });
-  assert.equal(days.title, '4 new cards in the app · 274 total');
-  assert.match(days.meta, /2 days since your last visit/);
-  assert.deepEqual(JSON.parse(JSON.stringify(days.bullets)), ['Deck tools when you choose Play']);
+  // Reveals inside the window, and ONLY inside it.
+  const reveals = awaySandbox({
+    _upcomingEntries: [
+      { pal: 'Selyne', revealed_at: at(opened - 2 * DAY) },
+      { pal: 'Cattiva', revealed_at: at(opened - 3 * DAY) },
+      { pal: 'Depresso', revealed_at: at(opened - 4 * DAY) },
+      { pal: 'Grizzbolt', revealed_at: at(opened - 30 * DAY) },
+    ],
+  }).awayRows();
+  assert.equal(reveals.length, 1, 'a reveal from before the last visit is not news');
+  assert.equal(reveals[0].line, 'New reveals \u00b7 Selyne, Cattiva and Depresso');
+  assert.equal(reveals[0].go, 'paldex');
 
-  assert.equal(source.includes('Welcome back'), false);
-  assert.equal(source.includes('Next set:'), false);
-  assert.equal(source.includes('Find next card'), false);
-  assert.equal(source.includes('View recent'), false);
-  assert.match(source, /View those cards/);
-  assert.match(source, /t>PREVIOUS_VISIT && t<APP_OPENED_AT/);
+  // Four or more becomes a count, and the line never carries two "and"s.
+  const many = awaySandbox({
+    _upcomingEntries: ['Selyne', 'Cattiva', 'Depresso', 'Quivern', 'Chillet']
+      .map((p, i) => ({ pal: p, revealed_at: at(opened - (i + 1) * DAY) })),
+  }).awayRows();
+  assert.equal(many[0].line, 'New reveals \u00b7 Selyne, Cattiva, Depresso and 2 more');
+  assert.equal((many[0].line.match(/ and /g) || []).length, 1, 'one "and", never two');
+
+  // The same Pal revealed twice is named once.
+  const dupe = awaySandbox({
+    _upcomingEntries: [
+      { pal: 'Tombat', revealed_at: at(opened - 2 * DAY) },
+      { pal: 'Tombat', revealed_at: at(opened - 3 * DAY) },
+    ],
+  }).awayRows();
+  assert.equal(dupe[0].line, 'New reveals \u00b7 Tombat');
+
+  // The biggest wishlist faller, named through palKey so the en dash subtitle never reaches the card.
+  const wish = {
+    CARDS: [{ id: 'EBP01-001', name: 'Jetragon \u2013 Legendary Guardian Dragon' }],
+    isWished: () => true,
+    PRICEBOOK: { 'EBP01-001': 14.2 },
+    PRICEPREV: { 'EBP01-001': 20 },
+  };
+  const fell = awaySandbox(wish).awayRows();
+  assert.equal(fell.length, 1);
+  assert.equal(fell[0].line, 'Jetragon fell to \u00a314.20 on your wishlist');
+  assert.equal(fell[0].go, 'wishlist');
+
+  // Collector mode hides every price in the app, this card included.
+  assert.equal(
+    awaySandbox(Object.assign({}, wish, { SETTINGS: { mode: 'collector' } })).awayRows().length, 0,
+    'collector mode shows no money');
+
+  // A converted estimate moving is an exchange rate, not a price fall.
+  assert.equal(
+    awaySandbox(Object.assign({}, wish, { isConverted: () => true })).awayRows().length, 0);
+
+  // A newer store build is one line, with no feature bullets.
+  const behind = awaySandbox({ _latestAppVersion: '2.2' }).awayRows();
+  assert.equal(behind.length, 1);
+  assert.equal(behind[0].line, 'SphereDex 2.2 is available');
+  assert.equal(behind[0].go, '');
+  assert.equal(awaySandbox({ _latestAppVersion: '2.0' }).awayRows().length, 0,
+    'an older store record is not an update');
+
+  // A product is only called released when its date names a real day: monDateTime falls back to the
+  // 28th for a bare month and year, so "late Oct 2026" would announce a date nobody published.
+  const box = awaySandbox();
+  assert.equal(box.sealDayKnown('2026-10-16'), true);
+  assert.equal(box.sealDayKnown('Oct 16, 2026'), true);
+  assert.equal(box.sealDayKnown('late Oct 2026'), false);
+  assert.equal(box.sealDayKnown(''), false);
+
+  // The card is a world digest now, and the copy rule holds.
+  assert.match(source, /While you were away/);
+  assert.equal(source.includes('missedUpdate'), false, 'the old recap is gone, not merely unused');
 });
 
 test('home bars only measure a goal that has a total', () => {
@@ -388,15 +453,32 @@ test('home bars only measure a goal that has a total', () => {
   assert.match(box.homeTrack(0, true), /width:0%/);
   assert.match(box.homeTrack(140, true), /width:100%/);
   assert.match(box.homeTrack(-5, true), /width:0%/);
-  assert.match(source, /homeTrack\(pct, total>0\)/);
-  assert.match(source, /homeTrack\(sphere\.percent, sphere\.total>0\)/);
-  assert.match(source, /homeTrack\(closest\.percent, closest\.total>0\)/);
-  assert.match(source, /homeTrack\(deck\.percent, deck\.total>0\)/);
-  assert.match(source, /homeTrack\(0, false\)/);
-  assert.match(source, /homeTrack\(wishPct, wishCount\(\)>0\)/);
+  // Three tiles traded their bar for the object they are about: the collection weave, the Set Sphere
+  // ring and the holes still to fill. The bar stays where a bar is still the honest shape.
+  assert.match(source, /homeCards\(deck\.items\.length\?deck\.items:deckOwnCards\(deck\.deck\), 3\)/, 'the deck tile draws its deck');
+  assert.match(source, /\+homeWeave\(\)\+/, 'the collection tile draws its catalogue');
+  assert.match(source, /homeSphereOrb\(sphere\.percent, sphere\.track\)/, 'the Sphere tile draws its sphere');
+  assert.match(source, /homeCards\(closest\.items, closest\.remaining\)/, 'the closest set draws the cards it is missing');
+  assert.match(source, /\(face\?"":homeValueChart\(\)\)/, 'and the market draws its own line, on the face that owns it');
+  assert.doesNotMatch(source, /homeTrack\(pct, total>0\)/);
+  assert.doesNotMatch(source, /homeTrack\(sphere\.percent/);
+  assert.doesNotMatch(source, /homeTrack\(closest\.percent/);
+  assert.match(source, /homeCards\(\[\], 3\)/, 'a collection with no deck still has something to look at');
+  assert.match(source, /homeCards\(wish\.items\.length\?wish\.items:/, 'the wishlist draws the cards on it');
+  // homeTrack is not retired, it is just down to the one place a bar is still the honest shape.
+  assert.match(source, /homeTrack\(100, true\)/, 'a finished collection still fills a bar');
+  assert.doesNotMatch(source, /homeSlots/, 'the dashed holes gave way to the cards themselves');
   const market = source.slice(source.indexOf('$("homeMarket").innerHTML'), source.indexOf('$("homeCollection").onclick'));
   assert.equal(market.includes('hctrack'), false);
   assert.equal(market.includes('pricedPct'), false);
+  // The market tile is the only one with more than one button: two face dots, two arrows and the
+  // action. Picking by tag hands the first DOT the open Market handler, so the dot that should
+  // switch the reading navigates away instead. Every other tile may pick by tag; this one may not.
+  const wiring = source.slice(source.indexOf('var el=$("homeMarket")'), source.indexOf('renderFeatured();'));
+  assert.doesNotMatch(wiring, /querySelector\("button"\)/, 'the market tile picks its action by class');
+  assert.match(wiring, /querySelector\("\.homeaction"\)/);
+  assert.match(wiring, /querySelectorAll\("\.hcface"\)/, 'and the dots keep their own handler');
+  assert.match(wiring, /querySelectorAll\("\.hcarrow"\)/, 'and so do the arrows');
 });
 
 function binom(n, k) {
@@ -465,7 +547,7 @@ test('TCGplayer Mass Entry uses quantity, name, and a set code only when one is 
 });
 
 test('JSON import clamps bad quantities and never records a negative value', () => {
-  const box = {};
+  const box = { recordDayPrices() {} };
   vm.createContext(box);
   vm.runInContext(['plainObj', 'rawCount', 'cardMap', 'sealedMap', 'cardValue', 'clampMoney', 'snapshot'].map(appFunction).join('\n'), box);
   const src = { 'EBP01-002': { qty: -4, mkt: 2.84, addAt: 5 } };
@@ -576,46 +658,64 @@ test('an upcoming PalDex tile names its set once', () => {
   assert.equal(fn.includes('soon || "not printed yet"'), false);
 });
 
-test('2.1 is this build, and a store record of 2.0 is not an update', () => {
-  assert.match(source, /var APP_VERSION = "2\.1";/);
+test('every version spot agrees, and this build has release highlights', () => {
+  // Deliberately derives the version instead of pinning it. The old form asserted "2.1" in six places,
+  // so every release broke it and had to hand edit it, which is precisely the step that gets skipped.
+  // What is worth guarding is not the NUMBER, it is that the four places never drift apart: the app
+  // footer, Android, the XcodeGen spec Xcode Cloud actually builds from, and the committed pbxproj.
+  const m = source.match(/var APP_VERSION = "([^"]+)";/);
+  assert.ok(m, 'APP_VERSION is in the source');
+  const version = m[1];
+
+  const gradle = fs.readFileSync(path.join(__dirname, '../app/build.gradle.kts'), 'utf8');
+  const gm = gradle.match(/versionName = "([^"]+)"/);
+  assert.ok(gm, 'versionName is in build.gradle.kts');
+  assert.equal(gm[1], version, `Android versionName ${gm[1]} does not match APP_VERSION ${version}`);
+  assert.match(gradle, /versionCode = System\.getenv\("VERSION_CODE"\)\?\.toIntOrNull\(\) \?: \d+/);
+
+  const spec = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/project.yml'), 'utf8');
+  const sm = spec.match(/MARKETING_VERSION: "([^"]+)"/);
+  const sb = spec.match(/CURRENT_PROJECT_VERSION: "([^"]+)"/);
+  assert.ok(sm && sb, 'project.yml carries both iOS version fields');
+  assert.equal(sm[1], version, `iOS MARKETING_VERSION ${sm[1]} does not match APP_VERSION ${version}`);
+
+  // project.yml is the one Xcode Cloud builds from; the pbxproj is for local Xcode. They must agree, or
+  // a Simulator build and a store build report different versions.
+  const project = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/SphereDex.xcodeproj/project.pbxproj'), 'utf8');
+  assert.equal((project.match(new RegExp('MARKETING_VERSION = ' + version.replace(/\./g, '\\.') + ';', 'g')) || []).length, 2,
+    `pbxproj MARKETING_VERSION should be ${version} in both configs`);
+  assert.equal((project.match(new RegExp('CURRENT_PROJECT_VERSION = ' + sb[1] + ';', 'g')) || []).length, 2,
+    `pbxproj CURRENT_PROJECT_VERSION should be ${sb[1]} in both configs`);
+
+  // A feature release needs its three "What's new" lines. A store train bump can ship with
+  // nothing new to announce: the headliner keeps the newest earlier release until the server
+  // has caught up, and an empty slide is omitted rather than shown.
   const highlights = source.match(/var RELEASE_HIGHLIGHTS = \{[\s\S]*?\n  \};/);
   assert.ok(highlights, 'RELEASE_HIGHLIGHTS is in the source');
   const box = {};
   vm.createContext(box);
-  vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase', 'missedUpdate'].map(appFunction).join('\n'), box);
-  assert.equal(box.RELEASE_HIGHLIGHTS['2.1'].length, 3);
-  assert.match(box.RELEASE_HIGHLIGHTS['2.1'][1], /Match tracker/);
-  assert.ok(box.verNum('2.1') > box.verNum('2.0'));
-  assert.equal(box.verNum('2.0') > box.verNum('2.1'), false);
-  const caught = box.missedUpdate({
-    now: 1_700_000_000_000,
-    openedAt: 1_700_000_000_000,
-    previousVisit: 1_700_000_000_000 - 50 * 60 * 60 * 1000,
-    addedSince: 0,
-    addedThisWeek: 0,
-    lastTotal: 270,
-    total: 274,
-    appVersion: '2.1',
-    latestVersion: '2.0',
-    updateNotes: ['Old store note']
-  });
-  assert.equal(caught.bullets.includes('Old store note'), false);
+  vm.runInContext(highlights[0] + '\n' + ['verNum', 'missedVisitPhrase'].map(appFunction).join('\n'), box);
+  const described = box.RELEASE_HIGHLIGHTS[version]
+    ? version
+    : Object.keys(box.RELEASE_HIGHLIGHTS)
+        .filter((v) => box.verNum(v) < box.verNum(version))
+        .sort((a, b) => box.verNum(b) - box.verNum(a))[0];
+  assert.ok(described, `no release highlights at or before ${version}`);
+  assert.equal(box.RELEASE_HIGHLIGHTS[described].length, 3, `${described} needs exactly three highlight lines`);
+  for (const line of box.RELEASE_HIGHLIGHTS[described]) {
+    assert.equal(/[-\u2013\u2014]/.test(line), false, `no dashes in user facing copy: ${line}`);
+  }
+  if (!box.RELEASE_HIGHLIGHTS[version]) {
+    assert.match(source, /if\(!notes\.length\) return;/);
+  }
+
+  // An older store record must never read as an update to install.
+  const older = Object.keys(box.RELEASE_HIGHLIGHTS).filter((v) => box.verNum(v) < box.verNum(version));
+  assert.ok(older.length > 0, 'there is at least one earlier release to compare against');
+  for (const v of older) {
+    assert.equal(box.verNum(v) > box.verNum(version), false, `${v} must not out-rank ${version}`);
+  }
   assert.match(source, /if\(latest && verNum\(latest\) > verNum\(APP_VERSION\)\) offerUpdate\(latest\);/);
-  const ver = box.verNum('2.1');
-  const latest = box.verNum('2.0');
-  const behind = latest > ver;
-  const notes = behind ? ['Old store note'] : box.RELEASE_HIGHLIGHTS['2.1'];
-  assert.equal(behind, false);
-  assert.deepEqual(JSON.parse(JSON.stringify(notes)), JSON.parse(JSON.stringify(box.RELEASE_HIGHLIGHTS['2.1'])));
-  const gradle = fs.readFileSync(path.join(__dirname, '../app/build.gradle.kts'), 'utf8');
-  assert.match(gradle, /versionName = "2\.1"/);
-  assert.match(gradle, /versionCode = System\.getenv\("VERSION_CODE"\)\?\.toIntOrNull\(\) \?: 13/);
-  const spec = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/project.yml'), 'utf8');
-  assert.match(spec, /MARKETING_VERSION: "2\.1"/);
-  assert.match(spec, /CURRENT_PROJECT_VERSION: "17"/);
-  const project = fs.readFileSync(path.join(__dirname, '../ios/SphereDex/SphereDex.xcodeproj/project.pbxproj'), 'utf8');
-  assert.equal((project.match(/MARKETING_VERSION = 2\.1;/g) || []).length, 2);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 17;/g) || []).length, 2);
 });
 
 test('sign-in column forms do not use the 180px flex basis as height', () => {
@@ -848,4 +948,466 @@ test('Match and Portfolio stay on the phone screen', { skip: !canMeasureSignIn }
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+// ---- Promo types: each Releases promo box opens the Promo set narrowed to its own type ----
+const promoBox = {};
+vm.createContext(promoBox);
+vm.runInContext(appConstant('PROMO_TYPES') + '\n' + ['promoTypeOf', 'promoTypeDef', 'promoTypeAllows'].map(appFunction).join('\n'), promoBox);
+const promoIds = Array.from(source.matchAll(/\["(E[A-Z]+-\d+[A-Z]*)",[^\]]*"PR2026"\]/g), (m) => m[1]);
+
+test('promo cards sort into their four types by card code', () => {
+  const type = (id) => promoBox.promoTypeOf({ id, set: 'PR2026' });
+  assert.equal(type('EPR-001'), 'demo');
+  assert.equal(type('ESOUL-000'), 'demo');
+  assert.equal(type('EPR-002'), 'tournament');
+  assert.equal(type('EPR-009S'), 'tournament');
+  assert.equal(type('ESOUL-008'), 'tournament');
+  assert.equal(type('EPR-012'), 'masters');
+  assert.equal(type('EPR-020'), 'masters');
+  assert.equal(type('ESOUL-016'), 'masters');
+  assert.equal(type('EPR-010'), 'special');
+  // A promo nobody has classified yet still lands somewhere instead of vanishing from every box.
+  assert.equal(type('EPR-099'), 'special');
+});
+
+test('every promo in the catalogue has a type, and every type has cards', () => {
+  assert.ok(promoIds.length >= 20, 'found ' + promoIds.length + ' promo rows');
+  const keys = promoBox.PROMO_TYPES.map((t) => t.key);
+  const seen = {};
+  promoIds.forEach((id) => {
+    const k = promoBox.promoTypeOf({ id, set: 'PR2026' });
+    assert.ok(keys.includes(k), id + ' has no promo type');
+    seen[k] = (seen[k] || 0) + 1;
+  });
+  keys.forEach((k) => assert.ok(seen[k] > 0, 'no promo cards are typed ' + k));
+});
+
+test('a promo type only narrows promo cards', () => {
+  const allows = promoBox.promoTypeAllows;
+  const tourney = { id: 'EPR-002S', set: 'PR2026' }, demo = { id: 'EPR-001', set: 'PR2026' }, booster = { id: 'EBP01-001', set: 'EBP01' };
+  assert.equal(allows(demo, []), true);
+  assert.equal(allows(tourney, ['tournament']), true);
+  assert.equal(allows(demo, ['tournament']), false);
+  assert.equal(allows(demo, ['tournament', 'demo']), true);
+  assert.equal(allows(booster, ['tournament']), true);
+});
+
+test('the promo boxes open on their own type, and every filter reset clears it', () => {
+  assert.equal((source.match(/openSet\("PR2026","all",g\.key\)/g) || []).length, 2, 'row tap and View promos both pass the type');
+  assert.match(source, /if\(k==="PR2026" && promoTypeDef\(promo\)\) filters\.promos\[promo\]=true;/);
+  const resets = (source.match(/filters\.keywords=\{\};/g) || []).length;
+  const promoResets = (source.match(/filters\.keywords=\{\}; filters\.promos=\{\};/g) || []).length;
+  assert.ok(resets > 0 && promoResets === resets, promoResets + ' of ' + resets + ' filter resets clear the promo type');
+  assert.match(source, /\["exps","sets","colors","els","kinds","work","keywords","rares","promos"\]/, 'Filters counts a promo type choice');
+});
+
+test('promo type copy has no dashes', () => {
+  promoBox.PROMO_TYPES.forEach((t) => {
+    [t.title, t.chip, t.date, t.desc].forEach((text) => assert.doesNotMatch(text, /[-–—]/, t.key + ': ' + text));
+  });
+});
+
+test('a promo type can never stay on while hidden', () => {
+  // syncSetChips drops the choice whenever the Promo set leaves the Set filter, and the grid and the bar
+  // only read it while the Promo set is in scope, so no path can leave an invisible promo filter behind.
+  assert.match(appFunction('syncSetChips'), /var promoOn=setFilterCodes\(\)\.indexOf\("PR2026"\)!==-1;\s*if\(!promoOn\) filters\.promos=\{\};/);
+  const vis = appFunction('visible');
+  assert.match(vis, /var promos=sets\.indexOf\("PR2026"\)!==-1 \? keysOn\(filters\.promos\|\|\{\}\) : \[\];/);
+  assert.match(vis, /if \(!promoTypeAllows\(c, promos\)\) return false;/);
+  assert.match(appFunction('paintPromoScope'), /var keys=setFilterCodes\(\)\.indexOf\("PR2026"\)!==-1 \? keysOn\(filters\.promos\|\|\{\}\) : \[\];/);
+});
+
+test('shortcut openers leave no filter the screen does not show', () => {
+  // A product pick without its set is ignored by setFilterCodes, so the Set Sphere shortcut goes through openSet.
+  assert.match(appFunction('openSetSphere'), /^function openSetSphere\(id, earned\)\{ openSet\(id, earned\?"all":"missing"\); \}$/);
+  // Writing the search box fires no input event, so these openers set the search filter themselves.
+  assert.match(appFunction('openMissingCollection'), /filters\.q=query\|\|"";[^]*input\.value=filters\.q;/);
+  assert.match(appFunction('openSinceVisit'), /filters\.q="";/);
+});
+
+test('a push that links to the app website opens Home, not the browser', () => {
+  const at = source.indexOf('window.SDOpenPush = function(url){');
+  assert.ok(at > 0, 'SDOpenPush exists');
+  const body = source.slice(at, source.indexOf('\n  };', at));
+  const home = body.indexOf('showPage("home"); return;'), outside = body.indexOf('window.open(url');
+  assert.ok(home > 0 && outside > home, 'the site check runs before the outside link branch');
+  const tail = '/i.test(url)){ showPage("home"); return; }';
+  const end = body.indexOf(tail), start = body.lastIndexOf('if(/', end);
+  assert.ok(start > 0 && end > start, 'site pattern found');
+  const re = new RegExp(body.slice(start + 4, end), 'i');
+  ['https://spheredex.app', 'https://spheredex.app/', 'https://www.spheredex.app/', 'https://spheredex.app/app/', 'https://spheredex.app/app/index.html']
+    .forEach((u) => assert.ok(re.test(u), u + ' should open Home'));
+  ['https://spheredex.app/roadmap', 'https://spheredex.app.example.com/', 'https://en.palworld-official-cardgame.com/news/']
+    .forEach((u) => assert.ok(!re.test(u), u + ' should still open outside'));
+});
+
+// ---- Want list CSV: the wishlist and every Missing goal, exported for a spreadsheet ----
+function wantApp(overrides) {
+  const cards = [
+    { id: 'EBP01-001', name: 'Jormuntide Ignis – Savage Lava Dragon', kind: 'Pal', sub: 'Lucky Pal', rare: 'RR', set: 'EBP01', setIdx: 0, seq: 1 },
+    { id: 'EBP01-025SSP', name: 'Chillet – Dragon Whisperer', kind: 'Pal', sub: 'Normal Pal', rare: 'SSP', set: 'EBP01', setIdx: 0, seq: 25 },
+    { id: 'ESOUL-001', name: 'Soul', kind: 'Soul', sub: '', rare: 'TD', set: 'ETD01', setIdx: 1, seq: 1000 }
+  ];
+  const own = {};
+  const sandbox = Object.assign({
+    CARDS: cards, own: own,
+    SETS: { EBP01: { name: 'Dawn of Palpagos' }, ETD01: { name: 'Trial Deck Red Blue' } },
+    RARE_NAME: { RR: 'Double Rare', SSP: 'Super Special', TD: 'Trial Deck' },
+    SETTINGS: {}, CUR: { code: 'GBP', dec: 2 }, SEAL_ED: 'en',
+    STATE: { wishlist: {}, wishlistAt: {} },
+    priceMode: () => 'sold', unitOf: () => 4, marketPriceLabel: () => 'last sold',
+    toast() {}, saveTextFile() {}
+  }, overrides || {});
+  const names = ['rawCount', 'csvNum', 'csvCell', 'csvText', 'csvDay', 'wantSearch', 'wantListCsv',
+    'isWished', 'wishlistAt', 'wishlistWantItems', 'missingWantItems', 'ownsForCompletion', 'has',
+    'edKw', 'edCode'];
+  const code = names.map(appFunction).join('\n') + '\n' + ['WANT_HEADER', 'WANT_NUMCOL'].map(appConstant).join('\n');
+  vm.runInContext(code, vm.createContext(sandbox));
+  sandbox.cards = cards;
+  return sandbox;
+}
+const wantRows = (csv) => csv.replace(/^﻿/, '').trim().split('\r\n');
+
+test('the want list CSV carries the card type the TCGplayer copy throws away', () => {
+  const a = wantApp();
+  const csv = a.wantListCsv([{ card: a.cards[0], need: 2 }, { card: a.cards[2], need: 1 }]);
+  const rows = wantRows(csv);
+  assert.equal(rows[0], 'Bought,Number,Need,Have,Name,Card type,Subtype,Set,Rarity,Unit estimate,Line estimate,Currency,Price basis,Wishlisted,eBay search,Notes');
+  // A Pal and a Soul are told apart, which is the whole point of the request.
+  assert.match(rows[1], /^,EBP01-001,2,0,Jormuntide Ignis – Savage Lava Dragon,Pal,Lucky Pal,Dawn of Palpagos,Double Rare,4\.00,8\.00,GBP,last sold,,/);
+  assert.match(rows[2], /,ESOUL-001,1,0,Soul,Soul,,Trial Deck Red Blue,Trial Deck,/);
+  assert.equal(csv.charCodeAt(0), 0xFEFF, 'a BOM so Excel reads the accents');
+  assert.ok(csv.endsWith('\r\n'));
+  assert.equal(rows.length, 3);
+});
+
+test('the eBay search cell is a phrase eBay will not read as an exclusion', () => {
+  const a = wantApp();
+  // eBay reads a leading "-" as "exclude this word", so a printed en dash becomes a space, while the card
+  // number keeps its own hyphen because eBay reads that as part of the word.
+  assert.equal(a.wantSearch(a.cards[0]), 'Jormuntide Ignis Savage Lava Dragon EBP01-001 palworld card');
+  assert.equal(a.wantSearch({ id: 'X-1', name: 'A - B — C' }), 'A B C X-1 palworld card');
+  // The Japanese price toggle carries into the search, exactly as the app's own eBay links do.
+  const jp = wantApp({ SEAL_ED: 'jp' });
+  assert.equal(jp.wantSearch(jp.cards[1]), 'Chillet Dragon Whisperer BP01-025SSP Japanese palworld card');
+});
+
+test('the want list counts what you already hold and never creates a holding', () => {
+  const a = wantApp();
+  a.own['EBP01-001'] = { qty: 2, graded: [{ grader: 'PSA', grade: '10' }] };
+  const before = JSON.stringify(a.own);
+  const rows = wantRows(a.wantListCsv([{ card: a.cards[0], need: 1 }, { card: a.cards[1], need: 1 }]));
+  assert.equal(JSON.stringify(a.own), before, 'exporting is a pure read');
+  assert.match(rows[1], /^,EBP01-001,1,3,/, 'two raw copies plus one slab');
+  assert.match(rows[2], /^,EBP01-025SSP,1,0,/, 'a card you do not own reads 0, not blank');
+});
+
+test('collector mode blanks the money cells but keeps every column', () => {
+  const a = wantApp({ SETTINGS: { mode: 'collector' } });
+  const rows = wantRows(a.wantListCsv([{ card: a.cards[0], need: 2 }]));
+  assert.equal(rows[0].split(',').length, 16);
+  assert.equal(rows[1].split(',').length, 16, 'one shape in both price modes');
+  assert.match(rows[1], /Double Rare,,,,,/, 'no unit, line, currency or basis');
+  assert.match(rows[1], /palworld card/, 'a shopping list still helps you shop');
+});
+
+test('the wishlist date is a sortable day, and a wish from before dates existed stays blank', () => {
+  const a = wantApp();
+  a.STATE.wishlist['EBP01-001'] = true;
+  a.STATE.wishlistAt['EBP01-001'] = new Date(2026, 9, 6, 12).getTime();
+  a.STATE.wishlist['ESOUL-001'] = true;   // migrated: wished, but no date was recorded
+  const items = a.wishlistWantItems();
+  assert.deepEqual(JSON.parse(JSON.stringify(items.map((i) => i.card.id))), ['EBP01-001', 'ESOUL-001']);
+  assert.deepEqual(JSON.parse(JSON.stringify(items.map((i) => i.need))), [1, 1]);
+  const rows = wantRows(a.wantListCsv(items));
+  assert.match(rows[1], /,2026-10-06,/);
+  assert.equal(a.csvDay(0), '');
+  assert.equal(a.csvDay(undefined), '');
+  assert.ok(!/,1970-/.test(rows[2]), 'no 1970 for a wish with no date');
+});
+
+test('a Missing goal exports in card number order, whatever the screen is sorted by', () => {
+  const a = wantApp();
+  const data = { items: [{ card: a.cards[2], need: 1 }, { card: a.cards[1], need: 3 }, { card: a.cards[0], need: 1 }] };
+  const ids = (list) => JSON.parse(JSON.stringify(list.map((i) => i.card.id)));
+  const first = ids(a.missingWantItems('master', data));
+  assert.deepEqual(first, ['EBP01-001', 'EBP01-025SSP', 'ESOUL-001']);
+  data.items.reverse();   // the Sort control re-sorts the on screen list in place after the hero is built
+  assert.deepEqual(ids(a.missingWantItems('master', data)), first, 'the same file every time');
+  // Cards you already own drop out of every goal except a deck, where you may still need another copy.
+  a.own['EBP01-001'] = { qty: 1 };
+  assert.deepEqual(ids(a.missingWantItems('master', data)), ['EBP01-025SSP', 'ESOUL-001']);
+  assert.deepEqual(ids(a.missingWantItems('deck', data)), first);
+  assert.equal(a.missingWantItems('master', { items: [{ card: a.cards[1], need: 0 }] }).length, 0);
+  assert.equal(a.missingWantItems('master', null).length, 0);
+});
+
+test('a want list is refused on import instead of landing as cards you own', () => {
+  const a = paidApp();
+  const want = ['Bought,Number,Need,Have,Name', ',EBP01-001,2,0,Lamball'].join('\r\n');
+  const res = a.parseCsvCollection(want);
+  assert.equal(res.wantList, true);
+  assert.equal(res.added, 0);
+  assert.deepEqual(Object.keys(res.own), []);
+  // A real collection CSV is untouched by the new guard.
+  const real = a.parseCsvCollection(['Number,Quantity', 'EBP01-001,2'].join('\r\n'));
+  assert.equal(real.wantList, undefined);
+  assert.equal(real.added, 1);
+});
+
+test('want list copy has no dashes', () => {
+  const headers = appConstant('WANT_HEADER');
+  (headers.match(/"([^"]+)"/g) || []).forEach((h) => assert.doesNotMatch(h, /[-–—]/, h));
+  // Read the real strings out of the app, never a copy typed in here: a literal in a test drifts away from
+  // the app silently and then proves nothing.
+  const said = (fn) => (appFunction(fn).match(/toast\("[^"]*"/g) || []).map((m) => m.slice(7, -1));
+  // The import refusal is a notice that stays up (title, then message), not a toast that is gone in two seconds.
+  const refusal = [].concat.apply([], (appFunction('doImportCsv').match(/importNotice\("This is a list of cards you still need",\s*"[^"]*"/g) || [])
+    .map((m) => m.match(/"[^"]*"/g).map((q) => q.slice(1, -1))));
+  const toasts = said('exportWantList').concat(refusal);
+  assert.ok(toasts.indexOf('Nothing to export yet') >= 0, JSON.stringify(toasts));
+  assert.ok(toasts.some((t) => /no owned cards to import/.test(t)), JSON.stringify(toasts));
+  assert.doesNotMatch(appFunction('doImportCsv'), /toast\("That is a want list/, 'the refusal is not a two second toast');
+  assert.ok(toasts.length >= 3, JSON.stringify(toasts));
+  toasts.forEach((t) => assert.doesNotMatch(t, /[-–—]/, t));
+  // The one toast built from pieces, so it cannot be read whole above.
+  assert.match(appFunction('exportWantList'), /"Exported "\+n\+" card"\+\(n===1\?"":"s"\)\+" you still need"/);
+  assert.equal((source.match(/>Spreadsheet \(CSV\)<\/button>/g) || []).length, 2, 'both buttons use the app house wording');
+});
+
+test('the Missing page exports what is on screen now, not what was there when the page drew', () => {
+  const a = wantApp();
+  const data = { items: [{ card: a.cards[0], need: 1 }, { card: a.cards[1], need: 1 }] };
+  assert.equal(a.missingWantItems('master', data).length, 2);
+  a.own['EBP01-001'] = { qty: 1 };   // collected from the list, which patches the page without re-rendering
+  assert.equal(a.missingWantItems('master', data).length, 1, 'a collected card leaves the list');
+  // So the click handlers must call it again rather than close over the render time snapshot.
+  const render = appFunction('renderMissing');
+  assert.match(render, /missingCsvAction[\s\S]*exportWantList\(missingWantItems\(missingGoal, activeMissingGoal\(\)\)/);
+  assert.match(render, /missingTcgAction[\s\S]*copyTcgplayerRows\(missingTcgRows\(missingGoal, activeMissingGoal\(\)\)\)/);
+});
+
+test('every new wrapping row carries the full no-flexgap fallback', () => {
+  // Old Android WebViews collapse flex gap. A wrapping row needs all three rules, or a wrapped line sits
+  // flush against the one above it.
+  ['modeexport', 'missingactions', 'missingfoot'].forEach((cls) => {
+    assert.match(source, new RegExp('\\.' + cls + ' \\{[^}]*flex-wrap:wrap'), cls + ' wraps');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '\\{gap:0\\}'), cls + ' clears the gap');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '>\\*\\+\\*\\{margin-left:\\d+px\\}'), cls + ' spaces along the row');
+    assert.match(source, new RegExp('\\.no-flexgap \\.' + cls + '>\\*\\{margin-bottom:\\d+px\\}'), cls + ' spaces wrapped lines');
+  });
+});
+
+test('the Missing page opens on the master set, in card number order', () => {
+  // The Sphere is SphereDex's own reward layer, not something the card game awards, so it is a poor
+  // assumption about what someone arrived to do. These pin the default in all three places it is decided:
+  // the variable, the tab that renders selected, and the fallback when deck tools are off.
+  assert.match(source, /var missingGoal="master", missingChoice=\{set:"",rarity:"",pal:""\}, missingSort="number";/);
+  assert.match(source, /class="missingtab on"[^>]*aria-selected="true" data-goal="master"/);
+  assert.match(source, /data-goal="sphere">Next Sphere/);
+  assert.ok(!/class="missingtab on"[^>]*data-goal="sphere"/.test(source), 'the Sphere tab is no longer preselected');
+  assert.match(source, /if\(missingGoal==="deck" && !playerToolsOn\(\)\) missingGoal="master";/);
+});
+
+// ---- the away card must not repeat itself -------------------------------------------------------------
+// Two of its five rows are facts about right now rather than events: a wishlist faller and a newer build.
+// Both reappeared on every open, so the card could sit on the same line for days and looked frozen after
+// closing and reopening the app. These guard the fix: a line already shown is never shown again.
+function awaySeenSandbox(stored, over) {
+  const box = awaySandbox(over);
+  let store = JSON.stringify(stored || []);
+  box.lsGet = (k) => (k === 'palvault-away-seen' ? store : '[]');
+  box.lsSet = (k, v) => { if (k === 'palvault-away-seen') store = v; };
+  box._awayRows = null;
+  box._awayRecorded = false;
+  // These are module level in the app, so extracting the functions alone leaves them undefined and every
+  // read would throw into its own catch and silently look like nothing had ever been seen.
+  box.AWAY_SEEN_KEY = 'palvault-away-seen';
+  box.AWAY_SEEN_MAX = 24;
+  box.AWAY_SEEN_MS = 60 * 24 * 60 * 60 * 1000;
+  box.readStore = () => JSON.parse(store);
+  vm.runInContext(['awaySeen', 'awayRemember', 'awayRowsOnce'].map(appFunction).join('\n'), box);
+  return box;
+}
+const NEWER = { APP_VERSION: '2.3', _latestAppVersion: '2.4' };
+
+test('a line the away card already showed is not shown again', () => {
+  const first = awaySeenSandbox([], NEWER);
+  const rows = first.awayRowsOnce();
+  assert.equal(rows.length, 1, 'a newer build is news the first time');
+  assert.match(rows[0].line, /2\.4 is available/);
+
+  // Record it the way the render does, then open again with that memory.
+  first.awayRemember(rows.map((r) => r.line));
+  const second = awaySeenSandbox(first.readStore(), NEWER);
+  assert.equal(second.awayRowsOnce().length, 0, 'the same line is not news twice');
+});
+
+test('a different line still gets through', () => {
+  const seen = [{ l: 'SphereDex 2.4 is available', at: Date.now() }];
+  const box = awaySeenSandbox(seen, { APP_VERSION: '2.3', _latestAppVersion: '2.5' });
+  const rows = box.awayRowsOnce();
+  assert.equal(rows.length, 1, 'a newer version than the one already announced is news again');
+  assert.match(rows[0].line, /2\.5 is available/);
+});
+
+test('the card does not vanish when Home repaints', () => {
+  // Home repaints on any change. Recomputing per paint would drop the rows the moment they were recorded.
+  const box = awaySeenSandbox([], NEWER);
+  const a = box.awayRowsOnce();
+  box.awayRemember(a.map((r) => r.line));
+  const b = box.awayRowsOnce();
+  assert.equal(b.length, a.length, 'the same session keeps showing what it is already showing');
+  assert.equal(b, a, 'and it is the very same list, worked out once');
+});
+
+test('a forgotten line becomes news again, and the store stays small', () => {
+  const old = Date.now() - 61 * 24 * 60 * 60 * 1000;
+  const box = awaySeenSandbox([{ l: 'SphereDex 2.4 is available', at: old }], NEWER);
+  assert.equal(box.awayRowsOnce().length, 1, 'a line older than 60 days is forgotten');
+
+  const many = [];
+  for (let i = 0; i < 40; i++) many.push('line ' + i);
+  const b2 = awaySeenSandbox([], NEWER);
+  b2.awayRemember(many);
+  assert.ok(b2.readStore().length <= 24, 'the store is capped, got ' + b2.readStore().length);
+});
+
+test('an unreadable store does not break the card', () => {
+  const box = awaySandbox(NEWER);
+  box.lsGet = () => '{not json';
+  box.lsSet = () => { throw new Error('storage full'); };
+  box._awayRows = null;
+  box.AWAY_SEEN_KEY = 'palvault-away-seen';
+  box.AWAY_SEEN_MAX = 24;
+  box.AWAY_SEEN_MS = 60 * 24 * 60 * 60 * 1000;
+  vm.runInContext(['awaySeen', 'awayRemember', 'awayRowsOnce'].map(appFunction).join('\n'), box);
+  // Length, not deepEqual: the array is built inside the vm realm, so it is never reference equal here.
+  assert.equal(box.awaySeen().length, 0, 'bad JSON reads as nothing seen');
+  assert.equal(box.awayRowsOnce().length, 1, 'and the card still works');
+  box.awayRemember(['x']);   // must not throw
+});
+
+test('a Browse by set tile never shows a broken logo, or a name over its artwork', () => {
+  // The Sleeve & Card Set shipped with a CARD_IMG key where this tile wanted a source. The key rendered
+  // as a broken image, and a broken image shows its alt text, so the set name sat over its own cards.
+  const ctx = {};
+  vm.createContext(ctx);
+  ctx.window = { CARD_IMG: { LOGO_BP02: 'img/LOGO_BP02.webp' } };
+  vm.runInContext(appFunction('browseLogoSrc'), ctx);
+  assert.equal(ctx.browseLogoSrc('LOGO_BP02'), 'img/LOGO_BP02.webp');
+  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), '', 'a name with no image behind it resolves to nothing, not a broken src');
+  // And a key that IS in the map resolves to its path, which is why the sleeve set carries no logo at all:
+  // leaving a real key there would paint that product art over its own cards.
+  ctx.window.CARD_IMG.BOX_BANNER_SS01 = 'img/BOX_BANNER_SS01.webp';
+  assert.equal(ctx.browseLogoSrc('BOX_BANNER_SS01'), 'img/BOX_BANNER_SS01.webp');
+  delete ctx.window.CARD_IMG.BOX_BANNER_SS01;
+  assert.equal(ctx.browseLogoSrc('data:image/webp;base64,AA'), 'data:image/webp;base64,AA');
+  assert.equal(ctx.browseLogoSrc('img/LOGO_BP03.webp'), 'img/LOGO_BP03.webp');
+  assert.equal(ctx.browseLogoSrc(''), '');
+  assert.equal(ctx.browseLogoSrc(undefined), '');
+
+  // Both tile builders go through it, so neither can put a raw string into a src again.
+  assert.match(source, /var col=setGroupCollageHTML\(x\.sets\), lg=browseLogoSrc\(x\.logo\);/);
+  assert.match(source, /var logo=browseLogoSrc\(x\.logo\);/);
+
+  // Every logo the tiles actually carry resolves against the built page's artwork map.
+  const built = fs.readFileSync(path.join(root, 'docs', 'app', 'index.html'), 'utf8');
+  const map = /window\.CARD_IMG=\{(.*?)\};/.exec(built);
+  assert.ok(map, 'the built page carries a CARD_IMG map');
+  const keys = new Set((map[1].match(/"([^"]+)":/g) || []).map((k) => k.slice(1, -2)));
+  const block = /var BROWSE_EXPANSIONS = \[([\s\S]*?)\n  \];/.exec(source);
+  assert.ok(block, 'BROWSE_EXPANSIONS is present');
+  const logos = (block[1].match(/logo:\s*"([^"]*)"/g) || []).map((m) => m.replace(/^logo:\s*"/, '').replace(/"$/, ''));
+  logos.filter(Boolean).forEach((logo) => {
+    const ok = keys.has(logo) || /^(data:|https?:|img\/|\.\/)/.test(logo);
+    assert.ok(ok, 'BROWSE_EXPANSIONS logo resolves: ' + logo);
+  });
+});
+
+test('collector mode never opens a page whose every section is hidden', () => {
+  // Market and a price day carry .priceui on every section, so in the no-prices collector mode the page
+  // had nothing left to draw: the More menu still offered Market and it opened to header and footer only.
+  assert.match(
+    source,
+    /if\(\(p==="portfolio" \|\| p==="day"\) && SETTINGS\.mode==="collector"\) p="home";/,
+    'showPage sends the price only pages home in collector mode',
+  );
+  assert.match(
+    source,
+    /\.collector \.tab\[data-page="portfolio"\], \.collector \.navitem\[data-page="portfolio"\],/,
+    'and collector mode hides the way in, the way it already does for Graded',
+  );
+  // The guard has to sit before the page is marked active, or the blank page still paints for a frame.
+  const guard = source.indexOf('p==="portfolio" || p==="day"');
+  const paint = source.indexOf('el.classList.toggle("active", el.id==="page-"+real)');
+  assert.ok(guard > 0 && paint > 0 && guard < paint, 'the redirect runs before the page is shown');
+});
+
+test('the Home tiles draw their own object, and draw nothing when there is nothing to draw', () => {
+  const box = {};
+  vm.createContext(box);
+  box.CARDS = [
+    { id: 'A1', color: 'Red', set: 'S1' }, { id: 'A2', color: 'Blue', set: 'S1' },
+    { id: 'B1', color: 'Green', set: 'S2' }, { id: 'B2', color: 'Nonsense', set: 'S2' },
+  ];
+  box.has = (e) => !!e && e.qty > 0;
+  box.o = (id) => (id === 'A1' || id === 'B1' ? { qty: 1 } : {});
+  box.Math = Math;
+  box.esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  box.imgSrc = (c) => (c.pic === false ? '' : 'img/' + c.id + '.jpg');
+  vm.runInContext(['homeWeave', 'homeCards', 'homeValueChart'].map(appFunction).join('\n') + '\nvar WEAVE_CLASS={ Red:"r", Blue:"b", Green:"g", Purple:"p", Colorless:"n" };', box);
+
+  // The weave: one cell per card, one block per set, lit for what is owned, and a colour the app does
+  // not know falls back to colourless rather than drawing nothing.
+  const weave = box.homeWeave();
+  assert.equal((weave.match(/<i /g) || []).length, 4, 'one cell per card');
+  assert.equal((weave.match(/sdx-wset/g) || []).length, 2, 'one block per set');
+  assert.equal((weave.match(/ on"/g) || []).length, 2, 'lit for the two owned');
+  assert.match(weave, /class="n"/, 'an unknown colour is colourless, not missing');
+  box.CARDS = [];
+  assert.equal(box.homeWeave(), '', 'and an empty catalogue draws nothing at all');
+
+  // The cards: the tile shows the ones it is actually about, five at most, because past that they
+  // stop being cards and become a texture.
+  const cards = (n) => Array.from({ length: n }, (_, i) => ({ card: { id: 'C' + i } }));
+  const fan = box.homeCards(cards(3), 0);
+  assert.equal((fan.match(/class="sdx-card"/g) || []).length, 3, 'one card each');
+  assert.equal((fan.match(/<img /g) || []).length, 3, 'drawn with their own picture');
+  assert.match(fan, /src="img\/C0\.jpg"/, 'and it is that card\u2019s picture');
+  assert.equal((box.homeCards(cards(5), 0).match(/class="sdx-card"/g) || []).length, 5);
+  assert.equal((box.homeCards(cards(89), 0).match(/class="sdx-card"/g) || []).length, 5, 'capped, never a wall');
+
+  // A bare card is the fallback, not the normal case: a card whose picture is missing keeps the shape.
+  const noPic = box.homeCards([{ card: { id: 'X', pic: false } }], 0);
+  assert.match(noPic, /class="sdx-card bare"/, 'a card with no picture still holds its place');
+  assert.doesNotMatch(noPic, /<img /);
+
+  // Plain cards work as well as {card} rows, because the wishlist passes them straight through.
+  assert.equal((box.homeCards([{ id: 'W1' }, { id: 'W2' }], 0).match(/class="sdx-card"/g) || []).length, 2);
+
+  // Nothing to show: the blank count is what gives the deck tile something before a deck exists.
+  assert.equal(box.homeCards([], 0), '', 'no cards and no blanks asked for draws nothing');
+  assert.equal((box.homeCards([], 3).match(/class="sdx-card bare"/g) || []).length, 3, 'the empty deck tile');
+  assert.equal((box.homeCards([], 89).match(/class="sdx-card bare"/g) || []).length, 5, 'blanks are capped too');
+  assert.equal(box.homeCards(null, 0), '', 'and a tile with no list at all is not an error');
+  assert.equal(box.homeCards([null, undefined], 0), '', 'nor is a list of nothing');
+
+  // The value line: one reading is not a line.
+  box.activeCol = () => ({ hist: { '2026-10-18': { v: 10, vLive: 10 } } });
+  box.priceMode = () => 'live';
+  assert.equal(box.homeValueChart(), '', 'one day is not a line');
+  box.activeCol = () => ({ hist: {} });
+  assert.equal(box.homeValueChart(), '', 'and neither is no day at all');
+  box.activeCol = () => ({
+    hist: { '2026-10-17': { v: 10, vLive: 10 }, '2026-10-18': { v: 12, vLive: 12 }, '2026-10-19': { v: 11, vLive: 11 } },
+  });
+  const chart = box.homeValueChart();
+  assert.match(chart, /<svg viewBox="0 0 300 46"/);
+  assert.equal((chart.match(/ L\d/g) || []).length >= 2, true, 'the line joins every day it has');
+  assert.match(chart, /var\(--up\)/, 'ending above where it started reads as a rise');
+  // A collection worth the same every day still draws a line rather than dividing by zero.
+  box.activeCol = () => ({ hist: { a: { v: 5, vLive: 5 }, b: { v: 5, vLive: 5 } } });
+  assert.match(box.homeValueChart(), /<path/);
 });

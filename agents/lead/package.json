@@ -1,0 +1,18 @@
+{
+  "name": "spheredex-lead",
+  "private": true,
+  "type": "module",
+  "description": "SphereDex Lead / CTO agent: plans features, assigns work, manages priorities.",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "dev": "bdk dev"
+  },
+  "dependencies": {
+    "@cursor/bdk": "^0.2.27",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "6.0.3"
+  }
+}

@@ -5,10 +5,31 @@ name: Tests
 #      behaviour on a stub DOM) so edits to paldeck.html cannot silently regress it.
 #   2. tools/test_scan_review.cjs — the scan session/review sheet, same treatment.
 #   3. tools/test_editions.cjs — CSV/edition/scan logic, extracted from the same source file.
+#      tools/test_card_language.cjs — Japanese text mapping and the scanner edition.
+#      tools/test_price_chart.cjs — the card price history page.
+#      tools/test_stock_glance.cjs — sealed stock at a glance.
+#      tools/test_price_vs_rrp.cjs — sealed price versus RRP.
+#      tools/test_release_startup.cjs — startup applyReleased() sees _MONIX (issue 39).
+#      tools/test_import_trackers.cjs — CSV import of other trackers' exports (numbering, parallels, language).
 #      tools/test_tcg_news.cjs — Palworld TCG news section (empty state, sample rows, feed schema).
 #      tools/test_upcoming_cards.cjs — PalDex upcoming-card file, labels and sheet.
+#      tools/test_sealed_images.cjs — sealed product image feed, files and launch loader.
+#      tools/test_tournament_decks.cjs — winning-deck counts, the staple rule and filter, tournament-decks.json.
+#      tools/test_native_scan_numbers.cjs — English and Japanese card numbers in both native scanners.
+#      tools/test_trade_check.cjs — trade checker lists, prices, collection move and history.
+#      tools/test_deck_share.cjs — deck share links: round trip, unknown cards and bad counts.
+#      tools/test_share_list.cjs — read-only wants and spares share link: build, encode, decode, clean.
+#      tools/test_small_fixes.cjs — shop list open state, notification permission note, push registration, baked sealed art.
+#      tools/test_account_sync.cjs — accounts on one phone, follows saved to the account, the account settings
+#      merge, and the startup ordering guards (2.4.1 shipped blank from a top level read of a later var).
+#      tools/test_event_log.cjs — manual event results, the match logger, backup and the cloud merge.
 #   4. The Python pipeline tests — Sieve sessions, news consolidation, rebuild, and the
 #      app bundle regeneration itself.
+#      tools/test_ios_project.py — the iOS project spec. Xcode Cloud regenerates
+#      SphereDex.xcodeproj from project.yml on every archive, so a build setting that lives only
+#      in the committed .xcodeproj never reaches a real build. That is how the APNs entitlement
+#      went missing and iOS push registration died silently for 18 days; this guard fails the
+#      push for any such setting, not just that one.
 #   5. A rebuild + git diff so a src/ edit without regenerated WEB/Android/iOS bundles
 #      fails the push instead of shipping stale bundles.
 #   6. A plain grep fails fast (before Node is even installed, independent of the .cjs suites)
@@ -38,6 +59,20 @@ jobs:
       # Belt and braces: the .cjs suites assert marker placement and four-copy sync in detail, but
       # this plain grep fails first — and even if the suites themselves were deleted or broken —
       # if a section's markers go missing or get duplicated in the canonical source.
+      # A merge conflict committed unresolved is invisible to every other gate here. The bundle drift
+      # check cannot see it, because rebuild.py restamps sw.js with re.sub(..., count=1) and so rewrites
+      # only the FIRST line of a conflicted block, leaving the markers in place and the diff clean. That
+      # is exactly how docs/app/sw.js reached a release with three nested conflicts in it, as a syntax
+      # error that silently stopped the service worker registering. Cheapest possible check, first.
+      - name: No unresolved merge conflict markers
+        run: |
+          hits=$(git grep -l -E "^(<<<<<<< |=======$|>>>>>>> )" -- . ':!*.md' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Unresolved merge conflict markers committed in: $hits"
+            exit 1
+          fi
+          echo "No conflict markers."
+
       - name: Section markers present exactly once (carousel + scan review)
         run: |
           fail=0
@@ -49,7 +84,9 @@ jobs:
             "SCAN REVIEW BEGIN (styles" \
             "SCAN REVIEW END (styles)" \
             "SCAN REVIEW BEGIN (logic" \
-            "SCAN REVIEW END (logic)"; do
+            "SCAN REVIEW END (logic)" \
+            "MULTI SCAN BEGIN (logic" \
+            "MULTI SCAN END (logic)"; do
             count=$(grep -c -F "$marker" src/paldeck.html || true); count=${count:-0}
             if [ "$count" != "1" ]; then
               echo "::error::src/paldeck.html must contain exactly one occurrence of: $marker (found ${count})"
@@ -63,11 +100,19 @@ jobs:
         with:
           node-version: '22'
 
+      # Generated JavaScript has to at least parse. sw.js is served straight to browsers and its
+      # registration failure is swallowed by a .catch, so a broken one fails completely silently.
+      - name: Generated service worker parses
+        run: node --check docs/app/sw.js
+
       - name: Featured-carousel guard suite
         run: node tools/test_carousel.cjs
 
       - name: Scan-review guard suite
         run: node tools/test_scan_review.cjs
+
+      - name: Multi-card photo scan
+        run: node tools/test_multi_scan.cjs
 
       - name: Editions / CSV guard suite
         run: node tools/test_editions.cjs
@@ -75,11 +120,92 @@ jobs:
       - name: Deck legality, stats, effect search and purchase price
         run: node tools/test_v21.cjs
 
+      - name: Tournament legality on decks
+        run: node tools/test_tournament_ready.cjs
+
+      - name: Card language, Japanese text mapping and scanner edition
+        run: node tools/test_card_language.cjs
+
+      - name: Card price history chart
+        run: node tools/test_price_chart.cjs
+
+      - name: Sealed stock at a glance
+        run: node tools/test_stock_glance.cjs
+
+      - name: Sealed price versus RRP
+        run: node tools/test_price_vs_rrp.cjs
+
+      - name: Release startup sees the month table
+        run: node tools/test_release_startup.cjs
+
+      - name: CSV import from other trackers
+        run: node tools/test_import_trackers.cjs
+
       - name: Palworld TCG news feed
         run: node tools/test_tcg_news.cjs
 
       - name: PalDex upcoming cards
         run: node tools/test_upcoming_cards.cjs
+
+      - name: Sealed product image feed
+        run: node tools/test_sealed_images.cjs
+
+      - name: Tournament decks and staples
+        run: node tools/test_tournament_decks.cjs
+
+      - name: Native scanner card numbers (English and Japanese)
+        run: node tools/test_native_scan_numbers.cjs
+
+      - name: Chase card second hand check
+        run: node tools/test_chase_check.cjs
+
+      - name: Per copy photos
+        run: node tools/test_copy_photos.cjs
+      - name: Collection inventory report
+        run: node tools/test_inventory_report.cjs
+
+      - name: Add to calendar on Releases (.ics)
+        run: node tools/test_release_calendar.cjs
+
+      - name: Market index and like for like split
+        run: node tools/test_market_index.cjs
+
+      - name: Trade checker
+        run: node tools/test_trade_check.cjs
+
+      - name: Printable missing cards checklist
+        run: node tools/test_missing_checklist.cjs
+
+      - name: Share a deck as a link
+        run: node tools/test_deck_share.cjs
+      - name: Storage location
+        run: node tools/test_storage_location.cjs
+      - name: Share wants and spares link
+        run: node tools/test_share_list.cjs
+      - name: Built decks hold their copies
+        run: node tools/test_built_decks.cjs
+      - name: Grading submissions
+        run: node tools/test_grading_submissions.cjs
+      - name: Daily Pal guess
+        run: node tools/test_daily_guess.cjs
+      - name: Wishlist priorities and budget
+        run: node tools/test_wish_priority.cjs
+      - name: Release announcement clocks
+        run: node tools/test_release_dates.cjs
+      - name: Deck owned only guard
+        run: node tools/test_deck_owned_only.cjs
+
+      - name: Small 2.4.2 fixes (shop list, notification note, push registration, sealed art)
+        run: node tools/test_small_fixes.cjs
+
+      - name: Accounts on one device, synced follows, account settings merge (startup ordering guards)
+        run: node tools/test_account_sync.cjs
+
+      - name: Promo How to get it copy (EPR-010 and EPR-011)
+        run: node tools/test_promo_sources.cjs
+
+      - name: Event results log
+        run: node tools/test_event_log.cjs
 
   python:
     name: Pipeline tests + bundle sync (Python)
@@ -92,6 +218,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # Every step above names ONE suite, so a suite added without touching this file never ran. Five had
+      # already slipped through that way (price list, trial decks, work filter, service worker update,
+      # rewards statue). This runs the whole folder, so a new tools/test_*.cjs is covered the day it lands.
+      - name: Every Node suite, including any not named above
+        run: node --test tools/test_*.cjs
 
       - name: Run tool tests (news feed, Sieve, rebuild)
         working-directory: tools

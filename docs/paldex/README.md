@@ -42,3 +42,23 @@ Leave out anything that is not a Pal. Do not add rumours. The app ignores a row 
 ## How the tile uses it
 
 The phrase `Card upcoming in <set>` is shown only when that Pal has no cards in the app catalogue and `release_date` is today or later. The soonest such set is the one named on the tile. After the date, or once a real card for that Pal is in the card data, the tile goes back to the ordinary "not printed yet" wording. Pals that already have cards are unchanged, even if this file mentions them.
+
+# Winning tournament decks
+
+`docs/paldex/tournament-decks.json` (live at `https://spheredex.app/paldex/tournament-decks.json`) holds the winning deck recipes from official events. The app loads it the same way as `upcoming-cards.json`: live file first, then the last saved copy, then the copy shipped in `src/paldeck.html` (`TOURNAMENT_DECKS_FALLBACK`).
+
+Add an event by running `python tools/fetch_tournament_decks.py <event page URL> --held-date YYYY-MM-DD --held-date-source <URL>`. It reads every `data-recipe-id` on the official page, fetches each recipe's JSON and appends one object to `events`. Never type counts by guesswork. A deck the script cannot read is left out and printed on stderr, to be typed in by hand from the official page, and the script exits with status 1. On a re-run, a deck already saved for that event that fails to download keeps its saved copy unchanged, with a warning on stderr. A re-run also keeps the event's saved `date`, `date_kind` and `date_source`; pass `--held-date` and/or `--held-date-source` only to replace them.
+
+| Field | Where | Rule |
+| --- | --- | --- |
+| `readme` | top level | What the file is and where it comes from. |
+| `events` | top level | One object per event. Append new ones at the end. |
+| `name`, `source_url` | event | Title and URL of the official deck recipe page. |
+| `date`, `date_kind` | event | `YYYY-MM-DD`. `held` when a source states the day it was held (`date_source` names it), else `published` (the recipe page date). |
+| `published` | event | Date shown on the recipe page. |
+| `decks` | event | One object per transcribed deck. |
+| `placement`, `player`, `deck_code` | deck | As printed on the recipe (`deck_code` only when given). |
+| `source_id`, `source_url` | deck | Official recipe id and its JSON URL. |
+| `cards` | deck | `{"number", "count", "zone"}` rows. `zone` is the official card type: `pal`, `structure`, `gear` or `event`. |
+
+The card sheet shows `In N of M winning decks at official events`. N counts the decks that list the card (or its base card, for a parallel) in any zone, once per deck. M counts every deck in the file. A card in no deck shows nothing. A **Tournament staple** is a card in at least 25% of those decks and in at least 2 of them (`TOURNAMENT_STAPLE` in `src/paldeck.html`).

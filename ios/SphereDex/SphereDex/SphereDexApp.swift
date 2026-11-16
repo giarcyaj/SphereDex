@@ -48,10 +48,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         Push.registerToken(hex)
     }
 
-    // No APNs available (e.g. a Simulator without a paired Mac, or before entitlements are provisioned).
-    // Nothing to do - the app is unaffected and simply won't receive pushes.
+    // No APNs available. Two very different causes land here and used to be indistinguishable: a
+    // Simulator without a paired Mac (harmless), or a build archived WITHOUT the aps-environment
+    // entitlement (fatal to push on every install). This handler was empty while exactly that happened:
+    // Xcode Cloud regenerates the project from project.yml, which did not declare
+    // CODE_SIGN_ENTITLEMENTS, so cloud builds shipped unentitled, every registration failed here, and
+    // no iOS device registered a token for 18 days with nothing anywhere saying so. Never silent again.
     func application(_ application: UIApplication,
-                     didFailToRegisterForRemoteNotificationsWithError error: Error) {}
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        let ns = error as NSError
+        // "%@" with the text as an argument, never the text as the format itself: the message carries
+        // system-supplied content and must not be parsed for format specifiers.
+        NSLog("%@", "SphereDex: APNs registration failed (\(ns.domain) \(ns.code)): "
+                  + "\(ns.localizedDescription). On a real device this usually means the build carries no "
+                  + "aps-environment entitlement, so push is dead for this install. Check "
+                  + "CODE_SIGN_ENTITLEMENTS in ios/SphereDex/project.yml, which is the file Xcode Cloud "
+                  + "actually builds from.")
+    }
 
     // Foreground delivery: still show the banner so the user sees new-set/news alerts while in the app.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
