@@ -347,59 +347,198 @@ function findChrome() {
   return list.find(function (p) { return fs.existsSync(p); }) || '';
 }
 
-function readReport(stdout) {
-  const m = String(stdout || '').match(/<pre id="out">([\s\S]*?)<\/pre>/);
-  if (!m) return null;
-  const text = m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-  try { return JSON.parse(text); }
+// Fresh profiles on GitHub runners have taken 5s to just over 20s to dump the DOM.
+// A 20s kill sat inside that range (17.6s passed on the same minute the next run died).
+// --virtual-time-budget is a fixed sleep, and --dump-dom writes nothing until Chrome exits,
+// so a slow start looks like a hang. Wait until #out is JSON, then kill the process group.
+const BROWSER_START_MS = 30000;
+const BROWSER_PAGE_MS = 15000;
+
+function parseReport(text) {
+  const raw = String(text == null ? '' : text).trim();
+  if (!raw || raw === 'pending') return null;
+  try { return JSON.parse(raw); }
   catch (e) { return null; }
 }
 
-function dumpDom(chrome, url) {
-  // Async on purpose: a same-process HTTP server cannot answer while the event loop is blocked.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scan-px-chrome-'));
-  const outFile = path.join(dir, 'dom.html');
-  const fd = fs.openSync(outFile, 'w');
+function stderrTail(text) {
+  return String(text || '').split('\n').filter(function (ln) {
+    return ln && ln.indexOf('dbus') < 0 && ln.indexOf('TensorFlow') < 0 && ln.indexOf('channel stable') < 0;
+  }).slice(-12).join('\n');
+}
+
+function sleep(ms) {
+  return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+function httpText(url) {
   return new Promise(function (resolve, reject) {
-    const child = spawn(chrome, [
-      '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
-      '--user-data-dir=' + path.join(dir, 'profile'),
-      '--remote-debugging-port=0',
-      '--virtual-time-budget=4000',
-      '--dump-dom', url,
-    ], { stdio: ['ignore', fd, 'pipe'] });
-    let stderr = '';
-    let done = false;
-    const killer = setTimeout(function () { finish(new Error('browser timed out')); }, 20000);
-    function finish(err, report) {
-      if (done) return;
-      done = true;
-      clearTimeout(killer);
-      clearInterval(timer);
-      try { child.kill('SIGKILL'); } catch (e) {}
-      try { fs.closeSync(fd); } catch (e) {}
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-      if (err) reject(err);
-      else resolve(report);
+    const req = http.get(url, { agent: false }, function (res) {
+      const chunks = [];
+      res.on('data', function (c) { chunks.push(c); });
+      res.on('end', function () { resolve(Buffer.concat(chunks).toString('utf8')); });
+    });
+    req.setTimeout(2000, function () { req.destroy(new Error('devtools list timed out')); });
+    req.on('error', reject);
+  });
+}
+
+async function waitFor(check, timeoutMs, labelFn) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const value = await check();
+    if (value) return value;
+    await sleep(100);
+  }
+  throw new Error(labelFn());
+}
+
+function connectCdp(wsUrl) {
+  return new Promise(function (resolve, reject) {
+    if (typeof WebSocket !== 'function') {
+      reject(new Error('this Node has no WebSocket client'));
+      return;
     }
-    const timer = setInterval(function () {
-      let stdout = '';
-      try { stdout = fs.readFileSync(outFile, 'utf8'); } catch (e) { return; }
-      const report = readReport(stdout);
-      if (report) finish(null, report);
-    }, 150);
-    child.stderr.on('data', function (b) { stderr += b.toString(); });
-    child.on('close', function () {
-      let stdout = '';
-      try { stdout = fs.readFileSync(outFile, 'utf8'); } catch (e) {}
-      const report = readReport(stdout);
-      if (report) { finish(null, report); return; }
-      const err = stderr.split('\n').filter(function (ln) {
-        return ln && ln.indexOf('dbus') < 0 && ln.indexOf('TensorFlow') < 0 && ln.indexOf('channel stable') < 0;
-      }).slice(-12).join('\n');
-      finish(new Error('browser page did not report\nSTDOUT:\n' + stdout.slice(0, 800) + '\nSTDERR:\n' + err));
+    const ws = new WebSocket(wsUrl);
+    const pending = new Map();
+    let next = 1;
+    let opened = false;
+    const timer = setTimeout(function () {
+      failOpen(new Error('devtools socket did not open'));
+      try { ws.close(); } catch (e) {}
+    }, 5000);
+    function failOpen(err) {
+      if (opened) return;
+      opened = true;
+      clearTimeout(timer);
+      reject(err);
+    }
+    function failPending(err) {
+      pending.forEach(function (waiter) {
+        clearTimeout(waiter.timer);
+        waiter.rej(err);
+      });
+      pending.clear();
+    }
+    ws.addEventListener('open', function () {
+      if (opened) return;
+      opened = true;
+      clearTimeout(timer);
+      resolve({
+        eval: function (expression) {
+          const id = next++;
+          return new Promise(function (res, rej) {
+            const evalTimer = setTimeout(function () {
+              pending.delete(id);
+              rej(new Error('devtools evaluate timed out'));
+            }, 5000);
+            pending.set(id, { res: res, rej: rej, timer: evalTimer });
+            ws.send(JSON.stringify({
+              id: id,
+              method: 'Runtime.evaluate',
+              params: { expression: expression, returnByValue: true },
+            }));
+          });
+        },
+        close: function () { try { ws.close(); } catch (e) {} },
+      });
+    });
+    ws.addEventListener('message', function (ev) {
+      let msg;
+      try { msg = JSON.parse(String(ev.data)); } catch (e) { return; }
+      const waiter = pending.get(msg.id);
+      if (!waiter) return;
+      pending.delete(msg.id);
+      clearTimeout(waiter.timer);
+      if (msg.error) waiter.rej(new Error(msg.error.message || 'devtools error'));
+      else waiter.res(msg.result && msg.result.result ? msg.result.result.value : '');
+    });
+    ws.addEventListener('error', function () {
+      if (!opened) failOpen(new Error('devtools socket failed'));
+      failPending(new Error('devtools socket failed'));
+    });
+    ws.addEventListener('close', function () {
+      if (!opened) failOpen(new Error('devtools socket closed'));
+      failPending(new Error('devtools socket closed'));
     });
   });
+}
+
+function stopChrome(child) {
+  return new Promise(function (resolve) {
+    if (!child || child.exitCode != null || child.signalCode != null) { resolve(); return; }
+    const timer = setTimeout(resolve, 2000);
+    child.once('exit', function () { clearTimeout(timer); resolve(); });
+    try { process.kill(-child.pid, 'SIGKILL'); }
+    catch (e) {
+      try { child.kill('SIGKILL'); } catch (e2) {}
+    }
+  });
+}
+
+async function readBrowserReport(chrome, url) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scan-px-chrome-'));
+  const child = spawn(chrome, [
+    '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
+    '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--disable-extensions', '--disable-sync',
+    '--remote-debugging-port=0', '--remote-allow-origins=*',
+    '--user-data-dir=' + path.join(dir, 'profile'),
+    url,
+  ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
+  let stderr = '';
+  let exitReason = '';
+  child.stderr.on('data', function (b) {
+    stderr += b.toString();
+    if (stderr.length > 16000) stderr = stderr.slice(-16000);
+  });
+  child.on('error', function (err) { exitReason = err.message; });
+  child.on('exit', function (code, signal) {
+    if (!exitReason) exitReason = 'browser exited (' + (signal || code) + ')';
+  });
+  let cdp = null;
+  function note() {
+    const tail = stderrTail(stderr);
+    return tail ? '\n' + tail : '';
+  }
+  try {
+    if (exitReason) throw new Error(exitReason + note());
+    const started = Date.now();
+    const port = await waitFor(function () {
+      if (exitReason) throw new Error(exitReason + note());
+      try {
+        const n = parseInt(fs.readFileSync(path.join(dir, 'profile', 'DevToolsActivePort'), 'utf8'), 10);
+        return n > 0 ? n : null;
+      } catch (e) { return null; }
+    }, BROWSER_START_MS, function () { return 'browser debugging port did not open' + note(); });
+    const wsUrl = await waitFor(async function () {
+      if (exitReason) throw new Error(exitReason + note());
+      let body = '';
+      try { body = await httpText('http://127.0.0.1:' + port + '/json/list'); }
+      catch (e) { return null; }
+      let targets = [];
+      try { targets = JSON.parse(body); } catch (e) { return null; }
+      const page = targets.find(function (t) {
+        return t && t.type === 'page' && t.webSocketDebuggerUrl && String(t.url || '').indexOf(url) === 0;
+      });
+      return page ? page.webSocketDebuggerUrl : null;
+    }, Math.max(1000, BROWSER_START_MS - (Date.now() - started)), function () { return 'browser page did not open' + note(); });
+    cdp = await connectCdp(wsUrl);
+    let lastText = '';
+    const report = await waitFor(async function () {
+      if (exitReason) throw new Error(exitReason + note());
+      lastText = String(await cdp.eval('(function(){try{var n=document.getElementById("out");return n?String(n.textContent):"";}catch(e){return "";}})()') || '');
+      const parsed = parseReport(lastText);
+      if (!parsed) return null;
+      if (parsed.pageError) throw new Error('browser page error\n' + parsed.pageError);
+      return parsed;
+    }, BROWSER_PAGE_MS, function () { return 'browser page was not ready\n' + lastText.slice(0, 400) + note(); });
+    return report;
+  } finally {
+    if (cdp) cdp.close();
+    await stopChrome(child);
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+  }
 }
 
 function listen(handler) {
@@ -409,7 +548,7 @@ function listen(handler) {
   });
 }
 
-test('browser: file image taints, blob read returns the pixel, CORS failure is not drawn', { skip: !findChrome(), timeout: 90000 }, async () => {
+test('browser: file image taints, blob read returns the pixel, CORS failure is not drawn', { skip: !findChrome(), timeout: 120000 }, async () => {
   const chrome = findChrome();
   const src = sourceOf(FILES.src);
   const fns = ['loadImg', 'describeElement'].map(function (n) { return extractFunction(src, n); }).join('\n');
@@ -449,7 +588,7 @@ test('browser: file image taints, blob read returns the pixel, CORS failure is n
     + '  } catch(e) { document.getElementById("out").textContent=JSON.stringify({pageError:String(e && e.stack || e)}); }\n'
     + '})();\n</script>';
   fs.writeFileSync(path.join(dir, 'file.html'), fileHtml);
-  const fileReport = await dumpDom(chrome, 'file://' + path.join(dir, 'file.html'));
+  const fileReport = await readBrowserReport(chrome, 'file://' + path.join(dir, 'file.html'));
   assert.equal(fileReport.baseline.loaded, true);
   assert.equal(fileReport.baseline.ok, false);
   assert.equal(fileReport.baseline.name, 'SecurityError');
@@ -512,7 +651,7 @@ test('browser: file image taints, blob read returns the pixel, CORS failure is n
     + '  } catch(e) { document.getElementById("out").textContent=JSON.stringify({pageError:String(e && e.stack || e)}); }\n'
     + '})();\n</script>';
   try {
-    const httpReport = await dumpDom(chrome, 'http://127.0.0.1:' + port1 + '/page.html');
+    const httpReport = await readBrowserReport(chrome, 'http://127.0.0.1:' + port1 + '/page.html');
     assert.equal(httpReport.same.src.startsWith('blob:'), true);
     assert.equal(httpReport.same.cross, null);
     assert.deepEqual([httpReport.same.desc.r, httpReport.same.desc.g, httpReport.same.desc.b, httpReport.same.desc.a], PIXEL);
