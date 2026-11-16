@@ -525,14 +525,28 @@ async function readBrowserReport(chrome, url) {
     }, Math.max(1000, BROWSER_START_MS - (Date.now() - started)), function () { return 'browser page did not open' + note(); });
     cdp = await connectCdp(wsUrl);
     let lastText = '';
+    let lastEvalError = '';
+    // The tab can appear in /json/list before it has an execution context. A missing
+    // context is a DevTools error, not a failed assertion, so keep polling until the
+    // page budget ends. A dead socket or a pageError in the report still stops now.
     const report = await waitFor(async function () {
       if (exitReason) throw new Error(exitReason + note());
-      lastText = String(await cdp.eval('(function(){try{var n=document.getElementById("out");return n?String(n.textContent):"";}catch(e){return "";}})()') || '');
+      try {
+        lastText = String(await cdp.eval('(function(){try{var n=document.getElementById("out");return n?String(n.textContent):"";}catch(e){return "";}})()') || '');
+        lastEvalError = '';
+      } catch (err) {
+        const message = err && err.message ? err.message : String(err);
+        if (exitReason || message.indexOf('devtools socket') === 0) throw new Error(message + note());
+        lastEvalError = message;
+        return null;
+      }
       const parsed = parseReport(lastText);
       if (!parsed) return null;
       if (parsed.pageError) throw new Error('browser page error\n' + parsed.pageError);
       return parsed;
-    }, BROWSER_PAGE_MS, function () { return 'browser page was not ready\n' + lastText.slice(0, 400) + note(); });
+    }, BROWSER_PAGE_MS, function () {
+      return 'browser page was not ready\n' + lastText.slice(0, 400) + (lastEvalError ? '\n' + lastEvalError : '') + note();
+    });
     return report;
   } finally {
     if (cdp) cdp.close();
