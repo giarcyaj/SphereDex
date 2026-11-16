@@ -56,6 +56,13 @@ test('wired into the detail sheet, search and merge', () => {
   assert.match(source, /whereMatches\(o\(c\.id\), filters\.q\)/);
   assert.match(source, /out\.where=String\(b\.where\)\.trim\(\)/);
 });
+test('the location field is one line, not the contact message box', () => {
+  // .ctmsg is the contact textarea and carries min-height:130px. The location is a text input
+  // that used to inherit that floor, so a short label drew taller than Notes.
+  assert.match(source, /<input type="text" id="fWhere" class="ctmsg"/);
+  assert.match(source, /input\.ctmsg\{ min-height:0; height:auto; resize:none; \}/);
+  assert.match(source, /id="fNotes" class="ctmsg"/);
+});
 test('labels named like Object.prototype keys still group', () => {
   const cards = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }];
   const own = { a: { qty: 1, where: 'constructor' }, b: { qty: 1, where: '__proto__' }, c: { qty: 1, where: 'toString' } };

@@ -88,6 +88,7 @@ function renderGrid(opts) {
     decks: () => [],
     activeCol: () => ({ setSpheres: {}, own: {} }),
     wishCount: () => 0,
+    dailyStats: () => ({}),
     lsGet: (k) => (Object.prototype.hasOwnProperty.call(stored, k) ? stored[k] : null),
     lsSet: (k, v) => { stored[k] = String(v); },
     effigyImg: (n) => '<i data-art="' + n + '"></i>',
@@ -110,8 +111,8 @@ function renderGrid(opts) {
 
 test('the statue tile is a button, is unearned until the app is shared, and stays earned after', () => {
   const cold = renderGrid();
-  // Fourteen tiles: the statue first, because it is the only one a brand new collection can earn today.
-  assert.equal((cold.grid.innerHTML.match(/class="achievement/g) || []).length, 14);
+  // Fifteen tiles: the statue first, because it is the only one a brand new collection can earn today.
+  assert.equal((cold.grid.innerHTML.match(/class="achievement/g) || []).length, 15);
   assert.ok(cold.grid.innerHTML.indexOf('Statue of Power') < cold.grid.innerHTML.indexOf('Lifmunk'), 'statue first');
   // Only the statue is actionable, so only the statue is a button.
   assert.equal((cold.grid.innerHTML.match(/<button/g) || []).length, 1);
@@ -124,8 +125,8 @@ test('the statue tile is a button, is unearned until the app is shared, and stay
   const warm = renderGrid({ shared: true });
   assert.match(warm.grid.innerHTML, /<button type="button" class="achievement achaction earned"/, 'earned once shared');
   assert.match(warm.grid.innerHTML, /Thank you for sharing SphereDex/);
-  // Still fourteen: earning it does not add or remove a tile.
-  assert.equal((warm.grid.innerHTML.match(/class="achievement/g) || []).length, 14);
+  // Still fifteen: earning it does not add or remove a tile.
+  assert.equal((warm.grid.innerHTML.match(/class="achievement/g) || []).length, 15);
 });
 
 test('sharing earns the statue on both paths, and earns it only once', () => {

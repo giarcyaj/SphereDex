@@ -2,16 +2,17 @@
 
 Run from the repo root:
 
-    python tools/make_kofi_card.py                      # this build's version
+    python tools/make_kofi_card.py                      # the release the headliner can describe
     python tools/make_kofi_card.py --version 2.4.6
     python tools/make_kofi_card.py --bullet "..." --bullet "..."
 
 Writes tmp/koupdate-<version>.png at 2400x1260, the size Ko-fi's Blog "Featured image" field takes.
 
 The bullets come from RELEASE_HIGHLIGHTS in src/paldeck.html, the same three lines the app's own Home
-headliner shows, so the card cannot drift from what the release actually says. Pass --bullet to
-override them (a post that covers two releases wants its own wider list); every bullet still goes
-through the no dashes check either way.
+headliner shows, so the card cannot drift from what the release actually says. A store train bump
+with no lines of its own keeps the newest earlier release, which is what the headliner does. Pass
+--bullet to override them (a post that covers two releases wants its own wider list); every bullet
+still goes through the no dashes check either way.
 
 Rendering is headless Chrome against tools/kofi_card.html, not Pillow, because the card is a CSS
 layout with blurs, a grid and real Chakra Petch. Three gotchas, all learned the hard way and all
@@ -81,8 +82,8 @@ def app_version(src):
     return m.group(1)
 
 
-def highlights(src, version):
-    """RELEASE_HIGHLIGHTS[version] as written in the app, decoded from its JS escapes."""
+def highlight_map(src):
+    """RELEASE_HIGHLIGHTS object from the app source, decoded from its JS escapes."""
     m = re.search(r"var RELEASE_HIGHLIGHTS\s*=\s*\{", src)
     if not m:
         raise SystemExit("RELEASE_HIGHLIGHTS not found in src/paldeck.html")
@@ -96,7 +97,44 @@ def highlights(src, version):
             if depth == 0:
                 break
         i += 1
-    body = json.loads(src[start:i + 1])
+    return json.loads(src[start:i + 1])
+
+
+def ver_num(v):
+    """Same ordering as verNum in src/paldeck.html."""
+    p = str(v or "").split(".")
+
+    def part(i):
+        if i >= len(p) or not p[i].isdigit():
+            return 0
+        return int(p[i])
+
+    return part(0) * 10000 + part(1) * 100 + part(2)
+
+
+def described_version(src):
+    """The release the headliner can describe.
+
+    A feature release has its own lines. A store train bump can ship with nothing new
+    to announce, and the headliner keeps the newest earlier release.
+    """
+    version = app_version(src)
+    body = highlight_map(src)
+
+    def filled(v):
+        return any(str(x).strip() for x in body.get(v, []))
+
+    if filled(version):
+        return version
+    earlier = [v for v in body if ver_num(v) < ver_num(version) and filled(v)]
+    if not earlier:
+        raise SystemExit("no release highlights at or before %s" % version)
+    return max(earlier, key=ver_num)
+
+
+def highlights(src, version):
+    """RELEASE_HIGHLIGHTS[version] as written in the app, decoded from its JS escapes."""
+    body = highlight_map(src)
     if version not in body:
         raise SystemExit(
             "no RELEASE_HIGHLIGHTS for %s (have %s): add them, or pass --bullet"
@@ -133,14 +171,14 @@ def visible_text(html):
 
 def main():
     ap = argparse.ArgumentParser(description="Render the Ko-fi card for a release")
-    ap.add_argument("--version", help="release version; defaults to this build's APP_VERSION")
+    ap.add_argument("--version", help="release version; defaults to the release the headliner can describe")
     ap.add_argument("--bullet", action="append", default=[],
                     help="override the bullets; repeat for each line")
     ap.add_argument("--out", help="output png path; defaults to tmp/koupdate-<version>.png")
     args = ap.parse_args()
 
     src = io.open(APP, encoding="utf-8").read()
-    version = args.version or app_version(src)
+    version = args.version or described_version(src)
     bullets = args.bullet or highlights(src, version)
     if not bullets:
         raise SystemExit("no bullets to draw")

@@ -57,3 +57,23 @@ test('panel copy has no dashes', () => {
   const html = sb.chaseCheckHtml({ id: 'X', rare: 'SSP' }).replace(/<[^>]*>/g, '');
   assert.doesNotMatch(html, /[-–—]/);
 });
+
+test('the panel is the last block on the card sheet', () => {
+  const open = source.slice(source.indexOf('function openDetail('), source.indexOf('function closeModal('));
+  const call = open.indexOf('chaseCheckHtml(c)');
+  assert.ok(call > open.indexOf('Where it is'), 'after where it is');
+  assert.ok(call > open.indexOf('id="fNotes"'), 'after notes');
+  assert.ok(call > open.indexOf('setNavHTML(c)'), 'after the set walk');
+  assert.ok(call > open.indexOf('class="meditor"'), 'inside the editor, below the floated chart');
+  assert.equal(open.indexOf('chaseCheckHtml(c)', call + 1), -1, 'inserted once');
+  // The set walk used to carry the dock clearance. When the panel follows it, that gap would
+  // sit between them and the panel would be the row the dock can cover.
+  assert.match(source, /\.meditor > \.setnav:not\(:last-child\)\{ margin-bottom:0; \}/);
+  assert.match(source, /\.meditor > \.chasecheck\{ margin:0 0 60px; \}/);
+  // The action row has to be able to use the column beside the chart. A floor keeps a phone
+  // from squeezing three buttons into that strip; min() stops the floor overflowing a 320px sheet.
+  const row = open.indexOf('class="bubrow"');
+  assert.ok(row > 0 && row < open.indexOf('class="meditor"'), 'action row is outside the clearing editor');
+  assert.match(source, /\.mmain > \.bubrow\{ min-width:260px; margin-top:12px; \}/);
+  assert.match(source, /\.mmain > \.bubrow\{ min-width:min\(100%, 260px\); \}/);
+});

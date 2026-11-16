@@ -536,7 +536,7 @@ test('the pre order wording follows the release date, so it agrees with the push
   const sb = { _MONIX: { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 },
     RELEASE_OVERRIDES: {}, Date, isNaN };
   vm.createContext(sb);
-  vm.runInContext(['sealDate', 'sealShipped', 'stockPre'].map(appFunction).join('\n'), sb);
+  vm.runInContext(['sweepOwnsDisplayedDay', 'sealDate', 'sealShipped', 'stockPre'].map(appFunction).join('\n'), sb);
 
   assert.equal(sb.stockPre({ pre: true, date: 'Jan 29, 2027' }), true, 'a future date is still a pre order');
   assert.equal(sb.stockPre({ pre: true, date: 'Oct 16, 2024' }), false, 'a date that has passed is not');
@@ -561,7 +561,7 @@ function releaseSandbox(sealed, overrides) {
     Date, isNaN,
   };
   vm.createContext(sb);
-  vm.runInContext(['sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'stockPre']
+  vm.runInContext(['sweepOwnsDisplayedDay', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'stockPre']
     .map(appFunction).join('\n'), sb);
   return sb;
 }
@@ -711,7 +711,7 @@ function releaseDaySandbox(sealed, todayIso) {
   FakeDate.prototype = RealDate.prototype;
   const sb = { SEALED: sealed, RELEASE_OVERRIDES: {}, _MONIX: MONIX, Date: FakeDate, isNaN, Number, Math, String };
   vm.createContext(sb);
-  vm.runInContext(['monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'releaseDaysUntil', 'preOrToday']
+  vm.runInContext(['sweepOwnsDisplayedDay', 'monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'releaseDaysUntil', 'preOrToday']
     .map(appFunction).join('\n'), sb);
   sb.applyReleased();
   return sb;
@@ -753,7 +753,7 @@ function newsSandbox(sealed, todayIso, items, remembered) {
     MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     decodeEntities: (x) => String(x == null ? '' : x), Date: FakeDate, isNaN, isFinite, Number, Math, String };
   vm.createContext(sb);
-  vm.runInContext(['monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'parseNewsDate',
+  vm.runInContext(['sweepOwnsDisplayedDay', 'monDateTime', 'sealDate', 'sealShipped', 'sealPreRaw', 'applyReleased', 'parseNewsDate',
     'releaseDayTime', 'buildReleaseOverrides'].map(appFunction).join('\n'), sb);
   sb.applyReleased();
   sb.buildReleaseOverrides(items);
@@ -885,7 +885,7 @@ function sortSandbox(sealed, key, dir) {
     Date, isNaN, Number, Math, String, Infinity,
   };
   vm.createContext(sb);
-  vm.runInContext(['monDateTime', 'sealDate', 'sealedList'].map(appFunction).join('\n'), sb);
+  vm.runInContext(['sweepOwnsDisplayedDay', 'monDateTime', 'sealDate', 'sealedList'].map(appFunction).join('\n'), sb);
   return sb.sealedList().map((p) => p.id);
 }
 const SORT_SET = [

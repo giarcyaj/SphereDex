@@ -782,6 +782,110 @@
       "keywords": [],
       "sourceNumber": "TD02-023"
     },
+    "EPR-021": {
+      "text": "CONT Assault (This card can attack Pals in the stand state)\nAUTO When the opposing combat Pal is put into the graveyard during this card's attack, stand this card.",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "EBP02-010"
+    },
+    "EPR-021S": {
+      "text": "CONT Assault (This card can attack Pals in the stand state)\nAUTO When the opposing combat Pal is put into the graveyard during this card's attack, stand this card.",
+      "keywords": [
+        "Assault"
+      ],
+      "sourceNumber": "EBP02-010"
+    },
+    "EPR-022": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "EBP02-013"
+    },
+    "EPR-022S": {
+      "text": "",
+      "keywords": [],
+      "sourceNumber": "EBP02-013"
+    },
+    "EPR-023": {
+      "text": "AUTO OnDeploy You may reveal 1 〈Legendary〉 Pal from your hand, and if you did not reveal a card, rest this card.",
+      "keywords": [
+        "Legendary"
+      ],
+      "sourceNumber": "EBP02-029"
+    },
+    "EPR-023S": {
+      "text": "AUTO OnDeploy You may reveal 1 〈Legendary〉 Pal from your hand, and if you did not reveal a card, rest this card.",
+      "keywords": [
+        "Legendary"
+      ],
+      "sourceNumber": "EBP02-029"
+    },
+    "EPR-024": {
+      "text": "CONT Your main name 《Frostallion》 Pals cannot be chosen by the effects of your opponent's Pals. \nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "EBP02-044"
+    },
+    "EPR-025": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EBP02-062"
+    },
+    "EPR-025S": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EBP02-062"
+    },
+    "EPR-026": {
+      "text": "Quick Choose 1 Pal, and it gets Power +300 until end of turn.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "EBP02-072"
+    },
+    "EPR-026S": {
+      "text": "Quick Choose 1 Pal, and it gets Power +300 until end of turn.",
+      "keywords": [
+        "Quick"
+      ],
+      "sourceNumber": "EBP02-072"
+    },
+    "EPR-027": {
+      "text": "AUTO When this card is assigned to a \"Farming\" structure, your opponent discards 1 card from hand.",
+      "keywords": [],
+      "sourceNumber": "EBP02-080"
+    },
+    "EPR-027S": {
+      "text": "AUTO When this card is assigned to a \"Farming\" structure, your opponent discards 1 card from hand.",
+      "keywords": [],
+      "sourceNumber": "EBP02-080"
+    },
+    "EPR-028": {
+      "text": "AUTO When your main name 《Frostallion Noct》 Pal is deployed, choose up to 1 ◇3 or less Pal from your graveyard, and deploy it in the rest state. \nACT [Rest this card] Choose 1 Pal, and it gets Power +200 until end of turn.",
+      "keywords": [],
+      "sourceNumber": "EBP02-092"
+    },
+    "EPR-029": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EBP02-099"
+    },
+    "EPR-029S": {
+      "text": "ACT Interrupt (Hand Quick [①, discard this card] OR [Discard this card and 1 other card from hand] Nullify the opponent's attack. Battle damage does not occur)",
+      "keywords": [
+        "Quick",
+        "Interrupt"
+      ],
+      "sourceNumber": "EBP02-099"
+    },
     "ESOUL-000": {
       "text": "",
       "keywords": [],
