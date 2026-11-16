@@ -1,4 +1,7 @@
 *.sh text eol=lf
+# Gradle's wrapper script is a shell script; the Windows twin is a batch file.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
 # Canonical app source and the generated bundles are LF-only, enforced by tools/rebuild.py and
 # asserted byte-exactly by tools/test_carousel.cjs / tools/test_scan_review.cjs.
 src/paldeck.html text eol=lf

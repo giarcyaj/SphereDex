@@ -120,7 +120,7 @@ Never hand-edit `paldeck_cards.json`.
 - LF line endings everywhere. `.gitattributes` pins them for the source and bundles, and the
   tests assert byte-exact LF.
 - 2-space indent for HTML/CSS/JS/JSON. 4-space for Kotlin, Swift and Python (see `.editorconfig`).
-- Android: Kotlin, Gradle 8.7, JDK 17. There's no Gradle wrapper; CI installs Gradle directly.
+- Android: Kotlin 2.4.21 (Compose compiler plugin; AGP 9 compiles Kotlin itself), Android Gradle Plugin 9.5.1, Gradle 9.9.1 via the wrapper. JDK 17.
 - iOS: SwiftUI + WKWebView, project generated with XcodeGen (`ios/SphereDex/project.yml`).
 
 ## Product and copy rules
