@@ -1417,6 +1417,89 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Masters League 26/27 - Bangkok, Thailand",
+      "date": "2026-11-15",
+      "date_kind": "held",
+      "date_source": "https://en.palworld-official-cardgame.com/events/masters-league",
+      "published": "2026-11-16",
+      "source_url": "https://en.palworld-official-cardgame.com/deckrecipe/7",
+      "decks": [
+        {
+          "placement": "Champion",
+          "player": "Phaelist",
+          "deck_code": "1YL1X",
+          "source_id": 65,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=65",
+          "cards": [
+            {"number": "EBP01-005SR", "count": 3, "zone": "pal"},
+            {"number": "EBP02-003OSR", "count": 4, "zone": "pal"},
+            {"number": "EBP02-002", "count": 2, "zone": "pal"},
+            {"number": "EBP02-009", "count": 3, "zone": "pal"},
+            {"number": "ESS01-005", "count": 2, "zone": "pal"},
+            {"number": "ETD01-016", "count": 4, "zone": "pal"},
+            {"number": "ETD01-004", "count": 1, "zone": "pal"},
+            {"number": "EBP01-012", "count": 3, "zone": "pal"},
+            {"number": "EBP02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP02-033", "count": 3, "zone": "pal"},
+            {"number": "EBP01-016", "count": 3, "zone": "structure"},
+            {"number": "EBP02-015", "count": 3, "zone": "structure"},
+            {"number": "EBP02-018SR", "count": 4, "zone": "gear"},
+            {"number": "EBP02-019", "count": 3, "zone": "gear"},
+            {"number": "EBP02-043", "count": 3, "zone": "gear"},
+            {"number": "ETD01-010", "count": 2, "zone": "gear"},
+            {"number": "EBP02-023", "count": 3, "zone": "event"}
+          ]
+        },
+        {
+          "placement": "2nd",
+          "player": "EvilOscar",
+          "deck_code": "3X9S9",
+          "source_id": 66,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=66",
+          "cards": [
+            {"number": "EBP01-026", "count": 4, "zone": "pal"},
+            {"number": "EBP01-049", "count": 2, "zone": "pal"},
+            {"number": "EBP01-029", "count": 2, "zone": "pal"},
+            {"number": "ESS01-002", "count": 4, "zone": "pal"},
+            {"number": "ETD01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-025", "count": 4, "zone": "pal"},
+            {"number": "ETD01-016", "count": 2, "zone": "pal"},
+            {"number": "EBP01-028", "count": 4, "zone": "pal"},
+            {"number": "EBP02-036", "count": 4, "zone": "pal"},
+            {"number": "ETD02-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-032", "count": 4, "zone": "pal"},
+            {"number": "EBP02-033", "count": 4, "zone": "pal"},
+            {"number": "EBP02-035", "count": 4, "zone": "pal"},
+            {"number": "EBP02-040", "count": 4, "zone": "structure"}
+          ]
+        },
+        {
+          "placement": "3rd",
+          "player": "ChayajoM",
+          "deck_code": "282WR",
+          "source_id": 67,
+          "source_url": "https://en.palworld-official-cardgame.com/manage/deckrecipe/detail?id=67",
+          "cards": [
+            {"number": "EBP02-001", "count": 2, "zone": "pal"},
+            {"number": "EBP01-014", "count": 1, "zone": "pal"},
+            {"number": "EBP02-006", "count": 4, "zone": "pal"},
+            {"number": "EBP02-077", "count": 4, "zone": "pal"},
+            {"number": "EBP02-085", "count": 3, "zone": "pal"},
+            {"number": "ETD01-004", "count": 4, "zone": "pal"},
+            {"number": "EBP01-012", "count": 4, "zone": "pal"},
+            {"number": "EBP02-012", "count": 4, "zone": "pal"},
+            {"number": "EBP01-011", "count": 2, "zone": "pal"},
+            {"number": "EBP01-015", "count": 4, "zone": "structure"},
+            {"number": "EBP01-016", "count": 4, "zone": "structure"},
+            {"number": "EBP02-015", "count": 4, "zone": "structure"},
+            {"number": "ETD01-008", "count": 4, "zone": "structure"},
+            {"number": "EBP02-021", "count": 2, "zone": "gear"},
+            {"number": "EBP01-095", "count": 4, "zone": "event"}
+          ]
+        }
+      ]
     }
   ]
 }
