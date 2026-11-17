@@ -39,8 +39,32 @@ class PageParseTests(unittest.TestCase):
         wrap = '<p class="article-head__date c-single-content__heading-date">%s</p>'
         self.assertEqual(ftd.parse_published(wrap % "Sep. 30, 2026"), "2026-09-30")
         self.assertEqual(ftd.parse_published(wrap % "October 1, 2026"), "2026-10-01")
+        self.assertEqual(ftd.parse_published(wrap % "2026.10.05"), "2026-10-05")
+        self.assertEqual(ftd.parse_published(wrap % "2026/10/05"), "2026-10-05")
+        self.assertEqual(ftd.parse_published(wrap % "2026-10-05"), "2026-10-05")
+        self.assertEqual(ftd.parse_published(wrap % "2026.13.01"), "")
         self.assertEqual(ftd.parse_published(wrap % "soon"), "")
         self.assertEqual(ftd.parse_published("<p>nothing</p>"), "")
+
+    def test_recipe_json_host_comes_from_the_page(self):
+        html = page()
+        self.assertEqual(ftd.detail_url_template(html), ftd.DETAIL_URL)
+        japanese = (
+            '<p class="c-single-content__heading-date">2026.10.05</p>'
+            '<script>var DRM_FRONT = {"lang":"ja","manageApiBase":'
+            '"https://palworld-official-cardgame.com/manage","endpoint":"deckrecipe/detail",'
+            '"labels":{"ja":{"kinds":{"a":"pal"}}}};</script>'
+            '<div class="drm-recipe-root" data-recipe-id="37"></div>'
+        )
+        self.assertEqual(
+            ftd.detail_url_template(japanese),
+            "https://palworld-official-cardgame.com/manage/deckrecipe/detail?id={id}",
+        )
+        hostile = japanese.replace(
+            "https://palworld-official-cardgame.com/manage", "https://evil.example/manage")
+        self.assertEqual(ftd.detail_url_template(hostile), ftd.DETAIL_URL)
+        other = japanese.replace('"endpoint":"deckrecipe/detail"', '"endpoint":"other/thing"')
+        self.assertEqual(ftd.detail_url_template(other), ftd.DETAIL_URL)
 
 
 class DeckParseTests(unittest.TestCase):
@@ -79,6 +103,25 @@ class DeckParseTests(unittest.TestCase):
         bad["details"][0]["num"] = "three"
         self.assertIsNone(ftd.deck_from_detail(bad, 34)[0])
 
+    def test_a_japanese_code_is_stored_as_the_english_catalogue_code(self):
+        payload = recipe()
+        payload["details"][0]["card_number"] = "bp01-025"
+        payload["details"][1]["card_number"] = "PR-004S"
+        payload["details"][2]["card_number"] = "TD02-021TSR"
+        url = "https://palworld-official-cardgame.com/manage/deckrecipe/detail?id=37"
+        deck, why = ftd.deck_from_detail(payload, 37, url)
+        self.assertEqual(why, "")
+        self.assertEqual(deck["source_url"], url)
+        self.assertEqual(deck["cards"][0]["number"], "EBP01-025")
+        self.assertEqual(deck["cards"][1]["number"], "EPR-004S")
+        self.assertEqual(deck["cards"][2]["number"], "ETD02-021TSR")
+        # An English recipe is stored as printed, and so is a code this rule does not know.
+        payload["details"][0]["card_number"] = "EBP01-025"
+        payload["details"][1]["card_number"] = "NOTE-1"
+        english, _ = ftd.deck_from_detail(payload, 37, ftd.DETAIL_URL.format(id=37))
+        self.assertEqual(english["cards"][0]["number"], "EBP01-025")
+        self.assertEqual(english["cards"][1]["number"], "NOTE-1")
+
 
 class BuildEventTests(unittest.TestCase):
     def test_failed_and_empty_recipes_are_reported_not_counted(self):
@@ -105,6 +148,31 @@ class BuildEventTests(unittest.TestCase):
         self.assertEqual(event["date_source"], "https://example.invalid/held")
         self.assertEqual(event["published"], "2026-10-07")
         self.assertEqual(event["source_url"], PAGE_URL)
+
+    def test_a_japanese_page_is_read_from_the_japanese_catalogue(self):
+        html = (
+            '<p class="c-single-content__heading-date">2026.10.05</p>'
+            '<h1 class="c-single-content__heading-title">Masters League 26-27 東京 Autumn</h1>'
+            '<script>var DRM_FRONT = {"manageApiBase":"https://palworld-official-cardgame.com/manage",'
+            '"endpoint":"deckrecipe/detail"};</script>'
+            '<div class="drm-recipe-root" data-recipe-id="37"></div>'
+        )
+        seen = []
+
+        def get_json(url):
+            seen.append(url)
+            payload = recipe()
+            payload["details"][0]["card_number"] = "BP01-095"
+            return payload
+
+        event, skipped = ftd.build_event("https://palworld-official-cardgame.com/deckrecipe/ml26-27_tokyo_autumn",
+                                         html, get_json)
+        self.assertEqual(skipped, [])
+        self.assertEqual(seen, ["https://palworld-official-cardgame.com/manage/deckrecipe/detail?id=37"])
+        self.assertEqual(event["published"], "2026-10-05")
+        self.assertEqual(event["name"], "Masters League 26-27 東京 Autumn")
+        self.assertEqual(event["decks"][0]["cards"][0]["number"], "EBP01-095")
+        self.assertEqual(event["decks"][0]["source_url"], seen[0])
 
     def test_without_a_held_date_the_published_date_is_used_and_labelled(self):
         event, _ = ftd.build_event(PAGE_URL, page(), lambda url: recipe())
